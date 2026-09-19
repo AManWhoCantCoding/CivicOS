@@ -1,0 +1,28 @@
+[project]
+name = "civicos-playwright"
+version = "0.1.0"
+description = "CivicOS browser acceptance tests"
+requires-python = ">=3.12"
+dependencies = [
+  "psycopg[binary]>=3.2,<4",
+  "pytest>=8.3,<9",
+  "pytest-playwright>=0.7,<1",
+]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["pages"]
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+python_files = ["test_*.py"]
+addopts = "-ra"
+markers = [
+  "identity: authentication, authorization, assignments, and shared platform behavior",
+  "incident: Incident lifecycle and approval behavior",
+  "inspection: establishment and Inspection workflows",
+  "vehicle: registry and VehicleObservation workflows",
+]

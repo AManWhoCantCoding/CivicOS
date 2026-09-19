@@ -1,3 +1,7 @@
+import Link from 'next/link';
+
+import { SessionControls } from '@/components/identity/SessionControls';
+
 const modules = [
   {
     href: '/incidents',
@@ -36,12 +40,7 @@ export default function Home() {
               Operational command surface
             </p>
           </div>
-          <a
-            href="/login"
-            className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-cyan-300 hover:text-white"
-          >
-            Đăng nhập
-          </a>
+          <SessionControls />
         </header>
         <section className="grid gap-10 py-16 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)] lg:items-end lg:py-24">
           <div>
@@ -87,6 +86,22 @@ export default function Home() {
               </span>
             </a>
           ))}
+        </section>
+        <section className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
+          <div>
+            <p className="text-sm font-semibold text-white">
+              Identity / Assignment
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Quản lý phân công theo hồ sơ và task trong phạm vi chỉ huy.
+            </p>
+          </div>
+          <Link
+            href="/assignments"
+            className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-200 hover:border-cyan-300 hover:text-white"
+          >
+            Mở Assignment
+          </Link>
         </section>
         <footer className="mt-20 border-t border-slate-800 pt-5 text-xs text-slate-600">
           Event-first foundation · PostgreSQL · projection freshness target p95

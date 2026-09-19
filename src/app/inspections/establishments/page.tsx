@@ -1,6 +1,8 @@
 import Link from 'next/link';
 
+import { EstablishmentForm } from '@/components/inspections/EstablishmentForm';
 import { EstablishmentList } from '@/components/inspections/EstablishmentList';
+import { InspectionScheduleBoard } from '@/components/inspections/InspectionScheduleBoard';
 
 export default function EstablishmentsPage() {
   return (
@@ -23,8 +25,12 @@ export default function EstablishmentsPage() {
             Danh mục cơ sở và lịch kiểm tra theo loại hình.
           </p>
         </div>
-        <div className="mt-10">
+        <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+          <EstablishmentForm />
           <EstablishmentList />
+        </div>
+        <div className="mt-10">
+          <InspectionScheduleBoard />
         </div>
       </div>
     </main>

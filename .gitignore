@@ -10,3 +10,5 @@ prisma/*.db
 prisma/*.db-journal
 playwright-report/
 test-results/
+__pycache__/
+.venv/

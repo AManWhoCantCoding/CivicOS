@@ -1,66 +1,308 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
-import { ChecklistForm } from './ChecklistForm';
+import {
+  FeedbackMessage,
+  readResponseError,
+  useOnlineStatus,
+} from '@/components/field/client-state';
+import { EvidenceList } from '@/components/field/EvidenceList';
+
+import { ChecklistForm, type ChecklistItem } from './ChecklistForm';
 import { EnforcementApprovalPanel } from './EnforcementApprovalPanel';
+import { InspectionFindingForm } from './InspectionFindingForm';
+import { RecommendationForm } from './RecommendationForm';
 
-type InspectionData = {
-  inspection: { id: string; status: string; version?: number } | null;
-  template: Array<{ key: string; label: string; required: boolean }>;
-  findings: Array<{ id: string }>;
-  recommendations: Array<{ id: string; action: string; status: string }>;
+type InspectionState = {
+  id: string;
+  establishmentId: string;
+  assignedUserId: string | null;
+  scheduledAt: string;
+  cadenceMonths: number;
+  status: string;
+  result: string | null;
+  version?: number;
+  checklistResponses?: unknown;
 };
 
+type Finding = {
+  id: string;
+  checklistKey: string;
+  description: string;
+  result: string;
+  evidenceIds?: unknown;
+};
+
+type Recommendation = {
+  id: string;
+  action: string;
+  reason?: string;
+  status: string;
+};
+
+type InspectionData = {
+  inspection: InspectionState | null;
+  template: ChecklistItem[];
+  findings: Finding[];
+  recommendations: Recommendation[];
+};
+
+function responsesFrom(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return [];
+    const response = entry as Record<string, unknown>;
+    return typeof response.key === 'string' &&
+      typeof response.value === 'string'
+      ? [{ key: response.key, value: response.value }]
+      : [];
+  });
+}
+
+function evidenceIdsFrom(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((id): id is string => typeof id === 'string');
+}
+
+function statusLabel(status: string) {
+  return (
+    {
+      scheduled: 'Đã lập lịch',
+      in_progress: 'Đang kiểm tra',
+      completed: 'Đã hoàn tất',
+    }[status] ?? status
+  );
+}
+
 export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
+  const online = useOnlineStatus();
   const [data, setData] = useState<InspectionData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [denied, setDenied] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+
   useEffect(() => {
+    if (!online) return;
+    let cancelled = false;
     fetch(`/api/inspections/${inspectionId}`)
-      .then((response) => response.json())
-      .then(setData);
-  }, [inspectionId]);
-  if (!data?.inspection)
+      .then(async (response) => {
+        if (!cancelled) {
+          setError(null);
+          setDenied(false);
+        }
+        if (!response.ok) {
+          const message = await readResponseError(
+            response,
+            'INSPECTION_FAILED',
+          );
+          throw Object.assign(new Error(message), {
+            denied: response.status === 401 || response.status === 403,
+          });
+        }
+        return response.json() as Promise<InspectionData>;
+      })
+      .then((result) => {
+        if (!cancelled) setData(result);
+      })
+      .catch((reason: unknown) => {
+        if (cancelled) return;
+        setDenied(
+          reason instanceof Error &&
+            'denied' in reason &&
+            Boolean(reason.denied),
+        );
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : 'Không thể tải inspection.',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [inspectionId, online, reloadToken]);
+
+  if (!online && !data)
     return (
-      <main className="min-h-dvh bg-slate-950 p-8 text-slate-400">
-        Đang tải Inspection…
+      <main className="min-h-dvh bg-slate-950 p-8 text-slate-100">
+        <FeedbackMessage
+          message="Offline: inspection cần kết nối để tải hồ sơ."
+          tone="warning"
+        />
       </main>
     );
-  if (!data.inspection)
+  if (loading && !data)
     return (
-      <main className="min-h-dvh bg-slate-950 p-8 text-slate-400">
-        Inspection không tồn tại.
+      <main className="min-h-dvh bg-slate-950 p-8 text-slate-400" role="status">
+        Đang tải inspection…
       </main>
     );
+  if (error || !data?.inspection)
+    return (
+      <main className="min-h-dvh bg-slate-950 p-8 text-slate-100">
+        <div className="mx-auto max-w-4xl space-y-5">
+          <Link
+            className="text-sm text-slate-400 hover:text-white"
+            href="/inspections/establishments"
+          >
+            ← Cơ sở
+          </Link>
+          <FeedbackMessage
+            message={
+              denied
+                ? `Không có quyền xem inspection: ${error ?? 'FORBIDDEN'}`
+                : (error ?? 'Inspection không tồn tại.')
+            }
+            tone={denied ? 'warning' : 'error'}
+          />
+        </div>
+      </main>
+    );
+
+  const inspection = data.inspection;
+  const version = inspection.version ?? 0;
+  const initialResponses = responsesFrom(inspection.checklistResponses);
+
+  function updateInspection(next: { version: number; status: string }) {
+    setData((current) =>
+      current
+        ? {
+            ...current,
+            inspection: current.inspection
+              ? { ...current.inspection, ...next }
+              : current.inspection,
+          }
+        : current,
+    );
+  }
+
   return (
     <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6">
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-5xl">
         <Link
           href="/inspections/establishments"
           className="text-sm text-slate-400 hover:text-white"
         >
           ← Cơ sở
         </Link>
-        <div className="mt-10">
-          <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
-            Inspection
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold text-white">
-            {data.inspection.id}
-          </h1>
-          <p className="mt-3 text-slate-400">
-            Trạng thái: {data.inspection.status}
-          </p>
+        <div className="mt-10 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+              Inspection
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold text-white">
+              {inspection.id}
+            </h1>
+            <p className="mt-3 text-sm text-slate-400">
+              Cơ sở: {inspection.establishmentId} · Lịch:{' '}
+              {new Date(inspection.scheduledAt).toLocaleString('vi-VN')}
+            </p>
+          </div>
+          <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">
+            {statusLabel(inspection.status)}
+          </span>
         </div>
+        {!online ? (
+          <div className="mt-5">
+            <FeedbackMessage
+              message="Offline: thao tác mới vẫn có thể xếp hàng trên thiết bị."
+              tone="warning"
+            />
+          </div>
+        ) : null}
+        <dl className="mt-6 grid gap-4 rounded-xl border border-slate-800 bg-slate-900 p-5 text-sm sm:grid-cols-3">
+          <div>
+            <dt className="text-slate-500">Chu kỳ</dt>
+            <dd className="mt-1 text-slate-200">
+              {inspection.cadenceMonths} tháng
+            </dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Người được giao</dt>
+            <dd className="mt-1 break-all text-slate-200">
+              {inspection.assignedUserId ?? 'Chưa giao'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Kết quả</dt>
+            <dd className="mt-1 text-slate-200">
+              {inspection.result ?? 'Chưa có'}
+            </dd>
+          </div>
+        </dl>
         <div className="mt-8 space-y-6">
           <ChecklistForm
             inspectionId={inspectionId}
-            initialVersion={data.inspection.version ?? 0}
+            status={inspection.status}
+            initialVersion={version}
+            initialResponses={initialResponses}
             items={data.template}
+            onStateChange={updateInspection}
+          />
+          <InspectionFindingForm
+            inspectionId={inspectionId}
+            initialVersion={version}
+            status={inspection.status}
+            items={data.template}
+            onVersionChange={(nextVersion) =>
+              updateInspection({
+                version: nextVersion,
+                status: inspection.status,
+              })
+            }
+            onSaved={() => {
+              if (online) setReloadToken((value) => value + 1);
+            }}
+          />
+          <section className="rounded-xl border border-slate-800 bg-slate-900 p-5">
+            <h2 className="text-sm font-semibold text-white">
+              Phát hiện đã ghi
+            </h2>
+            {data.findings.length ? (
+              <div className="mt-4 space-y-3">
+                {data.findings.map((finding) => (
+                  <article
+                    key={finding.id}
+                    className="rounded-lg border border-slate-800 p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-mono text-xs text-cyan-300">
+                          {finding.checklistKey}
+                        </p>
+                        <p className="mt-2 text-sm text-slate-200">
+                          {finding.description}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300">
+                        {finding.result}
+                      </span>
+                    </div>
+                    <EvidenceList
+                      evidenceIds={evidenceIdsFrom(finding.evidenceIds)}
+                    />
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-slate-500">Chưa có phát hiện.</p>
+            )}
+          </section>
+          <RecommendationForm
+            inspectionId={inspectionId}
+            findings={data.findings}
+            onSaved={() => setReloadToken((value) => value + 1)}
           />
           <EnforcementApprovalPanel
             inspectionId={inspectionId}
             recommendations={data.recommendations}
+            onChanged={() => setReloadToken((value) => value + 1)}
           />
         </div>
       </div>

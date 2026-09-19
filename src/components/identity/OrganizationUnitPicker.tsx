@@ -1,0 +1,173 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+
+import { AccessDenied } from './AccessDenied';
+
+type OrganizationUnit = {
+  id: string;
+  name: string;
+  level: string;
+  parentId: string | null;
+};
+
+class OrganizationUnitError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function parseOrganizationUnit(value: unknown): OrganizationUnit {
+  if (!isRecord(value)) throw new Error('INVALID_ORGANIZATION_RESPONSE');
+  if (
+    typeof value.id !== 'string' ||
+    typeof value.name !== 'string' ||
+    typeof value.level !== 'string' ||
+    (value.parentId !== null && typeof value.parentId !== 'string')
+  ) {
+    throw new Error('INVALID_ORGANIZATION_RESPONSE');
+  }
+  return {
+    id: value.id,
+    name: value.name,
+    level: value.level,
+    parentId: value.parentId,
+  };
+}
+
+async function fetchOrganizationUnits(): Promise<OrganizationUnit[]> {
+  const response = await fetch('/api/identity/organization-units', {
+    cache: 'no-store',
+  });
+  const body = (await response.json().catch(() => null)) as unknown;
+  if (!response.ok) {
+    throw new OrganizationUnitError(
+      isRecord(body) && typeof body.error === 'string'
+        ? body.error
+        : 'ORGANIZATION_UNITS_FAILED',
+      response.status,
+    );
+  }
+  if (!isRecord(body) || !Array.isArray(body.organizationUnits)) {
+    throw new Error('INVALID_ORGANIZATION_RESPONSE');
+  }
+  return body.organizationUnits.map(parseOrganizationUnit);
+}
+
+export function OrganizationUnitPicker({
+  value,
+  onChange,
+  label = 'Đơn vị nhận',
+  required = true,
+}: {
+  value: string;
+  onChange: (nextValue: string) => void;
+  label?: string;
+  required?: boolean;
+}) {
+  const [units, setUnits] = useState<OrganizationUnit[]>([]);
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchOrganizationUnits()
+      .then((nextUnits) => {
+        if (!active) return;
+        setUnits(nextUnits);
+        setState('ready');
+      })
+      .catch((reason: unknown) => {
+        if (!active) return;
+        setErrorStatus(
+          reason instanceof OrganizationUnitError ? reason.status : null,
+        );
+        setError(
+          reason instanceof OrganizationUnitError &&
+            reason.message === 'FORBIDDEN'
+            ? 'Tài khoản hiện tại không được xem OrganizationUnit.'
+            : 'Không thể tải danh sách OrganizationUnit.',
+        );
+        setState('error');
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function retry() {
+    setState('loading');
+    setError(null);
+    setErrorStatus(null);
+    try {
+      setUnits(await fetchOrganizationUnits());
+      setState('ready');
+    } catch (reason: unknown) {
+      setErrorStatus(
+        reason instanceof OrganizationUnitError ? reason.status : null,
+      );
+      setError(
+        reason instanceof OrganizationUnitError &&
+          reason.message === 'FORBIDDEN'
+          ? 'Tài khoản hiện tại không được xem OrganizationUnit.'
+          : 'Không thể tải danh sách OrganizationUnit.',
+      );
+      setState('error');
+    }
+  }
+
+  return (
+    <div>
+      <label
+        className="block text-sm text-slate-200"
+        htmlFor="organization-unit"
+      >
+        {label}
+        <select
+          id="organization-unit"
+          name="organizationId"
+          value={value}
+          required={required}
+          disabled={state !== 'ready'}
+          onChange={(event) => onChange(event.target.value)}
+          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30 disabled:cursor-wait disabled:opacity-60"
+        >
+          <option value="">
+            {state === 'loading' ? 'Đang tải đơn vị…' : 'Chọn OrganizationUnit'}
+          </option>
+          {units.map((unit) => (
+            <option key={unit.id} value={unit.id}>
+              {unit.name} · {unit.id}
+            </option>
+          ))}
+        </select>
+      </label>
+      {state === 'error' ? (
+        <div className="mt-3 space-y-3">
+          {errorStatus === 403 ? (
+            <AccessDenied message={error ?? undefined} />
+          ) : (
+            <p className="text-sm text-rose-300" role="alert">
+              {error}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => void retry()}
+            className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+          >
+            Thử tải lại
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}

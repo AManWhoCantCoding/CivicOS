@@ -12,6 +12,11 @@ export function parseIntakeReport(input: unknown): IntakeReportInput {
     channel !== 'manual_other'
   )
     throw new Error('INVALID_CHANNEL');
+  const latitude = parseCoordinate(value.latitude);
+  const longitude = parseCoordinate(value.longitude);
+  if ((latitude === undefined) !== (longitude === undefined)) {
+    throw new Error('GEOPOINT_INCOMPLETE');
+  }
   return {
     channel,
     receivedAt: value.receivedAt,
@@ -20,10 +25,21 @@ export function parseIntakeReport(input: unknown): IntakeReportInput {
       typeof value.sourceName === 'string' ? value.sourceName : undefined,
     sourceContact:
       typeof value.sourceContact === 'string' ? value.sourceContact : undefined,
-    latitude: typeof value.latitude === 'number' ? value.latitude : undefined,
-    longitude:
-      typeof value.longitude === 'number' ? value.longitude : undefined,
+    latitude,
+    longitude,
     sensitiveRef:
       typeof value.sensitiveRef === 'string' ? value.sensitiveRef : undefined,
   };
+}
+
+function parseCoordinate(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const coordinate =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && value.trim()
+        ? Number(value)
+        : Number.NaN;
+  if (!Number.isFinite(coordinate)) throw new Error('INVALID_LOCATION');
+  return coordinate;
 }

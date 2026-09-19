@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { RegistryForm } from '@/components/vehicles/RegistryForm';
 import { RegistryList } from '@/components/vehicles/RegistryList';
 
 export default function VehicleRegistryPage() {
@@ -20,7 +21,14 @@ export default function VehicleRegistryPage() {
             Danh mục nội bộ có nguồn, lý do và thời hạn hiệu lực.
           </p>
         </div>
-        <div className="mt-10">
+        <Link
+          href="/field/vehicles"
+          className="mt-6 inline-block text-sm text-amber-200 hover:text-white"
+        >
+          Mở hiện trường xe →
+        </Link>
+        <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+          <RegistryForm />
           <RegistryList />
         </div>
       </div>

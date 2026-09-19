@@ -14,18 +14,28 @@ export function LoginForm() {
     event.preventDefault();
     setLoading(true);
     setError(null);
-    const response = await fetch('/api/auth/session', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    setLoading(false);
-    if (!response.ok) {
-      setError('Email hoặc mật khẩu không hợp lệ.');
-      return;
+    try {
+      const response = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const result = (await response.json().catch(() => null)) as unknown;
+      if (!response.ok || !result || typeof result !== 'object') {
+        setError('Email hoặc mật khẩu không hợp lệ.');
+        return;
+      }
+      if (!('user' in result) || !result.user) {
+        setError('Phiên đăng nhập chưa được tạo. Vui lòng thử lại.');
+        return;
+      }
+      router.push('/');
+      router.refresh();
+    } catch {
+      setError('Không thể kết nối máy chủ xác thực. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
     }
-    router.push('/');
-    router.refresh();
   }
 
   return (

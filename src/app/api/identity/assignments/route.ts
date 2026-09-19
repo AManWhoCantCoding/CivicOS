@@ -61,10 +61,15 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
     return NextResponse.json({ assignments }, { status: 201 });
   } catch (error) {
-    if (error instanceof Error && error.message === 'FORBIDDEN') {
-      return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-    }
-    return NextResponse.json({ error: 'ASSIGNMENT_FAILED' }, { status: 500 });
+    const message =
+      error instanceof Error ? error.message : 'ASSIGNMENT_FAILED';
+    const status =
+      message === 'FORBIDDEN' || message.includes('ORGANIZATION')
+        ? 403
+        : message.includes('NOT_FOUND')
+          ? 404
+          : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 

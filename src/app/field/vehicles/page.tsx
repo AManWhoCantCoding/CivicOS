@@ -1,4 +1,6 @@
-import { VehicleObservationForm } from '@/components/vehicles/VehicleObservationForm';
+import Link from 'next/link';
+
+import { VehicleObservationWorkspace } from '@/components/vehicles/VehicleObservationWorkspace';
 
 export default function VehicleFieldPage() {
   return (
@@ -13,8 +15,14 @@ export default function VehicleFieldPage() {
         <p className="mt-3 text-sm leading-6 text-slate-400">
           Nhập biển số, vị trí và mô tả. Khi mất mạng, thao tác sẽ chờ đồng bộ.
         </p>
+        <Link
+          href="/vehicles/registry"
+          className="mt-3 inline-block text-sm text-amber-200 hover:text-white"
+        >
+          Mở registry xe →
+        </Link>
       </div>
-      <VehicleObservationForm />
+      <VehicleObservationWorkspace />
     </section>
   );
 }

@@ -34,6 +34,25 @@ export async function ensureDevelopmentUsers(): Promise<void> {
       level: 'commune',
     },
   });
+  const upperUnit = await prisma.organizationUnit.upsert({
+    where: { id: 'unit-cap-tren' },
+    update: {
+      name: 'Công an cấp trên',
+      level: 'district',
+      parentId: null,
+      active: true,
+    },
+    create: {
+      id: 'unit-cap-tren',
+      name: 'Công an cấp trên',
+      level: 'district',
+      parentId: null,
+    },
+  });
+  await prisma.organizationUnit.update({
+    where: { id: unit.id },
+    data: { parentId: upperUnit.id },
+  });
 
   const roleNames: RoleName[] = [
     'commander',
@@ -80,9 +99,22 @@ export async function ensureDevelopmentUsers(): Promise<void> {
       name: 'User không được phân công',
       role: 'field_officer',
     },
+    {
+      id: 'dev-commander',
+      email: 'commander@civicos.local',
+      name: 'Commander workflow fixture',
+      role: 'commander',
+    },
+    {
+      id: 'dev-field',
+      email: 'field@civicos.local',
+      name: 'Field workflow fixture',
+      role: 'field_officer',
+    },
   ] as const;
 
   for (const entry of users) {
+    const fixtureId = 'id' in entry ? entry.id : undefined;
     const user = await prisma.user.upsert({
       where: { email: entry.email },
       update: {
@@ -92,6 +124,7 @@ export async function ensureDevelopmentUsers(): Promise<void> {
         active: true,
       },
       create: {
+        ...(fixtureId ? { id: fixtureId } : {}),
         email: entry.email,
         name: entry.name,
         passwordHash: hashPassword(defaultPassword),
@@ -152,6 +185,26 @@ export async function listIdentityUsers(actor: IdentityUser) {
     email: user.email,
     name: user.name,
     roles: user.roles.map(({ role }) => role.name),
+  }));
+}
+
+export async function listOrganizationUnits(actor: IdentityUser) {
+  const organizationUnits = await prisma.organizationUnit.findMany({
+    where: { active: true },
+    orderBy: [{ level: 'asc' }, { name: 'asc' }],
+  });
+  await recordAudit({
+    actor,
+    resourceType: 'OrganizationUnit',
+    resourceId: '*',
+    operation: 'organization_unit.listed',
+    metadata: { count: organizationUnits.length },
+  });
+  return organizationUnits.map((unit) => ({
+    id: unit.id,
+    name: unit.name,
+    level: unit.level,
+    parentId: unit.parentId,
   }));
 }
 

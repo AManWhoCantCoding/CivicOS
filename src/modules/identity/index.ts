@@ -20,6 +20,7 @@ export {
   createIdentityUser,
   ensureDevelopmentUsers,
   listIdentityUsers,
+  listOrganizationUnits,
 } from './local-provider';
 export {
   createSession,
