@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: civicos
+      POSTGRES_PASSWORD: civicos
+      POSTGRES_DB: civicos
+    ports:
+      - '5432:5432'
+    volumes:
+      - civicos-postgres:/var/lib/postgresql/data
+
+volumes:
+  civicos-postgres:

@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+package-lock.json
+prisma/*.db
+prisma/*.db-journal
+.agents
+.opencode
+.scratch
+AGENTS.md
+CONTEXT.md
+Requirement.md
+docs/agents
+skills-lock.json
+next-env.d.ts
+opencode.jsonc

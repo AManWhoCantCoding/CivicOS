@@ -1,0 +1,397 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String       @id @default(cuid())
+  email              String       @unique
+  name               String?
+  passwordHash       String?
+  organizationUnitId String?
+  active             Boolean      @default(true)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  roles              UserRole[]
+  assignments        Assignment[]
+  sessions           Session[]
+}
+
+model Role {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  users       UserRole[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model OrganizationUnit {
+  id        String   @id @default(cuid())
+  name      String
+  level     String
+  parentId  String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Assignment {
+  id             String    @id @default(cuid())
+  resourceType   String
+  resourceId     String
+  task           String
+  assigneeUserId String
+  grantedById    String
+  organizationId String?
+  status         String    @default("active")
+  grantedAt      DateTime  @default(now())
+  revokedAt      DateTime?
+  revokedById    String?
+  revokeReason   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  assignee       User      @relation(fields: [assigneeUserId], references: [id])
+
+  @@index([resourceType, resourceId, status])
+  @@index([assigneeUserId, status])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model EventRecord {
+  id               String         @id @default(cuid())
+  eventId          String         @unique
+  eventType        String
+  eventVersion     Int            @default(1)
+  aggregateType    String
+  aggregateId      String
+  aggregateVersion Int
+  occurredAt       DateTime
+  recordedAt       DateTime       @default(now())
+  actorId          String?
+  actorRole        String?
+  actorName        String?
+  organizationId   String?
+  correlationId    String?
+  causationId      String?
+  payload          Json
+  metadata         Json
+  outboxMessage    OutboxMessage?
+
+  @@unique([aggregateType, aggregateId, aggregateVersion])
+  @@index([aggregateType, aggregateId, aggregateVersion])
+  @@index([eventType, occurredAt])
+}
+
+model OutboxMessage {
+  id           String      @id @default(cuid())
+  eventId      String      @unique
+  status       String      @default("pending")
+  attempts     Int         @default(0)
+  availableAt  DateTime    @default(now())
+  claimedAt    DateTime?
+  claimToken   String?
+  processedAt  DateTime?
+  lastError    String?
+  deadLetterAt DateTime?
+  createdAt    DateTime    @default(now())
+  eventRecord  EventRecord @relation(fields: [eventId], references: [eventId], onDelete: Cascade)
+
+  @@index([status, availableAt])
+}
+
+model ProjectionCheckpoint {
+  name              String    @id
+  lastRecordedAt    DateTime?
+  processedEventIds Json      @default("[]")
+  updatedAt         DateTime  @updatedAt
+}
+
+model ProjectionRecord {
+  id               String   @id @default(cuid())
+  projectionName   String
+  aggregateType    String
+  aggregateId      String
+  aggregateVersion Int
+  eventType        String
+  state            Json
+  updatedAt        DateTime @updatedAt
+
+  @@unique([projectionName, aggregateType, aggregateId])
+  @@index([projectionName, updatedAt])
+}
+
+model AuditEvent {
+  id            String   @id @default(cuid())
+  actorId       String?
+  resourceType  String
+  resourceId    String
+  operation     String
+  reason        String?
+  correlationId String?
+  metadata      Json
+  occurredAt    DateTime @default(now())
+
+  @@index([resourceType, resourceId, occurredAt])
+  @@index([actorId, occurredAt])
+}
+
+model Evidence {
+  id           String   @id @default(cuid())
+  resourceType String
+  resourceId   String
+  storageKey   String
+  originalHash String
+  mimeType     String
+  fileName     String
+  sizeBytes    Int
+  capturedAt   DateTime
+  receivedAt   DateTime @default(now())
+  actorId      String?
+  latitude     Decimal?
+  longitude    Decimal?
+  metadata     Json
+  immutable    Boolean  @default(true)
+
+  @@unique([resourceType, resourceId, originalHash])
+  @@index([resourceType, resourceId])
+}
+
+model SlaInstance {
+  id             String    @id @default(cuid())
+  resourceType   String
+  resourceId     String
+  kind           String
+  dueAt          DateTime
+  status         String    @default("active")
+  overdueAt      DateTime?
+  completedAt    DateTime?
+  assigneeUserId String?
+  overdueEventId String?   @unique
+  createdAt      DateTime  @default(now())
+
+  @@unique([resourceType, resourceId, kind])
+  @@index([status, dueAt])
+  @@index([resourceType, resourceId])
+}
+
+model Notification {
+  id            String    @id @default(cuid())
+  userId        String
+  type          String
+  title         String
+  body          String
+  resourceType  String?
+  resourceId    String?
+  sourceEventId String?   @unique
+  readAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, readAt, createdAt])
+}
+
+model OfflineCommand {
+  id              String    @id @default(cuid())
+  clientCommandId String    @unique
+  actorId         String
+  commandType     String
+  resourceType    String
+  resourceId      String?
+  occurredAt      DateTime
+  receivedAt      DateTime  @default(now())
+  payload         Json
+  payloadVersion  Int       @default(1)
+  baseVersion     Int?
+  status          String    @default("pending")
+  attemptCount    Int       @default(0)
+  response        Json?
+  error           String?
+  lastAttemptAt   DateTime?
+
+  @@index([actorId, status])
+}
+
+model IntakeReport {
+  id                String   @id @default(cuid())
+  channel           String
+  receivedAt        DateTime
+  content           String
+  sourceName        String?
+  sourceContact     String?
+  latitude          Decimal?
+  longitude         Decimal?
+  sensitiveRef      String?
+  sensitiveRefIndex String?
+  createdById       String
+  idempotencyKey    String?  @unique
+  incidentId        String?  @unique
+  createdAt         DateTime @default(now())
+}
+
+model Incident {
+  id             String    @id @default(cuid())
+  intakeReportId String    @unique
+  status         String    @default("received")
+  category       String?
+  severity       String?
+  description    String
+  latitude       Decimal?
+  longitude      Decimal?
+  assignedAt     DateTime?
+  resolvedAt     DateTime?
+  closedAt       DateTime?
+  version        Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, updatedAt])
+  @@index([category, severity])
+}
+
+model Establishment {
+  id         String   @id @default(cuid())
+  name       String
+  ownerName  String
+  address    String
+  type       String
+  licenseRef String?
+  latitude   Decimal?
+  longitude  Decimal?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([type, active])
+}
+
+model ChecklistTemplate {
+  id                String   @id @default(cuid())
+  establishmentType String
+  version           Int      @default(1)
+  title             String
+  items             Json
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+
+  @@unique([establishmentType, version])
+}
+
+model Inspection {
+  id                 String    @id @default(cuid())
+  establishmentId    String
+  assignedUserId     String?
+  templateId         String
+  templateVersion    Int
+  scheduledAt        DateTime
+  startedAt          DateTime?
+  completedAt        DateTime?
+  status             String    @default("scheduled")
+  result             String?
+  version            Int       @default(0)
+  checklistResponses Json      @default("[]")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([establishmentId, scheduledAt])
+  @@index([establishmentId, scheduledAt])
+  @@index([status, scheduledAt])
+}
+
+model InspectionFinding {
+  id           String   @id @default(cuid())
+  inspectionId String
+  checklistKey String
+  description  String
+  result       String
+  evidenceIds  Json
+  createdAt    DateTime @default(now())
+
+  @@index([inspectionId])
+}
+
+model EnforcementRecommendation {
+  id            String    @id @default(cuid())
+  inspectionId  String
+  findingIds    Json
+  action        String
+  reason        String
+  status        String    @default("pending_approval")
+  submittedById String
+  approvedById  String?
+  approvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([inspectionId, status])
+}
+
+model SuspiciousVehicleEntry {
+  id          String    @id @default(cuid())
+  plate       String
+  source      String
+  reason      String
+  validFrom   DateTime
+  validUntil  DateTime?
+  status      String    @default("active")
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([plate, status, validFrom, validUntil])
+}
+
+model VehicleObservation {
+  id                 String    @id @default(cuid())
+  plate              String
+  observedAt         DateTime
+  latitude           Decimal
+  longitude          Decimal
+  description        String?
+  status             String    @default("recorded")
+  observedById       String
+  clientCommandId    String?   @unique
+  version            Int       @default(0)
+  evidenceIds        Json      @default("[]")
+  matchedRegistryId  String?
+  matchConfirmedAt   DateTime?
+  matchConfirmedById String?
+  escalatedAt        DateTime?
+  createdAt          DateTime  @default(now())
+
+  @@index([plate, observedAt])
+  @@index([status, observedAt])
+}
+
+model VehicleVerification {
+  id            String   @id @default(cuid())
+  observationId String
+  result        String
+  notes         String
+  verifiedById  String
+  latitude      Decimal?
+  longitude     Decimal?
+  evidenceIds   Json     @default("[]")
+  verifiedAt    DateTime @default(now())
+
+  @@index([observationId, verifiedAt])
+}
