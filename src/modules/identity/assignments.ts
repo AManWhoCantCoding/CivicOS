@@ -26,6 +26,7 @@ export async function grantAssignments(
 ) {
   requireRole(actor, ...allowedRoles);
   if (!input.assigneeUserIds.length) throw new Error('ASSIGNEE_REQUIRED');
+  if (!input.task.trim()) throw new Error('TASK_REQUIRED');
 
   const assignments = [];
   for (const assigneeUserId of input.assigneeUserIds) {

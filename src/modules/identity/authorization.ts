@@ -11,6 +11,20 @@ function isCommander(user: IdentityUser): boolean {
   return user.roles.includes('commander');
 }
 
+const taskCapabilities: Record<string, AuthorizationAction[]> = {
+  incident_verification: ['read', 'mutate', 'read_sensitive'],
+  inspection_fieldwork: ['read', 'mutate', 'read_sensitive'],
+  vehicle_verification: ['read', 'mutate', 'read_sensitive'],
+};
+
+function assignmentAllowsAction(
+  task: string,
+  action: AuthorizationAction,
+): boolean {
+  if (action === 'read') return true;
+  return taskCapabilities[task]?.includes(action) ?? false;
+}
+
 export async function canAccess(
   user: IdentityUser,
   resource: ResourceRef,
@@ -27,10 +41,10 @@ export async function canAccess(
       assigneeUserId: user.id,
       status: 'active',
     },
+    select: { task: true },
   });
   if (!assignment) return false;
-  if (action === 'read_sensitive') return true;
-  return action === 'read' || action === 'mutate';
+  return assignmentAllowsAction(assignment.task, action);
 }
 
 export async function assertAccess(

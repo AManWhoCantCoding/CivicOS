@@ -90,7 +90,7 @@ async function dispatchConsumer(
   if (processed.includes(event.eventId)) return;
 
   await registration.handler(event);
-  const processedEventIds = [...processed, event.eventId].slice(-1000);
+  const processedEventIds = [...processed, event.eventId];
   await prisma.projectionCheckpoint.upsert({
     where: { name: checkpointName },
     update: {

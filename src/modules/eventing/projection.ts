@@ -83,9 +83,22 @@ export async function rebuildEventProjection(
   await client.projectionCheckpoint.deleteMany({
     where: { name: { contains: 'event-history-projection' } },
   });
-  const events = await readGlobalEvents(client, { take: 100_000 });
-  for (const event of events) await applyEventProjection(event, client);
-  return events.length;
+  let count = 0;
+  let cursor: { afterRecordedAt: Date; afterEventId: string } | undefined;
+  do {
+    const events = await readGlobalEvents(client, {
+      take: 1000,
+      ...cursor,
+    });
+    for (const event of events) await applyEventProjection(event, client);
+    count += events.length;
+    const last = events.at(-1);
+    cursor = last
+      ? { afterRecordedAt: last.recordedAt, afterEventId: last.eventId }
+      : undefined;
+    if (!events.length) break;
+  } while (cursor);
+  return count;
 }
 
 export function getEventProjection(aggregateType: string, aggregateId: string) {

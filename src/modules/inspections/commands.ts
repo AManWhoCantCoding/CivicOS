@@ -78,7 +78,7 @@ async function assertInspectionAccess(
   actor: InspectionActor,
   action: 'read' | 'mutate',
 ) {
-  if (actor.roles.includes('commander') || assignedUserId === actor.id) return;
+  if (actor.roles.includes('commander')) return;
   await assertAccess(
     actor,
     { resourceType: 'Inspection', resourceId: inspectionId },
@@ -449,6 +449,19 @@ async function transitionInspection(
       },
       tx,
     );
+    if (next === 'completed') {
+      await tx.slaInstance.updateMany({
+        where: {
+          resourceType: 'Inspection',
+          resourceId: inspectionId,
+          status: 'active',
+        },
+        data: {
+          status: 'completed',
+          completedAt: updated.completedAt ?? new Date(),
+        },
+      });
+    }
     return updated;
   });
 }
@@ -709,6 +722,14 @@ async function updateRecommendationStatus(
       },
       tx,
     );
+    await tx.slaInstance.updateMany({
+      where: {
+        resourceType: 'EnforcementRecommendation',
+        resourceId: recommendationId,
+        status: 'active',
+      },
+      data: { status: 'completed', completedAt: new Date() },
+    });
     return updatedRecommendation;
   });
 }

@@ -23,6 +23,8 @@ function verifyPassword(password: string, stored: string): boolean {
 }
 
 export async function ensureDevelopmentUsers(): Promise<void> {
+  if (process.env.NODE_ENV === 'production') return;
+
   const unit = await prisma.organizationUnit.upsert({
     where: { id: 'unit-nghia-tru' },
     update: { name: 'Công an xã Nghĩa Trụ', level: 'commune', active: true },

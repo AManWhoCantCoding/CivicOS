@@ -15,7 +15,7 @@ export async function GET(): Promise<NextResponse> {
 
 export async function POST(request: Request): Promise<NextResponse> {
   const body = (await request.json()) as { email?: string; password?: string };
-  await ensureDevelopmentUsers();
+  if (process.env.NODE_ENV !== 'production') await ensureDevelopmentUsers();
   const user = await authenticateLocal(body.email ?? '', body.password ?? '');
   if (!user)
     return NextResponse.json({ error: 'INVALID_CREDENTIALS' }, { status: 401 });

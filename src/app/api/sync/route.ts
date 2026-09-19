@@ -1,7 +1,65 @@
 import { NextResponse } from 'next/server';
 
 import { assertAccess, getCurrentUser } from '@/modules/identity';
-import { acceptOfflineCommand, listOfflineCommands } from '@/modules/platform';
+import {
+  acceptOfflineCommand,
+  completeOfflineCommand,
+  failOfflineCommand,
+  listOfflineCommands,
+  markOfflineCommandSyncing,
+  rejectOfflineCommand,
+} from '@/modules/platform';
+import { recordVehicleObservation } from '@/modules/vehicles';
+
+function payloadValue(payload: Record<string, unknown>, key: string): unknown {
+  return payload[key];
+}
+
+function stringPayload(payload: Record<string, unknown>, key: string): string {
+  const value = payloadValue(payload, key);
+  return typeof value === 'string' ? value : '';
+}
+
+function numberPayload(payload: Record<string, unknown>, key: string): number {
+  const value = payloadValue(payload, key);
+  return typeof value === 'number' ? value : Number.NaN;
+}
+
+async function dispatchOfflineCommand(
+  command: Awaited<ReturnType<typeof acceptOfflineCommand>>,
+  actor: Awaited<ReturnType<typeof getCurrentUser>>,
+) {
+  if (!actor) throw new Error('UNAUTHENTICATED');
+  if (command.commandType !== 'vehicle.record_observation') {
+    throw new Error('UNSUPPORTED_OFFLINE_COMMAND');
+  }
+  const payload =
+    command.payload && typeof command.payload === 'object'
+      ? (command.payload as Record<string, unknown>)
+      : {};
+  const result = await recordVehicleObservation(
+    {
+      plate: stringPayload(payload, 'plate'),
+      observedAt: stringPayload(payload, 'observedAt'),
+      latitude: numberPayload(payload, 'latitude'),
+      longitude: numberPayload(payload, 'longitude'),
+      description: stringPayload(payload, 'description'),
+      evidenceIds: Array.isArray(payload.evidenceIds)
+        ? payload.evidenceIds.filter(
+            (value): value is string => typeof value === 'string',
+          )
+        : undefined,
+      clientCommandId: command.clientCommandId,
+      baseVersion: command.baseVersion ?? undefined,
+    },
+    actor,
+  );
+  return {
+    observationId: result.observation.id,
+    status: result.observation.status,
+    matchId: result.match?.id ?? null,
+  };
+}
 
 export async function GET(): Promise<NextResponse> {
   const user = await getCurrentUser();
@@ -54,7 +112,43 @@ export async function POST(request: Request): Promise<NextResponse> {
       payloadVersion: body.payloadVersion,
       baseVersion: body.baseVersion,
     });
-    return NextResponse.json({ command }, { status: 202 });
+    if (command.status === 'synced' || command.status === 'rejected') {
+      return NextResponse.json(
+        { command },
+        { status: command.status === 'synced' ? 200 : 409 },
+      );
+    }
+
+    await markOfflineCommandSyncing(command.clientCommandId);
+    try {
+      const result = await dispatchOfflineCommand(command, user);
+      const synced = await completeOfflineCommand(command.clientCommandId, {
+        result,
+      });
+      return NextResponse.json({ command: synced }, { status: 200 });
+    } catch (error) {
+      const commandError =
+        error instanceof Error ? error.message : 'SYNC_FAILED';
+      if (
+        commandError === 'UNSUPPORTED_OFFLINE_COMMAND' ||
+        commandError === 'STALE_OFFLINE_COMMAND' ||
+        commandError === 'FORBIDDEN' ||
+        commandError.endsWith('_NOT_FOUND') ||
+        commandError.startsWith('INVALID_') ||
+        commandError.endsWith('_REQUIRED')
+      ) {
+        const rejected = await rejectOfflineCommand(
+          command.clientCommandId,
+          commandError,
+        );
+        return NextResponse.json({ command: rejected }, { status: 409 });
+      }
+      const failed = await failOfflineCommand(
+        command.clientCommandId,
+        commandError,
+      );
+      return NextResponse.json({ command: failed }, { status: 503 });
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'SYNC_FAILED';
     return NextResponse.json(

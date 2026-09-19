@@ -42,7 +42,7 @@ async function assertObservationAccess(
   actor: VehicleActor,
   action: 'read' | 'mutate',
 ) {
-  if (actor.roles.includes('commander') || observedById === actor.id) return;
+  if (actor.roles.includes('commander')) return;
   await assertAccess(
     actor,
     { resourceType: 'VehicleObservation', resourceId: observationId },

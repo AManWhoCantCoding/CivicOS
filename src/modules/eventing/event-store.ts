@@ -203,20 +203,32 @@ export async function readGlobalEvents(
     aggregateType?: string;
     eventType?: string;
     afterRecordedAt?: Date;
+    afterEventId?: string;
     take?: number;
   } = {},
 ): Promise<DomainEvent[]> {
+  const cursor = options.afterRecordedAt
+    ? options.afterEventId
+      ? {
+          OR: [
+            { recordedAt: { gt: options.afterRecordedAt } },
+            {
+              recordedAt: options.afterRecordedAt,
+              eventId: { gt: options.afterEventId },
+            },
+          ],
+        }
+      : { recordedAt: { gt: options.afterRecordedAt } }
+    : {};
   const records = await client.eventRecord.findMany({
     where: {
       ...(options.aggregateType
         ? { aggregateType: options.aggregateType }
         : {}),
       ...(options.eventType ? { eventType: options.eventType } : {}),
-      ...(options.afterRecordedAt
-        ? { recordedAt: { gt: options.afterRecordedAt } }
-        : {}),
+      ...cursor,
     },
-    orderBy: [{ recordedAt: 'asc' }, { id: 'asc' }],
+    orderBy: [{ recordedAt: 'asc' }, { eventId: 'asc' }],
     take: options.take ?? 1000,
   });
 

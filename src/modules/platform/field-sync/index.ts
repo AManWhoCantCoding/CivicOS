@@ -140,7 +140,7 @@ export async function acceptOfflineCommand(input: OfflineCommandInput) {
 
 export async function markOfflineCommandSyncing(clientCommandId: string) {
   const result = await prisma.offlineCommand.updateMany({
-    where: { clientCommandId, status: 'pending' },
+    where: { clientCommandId, status: { in: ['pending', 'failed'] } },
     data: {
       status: 'syncing',
       attemptCount: { increment: 1 },
