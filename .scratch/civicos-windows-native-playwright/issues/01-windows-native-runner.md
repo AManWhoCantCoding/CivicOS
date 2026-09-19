@@ -42,4 +42,4 @@ Thay runtime Python/Chromium của bộ acceptance test bằng runtime Windows n
 
 ## Trạng thái
 
-Status: ready-for-agent
+Status: done
