@@ -12,6 +12,10 @@ Copy `.env.example` to `.env`, then start the local database:
 docker compose up -d postgres
 ```
 
+If Docker Desktop is installed but WSL does not expose the `docker` command,
+use `docker.exe compose up -d postgres` or enable WSL integration for this
+distribution in Docker Desktop.
+
 ### 2. Generate Prisma Client and migrate
 
 ```bash
