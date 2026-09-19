@@ -1,4 +1,5 @@
-import type { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 
 import { prisma } from '@/lib/prisma';
 
@@ -23,32 +24,63 @@ export async function upsertReadModel(
   if (existing && existing.aggregateVersion >= event.aggregateVersion) {
     return existing;
   }
-  return client.projectionRecord.upsert({
-    where: key,
-    update: {
-      aggregateVersion: event.aggregateVersion,
-      eventType: event.eventType,
-      state: state as Prisma.InputJsonValue,
-    },
-    create: {
+  const updated = await client.projectionRecord.updateMany({
+    where: {
       projectionName,
       aggregateType: event.aggregateType,
       aggregateId: event.aggregateId,
+      aggregateVersion: { lt: event.aggregateVersion },
+    },
+    data: {
       aggregateVersion: event.aggregateVersion,
       eventType: event.eventType,
       state: state as Prisma.InputJsonValue,
     },
   });
+  if (updated.count) {
+    return client.projectionRecord.findUnique({ where: key });
+  }
+
+  try {
+    return await client.projectionRecord.create({
+      data: {
+        projectionName,
+        aggregateType: event.aggregateType,
+        aggregateId: event.aggregateId,
+        aggregateVersion: event.aggregateVersion,
+        eventType: event.eventType,
+        state: state as Prisma.InputJsonValue,
+      },
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      return upsertReadModel(client, projectionName, event, state);
+    }
+    throw error;
+  }
 }
 
 export function readModels(
   projectionName: string,
   aggregateType: string,
+  options: {
+    aggregateIds?: string[];
+    take?: number;
+  } = {},
   client: PrismaClient = prisma,
 ) {
   return client.projectionRecord.findMany({
-    where: { projectionName, aggregateType },
+    where: {
+      projectionName,
+      aggregateType,
+      ...(options.aggregateIds
+        ? { aggregateId: { in: options.aggregateIds } }
+        : {}),
+    },
     orderBy: { updatedAt: 'desc' },
-    take: 100,
+    take: options.take ?? 100,
   });
 }

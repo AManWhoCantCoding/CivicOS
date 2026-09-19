@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { appendEvent, getAggregateVersion } from '@/modules/eventing';
 import {
   assertAccess,
+  carryActiveAssignments,
   grantAssignments,
   recordAudit,
   requireRole,
@@ -55,7 +56,13 @@ function assertCadenceMonths(value: number | undefined): number {
 
 function addMonths(date: Date, months: number): Date {
   const next = new Date(date);
+  const day = next.getUTCDate();
+  next.setUTCDate(1);
   next.setUTCMonth(next.getUTCMonth() + months);
+  const lastDay = new Date(
+    Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  next.setUTCDate(Math.min(day, lastDay));
   return next;
 }
 
@@ -369,12 +376,24 @@ export async function updateEstablishment(
 export async function startInspection(
   inspectionId: string,
   actor: InspectionActor,
+  baseVersion?: number,
 ) {
-  return transitionInspection(inspectionId, 'in_progress', actor, {});
+  return transitionInspection(
+    inspectionId,
+    'in_progress',
+    actor,
+    {},
+    undefined,
+    baseVersion,
+  );
 }
 
 export async function saveChecklistResponses(
-  input: { inspectionId: string; responses: ChecklistResponse[] },
+  input: {
+    inspectionId: string;
+    responses: ChecklistResponse[];
+    baseVersion?: number;
+  },
   actor: InspectionActor,
 ) {
   const inspection = await prisma.inspection.findUnique({
@@ -390,6 +409,11 @@ export async function saveChecklistResponses(
       where: { id: input.inspectionId },
     });
     if (!current) throw new Error('INSPECTION_NOT_FOUND');
+    if (
+      input.baseVersion !== undefined &&
+      input.baseVersion !== current.version
+    )
+      throw new Error('STALE_OFFLINE_COMMAND');
     const updated = await tx.inspection.update({
       where: { id: current.id, version: current.version },
       data: {
@@ -414,7 +438,7 @@ export async function saveChecklistResponses(
 }
 
 export async function completeInspection(
-  input: { inspectionId: string; result: string },
+  input: { inspectionId: string; result: string; baseVersion?: number },
   actor: InspectionActor,
 ) {
   if (!isInspectionResult(input.result))
@@ -436,6 +460,7 @@ export async function completeInspection(
         (inspection.checklistResponses as unknown as ChecklistResponse[]) ?? [],
       );
     },
+    input.baseVersion,
   );
 }
 
@@ -458,9 +483,17 @@ async function scheduleNextInspection(
   });
   if (existing) return existing;
 
-  const assignedUserId = actor.roles.includes('commander')
-    ? inspection.assignedUserId
-    : undefined;
+  const sourceAssignments = await tx.assignment.findMany({
+    where: {
+      resourceType: 'Inspection',
+      resourceId: inspection.id,
+      status: 'active',
+    },
+    select: { assigneeUserId: true },
+  });
+  const assignedUserId =
+    sourceAssignments[0]?.assigneeUserId ??
+    (actor.roles.includes('commander') ? inspection.assignedUserId : undefined);
   const next = await tx.inspection.create({
     data: {
       establishmentId: inspection.establishmentId,
@@ -472,7 +505,18 @@ async function scheduleNextInspection(
       version: 1,
     },
   });
-  if (assignedUserId) {
+  if (sourceAssignments.length) {
+    await carryActiveAssignments(
+      tx,
+      {
+        sourceResourceType: 'Inspection',
+        sourceResourceId: inspection.id,
+        targetResourceType: 'Inspection',
+        targetResourceId: next.id,
+      },
+      actor,
+    );
+  } else if (assignedUserId) {
     await grantAssignments(
       tx,
       {
@@ -528,6 +572,7 @@ async function transitionInspection(
     tx: Prisma.TransactionClient,
     inspection: Awaited<ReturnType<typeof prisma.inspection.findUniqueOrThrow>>,
   ) => Promise<void>,
+  baseVersion?: number,
 ) {
   const inspection = await prisma.inspection.findUnique({
     where: { id: inspectionId },
@@ -540,6 +585,8 @@ async function transitionInspection(
       where: { id: inspectionId },
     });
     if (!current) throw new Error('INSPECTION_NOT_FOUND');
+    if (baseVersion !== undefined && baseVersion !== current.version)
+      throw new Error('STALE_OFFLINE_COMMAND');
     assertInspectionTransition(current.status as InspectionStatus, next);
     if (validate) await validate(tx, current);
     const updated = await tx.inspection.update({
@@ -600,6 +647,7 @@ export async function recordFinding(
     description: string;
     result: string;
     evidenceIds?: string[];
+    baseVersion?: number;
   },
   actor: InspectionActor,
 ) {
@@ -621,6 +669,18 @@ export async function recordFinding(
       where: { id: input.inspectionId },
     });
     if (!current) throw new Error('INSPECTION_NOT_FOUND');
+    if (
+      input.baseVersion !== undefined &&
+      input.baseVersion !== current.version
+    )
+      throw new Error('STALE_OFFLINE_COMMAND');
+    const template = await tx.checklistTemplate.findUnique({
+      where: { id: current.templateId },
+    });
+    const checklistItems =
+      (template?.items as unknown as ChecklistItem[]) ?? [];
+    if (!checklistItems.some((item) => item.key === input.checklistKey))
+      throw new Error('CHECKLIST_KEY_INVALID');
     const evidenceIds = input.evidenceIds ?? [];
     if (evidenceIds.length) {
       const evidence = await tx.evidence.findMany({
@@ -762,14 +822,21 @@ export async function submitRecommendation(
 }
 
 export async function approveRecommendation(
+  inspectionId: string,
   recommendationId: string,
   actor: InspectionActor,
 ) {
   requireRole(actor, 'commander');
-  return updateRecommendationStatus(recommendationId, actor, 'approved');
+  return updateRecommendationStatus(
+    inspectionId,
+    recommendationId,
+    actor,
+    'approved',
+  );
 }
 
 export async function rejectRecommendation(
+  inspectionId: string,
   recommendationId: string,
   actor: InspectionActor,
   reason: string,
@@ -777,6 +844,7 @@ export async function rejectRecommendation(
   requireRole(actor, 'commander');
   if (!reason.trim()) throw new Error('REJECTION_REASON_REQUIRED');
   return updateRecommendationStatus(
+    inspectionId,
     recommendationId,
     actor,
     'rejected',
@@ -785,6 +853,7 @@ export async function rejectRecommendation(
 }
 
 async function updateRecommendationStatus(
+  inspectionId: string,
   recommendationId: string,
   actor: InspectionActor,
   status: 'approved' | 'rejected',
@@ -795,6 +864,8 @@ async function updateRecommendationStatus(
       where: { id: recommendationId },
     });
     if (!recommendation) throw new Error('RECOMMENDATION_NOT_FOUND');
+    if (recommendation.inspectionId !== inspectionId)
+      throw new Error('RECOMMENDATION_RESOURCE_MISMATCH');
     if (recommendation.status !== 'pending_approval') {
       throw new Error('RECOMMENDATION_ALREADY_DECIDED');
     }

@@ -16,7 +16,7 @@ const incidentEventTypes = [
   'IncidentRegistered',
   'IncidentClassified',
   'IncidentAssigned',
-  'IncidentVerificationStarted',
+  'IncidentVerifying',
   'IncidentTransferRequested',
   'IncidentTransferred',
   'IncidentResolutionRequested',
@@ -129,14 +129,28 @@ export async function listIncidents(
   const allowedIds = assignedResourceIds
     ? new Set(assignedResourceIds)
     : undefined;
-  const incidents = (await readModels(incidentProjectionName, 'Incident'))
-    .map(({ state }) => state as Record<string, unknown>)
-    .filter((incident) => {
-      if (allowedIds && !allowedIds.has(String(incident.id))) return false;
-      if (input?.status && incident.status !== input.status) return false;
-      if (input?.category && incident.category !== input.category) return false;
-      return true;
-    });
+  const projected = await readModels(incidentProjectionName, 'Incident', {
+    aggregateIds: assignedResourceIds,
+    take: assignedResourceIds ? undefined : 100,
+  });
+  const incidents = (
+    projected.length
+      ? projected.map(({ state }) => state as Record<string, unknown>)
+      : (
+          await prisma.incident.findMany({
+            where: assignedResourceIds
+              ? { id: { in: assignedResourceIds } }
+              : undefined,
+            orderBy: { updatedAt: 'desc' },
+            take: 100,
+          })
+        ).map(incidentState)
+  ).filter((incident) => {
+    if (allowedIds && !allowedIds.has(String(incident.id))) return false;
+    if (input?.status && incident.status !== input.status) return false;
+    if (input?.category && incident.category !== input.category) return false;
+    return true;
+  });
   await recordAudit({
     actor,
     resourceType: 'Incident',
@@ -148,13 +162,21 @@ export async function listIncidents(
 }
 
 export function getIncidentReadModel(incidentId: string) {
-  return prisma.projectionRecord.findUnique({
-    where: {
-      projectionName_aggregateType_aggregateId: {
-        projectionName: incidentProjectionName,
-        aggregateType: 'Incident',
-        aggregateId: incidentId,
+  return prisma.projectionRecord
+    .findUnique({
+      where: {
+        projectionName_aggregateType_aggregateId: {
+          projectionName: incidentProjectionName,
+          aggregateType: 'Incident',
+          aggregateId: incidentId,
+        },
       },
-    },
-  });
+    })
+    .then(async (projection) => {
+      if (projection) return projection;
+      const incident = await prisma.incident.findUnique({
+        where: { id: incidentId },
+      });
+      return incident ? { state: incidentState(incident) } : null;
+    });
 }

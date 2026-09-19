@@ -156,10 +156,21 @@ export async function rebuildInspectionProjection(
 
 export async function listEstablishments(actor: InspectionActor) {
   requireRole(actor, 'commander', 'office_officer');
+  const projected = await readModels(
+    establishmentProjectionName,
+    'Establishment',
+  );
   const establishments = (
-    await readModels(establishmentProjectionName, 'Establishment')
+    projected.length
+      ? projected.map(({ state }) => state as Record<string, unknown>)
+      : (
+          await prisma.establishment.findMany({
+            where: { active: true },
+            orderBy: { name: 'asc' },
+            take: 100,
+          })
+        ).map(establishmentState)
   )
-    .map(({ state }) => state as Record<string, unknown>)
     .filter(({ active }) => active === true)
     .sort((left, right) => String(left.name).localeCompare(String(right.name)));
   await recordAudit({
@@ -177,15 +188,23 @@ export async function getEstablishment(
   actor: InspectionActor,
 ) {
   requireRole(actor, 'commander', 'office_officer');
-  const establishment = await prisma.projectionRecord.findUnique({
-    where: {
-      projectionName_aggregateType_aggregateId: {
-        projectionName: establishmentProjectionName,
-        aggregateType: 'Establishment',
-        aggregateId: establishmentId,
+  const establishment = await prisma.projectionRecord
+    .findUnique({
+      where: {
+        projectionName_aggregateType_aggregateId: {
+          projectionName: establishmentProjectionName,
+          aggregateType: 'Establishment',
+          aggregateId: establishmentId,
+        },
       },
-    },
-  });
+    })
+    .then(async (projection) => {
+      if (projection) return projection;
+      const source = await prisma.establishment.findUnique({
+        where: { id: establishmentId },
+      });
+      return source ? { state: establishmentState(source) } : null;
+    });
   if (!establishment) throw new Error('ESTABLISHMENT_NOT_FOUND');
   await recordAudit({
     actor,
@@ -216,9 +235,25 @@ export async function listInspections(actor: InspectionActor) {
   const allowedIds = assignedResourceIds
     ? new Set(assignedResourceIds)
     : undefined;
-  const inspections = (await readModels(inspectionProjectionName, 'Inspection'))
+  const projected = await readModels(inspectionProjectionName, 'Inspection', {
+    aggregateIds: assignedResourceIds,
+    take: assignedResourceIds ? undefined : 100,
+  });
+  const inspections = (
+    projected.length
+      ? projected.map(({ state }) => state)
+      : (
+          await prisma.inspection.findMany({
+            where: assignedResourceIds
+              ? { id: { in: assignedResourceIds } }
+              : undefined,
+            orderBy: { scheduledAt: 'asc' },
+            take: 100,
+          })
+        ).map(inspectionState)
+  )
     .map(
-      ({ state }) =>
+      (state) =>
         state as Record<string, unknown> & {
           id: string;
           scheduledAt: string;
@@ -259,15 +294,23 @@ export async function getInspection(
   inspectionId: string,
   actor: InspectionActor,
 ) {
-  const inspection = await prisma.projectionRecord.findUnique({
-    where: {
-      projectionName_aggregateType_aggregateId: {
-        projectionName: inspectionProjectionName,
-        aggregateType: 'Inspection',
-        aggregateId: inspectionId,
+  const inspection = await prisma.projectionRecord
+    .findUnique({
+      where: {
+        projectionName_aggregateType_aggregateId: {
+          projectionName: inspectionProjectionName,
+          aggregateType: 'Inspection',
+          aggregateId: inspectionId,
+        },
       },
-    },
-  });
+    })
+    .then(async (projection) => {
+      if (projection) return projection;
+      const source = await prisma.inspection.findUnique({
+        where: { id: inspectionId },
+      });
+      return source ? { state: inspectionState(source) } : null;
+    });
   if (!inspection) throw new Error('INSPECTION_NOT_FOUND');
   if (!actor.roles.includes('commander')) {
     const allowed = await canAccess(
@@ -283,7 +326,11 @@ export async function getInspection(
     resourceId: inspectionId,
     operation: 'inspection.read',
   });
-  const [findings, recommendations] = await Promise.all([
+  const templateId =
+    inspection.state && typeof inspection.state === 'object'
+      ? String((inspection.state as Record<string, unknown>).templateId ?? '')
+      : '';
+  const [findings, recommendations, template] = await Promise.all([
     prisma.inspectionFinding.findMany({
       where: { inspectionId },
       orderBy: { createdAt: 'asc' },
@@ -292,6 +339,14 @@ export async function getInspection(
       where: { inspectionId },
       orderBy: { createdAt: 'asc' },
     }),
+    templateId
+      ? prisma.checklistTemplate.findUnique({ where: { id: templateId } })
+      : null,
   ]);
-  return { inspection: inspection.state, findings, recommendations };
+  return {
+    inspection: inspection.state,
+    template: template?.items ?? [],
+    findings,
+    recommendations,
+  };
 }

@@ -4,22 +4,30 @@ import { useState } from 'react';
 
 import { submitOfflineCommand } from '@/components/field/offline-queue';
 
-export function ChecklistForm({ inspectionId }: { inspectionId: string }) {
+type ChecklistItem = {
+  key: string;
+  label: string;
+  required: boolean;
+};
+
+const defaultChecklistItems: ChecklistItem[] = [
+  { key: 'license', label: 'Giấy phép và hồ sơ hợp lệ', required: true },
+  { key: 'security', label: 'Điều kiện an ninh, trật tự', required: true },
+  { key: 'safety', label: 'Điều kiện an toàn tại cơ sở', required: false },
+];
+
+export function ChecklistForm({
+  inspectionId,
+  initialVersion = 0,
+  items = defaultChecklistItems,
+}: {
+  inspectionId: string;
+  initialVersion?: number;
+  items?: ChecklistItem[];
+}) {
   const [message, setMessage] = useState<string | null>(null);
-  const [responses, setResponses] = useState({
-    license: '',
-    security: '',
-    safety: '',
-  });
-  const checklistItems: Array<{
-    key: keyof typeof responses;
-    label: string;
-    required: boolean;
-  }> = [
-    { key: 'license', label: 'Giấy phép và hồ sơ hợp lệ', required: true },
-    { key: 'security', label: 'Điều kiện an ninh, trật tự', required: true },
-    { key: 'safety', label: 'Điều kiện an toàn tại cơ sở', required: false },
-  ];
+  const [version, setVersion] = useState(initialVersion);
+  const [responses, setResponses] = useState<Record<string, string>>({});
   async function command(command: string, body: Record<string, unknown> = {}) {
     const item = await submitOfflineCommand({
       id: globalThis.crypto.randomUUID(),
@@ -28,8 +36,13 @@ export function ChecklistForm({ inspectionId }: { inspectionId: string }) {
       resourceId: inspectionId,
       occurredAt: new Date().toISOString(),
       payloadVersion: 1,
+      baseVersion: version,
       payload: body,
     });
+    const result = item.response?.result as { version?: number } | undefined;
+    if (item.status === 'synced' || item.status === 'pending') {
+      setVersion(result?.version ?? version + 1);
+    }
     setMessage(
       item.status === 'synced'
         ? 'Đã lưu trạng thái.'
@@ -46,12 +59,12 @@ export function ChecklistForm({ inspectionId }: { inspectionId: string }) {
         yêu cầu.
       </p>
       <div className="mt-5 space-y-3">
-        {checklistItems.map(({ key, label, required }) => (
+        {items.map(({ key, label, required }) => (
           <label key={key} className="block text-sm text-slate-200">
             {label}
             {required ? <span className="ml-1 text-cyan-300">*</span> : null}
             <input
-              value={responses[key as keyof typeof responses]}
+              value={responses[key] ?? ''}
               onChange={(event) =>
                 setResponses((current) => ({
                   ...current,
@@ -86,7 +99,7 @@ export function ChecklistForm({ inspectionId }: { inspectionId: string }) {
         <button
           onClick={() =>
             command('finding', {
-              checklistKey: 'license',
+              checklistKey: items[0]?.key ?? 'license',
               description: 'Đã kiểm tra hồ sơ.',
               result: 'pass',
             })

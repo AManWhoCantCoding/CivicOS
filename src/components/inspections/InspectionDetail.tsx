@@ -7,7 +7,8 @@ import { ChecklistForm } from './ChecklistForm';
 import { EnforcementApprovalPanel } from './EnforcementApprovalPanel';
 
 type InspectionData = {
-  inspection: { id: string; status: string } | null;
+  inspection: { id: string; status: string; version?: number } | null;
+  template: Array<{ key: string; label: string; required: boolean }>;
   findings: Array<{ id: string }>;
   recommendations: Array<{ id: string; action: string; status: string }>;
 };
@@ -52,7 +53,11 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
           </p>
         </div>
         <div className="mt-8 space-y-6">
-          <ChecklistForm inspectionId={inspectionId} />
+          <ChecklistForm
+            inspectionId={inspectionId}
+            initialVersion={data.inspection.version ?? 0}
+            items={data.template}
+          />
           <EnforcementApprovalPanel
             inspectionId={inspectionId}
             recommendations={data.recommendations}

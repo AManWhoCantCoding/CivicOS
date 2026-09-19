@@ -99,6 +99,16 @@ export async function acceptOfflineCommand(input: OfflineCommandInput) {
       existing.resourceType === input.resourceType &&
       existing.resourceId === input.resourceId;
     if (!sameCommand) throw new Error('CLIENT_COMMAND_ID_CONFLICT');
+    const staleSync =
+      existing.status === 'syncing' &&
+      (!existing.lastAttemptAt ||
+        existing.lastAttemptAt < new Date(Date.now() - 5 * 60 * 1000));
+    if (staleSync) {
+      return prisma.offlineCommand.update({
+        where: { clientCommandId: input.clientCommandId },
+        data: { status: 'pending', error: 'SYNC_LEASE_EXPIRED' },
+      });
+    }
     return existing;
   }
   await assertCurrentResourceVersion(input);
@@ -139,8 +149,16 @@ export async function acceptOfflineCommand(input: OfflineCommandInput) {
 }
 
 export async function markOfflineCommandSyncing(clientCommandId: string) {
+  const staleSyncAt = new Date(Date.now() - 5 * 60 * 1000);
   const result = await prisma.offlineCommand.updateMany({
-    where: { clientCommandId, status: { in: ['pending', 'failed'] } },
+    where: {
+      clientCommandId,
+      OR: [
+        { status: { in: ['pending', 'failed'] } },
+        { status: 'syncing', lastAttemptAt: null },
+        { status: 'syncing', lastAttemptAt: { lt: staleSyncAt } },
+      ],
+    },
     data: {
       status: 'syncing',
       attemptCount: { increment: 1 },

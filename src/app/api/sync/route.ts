@@ -83,18 +83,31 @@ async function dispatchOfflineCommand(
       };
     }
     case 'inspection.start': {
-      const inspection = await startInspection(resourceId(command), actor);
-      return { inspectionId: inspection.id, status: inspection.status };
+      const inspection = await startInspection(
+        resourceId(command),
+        actor,
+        command.baseVersion ?? undefined,
+      );
+      return {
+        inspectionId: inspection.id,
+        status: inspection.status,
+        version: inspection.version,
+      };
     }
     case 'inspection.save_checklist': {
       const inspection = await saveChecklistResponses(
         {
           inspectionId: resourceId(command),
           responses: responsePayload(payload),
+          baseVersion: command.baseVersion ?? undefined,
         },
         actor,
       );
-      return { inspectionId: inspection.id, status: inspection.status };
+      return {
+        inspectionId: inspection.id,
+        status: inspection.status,
+        version: inspection.version,
+      };
     }
     case 'inspection.finding': {
       const finding = await recordFinding(
@@ -108,6 +121,7 @@ async function dispatchOfflineCommand(
                 (value): value is string => typeof value === 'string',
               )
             : undefined,
+          baseVersion: command.baseVersion ?? undefined,
         },
         actor,
       );
@@ -118,10 +132,15 @@ async function dispatchOfflineCommand(
         {
           inspectionId: resourceId(command),
           result: stringPayload(payload, 'result'),
+          baseVersion: command.baseVersion ?? undefined,
         },
         actor,
       );
-      return { inspectionId: inspection.id, status: inspection.status };
+      return {
+        inspectionId: inspection.id,
+        status: inspection.status,
+        version: inspection.version,
+      };
     }
     default:
       throw new Error('UNSUPPORTED_OFFLINE_COMMAND');
@@ -202,6 +221,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         commandError === 'FORBIDDEN' ||
         commandError.endsWith('_NOT_FOUND') ||
         commandError.startsWith('INVALID_') ||
+        commandError.startsWith('CHECKLIST_') ||
         commandError.endsWith('_REQUIRED')
       ) {
         const rejected = await rejectOfflineCommand(

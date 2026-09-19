@@ -153,9 +153,18 @@ export async function rebuildVehicleProjection(
 
 export async function listRegistry(actor: VehicleActor) {
   requireRole(actor, 'commander', 'office_officer');
-  const registry = (
-    await readModels(registryProjectionName, 'SuspiciousVehicleRegistry')
-  ).map(({ state }) => state);
+  const projected = await readModels(
+    registryProjectionName,
+    'SuspiciousVehicleRegistry',
+  );
+  const registry = projected.length
+    ? projected.map(({ state }) => state)
+    : (
+        await prisma.suspiciousVehicleEntry.findMany({
+          orderBy: { updatedAt: 'desc' },
+          take: 100,
+        })
+      ).map(registryState);
   await recordAudit({
     actor,
     resourceType: 'SuspiciousVehicleRegistry',
@@ -185,10 +194,28 @@ export async function listObservations(actor: VehicleActor) {
   const allowedIds = assignedResourceIds
     ? new Set(assignedResourceIds)
     : undefined;
+  const projected = await readModels(
+    observationProjectionName,
+    'VehicleObservation',
+    {
+      aggregateIds: assignedResourceIds,
+      take: assignedResourceIds ? undefined : 100,
+    },
+  );
   const observations = (
-    await readModels(observationProjectionName, 'VehicleObservation')
+    projected.length
+      ? projected.map(({ state }) => state)
+      : (
+          await prisma.vehicleObservation.findMany({
+            where: assignedResourceIds
+              ? { id: { in: assignedResourceIds } }
+              : undefined,
+            orderBy: { observedAt: 'desc' },
+            take: 100,
+          })
+        ).map(observationState)
   )
-    .map(({ state }) => state as Record<string, unknown>)
+    .map((state) => state as Record<string, unknown>)
     .filter(
       (observation) => !allowedIds || allowedIds.has(String(observation.id)),
     );
@@ -206,15 +233,23 @@ export async function getObservation(
   observationId: string,
   actor: VehicleActor,
 ) {
-  const observation = await prisma.projectionRecord.findUnique({
-    where: {
-      projectionName_aggregateType_aggregateId: {
-        projectionName: observationProjectionName,
-        aggregateType: 'VehicleObservation',
-        aggregateId: observationId,
+  const observation = await prisma.projectionRecord
+    .findUnique({
+      where: {
+        projectionName_aggregateType_aggregateId: {
+          projectionName: observationProjectionName,
+          aggregateType: 'VehicleObservation',
+          aggregateId: observationId,
+        },
       },
-    },
-  });
+    })
+    .then(async (projection) => {
+      if (projection) return projection;
+      const source = await prisma.vehicleObservation.findUnique({
+        where: { id: observationId },
+      });
+      return source ? { state: observationState(source) } : null;
+    });
   if (!observation) throw new Error('OBSERVATION_NOT_FOUND');
   if (!actor.roles.includes('commander')) {
     const allowed = await canAccess(

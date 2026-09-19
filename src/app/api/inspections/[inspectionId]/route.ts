@@ -116,6 +116,7 @@ export async function POST(
       case 'approve':
         return NextResponse.json({
           recommendation: await approveRecommendation(
+            inspectionId,
             String(body.recommendationId ?? ''),
             user,
           ),
@@ -123,6 +124,7 @@ export async function POST(
       case 'reject':
         return NextResponse.json({
           recommendation: await rejectRecommendation(
+            inspectionId,
             String(body.recommendationId ?? ''),
             user,
             String(body.reason ?? ''),

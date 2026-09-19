@@ -13,6 +13,7 @@ export type OfflineQueueItem = {
   payloadVersion: number;
   baseVersion?: number;
   status: OfflineQueueStatus;
+  attemptedAt?: string;
   error?: string;
   response?: Record<string, unknown>;
 };
@@ -82,7 +83,11 @@ function parseServerCommand(value: unknown): {
 async function syncQueueItem(
   item: OfflineQueueItem,
 ): Promise<OfflineQueueItem> {
-  updateQueueItem(item.id, { status: 'syncing', error: undefined });
+  updateQueueItem(item.id, {
+    status: 'syncing',
+    attemptedAt: new Date().toISOString(),
+    error: undefined,
+  });
   try {
     const response = await fetch('/api/sync', {
       method: 'POST',
@@ -154,7 +159,12 @@ export function syncOfflineQueue(): Promise<void> {
   activeSync = (async () => {
     if (!navigator.onLine) return;
     const queue = readQueue().filter(
-      (item) => item.status === 'pending' || item.status === 'failed',
+      (item) =>
+        item.status === 'pending' ||
+        item.status === 'failed' ||
+        (item.status === 'syncing' &&
+          (!item.attemptedAt ||
+            Date.now() - new Date(item.attemptedAt).getTime() > 5 * 60 * 1000)),
     );
     for (const item of queue) await syncQueueItem(item);
   })().finally(() => {

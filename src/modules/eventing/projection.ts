@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 
 import { readGlobalEvents, registerEventConsumer } from './event-store';
 import type { DomainEvent } from './contracts';
+import { upsertReadModel } from './read-model';
 
 export const eventHistoryProjectionName = 'event-history';
 
@@ -37,40 +38,13 @@ export async function applyEventProjection(
     !Array.isArray(event.payload)
       ? event.payload
       : { value: event.payload };
-  return client.projectionRecord.upsert({
-    where: {
-      projectionName_aggregateType_aggregateId: {
-        projectionName: eventHistoryProjectionName,
-        aggregateType: event.aggregateType,
-        aggregateId: event.aggregateId,
-      },
-    },
-    update: {
-      aggregateVersion: event.aggregateVersion,
-      eventType: event.eventType,
-      state: {
-        ...currentState,
-        ...(payload as Record<string, unknown>),
-        lastEventType: event.eventType,
-        lastEventVersion: event.aggregateVersion,
-        ...(event.actor.id ? { lastActorId: event.actor.id } : {}),
-        lastRecordedAt: event.recordedAt.toISOString(),
-      } as Prisma.InputJsonValue,
-    },
-    create: {
-      projectionName: eventHistoryProjectionName,
-      aggregateType: event.aggregateType,
-      aggregateId: event.aggregateId,
-      aggregateVersion: event.aggregateVersion,
-      eventType: event.eventType,
-      state: {
-        ...(payload as Record<string, unknown>),
-        lastEventType: event.eventType,
-        lastEventVersion: event.aggregateVersion,
-        ...(event.actor.id ? { lastActorId: event.actor.id } : {}),
-        lastRecordedAt: event.recordedAt.toISOString(),
-      } as Prisma.InputJsonValue,
-    },
+  return upsertReadModel(client, eventHistoryProjectionName, event, {
+    ...currentState,
+    ...(payload as Record<string, unknown>),
+    lastEventType: event.eventType,
+    lastEventVersion: event.aggregateVersion,
+    ...(event.actor.id ? { lastActorId: event.actor.id } : {}),
+    lastRecordedAt: event.recordedAt.toISOString(),
   });
 }
 

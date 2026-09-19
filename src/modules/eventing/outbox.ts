@@ -214,7 +214,14 @@ export async function getOutboxHealth() {
             0,
             latestEvent.recordedAt.getTime() - earliestCheckpoint.getTime(),
           )
-        : 0,
+        : latestEvent
+          ? null
+          : 0,
+    projectionStatus: latestEvent
+      ? earliestCheckpoint
+        ? 'tracked'
+        : 'unknown'
+      : 'idle',
   };
 }
 

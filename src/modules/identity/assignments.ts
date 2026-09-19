@@ -27,6 +27,13 @@ export async function grantAssignments(
   requireRole(actor, ...allowedRoles);
   if (!input.assigneeUserIds.length) throw new Error('ASSIGNEE_REQUIRED');
   if (!input.task.trim()) throw new Error('TASK_REQUIRED');
+  if (
+    input.organizationId &&
+    actor.organizationUnitId &&
+    input.organizationId !== actor.organizationUnitId
+  ) {
+    throw new Error('ORGANIZATION_SCOPE_FORBIDDEN');
+  }
 
   const assignments = [];
   for (const assigneeUserId of input.assigneeUserIds) {
@@ -85,6 +92,73 @@ export async function grantAssignments(
   return assignments;
 }
 
+export async function carryActiveAssignments(
+  tx: Prisma.TransactionClient,
+  input: {
+    sourceResourceType: string;
+    sourceResourceId: string;
+    targetResourceType: string;
+    targetResourceId: string;
+  },
+  actor: IdentityUser,
+) {
+  const sourceAssignments = await tx.assignment.findMany({
+    where: {
+      resourceType: input.sourceResourceType,
+      resourceId: input.sourceResourceId,
+      status: 'active',
+    },
+  });
+  const assignments = [];
+  for (const source of sourceAssignments) {
+    const assignment = await tx.assignment.create({
+      data: {
+        resourceType: input.targetResourceType,
+        resourceId: input.targetResourceId,
+        task: source.task,
+        assigneeUserId: source.assigneeUserId,
+        grantedById: source.grantedById,
+        organizationId: source.organizationId,
+      },
+    });
+    assignments.push(assignment);
+    await appendEvent(tx, {
+      eventId: randomUUID(),
+      eventType: 'AssignmentGranted',
+      eventVersion: 1,
+      aggregateType: 'Assignment',
+      aggregateId: assignment.id,
+      aggregateVersion: 1,
+      occurredAt: assignment.grantedAt,
+      actor: actorSnapshot(actor),
+      payload: {
+        resourceType: input.targetResourceType,
+        resourceId: input.targetResourceId,
+        assigneeUserId: assignment.assigneeUserId,
+        task: assignment.task,
+        carriedFromAssignmentId: source.id,
+      },
+      metadata: {},
+    });
+  }
+  if (assignments.length) {
+    await recordAudit(
+      {
+        actor,
+        resourceType: input.targetResourceType,
+        resourceId: input.targetResourceId,
+        operation: 'assignment.carried',
+        metadata: {
+          sourceResourceId: input.sourceResourceId,
+          assignmentIds: assignments.map(({ id }) => id),
+        },
+      },
+      tx,
+    );
+  }
+  return assignments;
+}
+
 export async function createAssignments(
   input: AssignmentInput,
   actor: IdentityUser,
@@ -105,6 +179,13 @@ export async function revokeAssignment(
       where: { id: assignmentId },
     });
     if (!existing) throw new Error('ASSIGNMENT_NOT_FOUND');
+    if (
+      actor.organizationUnitId &&
+      existing.organizationId &&
+      existing.organizationId !== actor.organizationUnitId
+    ) {
+      throw new Error('FORBIDDEN');
+    }
     if (existing.status === 'revoked') return existing;
 
     const assignment = await tx.assignment.update({

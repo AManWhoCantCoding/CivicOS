@@ -8,6 +8,7 @@ export type {
 export { assertAccess, canAccess, requireRole } from './authorization';
 export { recordAudit } from './audit';
 export {
+  carryActiveAssignments,
   createAssignments,
   grantAssignments,
   listAssignments,
