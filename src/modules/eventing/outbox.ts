@@ -90,18 +90,36 @@ async function dispatchConsumer(
   if (processed.includes(event.eventId)) return;
 
   await registration.handler(event);
-  const processedEventIds = [...processed, event.eventId];
-  await prisma.projectionCheckpoint.upsert({
-    where: { name: checkpointName },
-    update: {
-      lastRecordedAt: event.recordedAt,
-      processedEventIds: processedEventIds as Prisma.InputJsonValue,
-    },
-    create: {
-      name: checkpointName,
-      lastRecordedAt: event.recordedAt,
-      processedEventIds: processedEventIds as Prisma.InputJsonValue,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`
+      SELECT pg_advisory_xact_lock(hashtext(${checkpointName}))
+    `;
+    const current = await tx.projectionCheckpoint.findUnique({
+      where: { name: checkpointName },
+    });
+    const currentProcessedEventIds = Array.isArray(current?.processedEventIds)
+      ? current.processedEventIds.filter(
+          (value): value is string => typeof value === 'string',
+        )
+      : [];
+    if (currentProcessedEventIds.includes(event.eventId)) return;
+    const processedEventIds = [...currentProcessedEventIds, event.eventId];
+    const lastRecordedAt =
+      current?.lastRecordedAt && current.lastRecordedAt > event.recordedAt
+        ? current.lastRecordedAt
+        : event.recordedAt;
+    await tx.projectionCheckpoint.upsert({
+      where: { name: checkpointName },
+      update: {
+        lastRecordedAt,
+        processedEventIds: processedEventIds as Prisma.InputJsonValue,
+      },
+      create: {
+        name: checkpointName,
+        lastRecordedAt,
+        processedEventIds: processedEventIds as Prisma.InputJsonValue,
+      },
+    });
   });
 }
 

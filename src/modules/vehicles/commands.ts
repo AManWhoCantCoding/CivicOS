@@ -15,6 +15,7 @@ import { createGeoPoint, createSla } from '@/modules/platform';
 import type { VehicleActor, VehicleObservationInput } from './contracts';
 import { canVerifyVehicle, isRegistryActive } from './domain';
 import { normalizePlate } from './contracts';
+import { observationState, registryState } from './projection';
 
 function actorSnapshot(actor: VehicleActor) {
   return {
@@ -102,7 +103,11 @@ export async function createRegistryEntry(
       aggregateVersion: 1,
       occurredAt: entry.createdAt,
       actor: actorSnapshot(actor),
-      payload: { plate, validFrom: validFrom.toISOString() },
+      payload: {
+        plate,
+        validFrom: validFrom.toISOString(),
+        state: registryState(entry),
+      },
       metadata: {},
     });
     await recordAudit(
@@ -160,6 +165,7 @@ export async function updateRegistryEntry(
       payload: {
         status: updated.status,
         validUntil: updated.validUntil?.toISOString(),
+        state: registryState(updated),
       },
       metadata: {},
     });
@@ -228,7 +234,19 @@ export async function recordVehicleObservation(
       aggregateVersion: 1,
       occurredAt: observedAt,
       actor: eventActor,
-      payload: { plate, matchedRegistryId: match?.id },
+      payload: {
+        plate,
+        matchedRegistryId: match?.id,
+        state: observationState({
+          ...observation,
+          status: 'recorded',
+          version: 1,
+          matchedRegistryId: null,
+          matchConfirmedAt: null,
+          matchConfirmedById: null,
+          escalatedAt: null,
+        }),
+      },
       metadata: {},
     });
     if (match) {
@@ -241,7 +259,11 @@ export async function recordVehicleObservation(
         aggregateVersion: 2,
         occurredAt: new Date(),
         actor: eventActor,
-        payload: { registryId: match.id, requiresConfirmation: true },
+        payload: {
+          registryId: match.id,
+          requiresConfirmation: true,
+          state: observationState(observation),
+        },
         metadata: {},
       });
     }
@@ -316,7 +338,10 @@ export async function confirmVehicleMatch(
       aggregateVersion: updated.version,
       occurredAt: new Date(),
       actor: actorSnapshot(actor),
-      payload: { registryId: observation.matchedRegistryId },
+      payload: {
+        registryId: observation.matchedRegistryId,
+        state: observationState(updated),
+      },
       metadata: {},
     });
     await recordAudit(
@@ -400,7 +425,11 @@ export async function verifyVehicleObservation(
       aggregateVersion: updated.version,
       occurredAt: verification.verifiedAt,
       actor: actorSnapshot(actor),
-      payload: { verificationId: verification.id, result: input.result },
+      payload: {
+        verificationId: verification.id,
+        result: input.result,
+        state: observationState(updated),
+      },
       metadata: {},
     });
     await tx.slaInstance.updateMany({
@@ -462,7 +491,7 @@ export async function escalateVehicleObservation(
       aggregateVersion: updated.version,
       occurredAt: updated.escalatedAt ?? new Date(),
       actor: actorSnapshot(actor),
-      payload: { organizationId },
+      payload: { organizationId, state: observationState(updated) },
       metadata: {},
     });
     await recordAudit(

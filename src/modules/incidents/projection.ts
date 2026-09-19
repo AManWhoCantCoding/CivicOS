@@ -2,10 +2,12 @@ import { prisma } from '@/lib/prisma';
 import type { Prisma, PrismaClient } from '@prisma/client';
 
 import {
+  eventPayload,
+  eventState,
   readModels,
   registerEventConsumer,
+  reduceReadModel,
   replayEvents,
-  upsertReadModel,
   type DomainEvent,
 } from '@/modules/eventing';
 import { recordAudit } from '@/modules/identity';
@@ -26,7 +28,7 @@ const incidentEventTypes = [
   'IncidentApprovalRejected',
 ];
 
-function incidentState(incident: {
+export function incidentState(incident: {
   id: string;
   status: string;
   category: string | null;
@@ -58,20 +60,69 @@ function incidentState(incident: {
   };
 }
 
+function legacyIncidentState(
+  previous: Record<string, unknown> | undefined,
+  event: DomainEvent,
+) {
+  const payload = eventPayload(event);
+  const current = previous ?? {
+    id: event.aggregateId,
+    status: 'received',
+    category: null,
+    severity: null,
+    description: '',
+    latitude: null,
+    longitude: null,
+    assignedAt: null,
+    resolvedAt: null,
+    closedAt: null,
+    version: 0,
+    createdAt: event.occurredAt.toISOString(),
+    updatedAt: event.occurredAt.toISOString(),
+  };
+  const statusByEvent: Record<string, string> = {
+    IncidentClassified: 'classified',
+    IncidentVerifying: 'verifying',
+    IncidentTransferred: 'transferred',
+    IncidentResolved: 'resolved',
+    IncidentClosed: 'closed',
+  };
+  const status = statusByEvent[event.eventType];
+  return {
+    ...current,
+    id: event.aggregateId,
+    version: event.aggregateVersion,
+    updatedAt: event.occurredAt.toISOString(),
+    ...(status ? { status } : {}),
+    ...(typeof payload.category === 'string'
+      ? { category: payload.category }
+      : {}),
+    ...(typeof payload.severity === 'string'
+      ? { severity: payload.severity }
+      : {}),
+    ...(event.eventType === 'IncidentAssigned'
+      ? { assignedAt: event.occurredAt.toISOString() }
+      : {}),
+    ...(event.eventType === 'IncidentResolved'
+      ? { resolvedAt: event.occurredAt.toISOString() }
+      : {}),
+    ...(event.eventType === 'IncidentClosed'
+      ? { closedAt: event.occurredAt.toISOString() }
+      : {}),
+  };
+}
+
 async function projectIncidentEvent(
   event: DomainEvent,
   client: PrismaClient = prisma,
 ) {
   if (event.aggregateType !== 'Incident') return;
-  const incident = await client.incident.findUnique({
-    where: { id: event.aggregateId },
-  });
-  if (!incident) return;
-  await upsertReadModel(
+  await reduceReadModel(
     client,
     incidentProjectionName,
     event,
-    incidentState(incident),
+    (previous, currentEvent) =>
+      eventState(currentEvent) ?? legacyIncidentState(previous, currentEvent),
   );
 }
 
@@ -131,20 +182,23 @@ export async function listIncidents(
     : undefined;
   const projected = await readModels(incidentProjectionName, 'Incident', {
     aggregateIds: assignedResourceIds,
+    organizationId: actor.organizationUnitId,
     take: assignedResourceIds ? undefined : 100,
   });
   const incidents = (
     projected.length
       ? projected.map(({ state }) => state as Record<string, unknown>)
-      : (
-          await prisma.incident.findMany({
-            where: assignedResourceIds
-              ? { id: { in: assignedResourceIds } }
-              : undefined,
-            orderBy: { updatedAt: 'desc' },
-            take: 100,
-          })
-        ).map(incidentState)
+      : actor.organizationUnitId && !assignedResourceIds
+        ? []
+        : (
+            await prisma.incident.findMany({
+              where: assignedResourceIds
+                ? { id: { in: assignedResourceIds } }
+                : undefined,
+              orderBy: { updatedAt: 'desc' },
+              take: 100,
+            })
+          ).map(incidentState)
   ).filter((incident) => {
     if (allowedIds && !allowedIds.has(String(incident.id))) return false;
     if (input?.status && incident.status !== input.status) return false;

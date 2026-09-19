@@ -11,6 +11,33 @@ function isCommander(user: IdentityUser): boolean {
   return user.roles.includes('commander');
 }
 
+const resourceAggregateTypes: Record<string, string> = {
+  IntakeReport: 'IntakeReport',
+  Incident: 'Incident',
+  Establishment: 'Establishment',
+  Inspection: 'Inspection',
+  SuspiciousVehicleRegistry: 'SuspiciousVehicleRegistry',
+  VehicleObservation: 'VehicleObservation',
+};
+
+async function resourceOrganizationId(
+  client: PrismaClient | Prisma.TransactionClient,
+  resource: ResourceRef,
+): Promise<string | undefined> {
+  if (resource.organizationId) return resource.organizationId;
+  const aggregateType = resourceAggregateTypes[resource.resourceType];
+  if (!aggregateType) return undefined;
+  const event = await client.eventRecord.findFirst({
+    where: {
+      aggregateType,
+      aggregateId: resource.resourceId,
+    },
+    orderBy: { aggregateVersion: 'asc' },
+    select: { organizationId: true },
+  });
+  return event?.organizationId ?? undefined;
+}
+
 const taskCapabilities: Record<string, AuthorizationAction[]> = {
   incident_verification: ['read', 'mutate', 'read_sensitive'],
   inspection_fieldwork: ['read', 'mutate', 'read_sensitive'],
@@ -31,14 +58,12 @@ export async function canAccess(
   action: AuthorizationAction,
   client: PrismaClient | Prisma.TransactionClient = prisma,
 ): Promise<boolean> {
-  if (isCommander(user)) return true;
-  if (action === 'approve' || action === 'assign') return false;
-  if (
-    resource.organizationId &&
-    user.organizationUnitId !== resource.organizationId
-  ) {
+  const organizationId = await resourceOrganizationId(client, resource);
+  if (organizationId && user.organizationUnitId !== organizationId) {
     return false;
   }
+  if (isCommander(user)) return true;
+  if (action === 'approve' || action === 'assign') return false;
 
   const assignment = await client.assignment.findFirst({
     where: {

@@ -2,10 +2,12 @@ import { prisma } from '@/lib/prisma';
 import type { Prisma, PrismaClient } from '@prisma/client';
 
 import {
+  eventPayload,
+  eventState,
   readModels,
   registerEventConsumer,
+  reduceReadModel,
   replayEvents,
-  upsertReadModel,
   type DomainEvent,
 } from '@/modules/eventing';
 import { canAccess, recordAudit, requireRole } from '@/modules/identity';
@@ -27,7 +29,7 @@ const inspectionEventTypes = [
   'EnforcementRejected',
 ];
 
-function establishmentState(establishment: {
+export function establishmentState(establishment: {
   id: string;
   name: string;
   ownerName: string;
@@ -55,7 +57,7 @@ function establishmentState(establishment: {
   };
 }
 
-function inspectionState(inspection: {
+export function inspectionState(inspection: {
   id: string;
   establishmentId: string;
   assignedUserId: string | null;
@@ -91,34 +93,96 @@ function inspectionState(inspection: {
   };
 }
 
+function legacyEstablishmentState(
+  previous: Record<string, unknown> | undefined,
+  event: DomainEvent,
+) {
+  const payload = eventPayload(event);
+  const occurredAt = event.occurredAt.toISOString();
+  return {
+    id: event.aggregateId,
+    name: '',
+    ownerName: '',
+    address: '',
+    type: typeof payload.type === 'string' ? payload.type : '',
+    licenseRef: null,
+    latitude: null,
+    longitude: null,
+    active: true,
+    createdAt: occurredAt,
+    ...previous,
+    ...(typeof payload.type === 'string' ? { type: payload.type } : {}),
+    updatedAt: occurredAt,
+  };
+}
+
+function legacyInspectionState(
+  previous: Record<string, unknown> | undefined,
+  event: DomainEvent,
+) {
+  const payload = eventPayload(event);
+  const occurredAt = event.occurredAt.toISOString();
+  const current = {
+    establishmentId:
+      typeof payload.establishmentId === 'string'
+        ? payload.establishmentId
+        : '',
+    assignedUserId: null,
+    templateId: '',
+    templateVersion:
+      typeof payload.templateVersion === 'number' ? payload.templateVersion : 1,
+    scheduledAt:
+      typeof payload.scheduledAt === 'string'
+        ? payload.scheduledAt
+        : occurredAt,
+    cadenceMonths:
+      typeof payload.cadenceMonths === 'number' ? payload.cadenceMonths : 6,
+    startedAt: null,
+    completedAt: null,
+    status: 'scheduled',
+    result: null,
+    checklistResponses: [],
+    createdAt: occurredAt,
+    ...previous,
+    id: event.aggregateId,
+    version: event.aggregateVersion,
+    updatedAt: occurredAt,
+  } as Record<string, unknown>;
+
+  if (event.eventType === 'InspectionStarted') {
+    current.status = 'in_progress';
+    current.startedAt = occurredAt;
+  }
+  if (event.eventType === 'InspectionCompleted') {
+    current.status = 'completed';
+    current.completedAt = occurredAt;
+    if (typeof payload.result === 'string') current.result = payload.result;
+  }
+  return current;
+}
+
 async function projectInspectionEvent(
   event: DomainEvent,
   client: PrismaClient = prisma,
 ) {
   if (event.aggregateType === 'Establishment') {
-    const establishment = await client.establishment.findUnique({
-      where: { id: event.aggregateId },
-    });
-    if (establishment) {
-      await upsertReadModel(
-        client,
-        establishmentProjectionName,
-        event,
-        establishmentState(establishment),
-      );
-    }
+    await reduceReadModel(
+      client,
+      establishmentProjectionName,
+      event,
+      (previous, currentEvent) =>
+        eventState(currentEvent) ??
+        legacyEstablishmentState(previous, currentEvent),
+    );
     return;
   }
   if (event.aggregateType !== 'Inspection') return;
-  const inspection = await client.inspection.findUnique({
-    where: { id: event.aggregateId },
-  });
-  if (!inspection) return;
-  await upsertReadModel(
+  await reduceReadModel(
     client,
     inspectionProjectionName,
     event,
-    inspectionState(inspection),
+    (previous, currentEvent) =>
+      eventState(currentEvent) ?? legacyInspectionState(previous, currentEvent),
   );
 }
 
@@ -159,17 +223,20 @@ export async function listEstablishments(actor: InspectionActor) {
   const projected = await readModels(
     establishmentProjectionName,
     'Establishment',
+    { organizationId: actor.organizationUnitId },
   );
   const establishments = (
     projected.length
       ? projected.map(({ state }) => state as Record<string, unknown>)
-      : (
-          await prisma.establishment.findMany({
-            where: { active: true },
-            orderBy: { name: 'asc' },
-            take: 100,
-          })
-        ).map(establishmentState)
+      : actor.organizationUnitId
+        ? []
+        : (
+            await prisma.establishment.findMany({
+              where: { active: true },
+              orderBy: { name: 'asc' },
+              take: 100,
+            })
+          ).map(establishmentState)
   )
     .filter(({ active }) => active === true)
     .sort((left, right) => String(left.name).localeCompare(String(right.name)));
@@ -237,20 +304,23 @@ export async function listInspections(actor: InspectionActor) {
     : undefined;
   const projected = await readModels(inspectionProjectionName, 'Inspection', {
     aggregateIds: assignedResourceIds,
+    organizationId: actor.organizationUnitId,
     take: assignedResourceIds ? undefined : 100,
   });
   const inspections = (
     projected.length
       ? projected.map(({ state }) => state)
-      : (
-          await prisma.inspection.findMany({
-            where: assignedResourceIds
-              ? { id: { in: assignedResourceIds } }
-              : undefined,
-            orderBy: { scheduledAt: 'asc' },
-            take: 100,
-          })
-        ).map(inspectionState)
+      : actor.organizationUnitId && !assignedResourceIds
+        ? []
+        : (
+            await prisma.inspection.findMany({
+              where: assignedResourceIds
+                ? { id: { in: assignedResourceIds } }
+                : undefined,
+              orderBy: { scheduledAt: 'asc' },
+              take: 100,
+            })
+          ).map(inspectionState)
   )
     .map(
       (state) =>

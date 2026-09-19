@@ -158,6 +158,12 @@ describe.skipIf(!postgresEnabled)('Incident Approval PostgreSQL seam', () => {
       status: 'closed',
       description: 'Approval workflow test',
     });
+    await expect(
+      getIncident(incidentId, {
+        ...actor,
+        organizationUnitId: 'unit-cap-tren',
+      }),
+    ).rejects.toThrow('FORBIDDEN');
   });
 
   it('binds approval decisions to the incident and organization scope', async () => {

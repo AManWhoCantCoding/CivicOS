@@ -2,10 +2,12 @@ import { prisma } from '@/lib/prisma';
 import type { Prisma, PrismaClient } from '@prisma/client';
 
 import {
+  eventPayload,
+  eventState,
   readModels,
   registerEventConsumer,
+  reduceReadModel,
   replayEvents,
-  upsertReadModel,
   type DomainEvent,
 } from '@/modules/eventing';
 import { canAccess, recordAudit, requireRole } from '@/modules/identity';
@@ -24,7 +26,7 @@ const vehicleEventTypes = [
   'VehicleEscalated',
 ];
 
-function registryState(entry: {
+export function registryState(entry: {
   id: string;
   plate: string;
   source: string;
@@ -50,7 +52,7 @@ function registryState(entry: {
   };
 }
 
-function observationState(observation: {
+export function observationState(observation: {
   id: string;
   plate: string;
   observedAt: Date;
@@ -88,34 +90,92 @@ function observationState(observation: {
   };
 }
 
+function legacyRegistryState(
+  previous: Record<string, unknown> | undefined,
+  event: DomainEvent,
+) {
+  const payload = eventPayload(event);
+  const occurredAt = event.occurredAt.toISOString();
+  return {
+    id: event.aggregateId,
+    plate: typeof payload.plate === 'string' ? payload.plate : '',
+    source: '',
+    reason: '',
+    validFrom:
+      typeof payload.validFrom === 'string' ? payload.validFrom : occurredAt,
+    validUntil: null,
+    status: 'active',
+    createdById: event.actor.id ?? '',
+    createdAt: occurredAt,
+    ...previous,
+    ...(typeof payload.plate === 'string' ? { plate: payload.plate } : {}),
+    ...(typeof payload.validUntil === 'string' || payload.validUntil === null
+      ? { validUntil: payload.validUntil }
+      : {}),
+    ...(typeof payload.status === 'string' ? { status: payload.status } : {}),
+    updatedAt: occurredAt,
+  };
+}
+
+function legacyObservationState(
+  previous: Record<string, unknown> | undefined,
+  event: DomainEvent,
+) {
+  const payload = eventPayload(event);
+  const occurredAt = event.occurredAt.toISOString();
+  const current = {
+    plate: typeof payload.plate === 'string' ? payload.plate : '',
+    observedAt: occurredAt,
+    latitude: null,
+    longitude: null,
+    description: null,
+    status: 'recorded',
+    observedById: event.actor.id ?? '',
+    clientCommandId: null,
+    evidenceIds: [],
+    matchedRegistryId: null,
+    matchConfirmedAt: null,
+    matchConfirmedById: null,
+    escalatedAt: null,
+    createdAt: occurredAt,
+    ...previous,
+    id: event.aggregateId,
+    version: event.aggregateVersion,
+  } as Record<string, unknown>;
+  if (event.eventType === 'SuspiciousVehicleMatched') {
+    current.status = 'match_suggested';
+    current.matchedRegistryId = payload.registryId ?? null;
+  }
+  if (event.eventType === 'SuspiciousVehicleMatchConfirmed')
+    current.status = 'match_confirmed';
+  if (event.eventType === 'VehicleVerificationRecorded')
+    current.status = 'verified';
+  if (event.eventType === 'VehicleEscalated') current.status = 'escalated';
+  return { ...current, updatedAt: occurredAt };
+}
+
 async function projectVehicleEvent(
   event: DomainEvent,
   client: PrismaClient = prisma,
 ) {
   if (event.aggregateType === 'SuspiciousVehicleRegistry') {
-    const entry = await client.suspiciousVehicleEntry.findUnique({
-      where: { id: event.aggregateId },
-    });
-    if (entry) {
-      await upsertReadModel(
-        client,
-        registryProjectionName,
-        event,
-        registryState(entry),
-      );
-    }
+    await reduceReadModel(
+      client,
+      registryProjectionName,
+      event,
+      (previous, currentEvent) =>
+        eventState(currentEvent) ?? legacyRegistryState(previous, currentEvent),
+    );
     return;
   }
   if (event.aggregateType !== 'VehicleObservation') return;
-  const observation = await client.vehicleObservation.findUnique({
-    where: { id: event.aggregateId },
-  });
-  if (!observation) return;
-  await upsertReadModel(
+  await reduceReadModel(
     client,
     observationProjectionName,
     event,
-    observationState(observation),
+    (previous, currentEvent) =>
+      eventState(currentEvent) ??
+      legacyObservationState(previous, currentEvent),
   );
 }
 
@@ -156,15 +216,18 @@ export async function listRegistry(actor: VehicleActor) {
   const projected = await readModels(
     registryProjectionName,
     'SuspiciousVehicleRegistry',
+    { organizationId: actor.organizationUnitId },
   );
   const registry = projected.length
     ? projected.map(({ state }) => state)
-    : (
-        await prisma.suspiciousVehicleEntry.findMany({
-          orderBy: { updatedAt: 'desc' },
-          take: 100,
-        })
-      ).map(registryState);
+    : actor.organizationUnitId
+      ? []
+      : (
+          await prisma.suspiciousVehicleEntry.findMany({
+            orderBy: { updatedAt: 'desc' },
+            take: 100,
+          })
+        ).map(registryState);
   await recordAudit({
     actor,
     resourceType: 'SuspiciousVehicleRegistry',
@@ -199,21 +262,24 @@ export async function listObservations(actor: VehicleActor) {
     'VehicleObservation',
     {
       aggregateIds: assignedResourceIds,
+      organizationId: actor.organizationUnitId,
       take: assignedResourceIds ? undefined : 100,
     },
   );
   const observations = (
     projected.length
       ? projected.map(({ state }) => state)
-      : (
-          await prisma.vehicleObservation.findMany({
-            where: assignedResourceIds
-              ? { id: { in: assignedResourceIds } }
-              : undefined,
-            orderBy: { observedAt: 'desc' },
-            take: 100,
-          })
-        ).map(observationState)
+      : actor.organizationUnitId && !assignedResourceIds
+        ? []
+        : (
+            await prisma.vehicleObservation.findMany({
+              where: assignedResourceIds
+                ? { id: { in: assignedResourceIds } }
+                : undefined,
+              orderBy: { observedAt: 'desc' },
+              take: 100,
+            })
+          ).map(observationState)
   )
     .map((state) => state as Record<string, unknown>)
     .filter(

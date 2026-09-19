@@ -25,6 +25,7 @@ import {
   type ChecklistItem,
   type ChecklistResponse,
 } from './domain';
+import { establishmentState, inspectionState } from './projection';
 
 function actorSnapshot(actor: InspectionActor) {
   return {
@@ -192,7 +193,11 @@ export async function registerEstablishment(
       aggregateVersion: 1,
       occurredAt: establishment.createdAt,
       actor: actorSnapshot(actor),
-      payload: { establishmentId: establishment.id, type: establishment.type },
+      payload: {
+        establishmentId: establishment.id,
+        type: establishment.type,
+        state: establishmentState(establishment),
+      },
       metadata: {},
     });
     await recordAudit(
@@ -278,6 +283,7 @@ export async function scheduleInspection(
         establishmentId: establishment.id,
         scheduledAt: scheduledAt.toISOString(),
         templateVersion: template.version,
+        state: inspectionState(inspection),
       },
       metadata: {},
     });
@@ -357,7 +363,10 @@ export async function updateEstablishment(
       aggregateVersion,
       occurredAt: updated.updatedAt,
       actor: actorSnapshot(actor),
-      payload: { establishmentId: current.id },
+      payload: {
+        establishmentId: current.id,
+        state: establishmentState(updated),
+      },
       metadata: {},
     });
     await recordAudit(
@@ -430,7 +439,10 @@ export async function saveChecklistResponses(
       aggregateVersion: updated.version,
       occurredAt: new Date(),
       actor: actorSnapshot(actor),
-      payload: { responseCount: input.responses.length },
+      payload: {
+        responseCount: input.responses.length,
+        state: inspectionState(updated),
+      },
       metadata: {},
     });
     return updated;
@@ -544,6 +556,7 @@ async function scheduleNextInspection(
       templateVersion: inspection.templateVersion,
       cadenceMonths: inspection.cadenceMonths,
       previousInspectionId: inspection.id,
+      state: inspectionState(next),
     },
     metadata: {},
   });
@@ -610,7 +623,7 @@ async function transitionInspection(
       aggregateVersion: updated.version,
       occurredAt: new Date(),
       actor: actorSnapshot(actor),
-      payload,
+      payload: { ...payload, state: inspectionState(updated) },
       metadata: {},
     });
     await recordAudit(
@@ -720,6 +733,7 @@ export async function recordFinding(
         findingId: finding.id,
         checklistKey: input.checklistKey,
         evidenceIds,
+        state: inspectionState(updated),
       },
       metadata: {},
     });
@@ -792,7 +806,10 @@ export async function submitRecommendation(
       aggregateVersion: updated.version,
       occurredAt: new Date(),
       actor: actorSnapshot(actor),
-      payload: { recommendationId: recommendation.id },
+      payload: {
+        recommendationId: recommendation.id,
+        state: inspectionState(updated),
+      },
       metadata: {},
     });
     await createSla(
@@ -896,7 +913,11 @@ async function updateRecommendationStatus(
       aggregateVersion: updatedInspection.version,
       occurredAt: new Date(),
       actor: actorSnapshot(actor),
-      payload: { recommendationId, reason },
+      payload: {
+        recommendationId,
+        reason,
+        state: inspectionState(updatedInspection),
+      },
       metadata: {},
     });
     await recordAudit(

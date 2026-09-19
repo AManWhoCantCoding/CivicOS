@@ -21,7 +21,7 @@ import type {
   IntakeReportInput,
 } from './contracts';
 import { assertIncidentTransition } from './domain';
-import { getIncidentReadModel } from './projection';
+import { getIncidentReadModel, incidentState } from './projection';
 
 function eventActor(actor: IncidentActor) {
   return {
@@ -128,7 +128,7 @@ async function commitIncidentStatus(
     aggregateVersion: nextVersion,
     occurredAt: new Date(),
     actor: eventActor(actor),
-    payload: { ...payload, status: next },
+    payload: { ...payload, status: next, state: incidentState(updated) },
     metadata: {},
   });
   await recordAudit(
@@ -215,7 +215,11 @@ async function requestIncidentApproval(
       aggregateVersion: updated.version,
       occurredAt: approval.requestedAt,
       actor: eventActor(actor),
-      payload: { ...payload, approvalId: approval.id },
+      payload: {
+        ...payload,
+        approvalId: approval.id,
+        state: incidentState(updated),
+      },
       metadata: {},
     });
     await recordAudit(
@@ -323,7 +327,11 @@ export async function rejectIncidentApproval(
       aggregateVersion: updated.version,
       occurredAt: new Date(),
       actor: eventActor(actor),
-      payload: { approvalId, reason: reason.trim() },
+      payload: {
+        approvalId,
+        reason: reason.trim(),
+        state: incidentState(updated),
+      },
       metadata: {},
     });
     const decided = await tx.approval.update({
@@ -399,7 +407,7 @@ export async function registerIntakeReport(
         incidentId,
       },
     });
-    await tx.incident.create({
+    const incident = await tx.incident.create({
       data: {
         id: incidentId,
         intakeReportId: reportId,
@@ -431,7 +439,7 @@ export async function registerIntakeReport(
       aggregateVersion: 1,
       occurredAt: new Date(),
       actor: eventActorSnapshot,
-      payload: { intakeReportId: reportId },
+      payload: { intakeReportId: reportId, state: incidentState(incident) },
       metadata: {},
     });
     await recordAudit(
@@ -497,7 +505,7 @@ export async function classifyIncident(
       aggregateVersion: updated.version,
       occurredAt: new Date(),
       actor: eventActor(actor),
-      payload: { category, severity },
+      payload: { category, severity, state: incidentState(updated) },
       metadata: {},
     });
     await recordAudit(
@@ -554,6 +562,7 @@ export async function assignIncident(
       actor: eventActor(actor),
       payload: {
         assignmentIds: assignments.map((assignment) => assignment.id),
+        state: incidentState(updated),
       },
       metadata: {},
     });
