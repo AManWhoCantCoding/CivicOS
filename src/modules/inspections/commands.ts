@@ -42,10 +42,77 @@ function assertCoordinates(input: { latitude?: number; longitude?: number }) {
     createGeoPoint(input.latitude!, input.longitude!);
 }
 
+function assertCadenceMonths(value: number | undefined): number {
+  const cadenceMonths = value ?? 6;
+  if (
+    !Number.isInteger(cadenceMonths) ||
+    cadenceMonths < 1 ||
+    cadenceMonths > 6
+  )
+    throw new Error('INVALID_INSPECTION_CADENCE');
+  return cadenceMonths;
+}
+
+function addMonths(date: Date, months: number): Date {
+  const next = new Date(date);
+  next.setUTCMonth(next.getUTCMonth() + months);
+  return next;
+}
+
 async function ensureTemplate(
   type: string,
   client: Prisma.TransactionClient | typeof prisma,
 ) {
+  const normalizedType = type.trim().toLowerCase();
+  const items = normalizedType.includes('nhà nghỉ')
+    ? [
+        { key: 'license', label: 'Giấy phép lưu trú hợp lệ', required: true },
+        {
+          key: 'security',
+          label: 'Sổ theo dõi khách lưu trú và điều kiện an ninh',
+          required: true,
+        },
+        {
+          key: 'safety',
+          label: 'Điều kiện an toàn tại cơ sở',
+          required: false,
+        },
+      ]
+    : normalizedType.includes('karaoke') || normalizedType.includes('bar')
+      ? [
+          {
+            key: 'license',
+            label: 'Giấy phép kinh doanh hợp lệ',
+            required: true,
+          },
+          {
+            key: 'security',
+            label: 'Điều kiện an ninh và kiểm soát ra vào',
+            required: true,
+          },
+          {
+            key: 'safety',
+            label: 'Điều kiện phòng cháy và an toàn',
+            required: false,
+          },
+        ]
+      : [
+          {
+            key: 'license',
+            label: 'Giấy phép và hồ sơ hợp lệ',
+            required: true,
+          },
+          {
+            key: 'security',
+            label: 'Điều kiện an ninh, trật tự',
+            required: true,
+          },
+          {
+            key: 'safety',
+            label: 'Điều kiện an toàn tại cơ sở',
+            required: false,
+          },
+        ];
   return client.checklistTemplate.upsert({
     where: {
       establishmentType_version: { establishmentType: type, version: 1 },
@@ -55,19 +122,7 @@ async function ensureTemplate(
       establishmentType: type,
       version: 1,
       title: `Checklist ${type}`,
-      items: [
-        { key: 'license', label: 'Giấy phép và hồ sơ hợp lệ', required: true },
-        {
-          key: 'security',
-          label: 'Điều kiện an ninh, trật tự',
-          required: true,
-        },
-        {
-          key: 'safety',
-          label: 'Điều kiện an toàn tại cơ sở',
-          required: false,
-        },
-      ] as Prisma.InputJsonValue,
+      items: items as Prisma.InputJsonValue,
     },
   });
 }
@@ -151,12 +206,14 @@ export async function scheduleInspection(
     establishmentId: string;
     assignedUserId?: string;
     scheduledAt: string;
+    cadenceMonths?: number;
   },
   actor: InspectionActor,
 ) {
   requireRole(actor, 'commander', 'office_officer');
   const scheduledAt = new Date(input.scheduledAt);
   if (Number.isNaN(scheduledAt.getTime())) throw new Error('INVALID_SCHEDULE');
+  const cadenceMonths = assertCadenceMonths(input.cadenceMonths);
 
   return prisma.$transaction(async (tx) => {
     const establishment = await tx.establishment.findUnique({
@@ -182,6 +239,7 @@ export async function scheduleInspection(
         templateId: template.id,
         templateVersion: template.version,
         scheduledAt,
+        cadenceMonths,
         version: 1,
       },
     });
@@ -381,6 +439,86 @@ export async function completeInspection(
   );
 }
 
+async function scheduleNextInspection(
+  tx: Prisma.TransactionClient,
+  inspection: Awaited<ReturnType<typeof prisma.inspection.findUniqueOrThrow>>,
+  actor: InspectionActor,
+) {
+  const scheduledAt = addMonths(
+    inspection.scheduledAt,
+    inspection.cadenceMonths,
+  );
+  const existing = await tx.inspection.findUnique({
+    where: {
+      establishmentId_scheduledAt: {
+        establishmentId: inspection.establishmentId,
+        scheduledAt,
+      },
+    },
+  });
+  if (existing) return existing;
+
+  const assignedUserId = actor.roles.includes('commander')
+    ? inspection.assignedUserId
+    : undefined;
+  const next = await tx.inspection.create({
+    data: {
+      establishmentId: inspection.establishmentId,
+      assignedUserId,
+      templateId: inspection.templateId,
+      templateVersion: inspection.templateVersion,
+      scheduledAt,
+      cadenceMonths: inspection.cadenceMonths,
+      version: 1,
+    },
+  });
+  if (assignedUserId) {
+    await grantAssignments(
+      tx,
+      {
+        resourceType: 'Inspection',
+        resourceId: next.id,
+        task: 'inspection_fieldwork',
+        assigneeUserIds: [assignedUserId],
+        organizationId: actor.organizationUnitId,
+      },
+      actor,
+    );
+  }
+  await appendEvent(tx, {
+    eventId: randomUUID(),
+    eventType: 'InspectionScheduled',
+    eventVersion: 1,
+    aggregateType: 'Inspection',
+    aggregateId: next.id,
+    aggregateVersion: next.version,
+    occurredAt: new Date(),
+    actor: actorSnapshot(actor),
+    payload: {
+      establishmentId: inspection.establishmentId,
+      scheduledAt: scheduledAt.toISOString(),
+      templateVersion: inspection.templateVersion,
+      cadenceMonths: inspection.cadenceMonths,
+      previousInspectionId: inspection.id,
+    },
+    metadata: {},
+  });
+  await createSla(
+    {
+      resourceType: 'Inspection',
+      resourceId: next.id,
+      rule: {
+        kind: 'inspection_completion_7d',
+        durationMs: 7 * 24 * 60 * 60 * 1000,
+      },
+      startedAt: scheduledAt,
+      assigneeUserId: assignedUserId ?? undefined,
+    },
+    tx,
+  );
+  return next;
+}
+
 async function transitionInspection(
   inspectionId: string,
   next: InspectionStatus,
@@ -449,6 +587,7 @@ async function transitionInspection(
           completedAt: updated.completedAt ?? new Date(),
         },
       });
+      await scheduleNextInspection(tx, updated, actor);
     }
     return updated;
   });

@@ -62,14 +62,26 @@ export async function listInspections(actor: InspectionActor) {
     orderBy: { scheduledAt: 'asc' },
     take: 100,
   });
+  const now = new Date();
+  const scheduleView = inspections.map((inspection) => ({
+    ...inspection,
+    scheduleState:
+      inspection.status === 'scheduled'
+        ? inspection.scheduledAt <= now
+          ? 'overdue'
+          : 'upcoming'
+        : inspection.status === 'in_progress'
+          ? 'in_progress'
+          : 'completed',
+  }));
   await recordAudit({
     actor,
     resourceType: 'Inspection',
     resourceId: '*',
     operation: 'inspection.listed',
-    metadata: { count: inspections.length },
+    metadata: { count: scheduleView.length },
   });
-  return inspections;
+  return scheduleView;
 }
 
 export async function getInspection(

@@ -322,6 +322,7 @@ model Inspection {
   templateId         String
   templateVersion    Int
   scheduledAt        DateTime
+  cadenceMonths      Int       @default(6)
   startedAt          DateTime?
   completedAt        DateTime?
   status             String    @default("scheduled")
