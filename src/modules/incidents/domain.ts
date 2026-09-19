@@ -18,10 +18,6 @@ export function assertIncidentTransition(
   }
 }
 
-export function canApproveIncidentAction(roleNames: string[]): boolean {
-  return roleNames.includes('commander');
-}
-
 export function isIncidentStatus(value: string): value is IncidentStatus {
   return Object.prototype.hasOwnProperty.call(allowedTransitions, value);
 }

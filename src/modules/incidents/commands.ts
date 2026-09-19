@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import type { Prisma } from '@prisma/client';
+
 import { prisma } from '@/lib/prisma';
 import { appendEvent } from '@/modules/eventing';
 import {
@@ -18,7 +20,7 @@ import type {
   IncidentStatus,
   IntakeReportInput,
 } from './contracts';
-import { assertIncidentTransition, canApproveIncidentAction } from './domain';
+import { assertIncidentTransition } from './domain';
 
 function eventActor(actor: IncidentActor) {
   return {
@@ -36,8 +38,25 @@ const incidentSlaByStatus: Partial<Record<IncidentStatus, string>> = {
   transferred: 'incident_resolution_7d',
 };
 
+type IncidentTransaction = Parameters<
+  Parameters<typeof prisma.$transaction>[0]
+>[0];
+type IncidentApprovalAction = 'transfer' | 'resolve' | 'close';
+
+const approvalNextStatus: Record<IncidentApprovalAction, IncidentStatus> = {
+  transfer: 'transferred',
+  resolve: 'resolved',
+  close: 'closed',
+};
+
+const approvalEventType: Record<IncidentApprovalAction, string> = {
+  transfer: 'IncidentTransferRequested',
+  resolve: 'IncidentResolutionRequested',
+  close: 'IncidentClosureRequested',
+};
+
 async function advanceIncidentSla(
-  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  tx: IncidentTransaction,
   incidentId: string,
   next: IncidentStatus,
   assigneeUserId: string,
@@ -77,48 +96,124 @@ async function advanceIncidentSla(
   );
 }
 
+async function commitIncidentStatus(
+  tx: IncidentTransaction,
+  incidentId: string,
+  next: IncidentStatus,
+  actor: IncidentActor,
+  payload: Record<string, unknown> = {},
+) {
+  const incident = await tx.incident.findUnique({
+    where: { id: incidentId },
+  });
+  if (!incident) throw new Error('INCIDENT_NOT_FOUND');
+  assertIncidentTransition(incident.status as IncidentStatus, next);
+  const nextVersion = incident.version + 1;
+  const updated = await tx.incident.update({
+    where: { id: incidentId, version: incident.version },
+    data: {
+      status: next,
+      version: nextVersion,
+      ...(next === 'resolved' ? { resolvedAt: new Date() } : {}),
+      ...(next === 'closed' ? { closedAt: new Date() } : {}),
+    },
+  });
+  await appendEvent(tx, {
+    eventId: randomUUID(),
+    eventType: `Incident${next[0].toUpperCase()}${next.slice(1)}`,
+    eventVersion: 1,
+    aggregateType: 'Incident',
+    aggregateId: incidentId,
+    aggregateVersion: nextVersion,
+    occurredAt: new Date(),
+    actor: eventActor(actor),
+    payload: { ...payload, status: next },
+    metadata: {},
+  });
+  await recordAudit(
+    {
+      actor,
+      resourceType: 'Incident',
+      resourceId: incidentId,
+      operation: 'incident.mutated',
+      metadata: { status: next },
+    },
+    tx,
+  );
+  await advanceIncidentSla(tx, incidentId, next, actor.id);
+  return updated;
+}
+
 async function updateIncidentStatus(
   incidentId: string,
   next: IncidentStatus,
   actor: IncidentActor,
   payload: Record<string, unknown> = {},
 ) {
+  if (next !== 'verifying') throw new Error('APPROVAL_REQUIRED');
+  await assertAccess(
+    actor,
+    { resourceType: 'Incident', resourceId: incidentId },
+    'mutate',
+  );
+  return prisma.$transaction((tx) =>
+    commitIncidentStatus(tx, incidentId, next, actor, payload),
+  );
+}
+
+async function requestIncidentApproval(
+  incidentId: string,
+  actor: IncidentActor,
+  action: IncidentApprovalAction,
+  payload: Record<string, unknown>,
+) {
+  await assertAccess(
+    actor,
+    { resourceType: 'Incident', resourceId: incidentId },
+    'mutate',
+  );
   return prisma.$transaction(async (tx) => {
     const incident = await tx.incident.findUnique({
       where: { id: incidentId },
     });
     if (!incident) throw new Error('INCIDENT_NOT_FOUND');
-    assertIncidentTransition(incident.status as IncidentStatus, next);
-    if (next === 'transferred' || next === 'resolved' || next === 'closed') {
-      if (!canApproveIncidentAction(actor.roles)) throw new Error('FORBIDDEN');
-    } else {
-      await assertAccess(
-        actor,
-        { resourceType: 'Incident', resourceId: incidentId },
-        'mutate',
-        tx,
-      );
-    }
-    const nextVersion = incident.version + 1;
+    assertIncidentTransition(
+      incident.status as IncidentStatus,
+      approvalNextStatus[action],
+    );
+    const existing = await tx.approval.findFirst({
+      where: {
+        resourceType: 'Incident',
+        resourceId: incidentId,
+        action,
+        status: 'pending',
+      },
+    });
+    if (existing) return { approval: existing, incident };
+
+    const approval = await tx.approval.create({
+      data: {
+        resourceType: 'Incident',
+        resourceId: incidentId,
+        action,
+        requestedById: actor.id,
+        payload: payload as Prisma.InputJsonValue,
+      },
+    });
     const updated = await tx.incident.update({
       where: { id: incidentId, version: incident.version },
-      data: {
-        status: next,
-        version: nextVersion,
-        ...(next === 'resolved' ? { resolvedAt: new Date() } : {}),
-        ...(next === 'closed' ? { closedAt: new Date() } : {}),
-      },
+      data: { version: incident.version + 1 },
     });
     await appendEvent(tx, {
       eventId: randomUUID(),
-      eventType: `Incident${next[0].toUpperCase()}${next.slice(1)}`,
+      eventType: approvalEventType[action],
       eventVersion: 1,
       aggregateType: 'Incident',
       aggregateId: incidentId,
-      aggregateVersion: nextVersion,
-      occurredAt: new Date(),
+      aggregateVersion: updated.version,
+      occurredAt: approval.requestedAt,
       actor: eventActor(actor),
-      payload: { ...payload, status: next },
+      payload: { ...payload, approvalId: approval.id },
       metadata: {},
     });
     await recordAudit(
@@ -126,13 +221,114 @@ async function updateIncidentStatus(
         actor,
         resourceType: 'Incident',
         resourceId: incidentId,
-        operation: 'incident.mutated',
-        metadata: { status: next },
+        operation: `incident.${action}_approval_requested`,
+        metadata: { approvalId: approval.id },
       },
       tx,
     );
-    await advanceIncidentSla(tx, incidentId, next, actor.id);
-    return updated;
+    return { approval, incident: updated };
+  });
+}
+
+function approvalPayload(value: Prisma.JsonValue): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+export async function approveIncident(
+  approvalId: string,
+  actor: IncidentActor,
+) {
+  requireRole(actor, 'commander');
+  return prisma.$transaction(async (tx) => {
+    const approval = await tx.approval.findUnique({
+      where: { id: approvalId },
+    });
+    if (!approval) throw new Error('APPROVAL_NOT_FOUND');
+    if (approval.status !== 'pending')
+      throw new Error('APPROVAL_ALREADY_DECIDED');
+    if (approval.resourceType !== 'Incident')
+      throw new Error('APPROVAL_RESOURCE_INVALID');
+    if (!(approval.action in approvalNextStatus))
+      throw new Error('APPROVAL_ACTION_INVALID');
+    const action = approval.action as IncidentApprovalAction;
+    const updated = await commitIncidentStatus(
+      tx,
+      approval.resourceId,
+      approvalNextStatus[action],
+      actor,
+      { ...approvalPayload(approval.payload), approvalId },
+    );
+    const decided = await tx.approval.update({
+      where: { id: approvalId, status: 'pending' },
+      data: {
+        status: 'approved',
+        decidedById: actor.id,
+        decidedAt: new Date(),
+      },
+    });
+    return { approval: decided, incident: updated };
+  });
+}
+
+export async function rejectIncidentApproval(
+  approvalId: string,
+  actor: IncidentActor,
+  reason: string,
+) {
+  requireRole(actor, 'commander');
+  if (!reason.trim()) throw new Error('REJECTION_REASON_REQUIRED');
+  return prisma.$transaction(async (tx) => {
+    const approval = await tx.approval.findUnique({
+      where: { id: approvalId },
+    });
+    if (!approval) throw new Error('APPROVAL_NOT_FOUND');
+    if (approval.status !== 'pending')
+      throw new Error('APPROVAL_ALREADY_DECIDED');
+    if (approval.resourceType !== 'Incident')
+      throw new Error('APPROVAL_RESOURCE_INVALID');
+    const incident = await tx.incident.findUnique({
+      where: { id: approval.resourceId },
+    });
+    if (!incident) throw new Error('INCIDENT_NOT_FOUND');
+    const updated = await tx.incident.update({
+      where: { id: incident.id, version: incident.version },
+      data: { version: incident.version + 1 },
+    });
+    await appendEvent(tx, {
+      eventId: randomUUID(),
+      eventType: 'IncidentApprovalRejected',
+      eventVersion: 1,
+      aggregateType: 'Incident',
+      aggregateId: incident.id,
+      aggregateVersion: updated.version,
+      occurredAt: new Date(),
+      actor: eventActor(actor),
+      payload: { approvalId, reason: reason.trim() },
+      metadata: {},
+    });
+    const decided = await tx.approval.update({
+      where: { id: approvalId, status: 'pending' },
+      data: {
+        status: 'rejected',
+        decidedById: actor.id,
+        decidedAt: new Date(),
+        reason: reason.trim(),
+      },
+    });
+    await recordAudit(
+      {
+        actor,
+        resourceType: 'Incident',
+        resourceId: incident.id,
+        operation: 'incident.approval_rejected',
+        reason: reason.trim(),
+        metadata: { approvalId },
+      },
+      tx,
+    );
+    return { approval: decided, incident: updated };
   });
 }
 
@@ -373,7 +569,7 @@ export async function transferIncident(
   organizationId: string,
 ) {
   if (!organizationId.trim()) throw new Error('ORGANIZATION_REQUIRED');
-  return updateIncidentStatus(incidentId, 'transferred', actor, {
+  return requestIncidentApproval(incidentId, actor, 'transfer', {
     organizationId,
   });
 }
@@ -384,11 +580,11 @@ export async function resolveIncident(
   resolution: string,
 ) {
   if (!resolution.trim()) throw new Error('RESOLUTION_REQUIRED');
-  return updateIncidentStatus(incidentId, 'resolved', actor, { resolution });
+  return requestIncidentApproval(incidentId, actor, 'resolve', { resolution });
 }
 
 export async function closeIncident(incidentId: string, actor: IncidentActor) {
-  return updateIncidentStatus(incidentId, 'closed', actor);
+  return requestIncidentApproval(incidentId, actor, 'close', {});
 }
 
 export async function getIncident(incidentId: string, actor: IncidentActor) {

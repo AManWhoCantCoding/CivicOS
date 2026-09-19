@@ -3,17 +3,15 @@ export type {
   IncidentStatus,
   IntakeReportInput,
 } from './contracts';
-export {
-  assertIncidentTransition,
-  canApproveIncidentAction,
-  isIncidentStatus,
-} from './domain';
+export { assertIncidentTransition, isIncidentStatus } from './domain';
 export {
   assignIncident,
+  approveIncident,
   classifyIncident,
   closeIncident,
   getIncident,
   registerIntakeReport,
+  rejectIncidentApproval,
   resolveIncident,
   startVerification,
   transferIncident,

@@ -3,9 +3,11 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/modules/identity';
 import {
   assignIncident,
+  approveIncident,
   classifyIncident,
   closeIncident,
   resolveIncident,
+  rejectIncidentApproval,
   startVerification,
   transferIncident,
 } from '@/modules/incidents';
@@ -67,6 +69,18 @@ export async function POST(
       case 'close':
         return NextResponse.json({
           incident: await closeIncident(incidentId, user),
+        });
+      case 'approve':
+        return NextResponse.json({
+          result: await approveIncident(String(body.approvalId ?? ''), user),
+        });
+      case 'reject':
+        return NextResponse.json({
+          result: await rejectIncidentApproval(
+            String(body.approvalId ?? ''),
+            user,
+            String(body.reason ?? ''),
+          ),
         });
       default:
         return NextResponse.json({ error: 'UNKNOWN_COMMAND' }, { status: 400 });
