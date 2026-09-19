@@ -1,0 +1,164 @@
+import { randomUUID } from 'node:crypto';
+
+import type { Prisma } from '@prisma/client';
+
+import { prisma } from '@/lib/prisma';
+import { appendEvent, getAggregateVersion } from '@/modules/eventing';
+
+import { recordAudit } from './audit';
+import type { AssignmentInput, IdentityUser } from './contracts';
+import { requireRole } from './authorization';
+
+function actorSnapshot(actor: IdentityUser) {
+  return {
+    id: actor.id,
+    name: actor.name,
+    role: actor.roles[0],
+    organizationId: actor.organizationUnitId,
+  };
+}
+
+export async function grantAssignments(
+  tx: Prisma.TransactionClient,
+  input: AssignmentInput,
+  actor: IdentityUser,
+  allowedRoles: string[] = ['commander'],
+) {
+  requireRole(actor, ...allowedRoles);
+  if (!input.assigneeUserIds.length) throw new Error('ASSIGNEE_REQUIRED');
+
+  const assignments = [];
+  for (const assigneeUserId of input.assigneeUserIds) {
+    const assignment = await tx.assignment.create({
+      data: {
+        resourceType: input.resourceType,
+        resourceId: input.resourceId,
+        task: input.task,
+        assigneeUserId,
+        grantedById: actor.id,
+        organizationId: input.organizationId ?? actor.organizationUnitId,
+      },
+    });
+    assignments.push(assignment);
+
+    await appendEvent(tx, {
+      eventId: randomUUID(),
+      eventType: 'AssignmentGranted',
+      eventVersion: 1,
+      aggregateType: 'Assignment',
+      aggregateId: assignment.id,
+      aggregateVersion: 1,
+      occurredAt: assignment.grantedAt,
+      actor: actorSnapshot(actor),
+      payload: {
+        resourceType: input.resourceType,
+        resourceId: input.resourceId,
+        assigneeUserId,
+        task: input.task,
+      },
+      metadata: {},
+    });
+  }
+
+  await recordAudit(
+    {
+      actor,
+      resourceType: input.resourceType,
+      resourceId: input.resourceId,
+      operation: 'assignment.granted',
+      reason: input.task,
+      metadata: { assignmentIds: assignments.map(({ id }) => id) },
+    },
+    tx,
+  );
+
+  return assignments;
+}
+
+export async function createAssignments(
+  input: AssignmentInput,
+  actor: IdentityUser,
+) {
+  return prisma.$transaction((tx) => grantAssignments(tx, input, actor));
+}
+
+export async function revokeAssignment(
+  assignmentId: string,
+  actor: IdentityUser,
+  reason: string,
+) {
+  requireRole(actor, 'commander');
+  if (!reason.trim()) throw new Error('REVOKE_REASON_REQUIRED');
+
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.assignment.findUnique({
+      where: { id: assignmentId },
+    });
+    if (!existing) throw new Error('ASSIGNMENT_NOT_FOUND');
+    if (existing.status === 'revoked') return existing;
+
+    const assignment = await tx.assignment.update({
+      where: { id: assignmentId, status: 'active' },
+      data: {
+        status: 'revoked',
+        revokedAt: new Date(),
+        revokedById: actor.id,
+        revokeReason: reason.trim(),
+      },
+    });
+    const aggregateVersion =
+      (await getAggregateVersion(tx, 'Assignment', assignment.id)) + 1;
+    await appendEvent(tx, {
+      eventId: randomUUID(),
+      eventType: 'AssignmentRevoked',
+      eventVersion: 1,
+      aggregateType: 'Assignment',
+      aggregateId: assignment.id,
+      aggregateVersion,
+      occurredAt: assignment.revokedAt ?? new Date(),
+      actor: actorSnapshot(actor),
+      payload: { reason: reason.trim() },
+      metadata: {},
+    });
+    await recordAudit(
+      {
+        actor,
+        resourceType: assignment.resourceType,
+        resourceId: assignment.resourceId,
+        operation: 'assignment.revoked',
+        reason: reason.trim(),
+        metadata: { assignmentId: assignment.id },
+      },
+      tx,
+    );
+    return assignment;
+  });
+}
+
+export async function listAssignments(input: {
+  actor: IdentityUser;
+  resourceType?: string;
+  resourceId?: string;
+  includeRevoked?: boolean;
+}) {
+  const { actor, resourceType, resourceId, includeRevoked = false } = input;
+  const assignments = await prisma.assignment.findMany({
+    where: {
+      ...(resourceType ? { resourceType } : {}),
+      ...(resourceId ? { resourceId } : {}),
+      ...(actor.roles.includes('commander')
+        ? {}
+        : { assigneeUserId: actor.id }),
+      ...(includeRevoked ? {} : { status: 'active' }),
+    },
+    orderBy: { grantedAt: 'desc' },
+  });
+  await recordAudit({
+    actor,
+    resourceType: resourceType ?? 'Assignment',
+    resourceId: resourceId ?? '*',
+    operation: 'assignment.listed',
+    metadata: { count: assignments.length, includeRevoked },
+  });
+  return assignments;
+}
