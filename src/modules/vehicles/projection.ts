@@ -28,6 +28,9 @@ export async function listObservations(actor: VehicleActor) {
             resourceType: 'VehicleObservation',
             assigneeUserId: actor.id,
             status: 'active',
+            ...(actor.organizationUnitId
+              ? { organizationId: actor.organizationUnitId }
+              : {}),
           },
           select: { resourceId: true },
         })
@@ -63,8 +66,7 @@ export async function getObservation(
       { resourceType: 'VehicleObservation', resourceId: observationId },
       'read',
     );
-    if (!allowed && observation.observedById !== actor.id)
-      throw new Error('FORBIDDEN');
+    if (!allowed) throw new Error('FORBIDDEN');
   }
   await recordAudit({
     actor,

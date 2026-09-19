@@ -15,6 +15,9 @@ export async function listIncidents(
             resourceType: 'Incident',
             assigneeUserId: actor.id,
             status: 'active',
+            ...(actor.organizationUnitId
+              ? { organizationId: actor.organizationUnitId }
+              : {}),
           },
           select: { resourceId: true },
         })

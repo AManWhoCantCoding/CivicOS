@@ -103,7 +103,11 @@ describe.skipIf(!postgresEnabled)('Incident Approval PostgreSQL seam', () => {
     expect(transfer.approval.status).toBe('pending');
     expect(transfer.incident.status).toBe('verifying');
 
-    const transferred = await approveIncident(transfer.approval.id, actor);
+    const transferred = await approveIncident(
+      incidentId,
+      transfer.approval.id,
+      actor,
+    );
     expect(transferred.incident.status).toBe('transferred');
 
     const resolution = await resolveIncident(
@@ -111,11 +115,19 @@ describe.skipIf(!postgresEnabled)('Incident Approval PostgreSQL seam', () => {
       actor,
       'Đã hoàn tất xác minh.',
     );
-    const resolved = await approveIncident(resolution.approval.id, actor);
+    const resolved = await approveIncident(
+      incidentId,
+      resolution.approval.id,
+      actor,
+    );
     expect(resolved.incident.status).toBe('resolved');
 
     const closure = await closeIncident(incidentId, actor);
-    const closed = await approveIncident(closure.approval.id, actor);
+    const closed = await approveIncident(
+      incidentId,
+      closure.approval.id,
+      actor,
+    );
     expect(closed.incident.status).toBe('closed');
 
     const events = await prisma.eventRecord.findMany({
@@ -133,5 +145,38 @@ describe.skipIf(!postgresEnabled)('Incident Approval PostgreSQL seam', () => {
         'IncidentClosed',
       ]),
     );
+  });
+
+  it('binds approval decisions to the incident and organization scope', async () => {
+    const registered = await registerIntakeReport(
+      {
+        channel: 'manual_other',
+        receivedAt: new Date().toISOString(),
+        content: 'Approval scope test',
+        idempotencyKey: `approval-scope-test:${Date.now()}`,
+      },
+      actor,
+    );
+    intakeReportId = registered.reportId;
+    incidentId = registered.incidentId;
+
+    await classifyIncident(incidentId, actor, 'test', 'medium');
+    await startVerification(incidentId, actor);
+    const transfer = await transferIncident(incidentId, actor, 'unit-cap-tren');
+
+    await expect(
+      approveIncident('another-incident', transfer.approval.id, actor),
+    ).rejects.toThrow('APPROVAL_RESOURCE_MISMATCH');
+    await expect(
+      approveIncident(incidentId, transfer.approval.id, {
+        ...actor,
+        organizationUnitId: 'unit-cap-tren',
+      }),
+    ).rejects.toThrow('FORBIDDEN');
+
+    const pending = await prisma.approval.findUnique({
+      where: { id: transfer.approval.id },
+    });
+    expect(pending?.status).toBe('pending');
   });
 });

@@ -72,11 +72,16 @@ export async function POST(
         });
       case 'approve':
         return NextResponse.json({
-          result: await approveIncident(String(body.approvalId ?? ''), user),
+          result: await approveIncident(
+            incidentId,
+            String(body.approvalId ?? ''),
+            user,
+          ),
         });
       case 'reject':
         return NextResponse.json({
           result: await rejectIncidentApproval(
+            incidentId,
             String(body.approvalId ?? ''),
             user,
             String(body.reason ?? ''),

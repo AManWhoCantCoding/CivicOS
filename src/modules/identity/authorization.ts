@@ -33,6 +33,12 @@ export async function canAccess(
 ): Promise<boolean> {
   if (isCommander(user)) return true;
   if (action === 'approve' || action === 'assign') return false;
+  if (
+    resource.organizationId &&
+    user.organizationUnitId !== resource.organizationId
+  ) {
+    return false;
+  }
 
   const assignment = await client.assignment.findFirst({
     where: {
@@ -40,6 +46,9 @@ export async function canAccess(
       resourceId: resource.resourceId,
       assigneeUserId: user.id,
       status: 'active',
+      ...(resource.organizationId || user.organizationUnitId
+        ? { organizationId: resource.organizationId ?? user.organizationUnitId }
+        : {}),
     },
     select: { task: true },
   });

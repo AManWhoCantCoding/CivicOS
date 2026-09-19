@@ -196,6 +196,7 @@ async function requestIncidentApproval(
         resourceType: 'Incident',
         resourceId: incidentId,
         action,
+        organizationId: actor.organizationUnitId,
         requestedById: actor.id,
         payload: payload as Prisma.InputJsonValue,
       },
@@ -237,6 +238,7 @@ function approvalPayload(value: Prisma.JsonValue): Record<string, unknown> {
 }
 
 export async function approveIncident(
+  incidentId: string,
   approvalId: string,
   actor: IncidentActor,
 ) {
@@ -250,6 +252,13 @@ export async function approveIncident(
       throw new Error('APPROVAL_ALREADY_DECIDED');
     if (approval.resourceType !== 'Incident')
       throw new Error('APPROVAL_RESOURCE_INVALID');
+    if (approval.resourceId !== incidentId)
+      throw new Error('APPROVAL_RESOURCE_MISMATCH');
+    if (
+      approval.organizationId &&
+      approval.organizationId !== actor.organizationUnitId
+    )
+      throw new Error('FORBIDDEN');
     if (!(approval.action in approvalNextStatus))
       throw new Error('APPROVAL_ACTION_INVALID');
     const action = approval.action as IncidentApprovalAction;
@@ -273,6 +282,7 @@ export async function approveIncident(
 }
 
 export async function rejectIncidentApproval(
+  incidentId: string,
   approvalId: string,
   actor: IncidentActor,
   reason: string,
@@ -288,6 +298,13 @@ export async function rejectIncidentApproval(
       throw new Error('APPROVAL_ALREADY_DECIDED');
     if (approval.resourceType !== 'Incident')
       throw new Error('APPROVAL_RESOURCE_INVALID');
+    if (approval.resourceId !== incidentId)
+      throw new Error('APPROVAL_RESOURCE_MISMATCH');
+    if (
+      approval.organizationId &&
+      approval.organizationId !== actor.organizationUnitId
+    )
+      throw new Error('FORBIDDEN');
     const incident = await tx.incident.findUnique({
       where: { id: approval.resourceId },
     });
@@ -608,5 +625,23 @@ export async function getIncident(incidentId: string, actor: IncidentActor) {
     where: { aggregateType: 'Incident', aggregateId: incidentId },
     orderBy: { aggregateVersion: 'asc' },
   });
-  return { incident, events };
+  const approvals = await prisma.approval.findMany({
+    where: {
+      resourceType: 'Incident',
+      resourceId: incidentId,
+      status: 'pending',
+      OR: [
+        { requestedById: actor.id },
+        ...(actor.roles.includes('commander')
+          ? [
+              actor.organizationUnitId
+                ? { organizationId: actor.organizationUnitId }
+                : {},
+            ]
+          : []),
+      ],
+    },
+    orderBy: { requestedAt: 'asc' },
+  });
+  return { incident, events, approvals };
 }

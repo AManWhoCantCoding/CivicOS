@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { submitOfflineCommand } from '@/components/field/offline-queue';
+
 export function ChecklistForm({ inspectionId }: { inspectionId: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const [responses, setResponses] = useState({
@@ -19,13 +21,21 @@ export function ChecklistForm({ inspectionId }: { inspectionId: string }) {
     { key: 'safety', label: 'Điều kiện an toàn tại cơ sở', required: false },
   ];
   async function command(command: string, body: Record<string, unknown> = {}) {
-    const response = await fetch(`/api/inspections/${inspectionId}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ command, ...body }),
+    const item = await submitOfflineCommand({
+      id: globalThis.crypto.randomUUID(),
+      commandType: `inspection.${command}`,
+      resourceType: 'Inspection',
+      resourceId: inspectionId,
+      occurredAt: new Date().toISOString(),
+      payloadVersion: 1,
+      payload: body,
     });
     setMessage(
-      response.ok ? 'Đã lưu trạng thái.' : 'Thao tác chưa được chấp nhận.',
+      item.status === 'synced'
+        ? 'Đã lưu trạng thái.'
+        : item.status === 'pending' || item.status === 'syncing'
+          ? 'Đã lưu cục bộ, chờ đồng bộ.'
+          : (item.error ?? 'Thao tác chưa được chấp nhận.'),
     );
   }
   return (

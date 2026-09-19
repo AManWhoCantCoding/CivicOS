@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from 'react';
 
+import { submitOfflineCommand } from '@/components/field/offline-queue';
+
 export function VehicleObservationForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -9,27 +11,31 @@ export function VehicleObservationForm() {
     event.preventDefault();
     setLoading(true);
     const form = new FormData(event.currentTarget);
-    const response = await fetch('/api/vehicles/observations', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        clientCommandId: globalThis.crypto.randomUUID(),
-        payloadVersion: 1,
+    const item = await submitOfflineCommand({
+      id: globalThis.crypto.randomUUID(),
+      commandType: 'vehicle.record_observation',
+      resourceType: 'VehicleObservation',
+      occurredAt: new Date().toISOString(),
+      payloadVersion: 1,
+      payload: {
         plate: form.get('plate'),
         observedAt: new Date().toISOString(),
         latitude: Number(form.get('latitude')),
         longitude: Number(form.get('longitude')),
         description: form.get('description'),
-      }),
+      },
     });
-    const result = await response.json();
     setLoading(false);
+    const result = item.response?.result as
+      { matchId?: string | null } | undefined;
     setMessage(
-      response.ok
-        ? result.result?.match
+      item.status === 'synced'
+        ? result?.matchId
           ? 'Đã ghi nhận. Có match cần xác minh.'
           : 'Đã lưu quan sát.'
-        : (result.error ?? 'Không thể lưu quan sát.'),
+        : item.status === 'pending' || item.status === 'syncing'
+          ? 'Đã lưu cục bộ, chờ đồng bộ.'
+          : (item.error ?? 'Không thể lưu quan sát.'),
     );
   }
   return (

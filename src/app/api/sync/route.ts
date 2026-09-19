@@ -9,6 +9,12 @@ import {
   markOfflineCommandSyncing,
   rejectOfflineCommand,
 } from '@/modules/platform';
+import {
+  completeInspection,
+  recordFinding,
+  saveChecklistResponses,
+  startInspection,
+} from '@/modules/inspections';
 import { recordVehicleObservation } from '@/modules/vehicles';
 
 function payloadValue(payload: Record<string, unknown>, key: string): unknown {
@@ -25,40 +31,101 @@ function numberPayload(payload: Record<string, unknown>, key: string): number {
   return typeof value === 'number' ? value : Number.NaN;
 }
 
+function resourceId(command: Awaited<ReturnType<typeof acceptOfflineCommand>>) {
+  if (!command.resourceId) throw new Error('RESOURCE_ID_REQUIRED');
+  return command.resourceId;
+}
+
+function responsePayload(payload: Record<string, unknown>) {
+  return Array.isArray(payload.responses)
+    ? payload.responses.map((response) => {
+        const value = response as Record<string, unknown>;
+        return {
+          key: stringPayload(value, 'key'),
+          value: stringPayload(value, 'value'),
+        };
+      })
+    : [];
+}
+
 async function dispatchOfflineCommand(
   command: Awaited<ReturnType<typeof acceptOfflineCommand>>,
   actor: Awaited<ReturnType<typeof getCurrentUser>>,
 ) {
   if (!actor) throw new Error('UNAUTHENTICATED');
-  if (command.commandType !== 'vehicle.record_observation') {
-    throw new Error('UNSUPPORTED_OFFLINE_COMMAND');
-  }
   const payload =
     command.payload && typeof command.payload === 'object'
       ? (command.payload as Record<string, unknown>)
       : {};
-  const result = await recordVehicleObservation(
-    {
-      plate: stringPayload(payload, 'plate'),
-      observedAt: stringPayload(payload, 'observedAt'),
-      latitude: numberPayload(payload, 'latitude'),
-      longitude: numberPayload(payload, 'longitude'),
-      description: stringPayload(payload, 'description'),
-      evidenceIds: Array.isArray(payload.evidenceIds)
-        ? payload.evidenceIds.filter(
-            (value): value is string => typeof value === 'string',
-          )
-        : undefined,
-      clientCommandId: command.clientCommandId,
-      baseVersion: command.baseVersion ?? undefined,
-    },
-    actor,
-  );
-  return {
-    observationId: result.observation.id,
-    status: result.observation.status,
-    matchId: result.match?.id ?? null,
-  };
+  switch (command.commandType) {
+    case 'vehicle.record_observation': {
+      const result = await recordVehicleObservation(
+        {
+          plate: stringPayload(payload, 'plate'),
+          observedAt: stringPayload(payload, 'observedAt'),
+          latitude: numberPayload(payload, 'latitude'),
+          longitude: numberPayload(payload, 'longitude'),
+          description: stringPayload(payload, 'description'),
+          evidenceIds: Array.isArray(payload.evidenceIds)
+            ? payload.evidenceIds.filter(
+                (value): value is string => typeof value === 'string',
+              )
+            : undefined,
+          clientCommandId: command.clientCommandId,
+          baseVersion: command.baseVersion ?? undefined,
+        },
+        actor,
+      );
+      return {
+        observationId: result.observation.id,
+        status: result.observation.status,
+        matchId: result.match?.id ?? null,
+      };
+    }
+    case 'inspection.start': {
+      const inspection = await startInspection(resourceId(command), actor);
+      return { inspectionId: inspection.id, status: inspection.status };
+    }
+    case 'inspection.save_checklist': {
+      const inspection = await saveChecklistResponses(
+        {
+          inspectionId: resourceId(command),
+          responses: responsePayload(payload),
+        },
+        actor,
+      );
+      return { inspectionId: inspection.id, status: inspection.status };
+    }
+    case 'inspection.finding': {
+      const finding = await recordFinding(
+        {
+          inspectionId: resourceId(command),
+          checklistKey: stringPayload(payload, 'checklistKey'),
+          description: stringPayload(payload, 'description'),
+          result: stringPayload(payload, 'result'),
+          evidenceIds: Array.isArray(payload.evidenceIds)
+            ? payload.evidenceIds.filter(
+                (value): value is string => typeof value === 'string',
+              )
+            : undefined,
+        },
+        actor,
+      );
+      return { findingId: finding.id };
+    }
+    case 'inspection.complete': {
+      const inspection = await completeInspection(
+        {
+          inspectionId: resourceId(command),
+          result: stringPayload(payload, 'result'),
+        },
+        actor,
+      );
+      return { inspectionId: inspection.id, status: inspection.status };
+    }
+    default:
+      throw new Error('UNSUPPORTED_OFFLINE_COMMAND');
+  }
 }
 
 export async function GET(): Promise<NextResponse> {

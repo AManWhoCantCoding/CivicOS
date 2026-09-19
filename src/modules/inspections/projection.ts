@@ -39,20 +39,21 @@ export async function getEstablishment(
 }
 
 export async function listInspections(actor: InspectionActor) {
-  const isOffice = actor.roles.includes('office_officer');
-  const assignedResourceIds =
-    actor.roles.includes('commander') || isOffice
-      ? undefined
-      : (
-          await prisma.assignment.findMany({
-            where: {
-              resourceType: 'Inspection',
-              assigneeUserId: actor.id,
-              status: 'active',
-            },
-            select: { resourceId: true },
-          })
-        ).map(({ resourceId }) => resourceId);
+  const assignedResourceIds = actor.roles.includes('commander')
+    ? undefined
+    : (
+        await prisma.assignment.findMany({
+          where: {
+            resourceType: 'Inspection',
+            assigneeUserId: actor.id,
+            status: 'active',
+            ...(actor.organizationUnitId
+              ? { organizationId: actor.organizationUnitId }
+              : {}),
+          },
+          select: { resourceId: true },
+        })
+      ).map(({ resourceId }) => resourceId);
 
   const inspections = await prisma.inspection.findMany({
     where: assignedResourceIds
@@ -79,17 +80,13 @@ export async function getInspection(
     where: { id: inspectionId },
   });
   if (!inspection) throw new Error('INSPECTION_NOT_FOUND');
-  if (
-    !actor.roles.includes('commander') &&
-    !actor.roles.includes('office_officer')
-  ) {
+  if (!actor.roles.includes('commander')) {
     const allowed = await canAccess(
       actor,
       { resourceType: 'Inspection', resourceId: inspectionId },
       'read',
     );
-    if (!allowed && inspection.assignedUserId !== actor.id)
-      throw new Error('FORBIDDEN');
+    if (!allowed) throw new Error('FORBIDDEN');
   }
   await recordAudit({
     actor,

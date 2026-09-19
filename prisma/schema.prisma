@@ -270,17 +270,18 @@ model Incident {
 }
 
 model Approval {
-  id            String    @id @default(cuid())
-  resourceType  String
-  resourceId    String
-  action        String
-  status        String    @default("pending")
-  requestedById String
-  decidedById   String?
-  reason        String?
-  payload       Json
-  requestedAt   DateTime  @default(now())
-  decidedAt     DateTime?
+  id             String    @id @default(cuid())
+  resourceType   String
+  resourceId     String
+  action         String
+  status         String    @default("pending")
+  organizationId String?
+  requestedById  String
+  decidedById    String?
+  reason         String?
+  payload        Json
+  requestedAt    DateTime  @default(now())
+  decidedAt      DateTime?
 
   @@unique([resourceType, resourceId, action, status])
   @@index([resourceType, resourceId, status])

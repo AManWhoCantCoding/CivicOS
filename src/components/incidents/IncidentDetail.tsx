@@ -22,6 +22,11 @@ type Detail = {
       aggregateVersion: number;
       occurredAt: string;
     }>;
+    approvals: Array<{
+      id: string;
+      action: string;
+      requestedAt: string;
+    }>;
   };
 };
 
@@ -81,6 +86,7 @@ export function IncidentDetail({ incidentId }: { incidentId: string }) {
             <IncidentStatusActions
               incidentId={incident.id}
               status={incident.status}
+              pendingApprovals={detail.incident.approvals}
             />
           </section>
           <IncidentAssignmentPanel incidentId={incident.id} />

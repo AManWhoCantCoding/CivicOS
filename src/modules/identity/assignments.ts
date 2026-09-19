@@ -30,6 +30,15 @@ export async function grantAssignments(
 
   const assignments = [];
   for (const assigneeUserId of input.assigneeUserIds) {
+    const assignee = await tx.user.findUnique({
+      where: { id: assigneeUserId },
+      select: { active: true, organizationUnitId: true },
+    });
+    if (!assignee?.active) throw new Error('ASSIGNEE_NOT_FOUND');
+    const organizationId = input.organizationId ?? actor.organizationUnitId;
+    if (organizationId && assignee.organizationUnitId !== organizationId) {
+      throw new Error('ASSIGNEE_ORGANIZATION_MISMATCH');
+    }
     const assignment = await tx.assignment.create({
       data: {
         resourceType: input.resourceType,
@@ -37,7 +46,7 @@ export async function grantAssignments(
         task: input.task,
         assigneeUserId,
         grantedById: actor.id,
-        organizationId: input.organizationId ?? actor.organizationUnitId,
+        organizationId,
       },
     });
     assignments.push(assignment);
@@ -149,7 +158,12 @@ export async function listAssignments(input: {
       ...(resourceId ? { resourceId } : {}),
       ...(actor.roles.includes('commander')
         ? {}
-        : { assigneeUserId: actor.id }),
+        : {
+            assigneeUserId: actor.id,
+            ...(actor.organizationUnitId
+              ? { organizationId: actor.organizationUnitId }
+              : {}),
+          }),
       ...(includeRevoked ? {} : { status: 'active' }),
     },
     orderBy: { grantedAt: 'desc' },

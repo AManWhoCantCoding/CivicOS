@@ -23,7 +23,25 @@ export async function replayEvents(
   ) => Promise<void>,
   options: Parameters<typeof readGlobalEvents>[1] = {},
 ): Promise<number> {
-  const events = await readGlobalEvents(client, options);
-  for (const event of events) await apply(event);
-  return events.length;
+  const pageSize = options.take ?? 1000;
+  let afterRecordedAt = options.afterRecordedAt;
+  let afterEventId = options.afterEventId;
+  let count = 0;
+
+  while (true) {
+    const events = await readGlobalEvents(client, {
+      ...options,
+      take: pageSize,
+      afterRecordedAt,
+      afterEventId,
+    });
+    for (const event of events) await apply(event);
+    count += events.length;
+    if (events.length < pageSize) return count;
+
+    const last = events.at(-1);
+    if (!last) return count;
+    afterRecordedAt = last.recordedAt;
+    afterEventId = last.eventId;
+  }
 }

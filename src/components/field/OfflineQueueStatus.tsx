@@ -2,42 +2,45 @@
 
 import { useEffect, useState } from 'react';
 
-type QueueItem = {
-  id: string;
-  commandType: string;
-  status: 'pending' | 'syncing' | 'failed' | 'synced';
-};
-
-const queueKey = 'civicos:offline-queue';
+import {
+  offlineQueueEventName,
+  readOfflineQueue,
+  syncOfflineQueue,
+  type OfflineQueueItem,
+} from './offline-queue';
 
 export function OfflineQueueStatus() {
   const [online, setOnline] = useState(true);
-  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [queue, setQueue] = useState<OfflineQueueItem[]>([]);
   useEffect(() => {
     const update = () => setOnline(window.navigator.onLine);
-    const readQueue = () => {
-      try {
-        const stored = JSON.parse(localStorage.getItem(queueKey) ?? '[]');
-        setQueue(Array.isArray(stored) ? stored : []);
-      } catch {
-        setQueue([]);
-      }
+    const read = () => {
+      setQueue(readOfflineQueue());
     };
     update();
-    readQueue();
-    window.addEventListener('online', update);
+    read();
+    const resume = () => {
+      update();
+      void syncOfflineQueue().then(read);
+    };
+    window.addEventListener('online', resume);
     window.addEventListener('offline', update);
-    window.addEventListener('storage', readQueue);
+    window.addEventListener('storage', read);
+    window.addEventListener(offlineQueueEventName, read);
+    if (window.navigator.onLine) void syncOfflineQueue().then(read);
     return () => {
-      window.removeEventListener('online', update);
+      window.removeEventListener('online', resume);
       window.removeEventListener('offline', update);
-      window.removeEventListener('storage', readQueue);
+      window.removeEventListener('storage', read);
+      window.removeEventListener(offlineQueueEventName, read);
     };
   }, []);
   const pending = queue.filter(
     (item) => item.status === 'pending' || item.status === 'syncing',
   ).length;
-  const failed = queue.filter((item) => item.status === 'failed').length;
+  const failed = queue.filter(
+    (item) => item.status === 'failed' || item.status === 'rejected',
+  ).length;
   return (
     <section className="rounded-xl border border-slate-800 bg-slate-900 p-5">
       <div className="flex items-start justify-between gap-4">
@@ -63,7 +66,7 @@ export function OfflineQueueStatus() {
           </dd>
         </div>
         <div>
-          <dt className="text-slate-500">Lỗi</dt>
+          <dt className="text-slate-500">Lỗi/từ chối</dt>
           <dd className="mt-1 text-lg font-semibold text-rose-200">{failed}</dd>
         </div>
         <div>

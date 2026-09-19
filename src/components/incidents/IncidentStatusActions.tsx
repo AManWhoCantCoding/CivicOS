@@ -5,12 +5,16 @@ import { useState } from 'react';
 export function IncidentStatusActions({
   incidentId,
   status,
+  pendingApprovals = [],
 }: {
   incidentId: string;
   status: string;
+  pendingApprovals?: Array<{ id: string; action: string }>;
 }) {
   const [message, setMessage] = useState<string | null>(null);
-  const [approvalId, setApprovalId] = useState<string | null>(null);
+  const [approvalId, setApprovalId] = useState<string | null>(
+    pendingApprovals[0]?.id ?? null,
+  );
   async function send(command: string, extra: Record<string, string> = {}) {
     const response = await fetch(`/api/incidents/${incidentId}/commands`, {
       method: 'POST',

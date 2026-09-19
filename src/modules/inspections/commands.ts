@@ -74,7 +74,6 @@ async function ensureTemplate(
 
 async function assertInspectionAccess(
   inspectionId: string,
-  assignedUserId: string | null,
   actor: InspectionActor,
   action: 'read' | 'mutate',
 ) {
@@ -198,7 +197,6 @@ export async function scheduleInspection(
           organizationId: actor.organizationUnitId,
         },
         actor,
-        ['commander', 'office_officer'],
       );
     }
 
@@ -325,12 +323,7 @@ export async function saveChecklistResponses(
     where: { id: input.inspectionId },
   });
   if (!inspection) throw new Error('INSPECTION_NOT_FOUND');
-  await assertInspectionAccess(
-    input.inspectionId,
-    inspection.assignedUserId,
-    actor,
-    'mutate',
-  );
+  await assertInspectionAccess(input.inspectionId, actor, 'mutate');
   if (inspection.status !== 'in_progress')
     throw new Error('INSPECTION_NOT_IN_PROGRESS');
 
@@ -402,12 +395,7 @@ async function transitionInspection(
     where: { id: inspectionId },
   });
   if (!inspection) throw new Error('INSPECTION_NOT_FOUND');
-  await assertInspectionAccess(
-    inspectionId,
-    inspection.assignedUserId,
-    actor,
-    'mutate',
-  );
+  await assertInspectionAccess(inspectionId, actor, 'mutate');
 
   return prisma.$transaction(async (tx) => {
     const current = await tx.inspection.findUnique({
@@ -483,12 +471,7 @@ export async function recordFinding(
     where: { id: input.inspectionId },
   });
   if (!inspection) throw new Error('INSPECTION_NOT_FOUND');
-  await assertInspectionAccess(
-    input.inspectionId,
-    inspection.assignedUserId,
-    actor,
-    'mutate',
-  );
+  await assertInspectionAccess(input.inspectionId, actor, 'mutate');
   if (inspection.status !== 'in_progress')
     throw new Error('INSPECTION_NOT_IN_PROGRESS');
   if (!isInspectionResult(input.result))
@@ -575,12 +558,7 @@ export async function submitRecommendation(
     where: { id: input.inspectionId },
   });
   if (!inspection) throw new Error('INSPECTION_NOT_FOUND');
-  await assertInspectionAccess(
-    input.inspectionId,
-    inspection.assignedUserId,
-    actor,
-    'mutate',
-  );
+  await assertInspectionAccess(input.inspectionId, actor, 'mutate');
 
   return prisma.$transaction(async (tx) => {
     const findings = await tx.inspectionFinding.findMany({
