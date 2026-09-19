@@ -26,4 +26,5 @@ export {
   getInspection,
   listEstablishments,
   listInspections,
+  rebuildInspectionProjection,
 } from './projection';

@@ -10,4 +10,9 @@ export {
   updateRegistryEntry,
   verifyVehicleObservation,
 } from './commands';
-export { getObservation, listObservations, listRegistry } from './projection';
+export {
+  getObservation,
+  listObservations,
+  listRegistry,
+  rebuildVehicleProjection,
+} from './projection';

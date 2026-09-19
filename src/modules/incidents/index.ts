@@ -16,5 +16,9 @@ export {
   startVerification,
   transferIncident,
 } from './commands';
-export { listIncidents } from './projection';
+export {
+  getIncidentReadModel,
+  listIncidents,
+  rebuildIncidentProjection,
+} from './projection';
 export { parseIntakeReport } from './schemas';

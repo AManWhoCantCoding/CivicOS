@@ -1,15 +1,167 @@
 import { prisma } from '@/lib/prisma';
+import type { Prisma, PrismaClient } from '@prisma/client';
+
+import {
+  readModels,
+  registerEventConsumer,
+  replayEvents,
+  upsertReadModel,
+  type DomainEvent,
+} from '@/modules/eventing';
 import { canAccess, recordAudit, requireRole } from '@/modules/identity';
 
 import type { InspectionActor } from './contracts';
 
+const establishmentProjectionName = 'establishment-read-model';
+const inspectionProjectionName = 'inspection-read-model';
+const inspectionEventTypes = [
+  'EstablishmentRegistered',
+  'EstablishmentUpdated',
+  'InspectionScheduled',
+  'InspectionStarted',
+  'InspectionChecklistSaved',
+  'InspectionFindingRecorded',
+  'InspectionCompleted',
+  'EnforcementRecommendationSubmitted',
+  'EnforcementApproved',
+  'EnforcementRejected',
+];
+
+function establishmentState(establishment: {
+  id: string;
+  name: string;
+  ownerName: string;
+  address: string;
+  type: string;
+  licenseRef: string | null;
+  latitude: Prisma.Decimal | null;
+  longitude: Prisma.Decimal | null;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  return {
+    id: establishment.id,
+    name: establishment.name,
+    ownerName: establishment.ownerName,
+    address: establishment.address,
+    type: establishment.type,
+    licenseRef: establishment.licenseRef,
+    latitude: establishment.latitude?.toString() ?? null,
+    longitude: establishment.longitude?.toString() ?? null,
+    active: establishment.active,
+    createdAt: establishment.createdAt.toISOString(),
+    updatedAt: establishment.updatedAt.toISOString(),
+  };
+}
+
+function inspectionState(inspection: {
+  id: string;
+  establishmentId: string;
+  assignedUserId: string | null;
+  templateId: string;
+  templateVersion: number;
+  scheduledAt: Date;
+  cadenceMonths: number;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  status: string;
+  result: string | null;
+  version: number;
+  checklistResponses: Prisma.JsonValue;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  return {
+    id: inspection.id,
+    establishmentId: inspection.establishmentId,
+    assignedUserId: inspection.assignedUserId,
+    templateId: inspection.templateId,
+    templateVersion: inspection.templateVersion,
+    scheduledAt: inspection.scheduledAt.toISOString(),
+    cadenceMonths: inspection.cadenceMonths,
+    startedAt: inspection.startedAt?.toISOString() ?? null,
+    completedAt: inspection.completedAt?.toISOString() ?? null,
+    status: inspection.status,
+    result: inspection.result,
+    version: inspection.version,
+    checklistResponses: inspection.checklistResponses,
+    createdAt: inspection.createdAt.toISOString(),
+    updatedAt: inspection.updatedAt.toISOString(),
+  };
+}
+
+async function projectInspectionEvent(
+  event: DomainEvent,
+  client: PrismaClient = prisma,
+) {
+  if (event.aggregateType === 'Establishment') {
+    const establishment = await client.establishment.findUnique({
+      where: { id: event.aggregateId },
+    });
+    if (establishment) {
+      await upsertReadModel(
+        client,
+        establishmentProjectionName,
+        event,
+        establishmentState(establishment),
+      );
+    }
+    return;
+  }
+  if (event.aggregateType !== 'Inspection') return;
+  const inspection = await client.inspection.findUnique({
+    where: { id: event.aggregateId },
+  });
+  if (!inspection) return;
+  await upsertReadModel(
+    client,
+    inspectionProjectionName,
+    event,
+    inspectionState(inspection),
+  );
+}
+
+const projectionRegistration = globalThis as typeof globalThis & {
+  civicosInspectionProjection?: boolean;
+};
+
+if (!projectionRegistration.civicosInspectionProjection) {
+  for (const eventType of inspectionEventTypes) {
+    registerEventConsumer(
+      eventType,
+      (event) => projectInspectionEvent(event).then(() => undefined),
+      'inspection-read-model',
+    );
+  }
+  projectionRegistration.civicosInspectionProjection = true;
+}
+
+export async function rebuildInspectionProjection(
+  client: PrismaClient = prisma,
+): Promise<number> {
+  await client.projectionRecord.deleteMany({
+    where: {
+      projectionName: {
+        in: [establishmentProjectionName, inspectionProjectionName],
+      },
+    },
+  });
+  return replayEvents(
+    client,
+    (event) => projectInspectionEvent(event, client).then(() => undefined),
+    { take: 1000 },
+  );
+}
+
 export async function listEstablishments(actor: InspectionActor) {
   requireRole(actor, 'commander', 'office_officer');
-  const establishments = await prisma.establishment.findMany({
-    where: { active: true },
-    orderBy: { name: 'asc' },
-    take: 100,
-  });
+  const establishments = (
+    await readModels(establishmentProjectionName, 'Establishment')
+  )
+    .map(({ state }) => state as Record<string, unknown>)
+    .filter(({ active }) => active === true)
+    .sort((left, right) => String(left.name).localeCompare(String(right.name)));
   await recordAudit({
     actor,
     resourceType: 'Establishment',
@@ -25,8 +177,14 @@ export async function getEstablishment(
   actor: InspectionActor,
 ) {
   requireRole(actor, 'commander', 'office_officer');
-  const establishment = await prisma.establishment.findUnique({
-    where: { id: establishmentId },
+  const establishment = await prisma.projectionRecord.findUnique({
+    where: {
+      projectionName_aggregateType_aggregateId: {
+        projectionName: establishmentProjectionName,
+        aggregateType: 'Establishment',
+        aggregateId: establishmentId,
+      },
+    },
   });
   if (!establishment) throw new Error('ESTABLISHMENT_NOT_FOUND');
   await recordAudit({
@@ -35,7 +193,7 @@ export async function getEstablishment(
     resourceId: establishmentId,
     operation: 'establishment.read',
   });
-  return establishment;
+  return establishment.state;
 }
 
 export async function listInspections(actor: InspectionActor) {
@@ -55,19 +213,32 @@ export async function listInspections(actor: InspectionActor) {
         })
       ).map(({ resourceId }) => resourceId);
 
-  const inspections = await prisma.inspection.findMany({
-    where: assignedResourceIds
-      ? { id: { in: assignedResourceIds } }
-      : undefined,
-    orderBy: { scheduledAt: 'asc' },
-    take: 100,
-  });
+  const allowedIds = assignedResourceIds
+    ? new Set(assignedResourceIds)
+    : undefined;
+  const inspections = (await readModels(inspectionProjectionName, 'Inspection'))
+    .map(
+      ({ state }) =>
+        state as Record<string, unknown> & {
+          id: string;
+          scheduledAt: string;
+          status: string;
+        },
+    )
+    .filter(
+      (inspection) => !allowedIds || allowedIds.has(String(inspection.id)),
+    )
+    .sort(
+      (left, right) =>
+        new Date(String(left.scheduledAt)).getTime() -
+        new Date(String(right.scheduledAt)).getTime(),
+    );
   const now = new Date();
   const scheduleView = inspections.map((inspection) => ({
     ...inspection,
     scheduleState:
       inspection.status === 'scheduled'
-        ? inspection.scheduledAt <= now
+        ? new Date(String(inspection.scheduledAt)) <= now
           ? 'overdue'
           : 'upcoming'
         : inspection.status === 'in_progress'
@@ -88,8 +259,14 @@ export async function getInspection(
   inspectionId: string,
   actor: InspectionActor,
 ) {
-  const inspection = await prisma.inspection.findUnique({
-    where: { id: inspectionId },
+  const inspection = await prisma.projectionRecord.findUnique({
+    where: {
+      projectionName_aggregateType_aggregateId: {
+        projectionName: inspectionProjectionName,
+        aggregateType: 'Inspection',
+        aggregateId: inspectionId,
+      },
+    },
   });
   if (!inspection) throw new Error('INSPECTION_NOT_FOUND');
   if (!actor.roles.includes('commander')) {
@@ -116,5 +293,5 @@ export async function getInspection(
       orderBy: { createdAt: 'asc' },
     }),
   ]);
-  return { inspection, findings, recommendations };
+  return { inspection: inspection.state, findings, recommendations };
 }

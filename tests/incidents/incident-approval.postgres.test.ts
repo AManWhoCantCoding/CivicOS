@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { prisma } from '@/lib/prisma';
+import { processOutboxUntilIdle } from '@/modules/eventing';
 import type { IdentityUser } from '@/modules/identity';
 import {
   approveIncident,
   closeIncident,
   classifyIncident,
+  getIncident,
   registerIntakeReport,
   resolveIncident,
   startVerification,
@@ -67,6 +69,9 @@ describe.skipIf(!postgresEnabled)('Incident Approval PostgreSQL seam', () => {
       where: {
         eventId: { in: eventRecords.map(({ eventId }) => eventId) },
       },
+    });
+    await prisma.projectionRecord.deleteMany({
+      where: { aggregateType: 'Incident', aggregateId: incidentId },
     });
     await prisma.approval.deleteMany({
       where: { resourceType: 'Incident', resourceId: incidentId },
@@ -145,6 +150,14 @@ describe.skipIf(!postgresEnabled)('Incident Approval PostgreSQL seam', () => {
         'IncidentClosed',
       ]),
     );
+
+    await processOutboxUntilIdle();
+    const detail = await getIncident(incidentId, actor);
+    expect(detail.incident).toMatchObject({
+      id: incidentId,
+      status: 'closed',
+      description: 'Approval workflow test',
+    });
   });
 
   it('binds approval decisions to the incident and organization scope', async () => {

@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { prisma } from '@/lib/prisma';
+import { processOutboxUntilIdle } from '@/modules/eventing';
 import type { IdentityUser } from '@/modules/identity';
 import {
   completeInspection,
+  listInspections,
   registerEstablishment,
   saveChecklistResponses,
   scheduleInspection,
@@ -71,6 +73,14 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
     await prisma.eventRecord.deleteMany({
       where: { eventId: { in: eventRecords.map(({ eventId }) => eventId) } },
     });
+    await prisma.projectionRecord.deleteMany({
+      where: {
+        OR: [
+          { aggregateType: 'Establishment', aggregateId: establishmentId },
+          { aggregateType: 'Inspection', aggregateId: { in: inspectionIds } },
+        ],
+      },
+    });
     await prisma.inspectionFinding.deleteMany({
       where: { inspectionId: { in: inspectionIds } },
     });
@@ -137,6 +147,7 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
       actor,
     );
     await completeInspection({ inspectionId: first.id, result: 'pass' }, actor);
+    await processOutboxUntilIdle();
 
     const next = await prisma.inspection.findUnique({
       where: {
@@ -151,5 +162,8 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
       cadenceMonths: 6,
       templateVersion: first.templateVersion,
     });
+    expect(
+      (await listInspections(actor)).find(({ id }) => id === next?.id),
+    ).toMatchObject({ scheduleState: 'overdue' });
   });
 });

@@ -21,6 +21,7 @@ import type {
   IntakeReportInput,
 } from './contracts';
 import { assertIncidentTransition } from './domain';
+import { getIncidentReadModel } from './projection';
 
 function eventActor(actor: IncidentActor) {
   return {
@@ -617,9 +618,7 @@ export async function getIncident(incidentId: string, actor: IncidentActor) {
     resourceId: incidentId,
     operation: 'incident.read',
   });
-  const incident = await prisma.incident.findUnique({
-    where: { id: incidentId },
-  });
+  const incident = await getIncidentReadModel(incidentId);
   if (!incident) throw new Error('INCIDENT_NOT_FOUND');
   const events = await prisma.eventRecord.findMany({
     where: { aggregateType: 'Incident', aggregateId: incidentId },
@@ -643,5 +642,5 @@ export async function getIncident(incidentId: string, actor: IncidentActor) {
     },
     orderBy: { requestedAt: 'asc' },
   });
-  return { incident, events, approvals };
+  return { incident: incident.state, events, approvals };
 }

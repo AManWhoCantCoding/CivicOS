@@ -18,6 +18,7 @@ export {
   processOutboxUntilIdle,
 } from './outbox';
 export { replayAggregate, replayEvents } from './replay';
+export { readModels, upsertReadModel } from './read-model';
 export {
   applyEventProjection,
   eventHistoryProjectionName,
