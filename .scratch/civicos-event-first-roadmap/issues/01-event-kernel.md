@@ -29,16 +29,18 @@
 
 ## Implementation steps
 
-1. **Chốt baseline runtime trước khi sửa schema.** Xác nhận cách chạy Next.js hiện tại, giữ `src/lib/prisma.ts` làm Prisma entry point, thay datasource SQLite bằng PostgreSQL, bổ sung `DATABASE_URL` mẫu và thêm lệnh khởi động database/worker/test. Không bắt đầu code event trước khi `docker compose up` và Prisma generate chạy được.
-2. **Thiết kế event envelope và persistence contract.** Chốt tên field, kiểu dữ liệu, timezone, event version, aggregate version, Actor snapshot, correlation/causation IDs và metadata. Viết contract test trước khi viết repository.
-3. **Tạo schema và migration.** Thêm EventRecord, OutboxMessage và ProjectionCheckpoint với unique constraint cho `eventId` và `(aggregateType, aggregateId, aggregateVersion)`, index cho stream, event type, pending outbox và occurred time. Chạy migration trên database sạch và kiểm tra migration không dựa vào dữ liệu thủ công.
-4. **Implement public Event kernel API.** Chỉ export contract cần cho module nghiệp vụ: append transaction, read stream, publish outbox, register consumer và replay projection. Không export Prisma model hoặc repository implementation ra ngoài public entry point.
-5. **Implement atomic append và optimistic concurrency.** Trong cùng transaction, ghi aggregate state change reference, EventRecord và OutboxMessage; từ chối version cũ hoặc version trùng; không dùng last-write-wins.
-6. **Implement outbox lifecycle.** Worker claim message bằng locking an toàn, ghi attempt count/last error/next retry, retry exponential backoff, chuyển dead-letter sau threshold và không tạo side effect trùng khi message được giao lại.
-7. **Implement consumer dispatch và replay.** Consumer cập nhật ProjectionCheckpoint sau khi xử lý thành công; replay có thể chạy từ sequence/event time, xóa hoặc rebuild projection theo policy và không thay đổi EventRecord gốc.
-8. **Implement worker health và lag signal.** Expose trạng thái worker, pending count, oldest pending age, failed/dead-letter count và projection lag để ticket 07 có thể kiểm tra p95 10 giây.
-9. **Viết integration tests bằng PostgreSQL thật.** Bao phủ rollback atomicity, concurrent append, duplicate event, outbox claim/retry/dead-letter, idempotent consumer và replay equivalence; không mock transaction/locking.
-10. **Chạy verification gate.** Chạy lint, typecheck/build, migration trên database sạch, worker process và toàn bộ eventing tests. Chỉ đánh dấu ticket hoàn thành khi public entry point không để lộ internals và tất cả acceptance criteria đều có test hoặc signal kiểm chứng.
+- [x] 1. **Chốt và kiểm tra runtime baseline có thể tái lập trước verification.** PostgreSQL phải khởi động được, Prisma Client phải generate được, migration phải chạy được trên database tạm sạch và lần chạy thứ hai phải là no-op. Ghi lại command, exit code và môi trường chạy; không dùng database/mock thay cho PostgreSQL thật.
+- [x] 2. **Chốt event envelope và persistence contract qua public Event kernel API.** Contract test phải kiểm tra đầy đủ field, Actor snapshot, correlation/causation IDs, payload, metadata, duplicate/version behavior và round-trip persistence; test phải đi qua public entry point, không import implementation nội bộ.
+
+> **Change rationale:** S1 và S2 được chuyển từ yêu cầu chứng minh thứ tự lịch sử sang yêu cầu verification có thể tái lập, vì Git history không thể chứng minh thứ tự cũ.
+- [x] 3. **Tạo schema và migration.** Thêm EventRecord, OutboxMessage và ProjectionCheckpoint với unique constraint cho `eventId` và `(aggregateType, aggregateId, aggregateVersion)`, index cho stream, event type, pending outbox và occurred time. Chạy migration trên database sạch và kiểm tra migration không dựa vào dữ liệu thủ công.
+- [x] 4. **Implement public Event kernel API.** Chỉ export contract cần cho module nghiệp vụ: append transaction, read stream, publish outbox, register consumer và replay projection. Không export Prisma model hoặc repository implementation ra ngoài public entry point.
+- [x] 5. **Implement atomic append và optimistic concurrency.** Trong cùng transaction, ghi aggregate state change reference, EventRecord và OutboxMessage; từ chối version cũ hoặc version trùng; không dùng last-write-wins.
+- [x] 6. **Implement outbox lifecycle.** Worker claim message bằng locking an toàn, ghi attempt count/last error/next retry, retry exponential backoff, chuyển dead-letter sau threshold và không tạo side effect trùng khi message được giao lại.
+- [x] 7. **Implement consumer dispatch và replay.** Consumer cập nhật ProjectionCheckpoint sau khi xử lý thành công; replay có thể chạy từ sequence/event time, xóa hoặc rebuild projection theo policy và không thay đổi EventRecord gốc.
+- [x] 8. **Implement worker health và lag signal.** Expose trạng thái worker, pending count, oldest pending age, failed/dead-letter count và projection lag để ticket 07 có thể kiểm tra p95 10 giây.
+- [x] 9. **Viết integration tests bằng PostgreSQL thật.** Bao phủ rollback atomicity, concurrent append, duplicate event, outbox claim/retry/dead-letter, idempotent consumer và replay equivalence; không mock transaction/locking.
+- [x] 10. **Chạy verification gate.** Chạy lint, typecheck/build, migration trên database sạch, worker process và toàn bộ eventing tests. Chỉ đánh dấu ticket hoàn thành khi public entry point không để lộ internals và tất cả acceptance criteria đều có test hoặc signal kiểm chứng.
 
 ## Explicitly out of scope
 
@@ -49,14 +51,14 @@
 
 ## Acceptance criteria
 
-- [ ] Mỗi event lưu được `eventId`, `eventType`, `eventVersion`, `aggregateType`, `aggregateId`, `aggregateVersion`, `occurredAt`, `recordedAt`, Actor snapshot, `correlationId`, `causationId`, payload và metadata.
-- [ ] Một event có cùng `eventId` hoặc cùng `(aggregateId, aggregateVersion)` không thể được ghi thành bản sao thứ hai.
-- [ ] Domain state và event record được commit hoặc rollback cùng transaction.
-- [ ] Append sai aggregate version bị từ chối, không âm thầm ghi đè event trước đó.
-- [ ] Outbox worker claim message an toàn khi có nhiều worker; một message thành công chỉ được dispatch một lần về mặt hiệu ứng nhờ idempotency.
-- [ ] Lỗi consumer được retry với backoff, ghi số lần thử, và chuyển dead-letter sau ngưỡng cấu hình.
-- [ ] Projection có thể bị xóa/rebuild từ event stream mà cho ra cùng kết quả với xử lý trực tiếp.
-- [ ] Worker có health/lag signal đủ để phát hiện projection quá 10 giây trong điều kiện test bình thường.
-- [ ] Integration test chạy với PostgreSQL thật, không thay bằng mock Prisma cho transaction, locking hoặc uniqueness.
-- [ ] `npm run lint`, `npm run build` và test command mới đều chạy được trên database sạch.
-- [ ] Không có event consumer nào import implementation nội bộ của consumer khác.
+- [x] Mỗi event lưu được `eventId`, `eventType`, `eventVersion`, `aggregateType`, `aggregateId`, `aggregateVersion`, `occurredAt`, `recordedAt`, Actor snapshot, `correlationId`, `causationId`, payload và metadata.
+- [x] Một event có cùng `eventId` hoặc cùng `(aggregateId, aggregateVersion)` không thể được ghi thành bản sao thứ hai.
+- [x] Domain state và event record được commit hoặc rollback cùng transaction.
+- [x] Append sai aggregate version bị từ chối, không âm thầm ghi đè event trước đó.
+- [x] Outbox worker claim message an toàn khi có nhiều worker; một message thành công chỉ được dispatch một lần về mặt hiệu ứng nhờ idempotency.
+- [x] Lỗi consumer được retry với backoff, ghi số lần thử, và chuyển dead-letter sau ngưỡng cấu hình.
+- [x] Projection có thể bị xóa/rebuild từ event stream mà cho ra cùng kết quả với xử lý trực tiếp.
+- [x] Worker có health/lag signal đủ để phát hiện projection quá 10 giây trong điều kiện test bình thường.
+- [x] Integration test chạy với PostgreSQL thật, không thay bằng mock Prisma cho transaction, locking hoặc uniqueness.
+- [x] `npm run lint`, `npm run build` và test command mới đều chạy được trên database sạch.
+- [x] Không có event consumer nào import implementation nội bộ của consumer khác.

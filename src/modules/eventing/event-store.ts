@@ -164,6 +164,7 @@ export async function appendEvent(
   await client.outboxMessage.create({
     data: {
       eventId: event.eventId,
+      availableAt: recordedAt,
     },
   });
 

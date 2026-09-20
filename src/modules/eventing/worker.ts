@@ -1,5 +1,5 @@
 import { processOneOutboxMessage } from './outbox';
-import { markOverdue } from '@/modules/platform/sla';
+import { markOverdue } from '@/modules/platform';
 
 export function createEventWorker(intervalMs = 1000) {
   let stopping = false;
