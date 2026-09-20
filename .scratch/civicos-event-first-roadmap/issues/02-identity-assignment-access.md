@@ -4,7 +4,7 @@
 
 **Blocked by:** 01: Event kernel và transactional outbox
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Files in scope
 
