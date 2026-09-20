@@ -4,7 +4,7 @@
 
 **Blocked by:** 05: Ổn định Windows-native Next/browser transport và harness
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Phạm vi
 
@@ -43,4 +43,4 @@
 
 ## Trạng thái
 
-ready-for-agent
+done
