@@ -11,6 +11,7 @@
 - Reviewer: PASS for AC1–AC5 and steps 1–6.
 - Generated `next-env.d.ts` side effect restored; no generated file committed.
 - Commit: `62b596886500e4facd2c2861ea8d4672d20ec117` (`fix: restore lint and format quality gates`).
+- Closure commit: `7edad6c` (`chore: close Ticket 06 evidence`).
 
 ## Files and agents
 

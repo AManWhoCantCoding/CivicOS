@@ -28,3 +28,5 @@ Review scope: only `.scratch/civicos-windows-native-playwright/issues/04-remove-
 All requested AC1–AC7 and steps 1–6 have concrete evidence. No commit was made.
 
 Commit: `6f8ed25` (`chore: remove WSL Playwright artifacts`)
+
+Closure commit: `1b0d76c05cad1580984e1eaf83369c6ae116900f`
