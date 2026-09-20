@@ -60,6 +60,64 @@ export function readOfflineQueue(): OfflineQueueItem[] {
   return readQueue();
 }
 
+function isSyncable(item: OfflineQueueItem) {
+  if (item.status === 'pending' || item.status === 'failed') return true;
+  if (item.status !== 'syncing') return false;
+  return (
+    !item.attemptedAt ||
+    Date.now() - new Date(item.attemptedAt).getTime() > 5 * 60 * 1000
+  );
+}
+
+function claimSyncSlot(id: string, task: () => Promise<void>): Promise<void> {
+  const holder = globalThis.navigator as unknown as {
+    locks?: {
+      request: (name: string, task: () => Promise<void>) => Promise<void>;
+    };
+  };
+  if (!holder.locks) return task();
+  return holder.locks.request(`civicos:offline-sync:${id}`, task);
+}
+
+async function reconcileQueueItem(
+  id: string,
+  fallback: OfflineQueueItem,
+): Promise<OfflineQueueItem> {
+  try {
+    const response = await fetch('/api/sync');
+    if (!response.ok) return fallback;
+    const body = (await response.json().catch(() => null)) as {
+      commands?: unknown;
+    };
+    const commands = Array.isArray(body?.commands) ? body.commands : [];
+    const match = commands.find(
+      (command): command is Record<string, unknown> =>
+        !!command &&
+        typeof command === 'object' &&
+        (command as Record<string, unknown>).clientCommandId === id,
+    );
+    if (!match) return fallback;
+    const status = match.status;
+    if (status !== 'synced' && status !== 'failed' && status !== 'rejected') {
+      return (
+        updateQueueItem(id, { status: 'syncing', error: undefined }) ?? fallback
+      );
+    }
+    return (
+      updateQueueItem(id, {
+        status,
+        error: typeof match.error === 'string' ? match.error : undefined,
+        response:
+          match.response && typeof match.response === 'object'
+            ? (match.response as Record<string, unknown>)
+            : undefined,
+      }) ?? fallback
+    );
+  } catch {
+    return fallback;
+  }
+}
+
 function parseServerCommand(value: unknown): {
   status?: OfflineQueueStatus;
   error?: string | null;
@@ -108,6 +166,12 @@ async function syncQueueItem(
       error?: unknown;
     };
     const serverCommand = parseServerCommand(body.command);
+    const serverError =
+      serverCommand?.error ??
+      (typeof body.error === 'string' ? body.error : undefined);
+    if (!response.ok && serverError === 'OFFLINE_COMMAND_NOT_PENDING') {
+      return reconcileQueueItem(item.id, item);
+    }
     const status: OfflineQueueStatus = serverCommand?.status
       ? serverCommand.status
       : response.ok
@@ -118,9 +182,7 @@ async function syncQueueItem(
     return (
       updateQueueItem(item.id, {
         status,
-        error:
-          serverCommand?.error ??
-          (typeof body.error === 'string' ? body.error : undefined),
+        error: serverError ?? undefined,
         response: serverCommand?.response ?? undefined,
       }) ?? { ...item, status }
     );
@@ -156,18 +218,24 @@ export async function submitOfflineCommand(
 
 export function syncOfflineQueue(): Promise<void> {
   if (activeSync) return activeSync;
-  activeSync = (async () => {
+  activeSync = claimSyncSlot('queue', async () => {
     if (!navigator.onLine) return;
-    const queue = readQueue().filter(
-      (item) =>
-        item.status === 'pending' ||
-        item.status === 'failed' ||
-        (item.status === 'syncing' &&
-          (!item.attemptedAt ||
-            Date.now() - new Date(item.attemptedAt).getTime() > 5 * 60 * 1000)),
-    );
-    for (const item of queue) await syncQueueItem(item);
-  })().finally(() => {
+    const seen = new Set<string>();
+    const queue = readQueue().filter((item) => {
+      if (!isSyncable(item) || seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+    for (const item of queue) {
+      await claimSyncSlot(item.id, async () => {
+        const fresh = readQueue().find(
+          (entry) => entry.id === item.id && isSyncable(entry),
+        );
+        if (!fresh) return;
+        await syncQueueItem(fresh);
+      });
+    }
+  }).finally(() => {
     activeSync = null;
   });
   return activeSync;

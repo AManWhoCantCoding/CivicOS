@@ -66,6 +66,12 @@ function evidenceIdsFrom(value: unknown) {
   return value.filter((id): id is string => typeof id === 'string');
 }
 
+function inspectionStage(status: string) {
+  if (status === 'completed') return 2;
+  if (status === 'in_progress') return 1;
+  return 0;
+}
+
 function statusLabel(status: string) {
   return (
     {
@@ -105,7 +111,25 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
         return response.json() as Promise<InspectionData>;
       })
       .then((result) => {
-        if (!cancelled) setData(result);
+        if (cancelled) return;
+        setData((current) => {
+          if (!current?.inspection || !result.inspection) return result;
+          const currentVersion = current.inspection.version ?? 0;
+          const nextVersion = result.inspection.version ?? 0;
+          if (nextVersion >= currentVersion) return result;
+          return {
+            ...result,
+            inspection: {
+              ...result.inspection,
+              version: currentVersion,
+              status:
+                inspectionStage(current.inspection.status) >=
+                inspectionStage(result.inspection.status)
+                  ? current.inspection.status
+                  : result.inspection.status,
+            },
+          };
+        });
       })
       .catch((reason: unknown) => {
         if (cancelled) return;
@@ -196,7 +220,7 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
             <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
               Inspection
             </p>
-            <h1 className="mt-3 text-3xl font-semibold text-white">
+            <h1 className="mt-3 text-3xl font-semibold break-all text-white">
               {inspection.id}
             </h1>
             <p className="mt-3 text-sm text-slate-400">
@@ -204,7 +228,10 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
               {new Date(inspection.scheduledAt).toLocaleString('vi-VN')}
             </p>
           </div>
-          <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">
+          <span
+            data-testid="inspection-status"
+            className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200"
+          >
             {statusLabel(inspection.status)}
           </span>
         </div>

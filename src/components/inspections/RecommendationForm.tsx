@@ -43,7 +43,8 @@ export function RecommendationForm({
       setMessage('Đang ngoại tuyến. Kết nối mạng để gửi đề xuất.');
       return;
     }
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const findingIds = form.getAll('findingIds').map(String);
     if (!findingIds.length) {
       setTone('error');
@@ -82,7 +83,7 @@ export function RecommendationForm({
       }
       setTone('success');
       setMessage('Đã gửi đề xuất, chờ phê duyệt.');
-      event.currentTarget.reset();
+      formElement.reset();
       onSaved?.();
     } catch {
       setTone('error');

@@ -39,6 +39,8 @@ def test_vehicle_registry_observation_match_confirm_verify_evidence_and_escalate
     app.verify_vehicle("Đã xác minh", "Đối chiếu thực địa đạt yêu cầu.", "vehicle-evidence.jpg")
     app.escalate_vehicle(accounts["cross_org_field_officer"].organization_id)
     expect(app.page.get_by_text(re.compile(r"Bằng chứng 1 · xem"))).to_be_visible()
+    app.logout()
+    app.login(accounts["commander"])
     app.wait_for_projection()
 
 

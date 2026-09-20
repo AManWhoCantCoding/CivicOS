@@ -58,7 +58,8 @@ export function InspectionScheduleForm({
     }
     setLoading(true);
     setMessage(null);
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const selectedEstablishmentId =
       establishmentId ?? String(form.get('establishmentId') ?? '');
     const scheduledAtValue = String(form.get('scheduledAt') ?? '');
@@ -98,7 +99,7 @@ export function InspectionScheduleForm({
       }
       setTone('success');
       setMessage('Đã lập lịch kiểm tra.');
-      event.currentTarget.reset();
+      formElement.reset();
       setAssigneeUserId('');
       onScheduled?.();
     } catch {

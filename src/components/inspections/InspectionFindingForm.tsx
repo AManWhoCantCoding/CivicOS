@@ -50,7 +50,8 @@ export function InspectionFindingForm({
     }
     setLoading(true);
     setMessage(null);
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
       const item = await submitOfflineCommand({
         id: globalThis.crypto.randomUUID(),
@@ -71,7 +72,7 @@ export function InspectionFindingForm({
       if (accepted) {
         onVersionChange?.(initialVersion + 1);
         onSaved?.();
-        event.currentTarget.reset();
+        formElement.reset();
         setEvidenceIds([]);
         setEvidenceCaptureKey((value) => value + 1);
       }
@@ -113,9 +114,13 @@ export function InspectionFindingForm({
           Bắt đầu inspection để mở biểu mẫu phát hiện.
         </p>
       ) : null}
-      <label className="block text-sm text-slate-200">
+      <label
+        htmlFor="inspection-finding-checklist"
+        className="block text-sm text-slate-200"
+      >
         Mục checklist
         <select
+          id="inspection-finding-checklist"
           name="checklistKey"
           required
           disabled={!enabled || loading}
@@ -142,9 +147,13 @@ export function InspectionFindingForm({
           className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
         />
       </label>
-      <label className="block text-sm text-slate-200">
+      <label
+        htmlFor="inspection-finding-result"
+        className="block text-sm text-slate-200"
+      >
         Kết quả
         <select
+          id="inspection-finding-result"
           name="result"
           required
           disabled={!enabled || loading}

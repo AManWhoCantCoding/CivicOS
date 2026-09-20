@@ -38,7 +38,8 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const latitudeRaw = String(form.get('latitude') ?? '').trim();
     const longitudeRaw = String(form.get('longitude') ?? '').trim();
     const latitudeValue = Number(latitudeRaw);
@@ -87,7 +88,7 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
             : (item.error ?? 'Không thể lưu quan sát.'),
       );
       if (accepted) {
-        event.currentTarget.reset();
+        formElement.reset();
         setLatitude('');
         setLongitude('');
         setLocationMessage('Chưa lấy vị trí');

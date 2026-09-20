@@ -142,10 +142,14 @@ export function VehicleEscalationForm({
             : 'Quan sát đã được chuyển đơn vị.'}
         </p>
       ) : null}
-      <label className="block text-sm text-slate-200">
+      <label
+        htmlFor="vehicle-escalation-organization"
+        className="block text-sm text-slate-200"
+      >
         OrganizationUnit đích
         {units.length ? (
           <select
+            id="vehicle-escalation-organization"
             value={organizationId}
             onChange={(event) => setOrganizationId(event.target.value)}
             disabled={!enabled || loading}
@@ -162,6 +166,7 @@ export function VehicleEscalationForm({
           </select>
         ) : (
           <input
+            id="vehicle-escalation-organization"
             value={organizationId}
             onChange={(event) => setOrganizationId(event.target.value)}
             disabled={!enabled || loading}

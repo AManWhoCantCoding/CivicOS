@@ -42,7 +42,8 @@ export function EstablishmentForm({
     }
     setLoading(true);
     setMessage(null);
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const latitudeValue = String(form.get('latitude') ?? '').trim();
     const longitudeValue = String(form.get('longitude') ?? '').trim();
     const payload: Record<string, unknown> = {
@@ -100,7 +101,7 @@ export function EstablishmentForm({
       }
       setTone('success');
       setMessage(initial ? 'Đã cập nhật cơ sở.' : 'Đã tạo cơ sở.');
-      if (!initial) event.currentTarget.reset();
+      if (!initial) formElement.reset();
       onSaved?.(body.establishment);
       window.dispatchEvent(new Event(establishmentChangedEventName));
     } catch {

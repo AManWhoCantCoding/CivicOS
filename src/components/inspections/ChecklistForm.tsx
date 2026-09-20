@@ -192,39 +192,45 @@ export function ChecklistForm({
                 : 'Lưu checklist'}
             </button>
           ) : null}
-          {editable ? (
-            <label className="flex min-w-56 flex-1 items-center gap-2 text-sm text-slate-300 sm:flex-none">
-              <span className="sr-only">Kết quả hoàn tất inspection</span>
-              <select
-                value={completionResult}
-                onChange={(event) => setCompletionResult(event.target.value)}
-                disabled={loadingCommand !== null}
-                required
-                className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
-              >
-                <option value="" disabled>
-                  Chọn kết quả hoàn tất
-                </option>
-                {completionChoices.map((choice) => (
-                  <option key={choice.value} value={choice.value}>
-                    {choice.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                disabled={!completionResult || loadingCommand !== null}
-                onClick={() =>
-                  void command('complete', { result: completionResult })
-                }
-                className="rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:border-cyan-300 disabled:opacity-50"
-              >
-                Hoàn tất
-              </button>
-            </label>
-          ) : null}
         </div>
       </form>
+      {editable ? (
+        <div className="mt-4 flex min-w-56 flex-1 items-center gap-2 text-sm text-slate-300 sm:flex-none">
+          <label
+            htmlFor="inspection-complete-result"
+            className="flex min-w-0 flex-1 items-center gap-2"
+          >
+            <span className="sr-only">Kết quả hoàn tất inspection</span>
+            <select
+              id="inspection-complete-result"
+              value={completionResult}
+              onChange={(event) => setCompletionResult(event.target.value)}
+              disabled={loadingCommand !== null}
+              required
+              className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+            >
+              <option value="" disabled>
+                Chọn kết quả hoàn tất
+              </option>
+              {completionChoices.map((choice) => (
+                <option key={choice.value} value={choice.value}>
+                  {choice.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            disabled={!completionResult || loadingCommand !== null}
+            onClick={() =>
+              void command('complete', { result: completionResult })
+            }
+            className="rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:border-cyan-300 disabled:opacity-50"
+          >
+            Hoàn tất
+          </button>
+        </div>
+      ) : null}
       {status === 'completed' ? (
         <p className="mt-4 text-sm text-slate-500">
           Inspection đã hoàn tất; checklist chỉ đọc.

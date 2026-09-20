@@ -58,7 +58,8 @@ export function RegistryForm({
     }
     setLoading(true);
     setMessage(null);
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const payload: Record<string, unknown> = initial
       ? {
           entryId: initial.id,
@@ -116,7 +117,7 @@ export function RegistryForm({
       setMessage(
         initial ? 'Đã cập nhật registry.' : 'Đã thêm biển số vào registry.',
       );
-      if (!initial) event.currentTarget.reset();
+      if (!initial) formElement.reset();
       onSaved?.(body.entry);
       window.dispatchEvent(new Event(registryChangedEventName));
     } catch {

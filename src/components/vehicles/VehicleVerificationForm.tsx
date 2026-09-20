@@ -66,7 +66,8 @@ export function VehicleVerificationForm({
       setMessage('Đang ngoại tuyến. Kết nối mạng để gửi xác minh.');
       return;
     }
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const latitudeValue = String(form.get('latitude') ?? '').trim();
     const longitudeValue = String(form.get('longitude') ?? '').trim();
     if (Boolean(latitudeValue) !== Boolean(longitudeValue)) {
@@ -138,7 +139,7 @@ export function VehicleVerificationForm({
           verification: Record<string, unknown>;
         },
       );
-      event.currentTarget.reset();
+      formElement.reset();
       setLatitude('');
       setLongitude('');
       setEvidenceIds([]);

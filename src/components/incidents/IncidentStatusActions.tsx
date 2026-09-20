@@ -16,10 +16,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function findApproval(value: unknown): { id: string } | null {
+function findApproval(value: unknown): { id: string; status: string } | null {
   if (!isRecord(value)) return null;
   if (isRecord(value.approval) && typeof value.approval.id === 'string') {
-    return { id: value.approval.id };
+    return {
+      id: value.approval.id,
+      status:
+        typeof value.approval.status === 'string'
+          ? value.approval.status
+          : 'unknown',
+    };
   }
   if (isRecord(value.incident)) return findApproval(value.incident);
   if (isRecord(value.result)) return findApproval(value.result);
@@ -101,7 +107,7 @@ export function IncidentStatusActions({
       const requestedApproval = findApproval(body);
       if (requestedApproval) setApprovalId(requestedApproval.id);
       setMessage(
-        requestedApproval
+        requestedApproval && requestedApproval.status === 'pending'
           ? 'Đã gửi yêu cầu Approval.'
           : 'Đã ghi nhận thao tác.',
       );

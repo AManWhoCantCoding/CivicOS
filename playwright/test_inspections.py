@@ -64,6 +64,8 @@ def test_inspection_offline_checklist_finding_evidence_completion_and_recurring_
     app.inspection_status("completed")
     expect(app.page.get_by_text(re.compile(r"Bằng chứng 1 · xem"))).to_be_visible()
     expect(app.page.get_by_text("pass", exact=True)).to_be_visible()
+    app.logout()
+    app.login(accounts["commander"])
     app.goto("/inspections/establishments")
     expect(
         app.page.locator("article").filter(
@@ -124,10 +126,6 @@ def test_stale_offline_inspection_command_is_rejected(
     stale_app.checklist_start()
     stale_app.page.context.set_offline(False)
     stale_app.open_offline_status()
-    expect.poll(
-        lambda: stale_app.offline_queue_error(),
-        timeout=15_000,
-        intervals=[100, 250, 500, 1_000],
-    ).to_be("STALE_OFFLINE_COMMAND")
+    stale_app.wait_for_offline_queue_error("STALE_OFFLINE_COMMAND")
     stale_app.expect_queue_count("Lỗi/từ chối", "1")
     stale_page.close()

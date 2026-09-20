@@ -290,7 +290,10 @@ class CivicApp:
         self.page.get_by_label("Thời gian kiểm tra", exact=True).fill(
             "2030-01-15T10:00"
         )
-        self.page.get_by_label("Chu kỳ", exact=True).select_option("3")
+        cadence = self.page.locator('select[name="cadenceMonths"]')
+        expect(cadence).to_be_visible()
+        cadence.select_option("3")
+        expect(cadence).to_have_value("3")
         assignee = self.page.get_by_label(re.compile(r"^Người được giao"))
         try:
             assignee.select_option(value=assignee_id)
@@ -317,7 +320,8 @@ class CivicApp:
             "in_progress": "Đang kiểm tra",
             "completed": "Đã hoàn tất",
         }
-        expect(self.page.get_by_text(labels.get(status, status), exact=True)).to_be_visible()
+        badge = self.page.get_by_test_id("inspection-status")
+        expect(badge).to_have_text(labels.get(status, status))
 
     def fill_required_checklist(self, marker: str) -> None:
         for label, value in (
@@ -371,18 +375,16 @@ class CivicApp:
         expect(self.page.get_by_text(re.compile(r"Đã lưu checklist|Đã lưu cục bộ"))).to_be_visible()
 
     def record_finding(self, description: str = "Phát hiện E2E cần theo dõi.") -> None:
-        self.page.get_by_label("Mục checklist", exact=True).select_option("license")
+        self.page.locator("#inspection-finding-checklist").select_option("license")
         self.page.get_by_label("Mô tả phát hiện", exact=True).fill(description)
-        self.page.get_by_label("Kết quả", exact=True).select_option("needs_action")
+        self.page.locator("#inspection-finding-result").select_option("needs_action")
         self.page.get_by_role("button", name="Lưu phát hiện", exact=True).click()
         expect(
             self.page.get_by_text(re.compile(r"Đã ghi phát hiện|Đã lưu phát hiện cục bộ"))
         ).to_be_visible()
 
     def checklist_complete(self) -> None:
-        self.page.get_by_label("Kết quả hoàn tất inspection", exact=True).select_option(
-            "pass"
-        )
+        self.page.locator("#inspection-complete-result").select_option("pass")
         self.page.get_by_role("button", name="Hoàn tất", exact=True).click()
         expect(
             self.page.get_by_text(re.compile(r"Đã hoàn tất inspection|Đã lưu cục bộ"))
@@ -509,7 +511,8 @@ class CivicApp:
             "verified": "Đã xác minh",
             "escalated": "Đã chuyển đơn vị",
         }
-        expect(self.page.get_by_text(labels.get(status, status), exact=True)).to_be_visible()
+        label = labels.get(status, status)
+        expect(self.page.locator("span").get_by_text(label, exact=True)).to_be_visible()
 
     def create_registry_entry(self, plate: str, marker: str) -> None:
         self.goto("/vehicles/registry")
@@ -544,7 +547,7 @@ class CivicApp:
         self.vehicle_status("verified")
 
     def escalate_vehicle(self, organization_id: str) -> None:
-        field = self.page.get_by_label("OrganizationUnit đích", exact=True)
+        field = self.page.locator("#vehicle-escalation-organization")
         if field.evaluate("element => element.tagName") == "SELECT":
             field.select_option(value=organization_id)
         else:
