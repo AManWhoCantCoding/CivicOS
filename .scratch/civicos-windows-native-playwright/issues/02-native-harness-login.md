@@ -47,4 +47,4 @@ Loại bỏ toàn bộ nhánh orchestration dành riêng cho WSL/Windows interop
 
 ## Trạng thái
 
-Status: ready-for-agent
+Status: done
