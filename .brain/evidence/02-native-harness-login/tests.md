@@ -159,3 +159,40 @@ Database query was executed with native Python/psycopg against PostgreSQL using 
 8. No throwaway probe/debug masking branch: **PASS** (`probe_login.py` absent).
 
 Step 7 stability requirement: **PASS** — login/logout passed in two consecutive targeted runs for both desktop and mobile.
+
+## Infrastructure readiness — Ticket 02
+
+Commands were invoked through native Windows PowerShell from `D:\Project\CivicOS`.
+
+```text
+COMMAND: docker.exe context show
+desktop-linux
+
+COMMAND: docker.exe info
+Client: Docker 29.6.2; Context: desktop-linux
+Server: Docker Desktop; Containers: 1 running; Images: 6
+
+COMMAND: docker.exe compose up -d postgres
+ Container civicos-postgres-1 Running
+
+COMMAND: docker.exe ps --filter name=civicos-postgres-1 --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+NAMES                STATUS        PORTS
+civicos-postgres-1   Up 11 hours   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+
+COMMAND: docker.exe exec civicos-postgres-1 pg_isready -U civicos -h 127.0.0.1
+127.0.0.1:5432 - accepting connections
+
+COMMAND: npx.cmd prisma migrate status
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "civicos", schema "public" at "localhost:5432"
+4 migrations found in prisma/migrations
+Database schema is up to date!
+
+COMMAND: npx.cmd prisma generate
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+✔ Generated Prisma Client (v6.19.3) to .\node_modules\@prisma\client in 166ms
+```
+
+Result: PostgreSQL container is running and accepting connections; Prisma reached the database, reported the schema up to date, and generated the client successfully. Infrastructure blocker: none observed.

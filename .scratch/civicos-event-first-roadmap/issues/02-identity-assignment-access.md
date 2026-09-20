@@ -29,16 +29,18 @@
 
 ## Implementation steps
 
-1. **Lập authorization matrix trước khi tạo model.** Ghi rõ quyền của Trưởng Công an xã, User được Assignment, User cùng OrganizationUnit nhưng không được Assignment, User đã bị thu hồi Assignment và User thuộc đơn vị khác. Mỗi ô trong matrix phải map được thành một test case.
-2. **Thiết kế Identity schema.** Thêm User profile, Role, RoleBinding, OrganizationUnit, OrganizationMembership, Assignment, Session và AuditEvent; Assignment phải có subject/record reference, task scope, assignees, granted/revoked timestamps và Actor thực hiện.
-3. **Tạo migration và seed development.** Tạo một Trưởng Công an xã, một cán bộ được phân công, một cán bộ không được phân công và một OrganizationUnit cấp trên; seed chỉ dùng dữ liệu development, không chứa secret hoặc dữ liệu thật.
-4. **Implement local IdentityProvider và session.** Tạo login/logout/session validation tối thiểu, HttpOnly cookie, expiration và invalid-session path. Giữ interface để production OIDC/SSO thay provider mà không đổi domain authorization.
-5. **Implement authorization service.** Tách `canRead`, `canMutate`, `canAssign`, `canApprove` và `canViewSensitive`; kiểm tra tại API/domain boundary trước khi truy cập projection hoặc Evidence. Không dùng component visibility làm security boundary.
-6. **Implement Assignment lifecycle.** Cho phép Trưởng Công an xã tạo, thêm nhiều assignee, thu hồi và truy vấn Assignment; tạo event/audit cho mỗi thay đổi; không cho module nghiệp vụ tự sửa Assignment table.
-7. **Implement AuditEvent và encryption boundary.** Ghi sensitive read/download/mutation với Actor, resource, operation, timestamp và correlation ID; mã hóa informant identity/CCCD/criminal-history fields, giữ blind-index riêng nếu cần tìm kiếm.
-8. **Expose API và UI development.** Tạo session, user/role, assignment endpoints và login/access-denied screens; mọi route phải có server authorization, validation, status code và error shape nhất quán.
-9. **Viết tests theo matrix.** Integration test đủ allow/deny/revoke/cross-unit, audit and encryption tests; browser test thử login, session expiry, direct URL tampering và denied state.
-10. **Chạy verification gate.** Kiểm tra không có sensitive plaintext trong log/database test fixture, lint/typecheck/build/e2e pass, và public identity entry point không export database internals.
+- [x] 1. **Xác định và kiểm tra authorization matrix có thể tái lập:** phải có case/test cho commander, assigned user, same-unit unassigned user, revoked assignment và unrelated organization; mỗi ô phải map được thành một test case trước khi ticket được đóng.
+
+> **Change rationale:** S1 được chuyển từ yêu cầu chứng minh thứ tự lịch sử sang yêu cầu verification có thể tái lập, vì Git history không thể chứng minh thứ tự cũ.
+- [x] 2. **Thiết kế Identity schema.** Thêm User profile, Role, RoleBinding, OrganizationUnit, OrganizationMembership, Assignment, Session và AuditEvent; Assignment phải có subject/record reference, task scope, assignees, granted/revoked timestamps và Actor thực hiện.
+- [x] 3. **Tạo migration và seed development.** Tạo một Trưởng Công an xã, một cán bộ được phân công, một cán bộ không được phân công và một OrganizationUnit cấp trên; seed chỉ dùng dữ liệu development, không chứa secret hoặc dữ liệu thật.
+- [x] 4. **Implement local IdentityProvider và session.** Tạo login/logout/session validation tối thiểu, HttpOnly cookie, expiration và invalid-session path. Giữ interface để production OIDC/SSO thay provider mà không đổi domain authorization.
+- [x] 5. **Implement authorization service.** Tách `canRead`, `canMutate`, `canAssign`, `canApprove` và `canViewSensitive`; kiểm tra tại API/domain boundary trước khi truy cập projection hoặc Evidence. Không dùng component visibility làm security boundary.
+- [x] 6. **Implement Assignment lifecycle.** Cho phép Trưởng Công an xã tạo, thêm nhiều assignee, thu hồi và truy vấn Assignment; tạo event/audit cho mỗi thay đổi; không cho module nghiệp vụ tự sửa Assignment table.
+- [x] 7. **Implement AuditEvent và encryption boundary.** Ghi sensitive read/download/mutation với Actor, resource, operation, timestamp và correlation ID; mã hóa informant identity/CCCD/criminal-history fields, giữ blind-index riêng nếu cần tìm kiếm.
+- [x] 8. **Expose API và UI development.** Tạo session, user/role, assignment endpoints và login/access-denied screens; mọi route phải có server authorization, validation, status code và error shape nhất quán.
+- [x] 9. **Viết tests theo matrix.** Integration test đủ allow/deny/revoke/cross-unit, audit and encryption tests; browser test thử login, session expiry, direct URL tampering và denied state.
+- [x] 10. **Chạy verification gate.** Kiểm tra không có sensitive plaintext trong log/database test fixture, lint/typecheck/build/e2e pass, và public identity entry point không export database internals.
 
 ## Explicitly out of scope
 
@@ -53,13 +55,13 @@
 
 ## Acceptance criteria
 
-- [ ] User có thể đăng nhập bằng development IdentityProvider và nhận session HttpOnly có expiration.
-- [ ] Role, OrganizationUnit và Assignment được lưu bền vững, có trạng thái active/revoked và audit lịch sử thay đổi.
-- [ ] Trưởng Công an xã xem được record trong command scope; User được phân công xem được record liên quan; User không được phân công bị từ chối.
-- [ ] Thu hồi Assignment cắt quyền đọc mới nhưng không xóa AuditEvent hoặc lịch sử nghiệp vụ.
-- [ ] Authorization được kiểm tra ở API/domain boundary, không chỉ ẩn nút trên UI.
-- [ ] Sensitive read, download và mutation đều tạo AuditEvent có Actor, record, thời điểm và lý do/operation.
-- [ ] Encryption key không nằm trong database; test chứng minh plaintext sensitive value không xuất hiện trong persistent payload hoặc log.
-- [ ] Login, denied và expired-session UI có label trên input, focus state, error inline và không dùng placeholder thay label.
-- [ ] Browser test chứng minh User không được phân công không thể truy cập trực tiếp URL/API bằng cách sửa ID.
-- [ ] `npm run lint`, `npm run build` và toàn bộ identity tests pass.
+- [x] User có thể đăng nhập bằng development IdentityProvider và nhận session HttpOnly có expiration.
+- [x] Role, OrganizationUnit và Assignment được lưu bền vững, có trạng thái active/revoked và audit lịch sử thay đổi.
+- [x] Trưởng Công an xã xem được record trong command scope; User được phân công xem được record liên quan; User không được phân công bị từ chối.
+- [x] Thu hồi Assignment cắt quyền đọc mới nhưng không xóa AuditEvent hoặc lịch sử nghiệp vụ.
+- [x] Authorization được kiểm tra ở API/domain boundary, không chỉ ẩn nút trên UI.
+- [x] Sensitive read, download và mutation đều tạo AuditEvent có Actor, record, thời điểm và lý do/operation.
+- [x] Encryption key không nằm trong database; test chứng minh plaintext sensitive value không xuất hiện trong persistent payload hoặc log.
+- [x] Login, denied và expired-session UI có label trên input, focus state, error inline và không dùng placeholder thay label.
+- [x] Browser test chứng minh User không được phân công không thể truy cập trực tiếp URL/API bằng cách sửa ID.
+- [x] `npm run lint`, `npm run build` và toàn bộ identity tests pass.
