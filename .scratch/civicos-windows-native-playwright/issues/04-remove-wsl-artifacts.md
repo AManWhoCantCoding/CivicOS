@@ -45,4 +45,4 @@ Sau khi native acceptance gate đã xanh, xóa đúng các runtime/cache/workaro
 
 ## Trạng thái
 
-Status: ready-for-agent
+Status: done

@@ -26,3 +26,5 @@ Review scope: only `.scratch/civicos-windows-native-playwright/issues/04-remove-
 | Step 6 — Cleanup completion recorded and no WSL runtime dependency remains | **PASS** | Tick is present at ticket line 44. Completion and post-test generated-cache removal are recorded in `changes.md:62-82`; final `LD_LIBRARY_PATH` and process/listener checks are recorded in `tests.md:122-147`. |
 
 All requested AC1–AC7 and steps 1–6 have concrete evidence. No commit was made.
+
+Commit: `6f8ed25` (`chore: remove WSL Playwright artifacts`)
