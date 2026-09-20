@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Phạm vi
 
@@ -52,4 +52,4 @@
 
 ## Trạng thái
 
-ready-for-agent
+done
