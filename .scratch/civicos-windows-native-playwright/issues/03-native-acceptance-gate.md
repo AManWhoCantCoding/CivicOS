@@ -42,4 +42,4 @@ Chạy và ghi nhận toàn bộ Python Playwright acceptance suite bằng Windo
 
 ## Trạng thái
 
-Status: ready-for-agent
+Status: done

@@ -2,7 +2,7 @@
 
 Review basis: Ticket 03 acceptance criteria and steps, the current Ticket 03
 evidence, and the already-committed Ticket 02/05/06/07 evidence and README.
-Unrelated dirty/untracked paths were excluded. No commit was made.
+Unrelated dirty/untracked paths were excluded.
 
 ## Acceptance Criteria
 
@@ -29,4 +29,6 @@ Unrelated dirty/untracked paths were excluded. No commit was made.
 
 ## Final result
 
-**PASS — AC1–AC7 and steps 1–6.** Ticket 04 is eligible to begin. No commit was made.
+**PASS — AC1–AC7 and steps 1–6.** Ticket 04 is eligible to begin.
+
+Commit: `795dc86` (`chore: record native browser acceptance gate`)
