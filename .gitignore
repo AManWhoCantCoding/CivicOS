@@ -12,3 +12,6 @@ playwright-report/
 test-results/
 __pycache__/
 .venv/
+storage/
+*.egg-info/
+playwright/.pytest_cache/

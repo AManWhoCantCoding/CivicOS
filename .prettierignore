@@ -14,3 +14,17 @@ docs/agents
 skills-lock.json
 next-env.d.ts
 opencode.jsonc
+.brain/
+.venv/
+**/.venv/
+playwright/.venv/
+playwright/.pytest_cache/
+**/.pytest_cache/
+playwright/test-results/
+test-results/
+playwright-report/
+*.egg-info/
+**/*.egg-info/
+storage/
+coverage/
+__pycache__/
