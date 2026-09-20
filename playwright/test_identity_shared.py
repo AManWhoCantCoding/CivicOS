@@ -11,7 +11,17 @@ from pages import CivicApp
 pytestmark = pytest.mark.identity
 
 
-def test_login_and_logout(app: CivicApp, accounts: dict[str, object]) -> None:
+def test_login_creates_single_session_and_redirects(app: CivicApp, accounts: dict[str, object]) -> None:
+    app.login_with_session_assertion(accounts["commander"])
+    expect(app.page.get_by_text("CivicOS / Nghĩa Trụ", exact=True)).to_be_visible()
+
+
+def test_login_with_wrong_password_stays_on_login(app: CivicApp, accounts: dict[str, object]) -> None:
+    app.login_with_wrong_password(accounts["commander"])
+    expect(app.page.get_by_role("button", name="Đăng nhập", exact=True)).to_be_visible()
+
+
+def test_logout_clears_session(app: CivicApp, accounts: dict[str, object]) -> None:
     app.login(accounts["commander"])
     expect(app.page.get_by_text("CivicOS / Nghĩa Trụ", exact=True)).to_be_visible()
     app.logout()

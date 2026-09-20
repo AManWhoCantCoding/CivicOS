@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+import time
+from typing import Any, Callable, TypeVar
 from urllib.parse import urljoin
 
-from playwright.sync_api import APIResponse, Page, expect
+from playwright.sync_api import APIResponse, Page, Response, expect
+
+
+T = TypeVar("T")
 
 
 class CivicApp:
@@ -24,13 +28,109 @@ class CivicApp:
         self.page.goto(self.url(path), wait_until="domcontentloaded")
 
     def login(self, account: Any) -> None:
-        self.goto("/login")
-        expect(self.page.get_by_role("heading", name="Vào đúng hồ sơ. Làm đúng nhiệm vụ.")).to_be_visible()
-        self.page.get_by_label("Email", exact=True).fill(account.email)
-        self.page.get_by_label("Mật khẩu", exact=True).fill(account.password)
-        self.page.get_by_role("button", name="Đăng nhập", exact=True).click()
+        response = self._submit_login_form(account)
+        assert response.ok, f"expected POST /api/auth/session ok, saw HTTP {response.status}"
         expect(self.page).to_have_url(re.compile(rf"{re.escape(self.base_url)}/?$"))
         expect(self.page.get_by_text("Trung tâm điều hành", exact=True)).to_be_visible()
+
+    def login_with_session_assertion(self, account: Any) -> None:
+        responses: list[Response] = []
+        def _collect(response: Response) -> None:
+            responses.append(response)
+        self.page.on("response", _collect)
+        try:
+            session_response = self._submit_login_form(account)
+        finally:
+            self.page.remove_listener("response", _collect)
+        assert session_response.ok, f"expected HTTP 200, saw {session_response.status}"
+        session_posts = [
+            response
+            for response in responses
+            if response.request.method == "POST"
+            and response.url.endswith("/api/auth/session")
+        ]
+        assert len(session_posts) == 1, f"expected exactly one POST /api/auth/session, saw {len(session_posts)}"
+        assert session_posts[0].status == 200, f"expected HTTP 200, saw {session_posts[0].status}"
+        expect(self.page).to_have_url(re.compile(rf"{re.escape(self.base_url)}/?$"))
+        expect(self.page.get_by_text("Trung tâm điều hành", exact=True)).to_be_visible()
+        cookies = {cookie["name"]: cookie["value"] for cookie in self.page.context.cookies()}
+        assert cookies.get("civicos_session"), "expected civicos_session cookie after valid login"
+
+    def _wait_for_login_ready(self) -> None:
+        """Gate login input on page load plus React hydration before click."""
+        self.page.wait_for_load_state("load", timeout=15_000)
+        expect(self.page.get_by_role("heading", name="Vào đúng hồ sơ. Làm đúng nhiệm vụ.")).to_be_visible()
+        self.page.wait_for_function(
+            "() => { const nodes = [document.querySelector('form'), document.querySelector('button[type=\"submit\"]')]; for (const node of nodes) { if (!node) continue; const keys = Object.keys(node); for (const key of keys) { if (key.indexOf('__reactFiber') === 0 || key.indexOf('__reactProps') === 0) return true; } } return false; }",
+            timeout=15_000,
+        )
+
+    def _submit_login_form(self, account: Any) -> Response:
+        responses: list[Response] = []
+        def _collect(response: Response) -> None:
+            responses.append(response)
+        email = getattr(account, "email", None)
+        password = getattr(account, "password", None)
+        assert isinstance(email, str) and email, "login account must expose a non-empty email"
+        assert isinstance(password, str) and password, "login account must expose a non-empty password"
+        self.page.on("response", _collect)
+        try:
+            self.goto("/login")
+            self._wait_for_login_ready()
+            email_input = self.page.get_by_label("Email", exact=True)
+            password_input = self.page.get_by_label("Mật khẩu", exact=True)
+            email_input.fill(email)
+            password_input.fill(password)
+            expect(email_input).to_have_value(email)
+            expect(password_input).to_have_value(password)
+            login_button = self.page.get_by_role("button", name="Đăng nhập", exact=True)
+            expect(login_button).to_be_visible()
+            expect(login_button).to_be_enabled()
+            login_button.scroll_into_view_if_needed()
+            login_button.click()
+            try:
+                self._poll_value(
+                    lambda: bool(
+                        {
+                            cookie["name"]: cookie["value"]
+                            for cookie in self.page.context.cookies()
+                        }.get("civicos_session")
+                    ),
+                    expected=True,
+                    describe="civicos_session cookie to be set after login POST",
+                )
+            except AssertionError as error:
+                observed = [
+                    response
+                    for response in responses
+                    if response.request.method == "POST"
+                    and response.url.endswith("/api/auth/session")
+                ]
+                raise AssertionError(
+                    f"{error}; session POSTs observed: {len(observed)}"
+                ) from error
+        finally:
+            self.page.remove_listener("response", _collect)
+        session_posts = [
+            response
+            for response in responses
+            if response.request.method == "POST"
+            and response.url.endswith("/api/auth/session")
+        ]
+        assert len(session_posts) == 1, f"expected exactly one POST /api/auth/session, saw {len(session_posts)}"
+        assert session_posts[0].ok, f"expected POST /api/auth/session ok, saw HTTP {session_posts[0].status}"
+        return session_posts[0]
+
+    def login_with_wrong_password(self, account: Any, wrong_password: str = "sai-mat-khau-e2e") -> None:
+        self.goto("/login")
+        self._wait_for_login_ready()
+        self.page.get_by_label("Email", exact=True).fill(account.email)
+        self.page.get_by_label("Mật khẩu", exact=True).fill(wrong_password)
+        self.page.get_by_role("button", name="Đăng nhập", exact=True).click()
+        expect(self.page).to_have_url(re.compile(r"/login/?$"))
+        expect(self.page.locator('p[role="alert"]')).to_contain_text("Email hoặc mật khẩu không hợp lệ.")
+        cookies = {cookie["name"]: cookie["value"] for cookie in self.page.context.cookies()}
+        assert not cookies.get("civicos_session"), "wrong password must not create a session cookie"
 
     def logout(self) -> None:
         button = self.page.get_by_role(
@@ -45,6 +145,9 @@ class CivicApp:
         expect(control).to_be_visible()
         control.click()
         expect(self.page).to_have_url(re.compile(r"/login/?$"))
+        expect(self.page.get_by_role("button", name="Đăng nhập", exact=True)).to_be_visible()
+        cookies = {cookie["name"]: cookie["value"] for cookie in self.page.context.cookies()}
+        assert not cookies.get("civicos_session"), "logout must clear the session cookie"
 
     def create_incident(self, marker: str) -> str:
         self.goto("/intake")
@@ -125,11 +228,11 @@ class CivicApp:
         if expect_success:
             expect(self.page.get_by_text("Đã gửi phân công.", exact=True)).to_be_visible()
         else:
-            expect(
-                self.page.get_by_role(
-                    "alert", name=re.compile("Không thể phân công Incident")
-                )
-            ).to_be_visible()
+            alert = self.page.get_by_role("alert").filter(
+                has_text=re.compile(r"Không thể phân công Incident")
+            )
+            expect(alert.first).to_be_visible()
+            expect(alert.first).to_contain_text("Không thể phân công Incident")
 
     def revoke_assignment(self, resource_id: str, reason: str) -> None:
         self.goto("/assignments")
@@ -327,14 +430,14 @@ class CivicApp:
         self.page.context.set_offline(False)
         self.open_offline_status()
         expect(self.page.get_by_text("Online", exact=True)).to_be_visible()
-        expect.poll(
+        self._poll_value(
             lambda: self.page.get_by_text("Chờ gửi", exact=True)
             .locator("..")
             .get_by_text("0", exact=True)
             .count(),
-            timeout=15_000,
-            intervals=[100, 250, 500, 1_000],
-        ).to_be(1)
+            expected=1,
+            describe="offline queue 'Chờ gửi' count to reach 0",
+        )
         if expected_synced is not None:
             self.expect_queue_count("Đã xác nhận", str(expected_synced))
         else:
@@ -460,23 +563,57 @@ class CivicApp:
         return body
 
     def wait_for_projection(self) -> None:
-        expect.poll(
+        self._poll_value(
             lambda: self.worker_health().get("pendingCount"),
-            timeout=15_000,
-            intervals=[100, 250, 500, 1_000],
-        ).to_be(0)
-        expect.poll(
+            expected=0,
+            describe="worker pendingCount to reach 0",
+        )
+        self._poll_value(
             lambda: self.worker_health().get("deadLetterCount"),
-            timeout=15_000,
-            intervals=[100, 250, 500, 1_000],
-        ).to_be(0)
-        expect.poll(
+            expected=0,
+            describe="worker deadLetterCount to reach 0",
+        )
+        self._poll_value(
             lambda: self.worker_health().get("processingCount"),
-            timeout=15_000,
-            intervals=[100, 250, 500, 1_000],
-        ).to_be(0)
+            expected=0,
+            describe="worker processingCount to reach 0",
+        )
         health = self.worker_health()
         assert health.get("projectionStatus") in {"idle", "tracked"}
+
+    def wait_for_offline_queue_error(self, expected: str, *, timeout_ms: int = 15_000) -> None:
+        self._poll_value(
+            self.offline_queue_error,
+            expected=expected,
+            describe=f"offline queue error to become {expected!r}",
+            timeout_ms=timeout_ms,
+        )
+
+    def _poll_value(
+        self,
+        get_value: Callable[[], T],
+        *,
+        expected: T,
+        describe: str,
+        timeout_ms: int = 15_000,
+        interval_ms: int = 250,
+    ) -> T:
+        deadline = time.monotonic() + (timeout_ms / 1000)
+        last_value: T | BaseException | None = None
+        while True:
+            try:
+                last_value = get_value()
+            except Exception as error:
+                last_value = error
+            if last_value == expected:
+                return last_value
+            if time.monotonic() >= deadline:
+                break
+            time.sleep(interval_ms / 1000)
+        raise AssertionError(
+            f"timed out after {timeout_ms}ms waiting for {describe}; "
+            f"expected {expected!r}, saw {last_value!r}"
+        )
 
     def _last_path_segment(self) -> str:
         return self.page.url.rstrip("/").split("/")[-1]

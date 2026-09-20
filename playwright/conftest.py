@@ -3,10 +3,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import signal
 import subprocess
 import sys
 import time
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -142,7 +142,7 @@ REFERENCE_TABLES = (
 
 
 def _node_command() -> str:
-    return "npm.cmd" if os.name == "nt" else "npm"
+    return "npm.cmd"
 
 
 def _without_prisma_options(url: str) -> str:
@@ -445,12 +445,14 @@ def _terminate(process: subprocess.Popen[str] | None) -> None:
     if process is None or process.poll() is not None:
         return
     try:
-        if os.name == "posix":
-            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
-        else:  # pragma: no cover - Windows CI path
-            process.terminate()
+        subprocess.run(
+            ["cmd.exe", "/d", "/s", "/c", f"taskkill /PID {process.pid} /T /F"],
+            capture_output=True,
+            check=False,
+            timeout=30,
+        )
         process.wait(timeout=10)
-    except (ProcessLookupError, subprocess.TimeoutExpired):
+    except (OSError, subprocess.TimeoutExpired):
         try:
             process.kill()
             process.wait(timeout=5)
@@ -464,6 +466,7 @@ class E2EServices:
         self.port = port
         self.timeout = timeout
         self.base_url = f"http://127.0.0.1:{port}"
+        self.run_id = uuid.uuid4().hex[:12]
         self.app_process: subprocess.Popen[str] | None = None
         self.worker_process: subprocess.Popen[str] | None = None
         self.health_token: str | None = None
@@ -483,12 +486,51 @@ class E2EServices:
             "stdout": log_handle,
             "stderr": subprocess.STDOUT,
             "text": True,
+            "creationflags": subprocess.CREATE_NEW_PROCESS_GROUP,
         }
-        if os.name == "posix":
-            kwargs["start_new_session"] = True
-        else:  # pragma: no cover - Windows CI path
-            kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
         return subprocess.Popen(command, **kwargs)
+
+    def _cleanup_stale_processes(self) -> None:
+        try:
+            netstat = subprocess.run(
+                ["cmd.exe", "/d", "/s", "/c", "netstat -ano"],
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=30,
+            )
+        except (OSError, subprocess.SubprocessError):
+            netstat = None
+        if netstat is not None:
+            for line in netstat.stdout.splitlines():
+                if "LISTENING" not in line or f":{self.port} " not in line:
+                    continue
+                pid = line.split()[-1]
+                if not pid.isdigit():
+                    continue
+                try:
+                    subprocess.run(
+                        ["cmd.exe", "/d", "/s", "/c", f"taskkill /PID {pid} /F"],
+                        capture_output=True,
+                        check=False,
+                        timeout=30,
+                    )
+                except (OSError, subprocess.SubprocessError):
+                    continue
+        script = (
+            "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | "
+            "Where-Object { $_.CommandLine -like '*--e2e-run=*' } | "
+            "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"
+        )
+        try:
+            subprocess.run(
+                ["powershell.exe", "-NoProfile", "-Command", script],
+                capture_output=True,
+                check=False,
+                timeout=60,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
 
     def _log_excerpt(self, log_name: str) -> str:
         path = self.log_dir / log_name
@@ -553,17 +595,22 @@ class E2EServices:
 
     def start(self) -> None:
         npm = _node_command()
+        self._cleanup_stale_processes()
         self.app_process = self._start_process(
             [npm, "run", "dev", "--", "--hostname", "127.0.0.1", "--port", str(self.port)],
             "next.log",
         )
         self._wait_for_app()
-        self.worker_process = self._start_process([npm, "run", "worker"], "worker.log")
+        self.worker_process = self._start_process(
+            [npm, "run", "worker", "--", f"--e2e-run={self.run_id}"],
+            "worker.log",
+        )
         self._wait_for_worker()
 
     def stop(self) -> None:
         _terminate(self.worker_process)
         _terminate(self.app_process)
+        self._cleanup_stale_processes()
         for handle in self._log_handles:
             handle.close()
         self._log_handles.clear()
