@@ -66,3 +66,5 @@ S9 now has computed touch-target and WCAG contrast assertions, not class-name-on
 checks. The permission-denied browser branch is explicitly unobserved but does
 not block the exact listed acceptance criteria or implementation steps. This
 review does not change ticket status or checkboxes and does not commit.
+
+Commit: c3d3135
