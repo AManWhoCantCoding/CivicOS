@@ -8,6 +8,8 @@ import {
   useOnlineStatus,
 } from '@/components/field/client-state';
 
+import { describeVehicleCommandError } from './vehicle-status-text';
+
 type OrganizationUnit = { id: string; name: string; level: string };
 
 export function VehicleEscalationForm({
@@ -93,11 +95,7 @@ export function VehicleEscalationForm({
             ? 'warning'
             : 'error',
         );
-        setMessage(
-          response.status === 401 || response.status === 403
-            ? `Không được phép chuyển đơn vị: ${error}`
-            : `Không thể chuyển đơn vị: ${error}`,
-        );
+        setMessage(describeVehicleCommandError(error, response.status));
         return;
       }
       const body = (await response.json()) as {

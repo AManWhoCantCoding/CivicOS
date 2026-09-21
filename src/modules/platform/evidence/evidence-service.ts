@@ -23,7 +23,20 @@ export type EvidenceInput = {
 export async function createEvidence(
   storage: EvidenceStorageAdapter,
   input: EvidenceInput,
+  client: Prisma.TransactionClient | typeof prisma = prisma,
 ) {
+  const result = await createEvidenceRecord(storage, input, client);
+  return result.evidence;
+}
+
+export async function createEvidenceRecord(
+  storage: EvidenceStorageAdapter,
+  input: EvidenceInput,
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<{
+  evidence: Awaited<ReturnType<typeof prisma.evidence.create>>;
+  stored: boolean;
+}> {
   if (!input.bytes.byteLength) throw new Error('EMPTY_EVIDENCE');
   if (Number.isNaN(input.capturedAt.getTime()))
     throw new Error('INVALID_CAPTURE_TIME');
@@ -34,14 +47,14 @@ export async function createEvidence(
     createGeoPoint(input.latitude, input.longitude);
   }
   const hash = createHash('sha256').update(input.bytes).digest('hex');
-  const existing = await prisma.evidence.findFirst({
+  const existing = await client.evidence.findFirst({
     where: {
       resourceType: input.resourceType,
       resourceId: input.resourceId,
       originalHash: hash,
     },
   });
-  if (existing) return existing;
+  if (existing) return { evidence: existing, stored: false };
 
   const stored = await storage.store({
     resourceId: input.resourceId,
@@ -49,7 +62,7 @@ export async function createEvidence(
     bytes: input.bytes,
   });
   try {
-    return await prisma.evidence.create({
+    const evidence = await client.evidence.create({
       data: {
         resourceType: input.resourceType,
         resourceId: input.resourceId,
@@ -65,19 +78,23 @@ export async function createEvidence(
         metadata: (input.metadata ?? {}) as Prisma.InputJsonValue,
       },
     });
+    return { evidence, stored: true };
   } catch (error) {
+    await storage.remove(stored.storageKey);
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     ) {
-      const duplicate = await prisma.evidence.findFirst({
-        where: {
-          resourceType: input.resourceType,
-          resourceId: input.resourceId,
-          originalHash: hash,
-        },
-      });
-      if (duplicate) return duplicate;
+      if (client === prisma) {
+        const duplicate = await prisma.evidence.findFirst({
+          where: {
+            resourceType: input.resourceType,
+            resourceId: input.resourceId,
+            originalHash: hash,
+          },
+        });
+        if (duplicate) return { evidence: duplicate, stored: false };
+      }
     }
     throw error;
   }

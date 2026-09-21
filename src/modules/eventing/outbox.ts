@@ -175,6 +175,7 @@ export async function processOneOutboxMessage(): Promise<boolean> {
         deadLetterAt: terminal ? new Date() : null,
       },
     });
+    return true;
   }
 
   return true;

@@ -35,9 +35,9 @@ describe('continuous SLA clock', () => {
   });
 
   it('rejects invalid thresholds', () => {
-    expect(() => dueAt(new Date(), { kind: 'invalid', durationMs: -1 })).toThrow(
-      'INVALID_SLA_DURATION',
-    );
+    expect(() =>
+      dueAt(new Date(), { kind: 'invalid', durationMs: -1 }),
+    ).toThrow('INVALID_SLA_DURATION');
   });
 
   it('runs the continuous clock on the National Day holiday without skipping', () => {
@@ -98,7 +98,9 @@ describe('continuous SLA clock', () => {
           sourceEventId: persisted.overdueEventId ?? undefined,
         }),
       ).toMatchObject({ id: notifications[0].id });
-      expect(await markNotificationRead(userId, notifications[0].id)).toMatchObject({
+      expect(
+        await markNotificationRead(userId, notifications[0].id),
+      ).toMatchObject({
         count: 1,
       });
       await processOutboxUntilIdle();
@@ -139,13 +141,7 @@ describe('continuous SLA clock', () => {
           payload: { nonce },
           metadata: {},
         });
-        for (let guard = 0; guard < 25; guard += 1) {
-          const message = await prisma.outboxMessage.findUniqueOrThrow({
-            where: { eventId },
-          });
-          if (message.attempts > 0) break;
-          await processOneOutboxMessage();
-        }
+        expect(await processOneOutboxMessage()).toBe(true);
         const failed = await prisma.outboxMessage.findUniqueOrThrow({
           where: { eventId },
         });
@@ -158,13 +154,7 @@ describe('continuous SLA clock', () => {
           where: { eventId },
           data: { availableAt: new Date() },
         });
-        for (let guard = 0; guard < 25; guard += 1) {
-          const message = await prisma.outboxMessage.findUniqueOrThrow({
-            where: { eventId },
-          });
-          if (message.status === 'processed') break;
-          await processOneOutboxMessage();
-        }
+        expect(await processOneOutboxMessage()).toBe(true);
         const retried = await prisma.outboxMessage.findUniqueOrThrow({
           where: { eventId },
         });
@@ -174,9 +164,9 @@ describe('continuous SLA clock', () => {
 
         await processOutboxUntilIdle();
         expect(successes).toBe(1);
-        const checkpoint = await prisma.projectionCheckpoint.findUniqueOrThrow(
-          { where: { name: `${eventType}:probe-${nonce}` } },
-        );
+        const checkpoint = await prisma.projectionCheckpoint.findUniqueOrThrow({
+          where: { name: `${eventType}:probe-${nonce}` },
+        });
         expect(checkpoint.processedEventIds).toContain(eventId);
 
         const health = await getOutboxHealth();
@@ -210,7 +200,9 @@ describe('continuous SLA clock', () => {
     await prisma.outboxMessage.deleteMany({
       where: { eventId: { in: events.map(({ eventId }) => eventId) } },
     });
-    await prisma.eventRecord.deleteMany({ where: { aggregateId: { in: slaIds } } });
+    await prisma.eventRecord.deleteMany({
+      where: { aggregateId: { in: slaIds } },
+    });
     await prisma.slaInstance.deleteMany({ where: { id: { in: slaIds } } });
   });
 });

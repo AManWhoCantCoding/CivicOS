@@ -66,6 +66,7 @@ class CivicApp:
         )
 
     def _submit_login_form(self, account: Any) -> Response:
+        self.page.request.delete(self.url("/api/auth/session"))
         responses: list[Response] = []
         def _collect(response: Response) -> None:
             responses.append(response)
@@ -503,7 +504,7 @@ class CivicApp:
         expect(
             self.page.get_by_role("status").filter(
                 has_text=re.compile(r"Đã (lưu|ghi nhận)|chờ đồng bộ")
-            )
+            ).last
         ).to_be_visible()
 
     def duplicate_last_offline_command(self) -> None:

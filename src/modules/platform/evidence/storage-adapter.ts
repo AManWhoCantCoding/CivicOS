@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 export type StoredEvidence = {
@@ -14,6 +14,7 @@ export interface EvidenceStorageAdapter {
     fileName: string;
     bytes: Uint8Array;
   }): Promise<StoredEvidence>;
+  remove(storageKey: string): Promise<void>;
   read(storageKey: string): Promise<Uint8Array>;
 }
 
@@ -48,5 +49,13 @@ export class LocalEvidenceStorage implements EvidenceStorageAdapter {
   async read(storageKey: string): Promise<Uint8Array> {
     const { readFile } = await import('node:fs/promises');
     return new Uint8Array(await readFile(path.join(this.root, storageKey)));
+  }
+
+  async remove(storageKey: string): Promise<void> {
+    await unlink(path.join(this.root, storageKey)).catch(
+      (error: NodeJS.ErrnoException) => {
+        if (error.code !== 'ENOENT') throw error;
+      },
+    );
   }
 }

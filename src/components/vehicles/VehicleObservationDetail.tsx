@@ -12,11 +12,13 @@ import { EvidenceList } from '@/components/field/EvidenceList';
 
 import { VehicleEscalationForm } from './VehicleEscalationForm';
 import { VehicleVerificationForm } from './VehicleVerificationForm';
+import { describeVehicleCommandError } from './vehicle-status-text';
 
 type Observation = {
   id: string;
   plate: string;
   status: string;
+  version: number;
   description: string | null;
   latitude: string | number;
   longitude: string | number;
@@ -24,6 +26,7 @@ type Observation = {
   evidenceIds?: unknown;
   matchedRegistryId?: string | null;
   matchConfirmedAt?: string | null;
+  matchConfirmedById?: string | null;
   escalatedAt?: string | null;
 };
 
@@ -31,6 +34,8 @@ type Verification = {
   id: string;
   result: string;
   notes: string;
+  ownerLookup?: string | null;
+  verifiedById?: string | null;
   latitude?: string | number | null;
   longitude?: string | number | null;
   evidenceIds?: unknown;
@@ -129,7 +134,10 @@ export function VehicleObservationDetail({
         {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ command: 'confirm_match' }),
+          body: JSON.stringify({
+            command: 'confirm_match',
+            baseVersion: data.observation.version,
+          }),
         },
       );
       if (!response.ok) {
@@ -142,11 +150,7 @@ export function VehicleObservationDetail({
             ? 'warning'
             : 'error',
         );
-        setMessage(
-          response.status === 401 || response.status === 403
-            ? `Không được phép xác nhận match: ${reason}`
-            : `Không thể xác nhận match: ${reason}`,
-        );
+        setMessage(describeVehicleCommandError(reason, response.status));
         return;
       }
       const body = (await response.json()) as { observation?: Observation };
@@ -274,6 +278,14 @@ export function VehicleObservationDetail({
             </dd>
           </div>
           <div>
+            <dt className="text-slate-600">Xác nhận match</dt>
+            <dd className="mt-1 text-slate-300">
+              {observation.matchConfirmedAt
+                ? `${new Date(observation.matchConfirmedAt).toLocaleString('vi-VN')}${observation.matchConfirmedById ? ` · ${observation.matchConfirmedById}` : ''}`
+                : 'Chưa xác nhận'}
+            </dd>
+          </div>
+          <div>
             <dt className="text-slate-600">Chuyển đơn vị lúc</dt>
             <dd className="mt-1 text-slate-300">
               {observation.escalatedAt
@@ -347,6 +359,16 @@ export function VehicleObservationDetail({
                 <p className="mt-2 text-sm leading-6 text-slate-400">
                   {verification.notes}
                 </p>
+                {verification.verifiedById ? (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Người xác minh: {verification.verifiedById}
+                  </p>
+                ) : null}
+                {verification.ownerLookup ? (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Tra cứu chủ xe: {verification.ownerLookup}
+                  </p>
+                ) : null}
                 {verification.latitude !== null &&
                 verification.latitude !== undefined ? (
                   <p className="mt-2 text-xs text-slate-500">

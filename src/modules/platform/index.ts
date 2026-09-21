@@ -3,7 +3,12 @@ export type {
   EvidenceStorageAdapter,
   StoredEvidence,
 } from './evidence';
-export { createEvidence, getEvidence, LocalEvidenceStorage } from './evidence';
+export {
+  createEvidence,
+  createEvidenceRecord,
+  getEvidence,
+  LocalEvidenceStorage,
+} from './evidence';
 export type { GeoArea, GeoPoint } from './geo';
 export { createGeoArea, createGeoPoint } from './geo';
 export {

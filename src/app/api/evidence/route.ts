@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 
 import { assertAccess, getCurrentUser, recordAudit } from '@/modules/identity';
 import {
-  createEvidence,
   createGeoPoint,
   getEvidence,
   LocalEvidenceStorage,
 } from '@/modules/platform';
+import { createVehicleObservationEvidence } from '@/modules/vehicles';
+import { createEvidence } from '@/modules/platform';
 
 export async function POST(request: Request): Promise<NextResponse> {
   const user = await getCurrentUser();
@@ -48,7 +49,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (latitude !== undefined && longitude !== undefined) {
       createGeoPoint(latitude, longitude);
     }
-    const evidence = await createEvidence(new LocalEvidenceStorage(), {
+    const evidenceInput = {
       resourceType,
       resourceId,
       fileName: file.name,
@@ -58,17 +59,26 @@ export async function POST(request: Request): Promise<NextResponse> {
       actorId: user.id,
       latitude,
       longitude,
-    });
-    await recordAudit({
-      actor: user,
-      resourceType,
-      resourceId,
-      operation: 'evidence.uploaded',
-      metadata: {
-        evidenceId: evidence.id,
-        originalHash: evidence.originalHash,
-      },
-    });
+    };
+    const evidence =
+      resourceType === 'VehicleObservation'
+        ? await createVehicleObservationEvidence(
+            new LocalEvidenceStorage(),
+            evidenceInput,
+            user,
+          )
+        : await createEvidence(new LocalEvidenceStorage(), evidenceInput);
+    if (resourceType !== 'VehicleObservation')
+      await recordAudit({
+        actor: user,
+        resourceType,
+        resourceId,
+        operation: 'evidence.uploaded',
+        metadata: {
+          evidenceId: evidence.id,
+          originalHash: evidence.originalHash,
+        },
+      });
     return NextResponse.json({ evidence }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'EVIDENCE_FAILED';

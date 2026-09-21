@@ -53,6 +53,12 @@ export async function POST(
             observationId,
             result: String(body.result ?? ''),
             notes: String(body.notes ?? ''),
+            ownerLookup:
+              typeof body.ownerLookup === 'string'
+                ? body.ownerLookup
+                : body.ownerLookup == null
+                  ? undefined
+                  : String(body.ownerLookup),
             latitude:
               typeof body.latitude === 'number' ? body.latitude : undefined,
             longitude:
@@ -66,7 +72,13 @@ export async function POST(
       });
     if (body.command === 'confirm_match')
       return NextResponse.json({
-        observation: await confirmVehicleMatch(observationId, user),
+        observation: await confirmVehicleMatch(observationId, user, {
+          baseVersion:
+            typeof body.baseVersion === 'number' &&
+            Number.isInteger(body.baseVersion)
+              ? body.baseVersion
+              : undefined,
+        }),
       });
     if (body.command === 'escalate')
       return NextResponse.json({

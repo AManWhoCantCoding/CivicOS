@@ -7,7 +7,11 @@ import {
   FeedbackMessage,
   useOnlineStatus,
 } from '@/components/field/client-state';
+import { EvidenceCapture } from '@/components/field/EvidenceCapture';
+import { EvidenceList } from '@/components/field/EvidenceList';
 import { submitOfflineCommand } from '@/components/field/offline-queue';
+
+import { describeOfflineQueueStatus } from './vehicle-status-text';
 
 export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
   const online = useOnlineStatus();
@@ -18,6 +22,8 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
   const [tone, setTone] = useState<'success' | 'error' | 'warning'>('success');
   const [observationId, setObservationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
+  const [evidenceUploading, setEvidenceUploading] = useState(false);
 
   function getLocation() {
     if (!navigator.geolocation) {
@@ -82,9 +88,9 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
         item.status === 'synced'
           ? result?.matchId
             ? 'Đã ghi nhận. Có match cần xác nhận.'
-            : 'Đã lưu quan sát.'
+            : 'Đã ghi nhận quan sát. Chưa hoàn tất: cần tải ảnh bằng chứng.'
           : item.status === 'pending' || item.status === 'syncing'
-            ? 'Đã lưu cục bộ, chờ đồng bộ.'
+            ? describeOfflineQueueStatus(item.status)
             : (item.error ?? 'Không thể lưu quan sát.'),
       );
       if (accepted) {
@@ -160,7 +166,7 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
         <button
           type="button"
           onClick={getLocation}
-          className="rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:border-cyan-300"
+          className="min-h-[44px] rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:border-cyan-300"
         >
           Lấy vị trí hiện tại
         </button>
@@ -168,6 +174,16 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
           {locationMessage}
         </span>
       </div>
+      <p className="text-xs leading-5 text-slate-500" role="status">
+        GPS chỉ hỗ trợ điền nhanh; nếu không có GPS, luôn nhập tay được tọa độ.
+      </p>
+      <p
+        className="rounded-lg border border-slate-800 px-3 py-2 text-xs leading-5 text-slate-500"
+        role="status"
+      >
+        Quan sát chỉ được coi là hoàn tất sau khi ảnh bằng chứng được tải lên.
+        Khi offline, quan sát chỉ ở trạng thái chờ đồng bộ.
+      </p>
       <label className="block text-sm text-slate-200">
         Mô tả
         <textarea
@@ -178,15 +194,31 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
       </label>
       {message ? <FeedbackMessage message={message} tone={tone} /> : null}
       {observationId ? (
-        <Link
-          href={`/field/vehicles/${observationId}`}
-          className="block text-sm text-cyan-200 hover:text-white"
-        >
-          Mở chi tiết quan sát →
-        </Link>
+        <>
+          <Link
+            href={`/field/vehicles/${observationId}`}
+            className="block text-sm text-cyan-200 hover:text-white"
+          >
+            Mở chi tiết quan sát →
+          </Link>
+          <EvidenceCapture
+            resourceType="VehicleObservation"
+            resourceId={observationId}
+            disabled={loading}
+            onUploadStateChange={setEvidenceUploading}
+            onUploaded={(evidence) =>
+              setEvidenceIds((current) =>
+                current.includes(evidence.id)
+                  ? current
+                  : [...current, evidence.id],
+              )
+            }
+          />
+          <EvidenceList evidenceIds={evidenceIds} label="Ảnh quan sát đã gắn" />
+        </>
       ) : null}
       <button
-        disabled={loading}
+        disabled={loading || evidenceUploading}
         type="submit"
         className="w-full rounded-lg bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-60"
       >

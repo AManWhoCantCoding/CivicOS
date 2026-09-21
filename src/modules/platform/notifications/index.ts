@@ -3,30 +3,33 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { registerEventConsumer } from '@/modules/eventing';
 
-export async function createInAppNotification(input: {
-  userId: string;
-  type: string;
-  title: string;
-  body: string;
-  resourceType?: string;
-  resourceId?: string;
-  sourceEventId?: string;
-}) {
+export async function createInAppNotification(
+  input: {
+    userId: string;
+    type: string;
+    title: string;
+    body: string;
+    resourceType?: string;
+    resourceId?: string;
+    sourceEventId?: string;
+  },
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+) {
   if (input.sourceEventId) {
-    const existing = await prisma.notification.findUnique({
+    const existing = await client.notification.findUnique({
       where: { sourceEventId: input.sourceEventId },
     });
     if (existing) return existing;
   }
   try {
-    return await prisma.notification.create({ data: input });
+    return await client.notification.create({ data: input });
   } catch (error) {
     if (
       input.sourceEventId &&
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     ) {
-      return prisma.notification.findUniqueOrThrow({
+      return client.notification.findUniqueOrThrow({
         where: { sourceEventId: input.sourceEventId },
       });
     }

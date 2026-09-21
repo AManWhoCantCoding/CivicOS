@@ -409,6 +409,7 @@ model VehicleVerification {
   observationId String
   result        String
   notes         String
+  ownerLookup   String?
   verifiedById  String
   latitude      Decimal?
   longitude     Decimal?

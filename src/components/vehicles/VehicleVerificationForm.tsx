@@ -9,6 +9,8 @@ import {
   useOnlineStatus,
 } from '@/components/field/client-state';
 
+import { describeVehicleCommandError } from './vehicle-status-text';
+
 export function VehicleVerificationForm({
   observationId,
   status,
@@ -96,6 +98,9 @@ export function VehicleVerificationForm({
             command: 'verify',
             result: String(form.get('result') ?? ''),
             notes: String(form.get('notes') ?? ''),
+            ownerLookup: String(form.get('ownerLookup') ?? '').trim()
+              ? String(form.get('ownerLookup') ?? '').trim()
+              : undefined,
             ...(latitudeValue && longitudeValue
               ? {
                   latitude: Number(latitudeValue),
@@ -113,11 +118,7 @@ export function VehicleVerificationForm({
             ? 'warning'
             : 'error',
         );
-        setMessage(
-          response.status === 401 || response.status === 403
-            ? `Không được phép xác minh: ${error}`
-            : `Không thể xác minh: ${error}`,
-        );
+        setMessage(describeVehicleCommandError(error, response.status));
         return;
       }
       const body = (await response.json()) as {
@@ -186,6 +187,15 @@ export function VehicleVerificationForm({
         />
       </label>
       <label className="block text-sm text-slate-200">
+        Tra cứu chủ xe (không bắt buộc)
+        <input
+          name="ownerLookup"
+          disabled={!enabled || loading}
+          placeholder="Kết quả tra cứu chủ xe"
+          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+        />
+      </label>
+      <label className="block text-sm text-slate-200">
         Ghi chú
         <textarea
           name="notes"
@@ -228,7 +238,7 @@ export function VehicleVerificationForm({
             type="button"
             onClick={getLocation}
             disabled={!enabled || loading}
-            className="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200 hover:border-cyan-300 disabled:opacity-50"
+            className="min-h-[44px] rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200 hover:border-cyan-300 disabled:opacity-50"
           >
             Lấy vị trí hiện tại
           </button>

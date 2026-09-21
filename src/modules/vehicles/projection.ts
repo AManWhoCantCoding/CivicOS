@@ -20,6 +20,7 @@ const vehicleEventTypes = [
   'SuspiciousVehicleRegistered',
   'SuspiciousVehicleRegistryUpdated',
   'VehicleObservationRecorded',
+  'VehicleObservationEvidenceAttached',
   'SuspiciousVehicleMatched',
   'SuspiciousVehicleMatchConfirmed',
   'VehicleVerificationRecorded',

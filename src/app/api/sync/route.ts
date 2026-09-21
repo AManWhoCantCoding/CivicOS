@@ -79,6 +79,8 @@ async function dispatchOfflineCommand(
       return {
         observationId: result.observation.id,
         status: result.observation.status,
+        evidenceIds: result.observation.evidenceIds,
+        auditId: result.auditId,
         matchId: result.match?.id ?? null,
       };
     }
