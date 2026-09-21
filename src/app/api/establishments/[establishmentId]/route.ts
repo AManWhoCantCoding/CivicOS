@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 
 import { getCurrentUser } from '@/modules/identity';
 import { getEstablishment, updateEstablishment } from '@/modules/inspections';
+import {
+  parseEstablishmentPatch,
+  toApiError,
+} from '@/modules/inspections/schemas';
 
 export async function GET(
   _request: Request,
@@ -16,18 +20,10 @@ export async function GET(
       establishment: await getEstablishment(establishmentId, user),
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'ESTABLISHMENT_FAILED';
+    const apiError = toApiError(error);
     return NextResponse.json(
-      { error: message },
-      {
-        status:
-          message === 'FORBIDDEN'
-            ? 403
-            : message.includes('NOT_FOUND')
-              ? 404
-              : 400,
-      },
+      { error: apiError.message, code: apiError.code },
+      { status: apiError.status },
     );
   }
 }
@@ -43,23 +39,18 @@ export async function PATCH(
     const { establishmentId } = await context.params;
     return NextResponse.json({
       establishment: await updateEstablishment(
-        { ...(await request.json()), establishmentId },
+        {
+          ...parseEstablishmentPatch(await request.json()),
+          establishmentId,
+        },
         user,
       ),
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'ESTABLISHMENT_FAILED';
+    const apiError = toApiError(error);
     return NextResponse.json(
-      { error: message },
-      {
-        status:
-          message === 'FORBIDDEN'
-            ? 403
-            : message.includes('NOT_FOUND')
-              ? 404
-              : 400,
-      },
+      { error: apiError.message, code: apiError.code },
+      { status: apiError.status },
     );
   }
 }

@@ -13,6 +13,7 @@ import {
 } from '@/modules/inspections';
 
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
+const databaseTestTimeoutMs = 15_000;
 
 const actor: IdentityUser = {
   id: 'inspection-schedule-test-actor',
@@ -103,67 +104,74 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
     establishmentId = undefined;
   });
 
-  it('creates the next configured occurrence after completion', async () => {
-    const establishment = await registerEstablishment(
-      {
-        name: 'Nhà nghỉ lịch định kỳ',
-        ownerName: 'Chủ cơ sở',
-        address: 'Địa chỉ kiểm tra lịch định kỳ',
-        type: 'nhà nghỉ',
-      },
-      actor,
-    );
-    establishmentId = establishment.id;
-
-    const first = await scheduleInspection(
-      {
-        establishmentId,
-        scheduledAt: '2026-01-01T08:00:00.000Z',
-        cadenceMonths: 6,
-      },
-      actor,
-    );
-    const template = await prisma.checklistTemplate.findUnique({
-      where: { id: first.templateId },
-    });
-    expect(template?.items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          key: 'security',
-          label: expect.stringContaining('lưu trú'),
-        }),
-      ]),
-    );
-
-    await startInspection(first.id, actor);
-    await saveChecklistResponses(
-      {
-        inspectionId: first.id,
-        responses: [
-          { key: 'license', value: 'valid' },
-          { key: 'security', value: 'valid' },
-        ],
-      },
-      actor,
-    );
-    await completeInspection({ inspectionId: first.id, result: 'pass' }, actor);
-    await processOutboxUntilIdle();
-
-    const next = await prisma.inspection.findUnique({
-      where: {
-        establishmentId_scheduledAt: {
-          establishmentId,
-          scheduledAt: new Date('2026-07-01T08:00:00.000Z'),
+  it(
+    'creates the next configured occurrence after completion',
+    async () => {
+      const establishment = await registerEstablishment(
+        {
+          name: 'Nhà nghỉ lịch định kỳ',
+          ownerName: 'Chủ cơ sở',
+          address: 'Địa chỉ kiểm tra lịch định kỳ',
+          type: 'nhà nghỉ',
         },
-      },
-    });
-    expect(next).toMatchObject({
-      status: 'scheduled',
-      cadenceMonths: 6,
-      templateVersion: first.templateVersion,
-    });
-    expect(
-      (await listInspections(actor)).find(({ id }) => id === next?.id),
-    ).toMatchObject({ scheduleState: 'overdue' });
-  });
+        actor,
+      );
+      establishmentId = establishment.id;
+
+      const first = await scheduleInspection(
+        {
+          establishmentId,
+          scheduledAt: '2026-01-01T08:00:00.000Z',
+          cadenceMonths: 6,
+        },
+        actor,
+      );
+      const template = await prisma.checklistTemplate.findUnique({
+        where: { id: first.templateId },
+      });
+      expect(template?.items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'security',
+            label: expect.stringContaining('lưu trú'),
+          }),
+        ]),
+      );
+
+      await startInspection(first.id, actor);
+      await saveChecklistResponses(
+        {
+          inspectionId: first.id,
+          responses: [
+            { key: 'license', value: 'valid' },
+            { key: 'security', value: 'valid' },
+          ],
+        },
+        actor,
+      );
+      await completeInspection(
+        { inspectionId: first.id, result: 'pass' },
+        actor,
+      );
+      await processOutboxUntilIdle();
+
+      const next = await prisma.inspection.findUnique({
+        where: {
+          establishmentId_scheduledAt: {
+            establishmentId,
+            scheduledAt: new Date('2026-07-01T08:00:00.000Z'),
+          },
+        },
+      });
+      expect(next).toMatchObject({
+        status: 'scheduled',
+        cadenceMonths: 6,
+        templateVersion: first.templateVersion,
+      });
+      expect(
+        (await listInspections(actor)).find(({ id }) => id === next?.id),
+      ).toMatchObject({ scheduleState: 'overdue' });
+    },
+    databaseTestTimeoutMs,
+  );
 });

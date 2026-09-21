@@ -360,6 +360,19 @@ export async function listInspections(actor: InspectionActor) {
   return scheduleView;
 }
 
+export async function listDueInspections(
+  actor: InspectionActor,
+  now: Date = new Date(),
+) {
+  const inspections = await listInspections(actor);
+  return inspections.filter(
+    (inspection) =>
+      inspection.status === 'scheduled' &&
+      !Number.isNaN(new Date(String(inspection.scheduledAt)).getTime()) &&
+      new Date(String(inspection.scheduledAt)).getTime() <= now.getTime(),
+  );
+}
+
 export async function getInspection(
   inspectionId: string,
   actor: InspectionActor,

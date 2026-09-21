@@ -20,7 +20,7 @@ export function EnforcementApprovalPanel({
     reason?: string;
     status: string;
   }>;
-  onChanged?: () => void;
+  onChanged?: (version?: number) => void;
 }) {
   const online = useOnlineStatus();
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -71,11 +71,16 @@ export function EnforcementApprovalPanel({
         );
         return;
       }
+      const body = (await response.json()) as { inspectionVersion?: unknown };
+      const inspectionVersion =
+        typeof body.inspectionVersion === 'number'
+          ? body.inspectionVersion
+          : undefined;
       setTone('success');
       setMessage(
         command === 'approve' ? 'Đã duyệt đề xuất.' : 'Đã từ chối đề xuất.',
       );
-      onChanged?.();
+      onChanged?.(inspectionVersion);
     } catch {
       setTone('error');
       setMessage('Không thể kết nối để cập nhật đề xuất.');

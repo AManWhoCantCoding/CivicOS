@@ -123,6 +123,14 @@ export function ChecklistForm({
       setMessage('Checklist chỉ có thể lưu khi inspection đang được kiểm tra.');
       return;
     }
+    const missing = items.find(
+      ({ key, required }) => required && !responses[key]?.trim(),
+    );
+    if (missing) {
+      setTone('error');
+      setMessage(`Điền mục bắt buộc trước khi lưu: ${missing.label}.`);
+      return;
+    }
     void command('save_checklist', {
       responses: items.map(({ key }) => ({ key, value: responses[key] ?? '' })),
     });
@@ -168,13 +176,13 @@ export function ChecklistForm({
             />
           </label>
         ))}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           {status === 'scheduled' ? (
             <button
               type="button"
               onClick={() => void command('start')}
               disabled={loadingCommand !== null}
-              className="rounded-lg bg-cyan-300 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-60"
+              className="min-h-[44px] rounded-lg bg-cyan-300 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-60 motion-reduce:transition-none"
             >
               {loadingCommand === 'start'
                 ? 'Đang bắt đầu…'
@@ -185,7 +193,7 @@ export function ChecklistForm({
             <button
               type="submit"
               disabled={loadingCommand !== null}
-              className="rounded-lg border border-cyan-300/60 px-3 py-2 text-sm text-cyan-100 hover:border-cyan-200 disabled:opacity-60"
+              className="min-h-[44px] rounded-lg border border-cyan-300/60 px-3 py-2 text-sm text-cyan-100 hover:border-cyan-200 disabled:opacity-60 motion-reduce:transition-none"
             >
               {loadingCommand === 'save_checklist'
                 ? 'Đang lưu…'
@@ -225,7 +233,7 @@ export function ChecklistForm({
             onClick={() =>
               void command('complete', { result: completionResult })
             }
-            className="rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:border-cyan-300 disabled:opacity-50"
+            className="min-h-[44px] rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:border-cyan-300 disabled:opacity-50 motion-reduce:transition-none"
           >
             Hoàn tất
           </button>

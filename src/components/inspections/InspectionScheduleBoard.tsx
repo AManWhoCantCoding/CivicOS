@@ -48,6 +48,7 @@ export function InspectionScheduleBoard() {
   const [inspections, setInspections] = useState<InspectionSummary[]>([]);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'overdue' | 'upcoming'>('all');
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
@@ -120,13 +121,29 @@ export function InspectionScheduleBoard() {
         onScheduled={() => setReloadToken((value) => value + 1)}
       />
       <section className="space-y-4">
-        <div>
-          <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
-            Schedule
-          </p>
-          <h2 className="mt-2 text-xl font-semibold text-white">
-            Lịch kiểm tra
-          </h2>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+              Schedule
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-white">
+              Lịch kiểm tra
+            </h2>
+          </div>
+          <label className="block text-xs text-slate-400">
+            Lọc lịch
+            <select
+              value={filter}
+              onChange={(event) =>
+                setFilter(event.target.value as 'all' | 'overdue' | 'upcoming')
+              }
+              className="mt-2 min-h-[44px] rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-300"
+            >
+              <option value="all">Tất cả</option>
+              <option value="overdue">Quá hạn</option>
+              <option value="upcoming">Sắp tới</option>
+            </select>
+          </label>
         </div>
         {!online ? (
           <FeedbackMessage
@@ -158,58 +175,66 @@ export function InspectionScheduleBoard() {
         ) : null}
         {loadState === 'ready' && inspections.length ? (
           <div className="space-y-3">
-            {inspections.map((inspection) => {
-              const establishment = establishments.find(
-                (item) => item.id === inspection.establishmentId,
-              );
-              const scheduleState =
-                inspection.scheduleState ?? inspection.status;
-              return (
-                <article
-                  key={inspection.id}
-                  className="rounded-xl border border-slate-800 bg-slate-900 p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <Link
-                        href={`/inspections/${inspection.id}`}
-                        className="font-medium text-white hover:text-cyan-200"
-                      >
-                        {establishment?.name ?? inspection.establishmentId}
-                      </Link>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {new Date(inspection.scheduledAt).toLocaleString(
-                          'vi-VN',
-                        )}
-                      </p>
+            {inspections
+              .filter((inspection) => {
+                const scheduleState =
+                  inspection.scheduleState ?? inspection.status;
+                if (filter === 'overdue') return scheduleState === 'overdue';
+                if (filter === 'upcoming') return scheduleState === 'upcoming';
+                return true;
+              })
+              .map((inspection) => {
+                const establishment = establishments.find(
+                  (item) => item.id === inspection.establishmentId,
+                );
+                const scheduleState =
+                  inspection.scheduleState ?? inspection.status;
+                return (
+                  <article
+                    key={inspection.id}
+                    className="rounded-xl border border-slate-800 bg-slate-900 p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <Link
+                          href={`/inspections/${inspection.id}`}
+                          className="font-medium text-white hover:text-cyan-200"
+                        >
+                          {establishment?.name ?? inspection.establishmentId}
+                        </Link>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {new Date(inspection.scheduledAt).toLocaleString(
+                            'vi-VN',
+                          )}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">
+                        {statusLabel(scheduleState)}
+                      </span>
                     </div>
-                    <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">
-                      {statusLabel(scheduleState)}
-                    </span>
-                  </div>
-                  <dl className="mt-4 grid gap-3 text-xs text-slate-400 sm:grid-cols-3">
-                    <div>
-                      <dt className="text-slate-600">Trạng thái nghiệp vụ</dt>
-                      <dd className="mt-1 text-slate-300">
-                        {statusLabel(inspection.status)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-slate-600">Chu kỳ</dt>
-                      <dd className="mt-1 text-slate-300">
-                        {inspection.cadenceMonths} tháng
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-slate-600">Người được giao</dt>
-                      <dd className="mt-1 break-all text-slate-300">
-                        {inspection.assignedUserId ?? 'Chưa giao'}
-                      </dd>
-                    </div>
-                  </dl>
-                </article>
-              );
-            })}
+                    <dl className="mt-4 grid gap-3 text-xs text-slate-400 sm:grid-cols-3">
+                      <div>
+                        <dt className="text-slate-600">Trạng thái nghiệp vụ</dt>
+                        <dd className="mt-1 text-slate-300">
+                          {statusLabel(inspection.status)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-slate-600">Chu kỳ</dt>
+                        <dd className="mt-1 text-slate-300">
+                          {inspection.cadenceMonths} tháng
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-slate-600">Người được giao</dt>
+                        <dd className="mt-1 break-all text-slate-300">
+                          {inspection.assignedUserId ?? 'Chưa giao'}
+                        </dd>
+                      </div>
+                    </dl>
+                  </article>
+                );
+              })}
           </div>
         ) : null}
       </section>

@@ -11,20 +11,16 @@ import {
   startInspection,
   submitRecommendation,
 } from '@/modules/inspections';
+import {
+  parseInspectionCommand,
+  toApiError,
+} from '@/modules/inspections/schemas';
 
 function commandError(error: unknown): NextResponse {
-  const message =
-    error instanceof Error ? error.message : 'INSPECTION_COMMAND_FAILED';
+  const apiError = toApiError(error);
   return NextResponse.json(
-    { error: message },
-    {
-      status:
-        message === 'FORBIDDEN'
-          ? 403
-          : message.includes('NOT_FOUND')
-            ? 404
-            : 400,
-    },
+    { error: apiError.message, code: apiError.code },
+    { status: apiError.status },
   );
 }
 
@@ -52,9 +48,9 @@ export async function POST(
   if (!user)
     return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
   const inspectionId = (await context.params).inspectionId;
-  const body = (await request.json()) as Record<string, unknown>;
   try {
-    switch (body.command) {
+    const input = parseInspectionCommand(await request.json());
+    switch (input.command) {
       case 'start':
         return NextResponse.json({
           inspection: await startInspection(inspectionId, user),
@@ -64,15 +60,7 @@ export async function POST(
           inspection: await saveChecklistResponses(
             {
               inspectionId,
-              responses: Array.isArray(body.responses)
-                ? body.responses.map((response) => {
-                    const value = response as Record<string, unknown>;
-                    return {
-                      key: String(value.key ?? ''),
-                      value: String(value.value ?? ''),
-                    };
-                  })
-                : [],
+              responses: input.responses,
             },
             user,
           ),
@@ -80,7 +68,7 @@ export async function POST(
       case 'complete':
         return NextResponse.json({
           inspection: await completeInspection(
-            { inspectionId, result: String(body.result ?? '') },
+            { inspectionId, result: input.result },
             user,
           ),
         });
@@ -89,12 +77,10 @@ export async function POST(
           finding: await recordFinding(
             {
               inspectionId,
-              checklistKey: String(body.checklistKey ?? ''),
-              description: String(body.description ?? ''),
-              result: String(body.result ?? ''),
-              evidenceIds: Array.isArray(body.evidenceIds)
-                ? body.evidenceIds.map(String)
-                : [],
+              checklistKey: input.checklistKey,
+              description: input.description,
+              result: input.result,
+              evidenceIds: input.evidenceIds,
             },
             user,
           ),
@@ -104,34 +90,36 @@ export async function POST(
           recommendation: await submitRecommendation(
             {
               inspectionId,
-              findingIds: Array.isArray(body.findingIds)
-                ? body.findingIds.map(String)
-                : [],
-              action: String(body.action ?? ''),
-              reason: String(body.reason ?? ''),
+              findingIds: input.findingIds,
+              action: input.action,
+              reason: input.reason,
             },
             user,
           ),
         });
-      case 'approve':
+      case 'approve': {
+        const recommendation = await approveRecommendation(
+          inspectionId,
+          input.recommendationId,
+          user,
+        );
         return NextResponse.json({
-          recommendation: await approveRecommendation(
-            inspectionId,
-            String(body.recommendationId ?? ''),
-            user,
-          ),
+          recommendation,
+          inspectionVersion: recommendation.inspectionVersion,
         });
-      case 'reject':
+      }
+      case 'reject': {
+        const recommendation = await rejectRecommendation(
+          inspectionId,
+          input.recommendationId,
+          user,
+          input.reason,
+        );
         return NextResponse.json({
-          recommendation: await rejectRecommendation(
-            inspectionId,
-            String(body.recommendationId ?? ''),
-            user,
-            String(body.reason ?? ''),
-          ),
+          recommendation,
+          inspectionVersion: recommendation.inspectionVersion,
         });
-      default:
-        return NextResponse.json({ error: 'UNKNOWN_COMMAND' }, { status: 400 });
+      }
     }
   } catch (error) {
     return commandError(error);

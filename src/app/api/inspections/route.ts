@@ -1,13 +1,31 @@
 import { NextResponse } from 'next/server';
 
 import { getCurrentUser } from '@/modules/identity';
-import { listInspections, scheduleInspection } from '@/modules/inspections';
+import {
+  listDueInspections,
+  listInspections,
+  scheduleInspection,
+} from '@/modules/inspections';
+import { parseScheduleInput, toApiError } from '@/modules/inspections/schemas';
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
   const user = await getCurrentUser();
   if (!user)
     return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
-  return NextResponse.json({ inspections: await listInspections(user) });
+  try {
+    const state = new URL(request.url).searchParams.get('state');
+    const inspections =
+      state === 'due' || state === 'overdue'
+        ? await listDueInspections(user)
+        : await listInspections(user);
+    return NextResponse.json({ inspections });
+  } catch (error) {
+    const apiError = toApiError(error);
+    return NextResponse.json(
+      { error: apiError.message, code: apiError.code },
+      { status: apiError.status },
+    );
+  }
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -16,15 +34,19 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
   try {
     return NextResponse.json(
-      { inspection: await scheduleInspection(await request.json(), user) },
+      {
+        inspection: await scheduleInspection(
+          parseScheduleInput(await request.json()),
+          user,
+        ),
+      },
       { status: 201 },
     );
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'INSPECTION_FAILED';
+    const apiError = toApiError(error);
     return NextResponse.json(
-      { error: message },
-      { status: message === 'FORBIDDEN' ? 403 : 400 },
+      { error: apiError.message, code: apiError.code },
+      { status: apiError.status },
     );
   }
 }

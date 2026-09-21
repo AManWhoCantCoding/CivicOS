@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -36,6 +37,17 @@ from pages import CivicApp
 DEFAULT_DATABASE_URL = "postgresql://civicos:civicos@localhost:5432/civicos"
 E2E_DATABASE_NAME = "civicos_e2e"
 DEFAULT_PASSWORD = "civicos-dev"
+
+# Serialises concurrent `prisma generate` runs (parallel pytest workers or a
+# previous e2e server still holding the query-engine DLL on Windows) and
+# retries the known transient EPERM/EBUSY rename of
+# `query_engine-windows.dll.node.tmp...`. Generation is never skipped when the
+# schema changed or the client is missing; a fingerprint stamp only avoids a
+# redundant regeneration.
+_PRISMA_GENERATE_LOCK_NAME = "prisma-generate.lock"
+_PRISMA_GENERATE_STAMP_NAME = ".prisma-generate.stamp"
+_PRISMA_GENERATE_RETRIES = 5
+_PRISMA_GENERATE_LOCK_TIMEOUT = 300.0
 
 
 @dataclass(frozen=True)
@@ -142,7 +154,72 @@ REFERENCE_TABLES = (
 
 
 def _node_command() -> str:
-    return "npm.cmd"
+    return "npm.cmd" if os.name == "nt" else "npm"
+
+
+def _prisma_schema_fingerprint() -> str:
+    schema = REPO_ROOT / "prisma" / "schema.prisma"
+    return hashlib.sha256(schema.read_bytes()).hexdigest()
+
+
+def _prisma_client_ready(fingerprint: str) -> bool:
+    client_dir = REPO_ROOT / "node_modules" / ".prisma" / "client"
+    stamp_file = REPO_ROOT / "node_modules" / ".prisma" / _PRISMA_GENERATE_STAMP_NAME
+    if not client_dir.is_dir():
+        return False
+    try:
+        return stamp_file.read_text(encoding="utf-8").strip() == fingerprint
+    except OSError:
+        return False
+
+
+def _pid_is_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _acquire_generate_lock(lock_path: Path, timeout: float) -> str:
+    token = uuid.uuid4().hex
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            try:
+                if time.time() - lock_path.stat().st_mtime > 600:
+                    owner = json.loads(lock_path.read_text(encoding="utf-8"))
+                    owner_pid = int(owner["pid"])
+                    if not _pid_is_alive(owner_pid):
+                        lock_path.unlink()
+                        continue
+            except OSError:
+                pass
+            except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+                pass
+            if time.monotonic() >= deadline:
+                raise RuntimeError(
+                    f"Timed out waiting for Prisma generate lock: {lock_path}"
+                )
+            time.sleep(0.5)
+            continue
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump({"pid": os.getpid(), "token": token}, handle)
+        return token
+
+
+def _release_generate_lock(lock_path: Path, token: str) -> None:
+    try:
+        owner = json.loads(lock_path.read_text(encoding="utf-8"))
+        if owner.get("pid") != os.getpid() or owner.get("token") != token:
+            return
+        lock_path.unlink()
+    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+        pass
 
 
 def _without_prisma_options(url: str) -> str:
@@ -264,10 +341,44 @@ class E2EDatabase:
                 f"Command failed ({result.returncode}): {' '.join(command)}\n{output}"
             )
 
-    def migrate(self) -> None:
+    def _run_prisma_generate(self) -> None:
         npm = _node_command()
-        self._run_node_command([npm, "run", "prisma:generate"])
-        self._run_node_command([npm, "run", "prisma:migrate:deploy"])
+        fingerprint = _prisma_schema_fingerprint()
+        if _prisma_client_ready(fingerprint):
+            return
+        prisma_dir = REPO_ROOT / "node_modules" / ".prisma"
+        prisma_dir.mkdir(parents=True, exist_ok=True)
+        lock_path = prisma_dir / _PRISMA_GENERATE_LOCK_NAME
+        lock_token = _acquire_generate_lock(lock_path, _PRISMA_GENERATE_LOCK_TIMEOUT)
+        try:
+            if _prisma_client_ready(fingerprint):
+                return
+            last_error: RuntimeError | None = None
+            for attempt in range(1, _PRISMA_GENERATE_RETRIES + 1):
+                try:
+                    self._run_node_command([npm, "run", "prisma:generate"])
+                except RuntimeError as error:
+                    last_error = error
+                    transient = "EPERM" in str(error) or "EBUSY" in str(error)
+                    if not transient or attempt == _PRISMA_GENERATE_RETRIES:
+                        raise
+                    time.sleep(min(2**attempt, 15))
+                    continue
+                last_error = None
+                break
+            if last_error is not None:
+                raise last_error
+            stamp_file = prisma_dir / _PRISMA_GENERATE_STAMP_NAME
+            try:
+                stamp_file.write_text(fingerprint, encoding="utf-8")
+            except OSError:
+                pass
+        finally:
+            _release_generate_lock(lock_path, lock_token)
+
+    def migrate(self) -> None:
+        self._run_prisma_generate()
+        self._run_node_command([_node_command(), "run", "prisma:migrate:deploy"])
 
     def prepare(self, timeout: float) -> None:
         self.wait_for_postgres(timeout)
@@ -441,6 +552,17 @@ def _safe_name(value: str) -> str:
     return "".join(character if character.isalnum() else "_" for character in value)[-120:]
 
 
+def _select_available_loopback_port(requested_port: int) -> int:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.bind(("127.0.0.1", requested_port))
+            return requested_port
+    except OSError:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.bind(("127.0.0.1", 0))
+            return int(probe.getsockname()[1])
+
+
 def _terminate(process: subprocess.Popen[str] | None) -> None:
     if process is None or process.poll() is not None:
         return
@@ -463,9 +585,9 @@ def _terminate(process: subprocess.Popen[str] | None) -> None:
 class E2EServices:
     def __init__(self, database: E2EDatabase, port: int, timeout: float) -> None:
         self.database = database
-        self.port = port
+        self.port = _select_available_loopback_port(port)
         self.timeout = timeout
-        self.base_url = f"http://127.0.0.1:{port}"
+        self.base_url = f"http://127.0.0.1:{self.port}"
         self.run_id = uuid.uuid4().hex[:12]
         self.app_process: subprocess.Popen[str] | None = None
         self.worker_process: subprocess.Popen[str] | None = None
@@ -486,51 +608,12 @@ class E2EServices:
             "stdout": log_handle,
             "stderr": subprocess.STDOUT,
             "text": True,
-            "creationflags": subprocess.CREATE_NEW_PROCESS_GROUP,
         }
+        if os.name == "nt":
+            kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        else:
+            kwargs["start_new_session"] = True
         return subprocess.Popen(command, **kwargs)
-
-    def _cleanup_stale_processes(self) -> None:
-        try:
-            netstat = subprocess.run(
-                ["cmd.exe", "/d", "/s", "/c", "netstat -ano"],
-                text=True,
-                capture_output=True,
-                check=False,
-                timeout=30,
-            )
-        except (OSError, subprocess.SubprocessError):
-            netstat = None
-        if netstat is not None:
-            for line in netstat.stdout.splitlines():
-                if "LISTENING" not in line or f":{self.port} " not in line:
-                    continue
-                pid = line.split()[-1]
-                if not pid.isdigit():
-                    continue
-                try:
-                    subprocess.run(
-                        ["cmd.exe", "/d", "/s", "/c", f"taskkill /PID {pid} /F"],
-                        capture_output=True,
-                        check=False,
-                        timeout=30,
-                    )
-                except (OSError, subprocess.SubprocessError):
-                    continue
-        script = (
-            "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | "
-            "Where-Object { $_.CommandLine -like '*--e2e-run=*' } | "
-            "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"
-        )
-        try:
-            subprocess.run(
-                ["powershell.exe", "-NoProfile", "-Command", script],
-                capture_output=True,
-                check=False,
-                timeout=60,
-            )
-        except (OSError, subprocess.SubprocessError):
-            pass
 
     def _log_excerpt(self, log_name: str) -> str:
         path = self.log_dir / log_name
@@ -544,6 +627,7 @@ class E2EServices:
     def _wait_for_app(self) -> None:
         deadline = time.monotonic() + self.timeout
         last_error = ""
+        stable_responses = 0
         while time.monotonic() < deadline:
             if self.app_process and self.app_process.poll() is not None:
                 raise RuntimeError(
@@ -553,11 +637,16 @@ class E2EServices:
             try:
                 with urlopen(f"{self.base_url}/login", timeout=2) as response:
                     if response.status < 500:
-                        return
+                        stable_responses += 1
+                        if stable_responses >= 3:
+                            return
+                    else:
+                        stable_responses = 0
                     last_error = f"HTTP {response.status}"
             except (OSError, HTTPError, URLError) as error:
+                stable_responses = 0
                 last_error = str(error)
-            time.sleep(0.25)
+            time.sleep(0.5)
         raise RuntimeError(f"Next app was not ready: {last_error}\n{self._log_excerpt('next.log')}")
 
     def _worker_health(self) -> dict[str, Any] | None:
@@ -595,7 +684,6 @@ class E2EServices:
 
     def start(self) -> None:
         npm = _node_command()
-        self._cleanup_stale_processes()
         self.app_process = self._start_process(
             [npm, "run", "dev", "--", "--hostname", "127.0.0.1", "--port", str(self.port)],
             "next.log",
@@ -610,7 +698,6 @@ class E2EServices:
     def stop(self) -> None:
         _terminate(self.worker_process)
         _terminate(self.app_process)
-        self._cleanup_stale_processes()
         for handle in self._log_handles:
             handle.close()
         self._log_handles.clear()
@@ -652,23 +739,31 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Run the Chromium desktop project, mobile project, or both.",
     )
     group.addoption(
-        "--no-recreate-e2e-db",
+        "--recreate-e2e-db",
         action="store_true",
         default=False,
-        help="Reuse the dedicated database schema instead of dropping it first.",
+        help="Opt in to dropping and recreating the dedicated database.",
+    )
+    group.addoption(
+        "--drop-e2e-db",
+        action="store_true",
+        default=False,
+        help="Opt in to dropping the dedicated database after the run.",
     )
 
 @pytest.fixture(scope="session")
 def e2e_database(pytestconfig: pytest.Config) -> Iterator[E2EDatabase]:
     database = E2EDatabase(
         _e2e_database_url(),
-        recreate=not pytestconfig.getoption("--no-recreate-e2e-db"),
+        recreate=pytestconfig.getoption("--recreate-e2e-db"),
     )
     try:
         database.prepare(pytestconfig.getoption("--service-timeout"))
         yield database
     finally:
-        if not pytestconfig.getoption("--keep-e2e-db"):
+        if pytestconfig.getoption("--drop-e2e-db") and not pytestconfig.getoption(
+            "--keep-e2e-db"
+        ):
             database.drop()
 
 

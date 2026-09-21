@@ -99,30 +99,31 @@ export function EstablishmentList() {
       </div>
     );
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <ul className="space-y-3">
       {!online ? (
-        <div className="md:col-span-2">
+        <li>
           <FeedbackMessage
             message="Offline: đang hiển thị danh mục cơ sở đã tải trước đó."
             tone="warning"
           />
-        </div>
+        </li>
       ) : null}
       {items.map((item) => (
-        <a
-          key={item.id}
-          href={`/inspections/establishments/${item.id}`}
-          className="rounded-xl border border-slate-800 bg-slate-900 p-5 transition hover:border-cyan-400/60"
-        >
-          <p className="text-lg font-semibold text-white">{item.name}</p>
-          <p className="mt-2 text-sm text-slate-400">
-            {item.type} · {item.ownerName}
-          </p>
-          <p className="mt-3 text-sm leading-6 text-slate-300">
-            {item.address}
-          </p>
-        </a>
+        <li key={item.id}>
+          <a
+            href={`/inspections/establishments/${item.id}`}
+            className="block rounded-xl border border-slate-800 bg-slate-900 p-5 motion-reduce:transition-none"
+          >
+            <p className="text-lg font-semibold text-white">{item.name}</p>
+            <p className="mt-2 text-sm text-slate-400">
+              {item.type} · {item.ownerName}
+            </p>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              {item.address}
+            </p>
+          </a>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }

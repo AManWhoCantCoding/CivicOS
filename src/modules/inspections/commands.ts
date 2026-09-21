@@ -20,12 +20,14 @@ import type {
 } from './contracts';
 import {
   assertChecklistComplete,
+  assertChecklistEvidence,
   assertInspectionTransition,
   isInspectionResult,
   type ChecklistItem,
   type ChecklistResponse,
 } from './domain';
 import { establishmentState, inspectionState } from './projection';
+import { INSPECTION_SLA } from './config';
 
 function actorSnapshot(actor: InspectionActor) {
   return {
@@ -244,17 +246,27 @@ export async function scheduleInspection(
     });
     if (existing) throw new Error('DUPLICATE_SCHEDULE');
 
-    const inspection = await tx.inspection.create({
-      data: {
-        establishmentId: input.establishmentId,
-        assignedUserId: input.assignedUserId,
-        templateId: template.id,
-        templateVersion: template.version,
-        scheduledAt,
-        cadenceMonths,
-        version: 1,
-      },
-    });
+    let inspection;
+    try {
+      inspection = await tx.inspection.create({
+        data: {
+          establishmentId: input.establishmentId,
+          assignedUserId: input.assignedUserId,
+          templateId: template.id,
+          templateVersion: template.version,
+          scheduledAt,
+          cadenceMonths,
+          version: 1,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      )
+        throw new Error('DUPLICATE_SCHEDULE');
+      throw error;
+    }
 
     if (input.assignedUserId) {
       await grantAssignments(
@@ -292,8 +304,7 @@ export async function scheduleInspection(
         resourceType: 'Inspection',
         resourceId: inspection.id,
         rule: {
-          kind: 'inspection_completion_7d',
-          durationMs: 7 * 24 * 60 * 60 * 1000,
+          ...INSPECTION_SLA.completion,
         },
         startedAt: scheduledAt,
         assigneeUserId: input.assignedUserId,
@@ -423,6 +434,14 @@ export async function saveChecklistResponses(
       input.baseVersion !== current.version
     )
       throw new Error('STALE_OFFLINE_COMMAND');
+    const template = await tx.checklistTemplate.findUnique({
+      where: { id: current.templateId },
+    });
+    if (!template) throw new Error('CHECKLIST_TEMPLATE_NOT_FOUND');
+    assertChecklistComplete(
+      (template.items as unknown as ChecklistItem[]) ?? [],
+      input.responses,
+    );
     const updated = await tx.inspection.update({
       where: { id: current.id, version: current.version },
       data: {
@@ -467,10 +486,48 @@ export async function completeInspection(
         where: { id: inspection.templateId },
       });
       if (!template) throw new Error('CHECKLIST_TEMPLATE_NOT_FOUND');
+      const items = (template.items as unknown as ChecklistItem[]) ?? [];
       assertChecklistComplete(
-        (template.items as unknown as ChecklistItem[]) ?? [],
+        items,
         (inspection.checklistResponses as unknown as ChecklistResponse[]) ?? [],
       );
+      const findings = await tx.inspectionFinding.findMany({
+        where: { inspectionId: inspection.id },
+        select: { checklistKey: true, evidenceIds: true },
+      });
+      assertChecklistEvidence(
+        items,
+        (inspection.checklistResponses as unknown as ChecklistResponse[]) ?? [],
+        findings.map((finding) => ({
+          checklistKey: finding.checklistKey,
+          evidenceIds: Array.isArray(finding.evidenceIds)
+            ? (finding.evidenceIds as unknown as string[])
+            : [],
+        })),
+      );
+      if (input.result === 'needs_action') {
+        const needsActionFindings = await tx.inspectionFinding.findMany({
+          where: { inspectionId: inspection.id, result: 'needs_action' },
+          select: { id: true },
+        });
+        const recommendations = await tx.enforcementRecommendation.findMany({
+          where: { inspectionId: inspection.id },
+          select: { findingIds: true, status: true },
+        });
+        for (const finding of needsActionFindings) {
+          const related = recommendations.filter(
+            ({ findingIds }) =>
+              Array.isArray(findingIds) &&
+              (findingIds as unknown[]).includes(finding.id),
+          );
+          if (related.some(({ status }) => status === 'approved')) continue;
+          if (related.some(({ status }) => status === 'pending_approval'))
+            throw new Error('RECOMMENDATION_PENDING_APPROVAL');
+          if (related.some(({ status }) => status === 'rejected'))
+            throw new Error('RECOMMENDATION_REJECTED');
+          throw new Error('RECOMMENDATION_REQUIRED');
+        }
+      }
     },
     input.baseVersion,
   );
@@ -565,8 +622,7 @@ async function scheduleNextInspection(
       resourceType: 'Inspection',
       resourceId: next.id,
       rule: {
-        kind: 'inspection_completion_7d',
-        durationMs: 7 * 24 * 60 * 60 * 1000,
+        ...INSPECTION_SLA.completion,
       },
       startedAt: scheduledAt,
       assigneeUserId: assignedUserId ?? undefined,
@@ -640,7 +696,7 @@ async function transitionInspection(
         where: {
           resourceType: 'Inspection',
           resourceId: inspectionId,
-          status: 'active',
+          status: { in: ['active', 'overdue'] },
         },
         data: {
           status: 'completed',
@@ -817,8 +873,7 @@ export async function submitRecommendation(
         resourceType: 'EnforcementRecommendation',
         resourceId: recommendation.id,
         rule: {
-          kind: 'inspection_recommendation_7d',
-          durationMs: 7 * 24 * 60 * 60 * 1000,
+          ...INSPECTION_SLA.recommendation,
         },
         assigneeUserId: actor.id,
       },
@@ -935,10 +990,13 @@ async function updateRecommendationStatus(
       where: {
         resourceType: 'EnforcementRecommendation',
         resourceId: recommendationId,
-        status: 'active',
+        status: { in: ['active', 'overdue'] },
       },
       data: { status: 'completed', completedAt: new Date() },
     });
-    return updatedRecommendation;
+    return {
+      ...updatedRecommendation,
+      inspectionVersion: updatedInspection.version,
+    };
   });
 }

@@ -383,8 +383,8 @@ class CivicApp:
             self.page.get_by_text(re.compile(r"Đã ghi phát hiện|Đã lưu phát hiện cục bộ"))
         ).to_be_visible()
 
-    def checklist_complete(self) -> None:
-        self.page.locator("#inspection-complete-result").select_option("pass")
+    def checklist_complete(self, result: str = "pass") -> None:
+        self.page.locator("#inspection-complete-result").select_option(result)
         self.page.get_by_role("button", name="Hoàn tất", exact=True).click()
         expect(
             self.page.get_by_text(re.compile(r"Đã hoàn tất inspection|Đã lưu cục bộ"))
@@ -428,10 +428,39 @@ class CivicApp:
         definition = self.page.get_by_text(label, exact=True).locator("..")
         expect(definition.get_by_text(value, exact=True)).to_be_visible()
 
-    def sync_offline_queue(self, expected_synced: int | None = None) -> None:
+    def sync_offline_queue(
+        self,
+        expected_synced: int | None = None,
+        expected_total: int | None = None,
+    ) -> None:
         self.page.context.set_offline(False)
         self.open_offline_status()
         expect(self.page.get_by_text("Online", exact=True)).to_be_visible()
+        if expected_total is not None:
+            self._poll_value(
+                lambda: self.page.evaluate(
+                    """
+                    (expectedTotal) => {
+                      const queue = JSON.parse(
+                        localStorage.getItem('civicos:offline-queue') || '[]',
+                      );
+                      if (!Array.isArray(queue) || queue.length !== expectedTotal) {
+                        return false;
+                      }
+                      return queue.every(
+                        (item) => item.status === 'synced' || item.status === 'rejected',
+                      );
+                    }
+                    """,
+                    expected_total,
+                ),
+                expected=True,
+                describe=(
+                    "offline queue to account for all commands as synced or rejected "
+                    "with no pending items"
+                ),
+            )
+            return
         self._poll_value(
             lambda: self.page.get_by_text("Chờ gửi", exact=True)
             .locator("..")

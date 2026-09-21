@@ -4,7 +4,7 @@
 
 **Blocked by:** 01: Event kernel và transactional outbox; 02: Identity, Assignment và quyền truy cập; 03: Năng lực dùng chung cho vertical slice
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Files in scope
 
@@ -34,16 +34,16 @@
 
 ## Implementation steps
 
-1. **Define Inspection domain vocabulary and lifecycle.** Chốt EstablishmentType, checklist version, Inspection status, InspectionResult, InspectionFinding và EnforcementRecommendation; không dùng “violation” như một kết luận pháp lý tự động.
-2. **Define event/command ownership.** Chốt `EstablishmentRegistered`, `InspectionScheduled`, `InspectionStarted`, `InspectionCompleted`, `InspectionFindingRecorded`, `EnforcementRecommendationSubmitted` và `EnforcementApproved`; mỗi event có version/owner trước khi coding.
-3. **Create schema/migration.** Add Establishment, EstablishmentType, ChecklistTemplate/Item, Inspection, ChecklistResponse, InspectionFinding và EnforcementRecommendation; lưu checklist version used by each Inspection để template thay đổi không sửa lịch sử.
-4. **Implement catalog and scheduling.** Validate establishment fields/GeoPoint, prevent duplicate active records, create periodic schedule, detect due/overdue and emit `InspectionScheduled` once per schedule occurrence.
-5. **Implement checklist workflow.** Select template by EstablishmentType, start Inspection, save responses, require mandatory items, attach Evidence where required and complete only when checklist validation passes.
-6. **Implement Finding and Approval rules.** Record Finding with checklist reference/Evidence, derive only `InspectionResult`, submit EnforcementRecommendation, require Trưởng Công an xã Approval and preserve rejected/revised history.
-7. **Implement projections and APIs.** Provide catalog, schedule, detail and due-inspection projections; add server-validated endpoints for establishment, inspection and Approval commands.
-8. **Build Web/PWA UI.** Create catalog/detail, schedule, checklist, Evidence and Approval surfaces. Apply trust-first regulated-operations design, mobile one-hand checklist, visible save/sync state, full loading/empty/error/offline/denied states and reduced motion.
-9. **Test domain and access behavior.** Cover type-specific checklist, template versioning, mandatory fields, Evidence immutability, Assignment scope, Approval rejection, seven-day SLA and duplicate commands.
-10. **Run end-to-end gate.** Browser test creates Establishment, schedules inspection, completes checklist, records Finding, submits and approves recommendation; run lint/typecheck/build/format and verify no automatic legal conclusion is produced.
+- [x] 1. **Define Inspection domain vocabulary and lifecycle.** Chốt EstablishmentType, checklist version, Inspection status, InspectionResult, InspectionFinding và EnforcementRecommendation; không dùng “violation” như một kết luận pháp lý tự động.
+- [x] 2. **Define event/command ownership.** Chốt `EstablishmentRegistered`, `InspectionScheduled`, `InspectionStarted`, `InspectionCompleted`, `InspectionFindingRecorded`, `EnforcementRecommendationSubmitted` và `EnforcementApproved`; mỗi event có version/owner trước khi coding.
+- [x] 3. **Create schema/migration.** Add Establishment, EstablishmentType, ChecklistTemplate/Item, Inspection, ChecklistResponse, InspectionFinding và EnforcementRecommendation; lưu checklist version used by each Inspection để template thay đổi không sửa lịch sử.
+- [x] 4. **Implement catalog and scheduling.** Validate establishment fields/GeoPoint, prevent duplicate active records, create periodic schedule, detect due/overdue and emit `InspectionScheduled` once per schedule occurrence.
+- [x] 5. **Implement checklist workflow.** Select template by EstablishmentType, start Inspection, save responses, require mandatory items, attach Evidence where required and complete only when checklist validation passes.
+- [x] 6. **Implement Finding and Approval rules.** Record Finding with checklist reference/Evidence, derive only `InspectionResult`, submit EnforcementRecommendation, require Trưởng Công an xã Approval and preserve rejected/revised history.
+- [x] 7. **Implement projections and APIs.** Provide catalog, schedule, detail and due-inspection projections; add server-validated endpoints for establishment, inspection and Approval commands.
+- [x] 8. **Build Web/PWA UI.** Create catalog/detail, schedule, checklist, Evidence and Approval surfaces. Apply trust-first regulated-operations design, mobile one-hand checklist, visible save/sync state, full loading/empty/error/offline/denied states and reduced motion.
+- [x] 9. **Test domain and access behavior.** Cover type-specific checklist, template versioning, mandatory fields, Evidence immutability, Assignment scope, Approval rejection, seven-day SLA and duplicate commands.
+- [x] 10. **Run end-to-end gate.** Browser test creates Establishment, schedules inspection, completes checklist, records Finding, submits and approves recommendation; run lint/typecheck/build/format and verify no automatic legal conclusion is produced.
 
 ## Explicitly out of scope
 
@@ -58,15 +58,15 @@
 
 ## Acceptance criteria
 
-- [ ] Cán bộ văn phòng tạo/sửa Establishment với loại hình, chủ, địa chỉ, giấy phép và GeoPoint hợp lệ.
-- [ ] Lịch kiểm tra được tạo theo kỳ cấu hình; hệ thống hiển thị upcoming/overdue và không tạo lịch trùng.
-- [ ] Checklist template khác nhau theo EstablishmentType; không dùng một checklist chung cho mọi loại hình.
-- [ ] Cán bộ hiện trường chỉ thao tác Inspection được phân công và có thể lưu từng mục checklist an toàn khi mạng chập chờn.
-- [ ] Inspection ghi `InspectionStarted`, `InspectionFindingRecorded` và `InspectionCompleted` đúng thứ tự; mỗi finding liên kết Evidence nếu có yêu cầu chứng cứ.
-- [ ] `InspectionResult` chỉ là đạt/nhắc nhở/có dấu hiệu không đạt; `EnforcementRecommendation` cần Approval trước khi hoàn tất.
-- [ ] Evidence ảnh có hash, capture time và GPS; original không bị sửa/xóa.
-- [ ] SLA xử lý recommendation/violation theo threshold cấu hình, bao gồm cuối tuần và ngày lễ.
-- [ ] User không được phân công không đọc được hồ sơ Inspection nhạy cảm hoặc download Evidence.
-- [ ] E2E test chạy từ tạo Establishment đến Approval recommendation và kiểm tra denied/retry states.
-- [ ] UI có loading, empty, error, offline/pending-save, success và validation states ở desktop/mobile.
-- [ ] `npm run lint`, `npm run build` và PS-E1-007 tests pass.
+- [x] Cán bộ văn phòng tạo/sửa Establishment với loại hình, chủ, địa chỉ, giấy phép và GeoPoint hợp lệ.
+- [x] Lịch kiểm tra được tạo theo kỳ cấu hình; hệ thống hiển thị upcoming/overdue và không tạo lịch trùng.
+- [x] Checklist template khác nhau theo EstablishmentType; không dùng một checklist chung cho mọi loại hình.
+- [x] Cán bộ hiện trường chỉ thao tác Inspection được phân công và có thể lưu từng mục checklist an toàn khi mạng chập chờn.
+- [x] Inspection ghi `InspectionStarted`, `InspectionFindingRecorded` và `InspectionCompleted` đúng thứ tự; mỗi finding liên kết Evidence nếu có yêu cầu chứng cứ.
+- [x] `InspectionResult` chỉ là đạt/nhắc nhở/có dấu hiệu không đạt; `EnforcementRecommendation` cần Approval trước khi hoàn tất.
+- [x] Evidence ảnh có hash, capture time và GPS; original không bị sửa/xóa.
+- [x] SLA xử lý recommendation/violation theo threshold cấu hình, bao gồm cuối tuần và ngày lễ.
+- [x] User không được phân công không đọc được hồ sơ Inspection nhạy cảm hoặc download Evidence.
+- [x] E2E test chạy từ tạo Establishment đến Approval recommendation và kiểm tra denied/retry states.
+- [x] UI có loading, empty, error, offline/pending-save, success và validation states ở desktop/mobile.
+- [x] `npm run lint`, `npm run build` và PS-E1-007 tests pass.

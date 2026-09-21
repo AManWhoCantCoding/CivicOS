@@ -329,7 +329,15 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
           <EnforcementApprovalPanel
             inspectionId={inspectionId}
             recommendations={data.recommendations}
-            onChanged={() => setReloadToken((value) => value + 1)}
+            onChanged={(nextVersion) => {
+              if (nextVersion !== undefined) {
+                updateInspection({
+                  version: nextVersion,
+                  status: inspection.status,
+                });
+              }
+              setReloadToken((value) => value + 1);
+            }}
           />
         </div>
       </div>

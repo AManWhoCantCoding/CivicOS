@@ -57,7 +57,7 @@ def test_inspection_offline_checklist_finding_evidence_completion_and_recurring_
     app.record_finding()
     app.checklist_complete()
 
-    app.sync_offline_queue(expected_synced=4)
+    app.sync_offline_queue(expected_total=4)
     offline_status.page.close()
     app.goto(f"/inspections/{inspection_id}")
     app.open_inspection(inspection_id)
