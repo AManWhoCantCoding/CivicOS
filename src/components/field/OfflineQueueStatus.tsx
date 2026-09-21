@@ -41,8 +41,22 @@ export function OfflineQueueStatus() {
   const failed = queue.filter(
     (item) => item.status === 'failed' || item.status === 'rejected',
   ).length;
+  const synced = queue.filter((item) => item.status === 'synced').length;
+  const failedError = queue.find(
+    (item) =>
+      (item.status === 'failed' || item.status === 'rejected') && item.error,
+  )?.error;
+  function retrySync() {
+    void syncOfflineQueue().then(() => {
+      setQueue(readOfflineQueue());
+    });
+  }
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900 p-5">
+    <section
+      aria-label="Trạng thái đồng bộ"
+      aria-live="polite"
+      className="rounded-xl border border-slate-800 bg-slate-900 p-5"
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-white">Kết nối</p>
@@ -58,24 +72,50 @@ export function OfflineQueueStatus() {
           {online ? 'Online' : 'Offline'}
         </span>
       </div>
-      <dl className="mt-5 grid grid-cols-3 gap-3 border-t border-slate-800 pt-4 text-xs">
+      <dl className="mt-5 grid grid-cols-1 gap-3 border-t border-slate-800 pt-4 text-xs sm:grid-cols-3">
         <div>
           <dt className="text-slate-500">Chờ gửi</dt>
-          <dd className="mt-1 text-lg font-semibold text-amber-200">
+          <dd
+            data-testid="queue-pending-count"
+            className="mt-1 text-lg font-semibold text-amber-200"
+          >
             {pending}
           </dd>
         </div>
         <div>
           <dt className="text-slate-500">Lỗi/từ chối</dt>
-          <dd className="mt-1 text-lg font-semibold text-rose-200">{failed}</dd>
+          <dd
+            data-testid="queue-failed-count"
+            className="mt-1 text-lg font-semibold text-rose-200"
+          >
+            {failed}
+          </dd>
         </div>
         <div>
           <dt className="text-slate-500">Đã xác nhận</dt>
-          <dd className="mt-1 text-lg font-semibold text-emerald-200">
-            {queue.filter((item) => item.status === 'synced').length}
+          <dd
+            data-testid="queue-synced-count"
+            className="mt-1 text-lg font-semibold text-emerald-200"
+          >
+            {synced}
           </dd>
         </div>
       </dl>
+      {failedError ? (
+        <p
+          role="alert"
+          className="mt-3 rounded-lg border border-rose-400/30 bg-rose-950/30 px-3 py-2 text-xs text-rose-200"
+        >
+          Lỗi đồng bộ: {failedError}
+        </p>
+      ) : null}
+      <button
+        type="button"
+        onClick={retrySync}
+        className="mt-4 min-h-[44px] w-full rounded-lg border border-cyan-300/40 px-4 py-2 text-sm font-semibold text-cyan-200 hover:border-cyan-200 hover:text-white"
+      >
+        Đồng bộ ngay
+      </button>
     </section>
   );
 }

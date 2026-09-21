@@ -176,6 +176,7 @@ model Evidence {
 
   @@unique([resourceType, resourceId, originalHash])
   @@index([resourceType, resourceId])
+  @@index([actorId, receivedAt], map: "Evidence_actorId_receivedAt_idx")
 }
 
 model SlaInstance {
@@ -194,6 +195,7 @@ model SlaInstance {
   @@unique([resourceType, resourceId, kind])
   @@index([status, dueAt])
   @@index([resourceType, resourceId])
+  @@index([assigneeUserId, status], map: "SlaInstance_assigneeUserId_status_idx")
 }
 
 model Notification {
@@ -230,6 +232,7 @@ model OfflineCommand {
   lastAttemptAt   DateTime?
 
   @@index([actorId, status])
+  @@index([resourceType, resourceId, status], map: "OfflineCommand_resourceType_resourceId_status_idx")
 }
 
 model IntakeReport {

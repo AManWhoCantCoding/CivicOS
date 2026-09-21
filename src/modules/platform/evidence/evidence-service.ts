@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 
 import { prisma } from '@/lib/prisma';
 
+import { createGeoPoint } from '../geo';
 import type { EvidenceStorageAdapter } from './storage-adapter';
 
 export type EvidenceInput = {
@@ -24,6 +25,14 @@ export async function createEvidence(
   input: EvidenceInput,
 ) {
   if (!input.bytes.byteLength) throw new Error('EMPTY_EVIDENCE');
+  if (Number.isNaN(input.capturedAt.getTime()))
+    throw new Error('INVALID_CAPTURE_TIME');
+  if ((input.latitude === undefined) !== (input.longitude === undefined)) {
+    throw new Error('GEOPOINT_INCOMPLETE');
+  }
+  if (input.latitude !== undefined && input.longitude !== undefined) {
+    createGeoPoint(input.latitude, input.longitude);
+  }
   const hash = createHash('sha256').update(input.bytes).digest('hex');
   const existing = await prisma.evidence.findFirst({
     where: {

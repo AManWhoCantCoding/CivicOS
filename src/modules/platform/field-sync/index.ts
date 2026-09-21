@@ -67,6 +67,13 @@ async function getResourceVersion(
   }
 }
 
+function sameOptionalResourceId(
+  a: string | null | undefined,
+  b: string | null | undefined,
+) {
+  return (a ?? undefined) === (b ?? undefined);
+}
+
 async function assertCurrentResourceVersion(input: OfflineCommandInput) {
   if (input.baseVersion === undefined) return;
   if (!input.resourceId) throw new Error('RESOURCE_ID_REQUIRED');
@@ -97,7 +104,7 @@ export async function acceptOfflineCommand(input: OfflineCommandInput) {
       existing.actorId === input.actorId &&
       existing.commandType === input.commandType &&
       existing.resourceType === input.resourceType &&
-      existing.resourceId === input.resourceId;
+      sameOptionalResourceId(existing.resourceId, input.resourceId);
     if (!sameCommand) throw new Error('CLIENT_COMMAND_ID_CONFLICT');
     const staleSync =
       existing.status === 'syncing' &&
@@ -142,7 +149,7 @@ export async function acceptOfflineCommand(input: OfflineCommandInput) {
       concurrent.actorId === input.actorId &&
       concurrent.commandType === input.commandType &&
       concurrent.resourceType === input.resourceType &&
-      concurrent.resourceId === input.resourceId;
+      sameOptionalResourceId(concurrent.resourceId, input.resourceId);
     if (!sameCommand) throw new Error('CLIENT_COMMAND_ID_CONFLICT');
     return concurrent;
   }

@@ -35,16 +35,16 @@
 
 ## Implementation steps
 
-1. **Chốt ownership và shared contracts.** Xác định module platform chỉ cung cấp Evidence, Geo, SLA, Notification và sync primitives; không chứa Incident/Inspection/VehicleObservation state. Mọi public type đi qua `src/modules/platform/index.ts`.
-2. **Tạo shared migration.** Thêm Evidence metadata/hash, storage reference, GeoReference, SLA rule/clock state, Notification và OfflineCommand; thêm index cho resource owner, pending notification và sync status.
-3. **Implement Evidence adapter.** Tạo storage interface, local development adapter, hash-at-write, immutable original metadata và authorization callback. Không cho update/delete original; replacement tạo record mới.
-4. **Implement Geo value objects.** Validate coordinate range, coordinate reference, polygon closure/validity và serialization; test invalid input trước khi cho module nghiệp vụ sử dụng.
-5. **Implement SLA engine.** Dùng clock liên tục theo `Asia/Ho_Chi_Minh`, bao gồm cuối tuần/ngày lễ; tạo một overdue event mỗi SLA instance, support configurable thresholds, retry và idempotency.
-6. **Implement notification projection.** Nhận event qua outbox, tạo in-app notification, đánh dấu read, retry delivery và expose lag/error; không gọi SMS/push provider thật trong ticket.
-7. **Implement offline sync contract.** Lưu client command ID, occurred/received timestamps, payload version và sync state; duplicate ID trả kết quả cũ, stale transition bị server từ chối, append-only update không ghi đè.
-8. **Build shared field shell.** Dùng responsive/PWA shell, EvidenceCapture và OfflineQueueStatus; UI phải hiển thị rõ local pending, syncing, failed và server accepted. Không giả lập trạng thái synced chỉ từ client.
-9. **Áp dụng design preflight cho UI.** Giữ `DESIGN_VARIANCE=3`, `MOTION_INTENSITY=2`, `VISUAL_DENSITY=5`; kiểm tra label/error/focus, touch target, keyboard, mobile single-column, contrast và reduced motion.
-10. **Viết tests và verification.** Integration test hash/access/geo/SLA/sync, browser test online/offline/resume flow, lint/typecheck/build và kiểm tra worker phát notification từ outbox chứ không từ transaction side effect.
+- [x] 1. **Chốt ownership và shared contracts.** Xác định module platform chỉ cung cấp Evidence, Geo, SLA, Notification và sync primitives; không chứa Incident/Inspection/VehicleObservation state. Mọi public type đi qua `src/modules/platform/index.ts`.
+- [x] 2. **Tạo shared migration.** Thêm Evidence metadata/hash, storage reference, GeoReference, SLA rule/clock state, Notification và OfflineCommand; thêm index cho resource owner, pending notification và sync status.
+- [x] 3. **Implement Evidence adapter.** Tạo storage interface, local development adapter, hash-at-write, immutable original metadata và authorization callback. Không cho update/delete original; replacement tạo record mới.
+- [x] 4. **Implement Geo value objects.** Validate coordinate range, coordinate reference, polygon closure/validity và serialization; test invalid input trước khi cho module nghiệp vụ sử dụng.
+- [x] 5. **Implement SLA engine.** Dùng clock liên tục theo `Asia/Ho_Chi_Minh`, bao gồm cuối tuần/ngày lễ; tạo một overdue event mỗi SLA instance, support configurable thresholds, retry và idempotency.
+- [x] 6. **Implement notification projection.** Nhận event qua outbox, tạo in-app notification, đánh dấu read, retry delivery và expose lag/error; không gọi SMS/push provider thật trong ticket.
+- [x] 7. **Implement offline sync contract.** Lưu client command ID, occurred/received timestamps, payload version và sync state; duplicate ID trả kết quả cũ, stale transition bị server từ chối, append-only update không ghi đè.
+- [x] 8. **Build shared field shell.** Dùng responsive/PWA shell, EvidenceCapture và OfflineQueueStatus; UI phải hiển thị rõ local pending, syncing, failed và server accepted. Không giả lập trạng thái synced chỉ từ client.
+- [x] 9. **Áp dụng design preflight cho UI.** Giữ `DESIGN_VARIANCE=3`, `MOTION_INTENSITY=2`, `VISUAL_DENSITY=5`; kiểm tra label/error/focus, touch target, keyboard, mobile single-column, contrast và reduced motion.
+- [x] 10. **Viết tests và verification.** Integration test hash/access/geo/SLA/sync, browser test online/offline/resume flow, lint/typecheck/build và kiểm tra worker phát notification từ outbox chứ không từ transaction side effect.
 
 ## Explicitly out of scope
 
@@ -59,14 +59,14 @@
 
 ## Acceptance criteria
 
-- [ ] Evidence được lưu với hash, Actor, capture time, GPS metadata và immutable original reference.
-- [ ] Upload lại cùng nội dung không tạo bản sao ngoài quy tắc idempotency đã định; thay thế tạo Evidence mới.
-- [ ] User không có quyền không thể đọc metadata hoặc tải Evidence chỉ bằng cách đổi ID.
-- [ ] GeoPoint và GeoArea dùng cùng coordinate contract; polygon không hợp lệ bị từ chối.
-- [ ] SLA chạy liên tục qua thứ bảy, chủ nhật và ngày lễ; threshold có thể cấu hình và event overdue được tạo đúng một lần.
-- [ ] Notification phát sinh từ outbox event, không gửi side effect trực tiếp trong domain transaction.
-- [ ] Offline command có client ID, `occurredAt`, `receivedAt`, retry state và xử lý idempotent.
-- [ ] Stale status transition bị server từ chối; append-only FieldUpdate không bị ghi đè.
-- [ ] Field shell hiển thị rõ online/offline/syncing/failed/synced và không làm mất dữ liệu khi reload.
-- [ ] Browser test bao phủ viewport desktop và mobile, keyboard focus, reduced motion và các trạng thái lỗi chính.
-- [ ] `npm run lint`, `npm run build` và toàn bộ shared-capability tests pass.
+- [x] Evidence được lưu với hash, Actor, capture time, GPS metadata và immutable original reference.
+- [x] Upload lại cùng nội dung không tạo bản sao ngoài quy tắc idempotency đã định; thay thế tạo Evidence mới.
+- [x] User không có quyền không thể đọc metadata hoặc tải Evidence chỉ bằng cách đổi ID.
+- [x] GeoPoint và GeoArea dùng cùng coordinate contract; polygon không hợp lệ bị từ chối.
+- [x] SLA chạy liên tục qua thứ bảy, chủ nhật và ngày lễ; threshold có thể cấu hình và event overdue được tạo đúng một lần.
+- [x] Notification phát sinh từ outbox event, không gửi side effect trực tiếp trong domain transaction.
+- [x] Offline command có client ID, `occurredAt`, `receivedAt`, retry state và xử lý idempotent.
+- [x] Stale status transition bị server từ chối; append-only FieldUpdate không bị ghi đè.
+- [x] Field shell hiển thị rõ online/offline/syncing/failed/synced và không làm mất dữ liệu khi reload.
+- [x] Browser test bao phủ viewport desktop và mobile, keyboard focus, reduced motion và các trạng thái lỗi chính.
+- [x] `npm run lint`, `npm run build` và toàn bộ shared-capability tests pass.

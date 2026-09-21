@@ -38,4 +38,26 @@ describe('geo contract', () => {
       ]),
     ).toThrow('POLYGON_SELF_INTERSECTS');
   });
+
+  it.each([
+    [-90.1, 105, 'INVALID_LATITUDE'],
+    [90.1, 105, 'INVALID_LATITUDE'],
+    [20, -180.1, 'INVALID_LONGITUDE'],
+    [20, 180.1, 'INVALID_LONGITUDE'],
+  ])('rejects invalid coordinates (%s, %s)', (latitude, longitude, error) => {
+    expect(() => createGeoPoint(latitude, longitude)).toThrow(error);
+  });
+
+  it('rejects a closed polygon without area', () => {
+    const point = (latitude: number, longitude: number) =>
+      createGeoPoint(latitude, longitude);
+    expect(() =>
+      createGeoArea([
+        point(20, 105),
+        point(20, 106),
+        point(20, 107),
+        point(20, 105),
+      ]),
+    ).toThrow('POLYGON_HAS_NO_AREA');
+  });
 });
