@@ -5,7 +5,7 @@
 - Review: PASS in `.brain/evidence/05-ps007-inspection/review.md`
 - Final verification: `.brain/evidence/05-ps007-inspection/tests.md` (`AUTHORITATIVE FINAL NATIVE VERIFICATION`)
 - Implementation commit: `d79c2feefb477988b403379dfa868ea31b470eed` (`feat: complete inspection roadmap ticket`)
-- Closure commit: pending Reviewer commit
+- Closure commit: `b3aa45c` (`chore: close Ticket 05 evidence`)
 
 ## Final verification
 
