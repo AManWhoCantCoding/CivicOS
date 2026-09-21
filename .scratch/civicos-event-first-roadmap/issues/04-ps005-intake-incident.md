@@ -4,7 +4,7 @@
 
 **Blocked by:** 01: Event kernel và transactional outbox; 02: Identity, Assignment và quyền truy cập; 03: Năng lực dùng chung cho vertical slice
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Files in scope
 
