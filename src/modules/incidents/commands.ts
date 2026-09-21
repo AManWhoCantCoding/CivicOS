@@ -364,11 +364,21 @@ export async function registerIntakeReport(
 ) {
   requireRole(actor, 'commander', 'duty_officer');
   if (!input.content.trim()) throw new Error('CONTENT_REQUIRED');
+  if (
+    input.channel !== 'in_person' &&
+    input.channel !== 'telephone' &&
+    input.channel !== 'manual_other'
+  ) {
+    throw new Error('INVALID_CHANNEL');
+  }
   const reportId = randomUUID();
   const incidentId = randomUUID();
   const receivedAt = new Date(input.receivedAt);
   if (Number.isNaN(receivedAt.getTime()))
     throw new Error('INVALID_RECEIVED_AT');
+  if ((input.latitude === undefined) !== (input.longitude === undefined)) {
+    throw new Error('GEOPOINT_INCOMPLETE');
+  }
   if (input.latitude !== undefined && input.longitude !== undefined) {
     createGeoPoint(input.latitude, input.longitude);
   }

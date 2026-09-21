@@ -34,16 +34,16 @@
 
 ## Implementation steps
 
-1. **Freeze PS-E1-005 state machine and commands.** Encode only `received`, `classified`, `verifying`, `transferred`, `resolved` and `closed`; list actor/role required for every transition and reject unknown transitions before persistence.
-2. **Define aggregate/event contracts.** Implement IntakeReport and Incident commands plus the agreed event types; define idempotency key behavior and correlation IDs before adding routes.
-3. **Create schema/migration.** Add IntakeReport, Incident and read-model tables with source IDs, status, location, channel, timestamps and sensitive informant reference; reference shared Assignment/SLA/Evidence rather than duplicating them.
-4. **Implement register command.** Validate manual intake, create one IntakeReport and one Incident in the MVP, append `IntakeReportReceived` and `IncidentRegistered` atomically, and return a stable Incident ID.
-5. **Implement lifecycle commands.** Add classify, assign, verify, transfer request, resolve and close; each command checks current version, authorization, required fields and Approval rule before emitting its event.
-6. **Implement projection and timeline query.** Build list/detail/timeline projections only from DomainEvent; include filter/status/SLA fields without exposing informant identity to unauthorized readers.
-7. **Implement REST boundary.** Add intake/list/detail/command routes with schema validation, consistent error codes, idempotency headers and server authorization on every route.
-8. **Build the Web UI.** Implement intake form, work queue, detail/timeline, Assignment panel and status actions. Apply the ticket’s trust-first design read, clear status hierarchy, responsive layout, loading skeleton, empty/error/denied states, keyboard focus and reduced motion.
-9. **Add event, authorization, audit and SLA tests.** Test valid/invalid transitions, duplicate commands, missing Approval, assignment scope, informant redaction, overdue event and projection rebuild.
-10. **Run end-to-end gate.** Use browser test to submit intake, classify, assign, verify, request transfer, approve, resolve and close; verify read model and denied access. Run lint/typecheck/build/format and record no PS-E1-008, citizen app or Camera/LPR work.
+- [x] 1. **Freeze PS-E1-005 state machine and commands.** Encode only `received`, `classified`, `verifying`, `transferred`, `resolved` and `closed`; list actor/role required for every transition and reject unknown transitions before persistence.
+- [x] 2. **Define aggregate/event contracts.** Implement IntakeReport and Incident commands plus the agreed event types; define idempotency key behavior and correlation IDs before adding routes.
+- [x] 3. **Create schema/migration.** Add IntakeReport, Incident and read-model tables with source IDs, status, location, channel, timestamps and sensitive informant reference; reference shared Assignment/SLA/Evidence rather than duplicating them.
+- [x] 4. **Implement register command.** Validate manual intake, create one IntakeReport and one Incident in the MVP, append `IntakeReportReceived` and `IncidentRegistered` atomically, and return a stable Incident ID.
+- [x] 5. **Implement lifecycle commands.** Add classify, assign, verify, transfer request, resolve and close; each command checks current version, authorization, required fields and Approval rule before emitting its event.
+- [x] 6. **Implement projection and timeline query.** Build list/detail/timeline projections only from DomainEvent; include filter/status/SLA fields without exposing informant identity to unauthorized readers.
+- [x] 7. **Implement REST boundary.** Add intake/list/detail/command routes with schema validation, consistent error codes, idempotency headers and server authorization on every route.
+- [x] 8. **Build the Web UI.** Implement intake form, work queue, detail/timeline, Assignment panel and status actions. Apply the ticket’s trust-first design read, clear status hierarchy, responsive layout, loading skeleton, empty/error/denied states, keyboard focus and reduced motion.
+- [x] 9. **Add event, authorization, audit and SLA tests.** Test valid/invalid transitions, duplicate commands, missing Approval, assignment scope, informant redaction, overdue event and projection rebuild.
+- [x] 10. **Run end-to-end gate.** Use browser test to submit intake, classify, assign, verify, request transfer, approve, resolve and close; verify read model and denied access. Run lint/typecheck/build/format and record no PS-E1-008, citizen app or Camera/LPR work.
 
 ## Explicitly out of scope
 
@@ -58,15 +58,15 @@
 
 ## Acceptance criteria
 
-- [ ] Cán bộ trực ban nhập được kênh, thời điểm, nội dung, địa điểm và thông tin nguồn của IntakeReport với validation server-side.
-- [ ] Mỗi IntakeReport tạo đúng một Incident trong MVP và ghi `IntakeReportReceived` cùng `IncidentRegistered` trong cùng business operation.
-- [ ] Incident chỉ đi qua các transition hợp lệ: `received → classified → verifying → transferred/resolved → closed`.
-- [ ] User được phân công mới ghi được verification; User không được phân công không ghi hoặc đọc được dữ liệu ngoài scope.
-- [ ] Chuyển cấp trên và resolve/close đều yêu cầu Approval của Trưởng Công an xã; thiếu Approval bị từ chối và không tạo event thành công.
-- [ ] Timeline lấy từ projection/event history, không dựng từ client state hoặc hard-coded status.
-- [ ] SLA reminder/overdue event được tạo cho Incident chưa phân loại/xác minh/chuyển tiếp theo threshold cấu hình.
-- [ ] Sensitive data read và mutation tạo AuditEvent; informant identity không lộ trong list/projection không có quyền.
-- [ ] Retry command có idempotency key và không tạo Incident/Assignment/event trùng.
-- [ ] E2E test chạy từ form intake đến close bằng UI và kiểm tra permission denial cho User không được phân công.
-- [ ] UI có đầy đủ loading, empty, error, denied, focus và mobile responsive states; không có text bị cắt trên desktop/mobile.
-- [ ] `npm run lint`, `npm run build` và PS-E1-005 tests pass.
+- [x] Cán bộ trực ban nhập được kênh, thời điểm, nội dung, địa điểm và thông tin nguồn của IntakeReport với validation server-side.
+- [x] Mỗi IntakeReport tạo đúng một Incident trong MVP và ghi `IntakeReportReceived` cùng `IncidentRegistered` trong cùng business operation.
+- [x] Incident chỉ đi qua các transition hợp lệ: `received → classified → verifying → transferred/resolved → closed`.
+- [x] User được phân công mới ghi được verification; User không được phân công không ghi hoặc đọc được dữ liệu ngoài scope.
+- [x] Chuyển cấp trên và resolve/close đều yêu cầu Approval của Trưởng Công an xã; thiếu Approval bị từ chối và không tạo event thành công.
+- [x] Timeline lấy từ projection/event history, không dựng từ client state hoặc hard-coded status.
+- [x] SLA reminder/overdue event được tạo cho Incident chưa phân loại/xác minh/chuyển tiếp theo threshold cấu hình.
+- [x] Sensitive data read và mutation tạo AuditEvent; informant identity không lộ trong list/projection không có quyền.
+- [x] Retry command có idempotency key và không tạo Incident/Assignment/event trùng.
+- [x] E2E test chạy từ form intake đến close bằng UI và kiểm tra permission denial cho User không được phân công.
+- [x] UI có đầy đủ loading, empty, error, denied, focus và mobile responsive states; không có text bị cắt trên desktop/mobile.
+- [x] `npm run lint`, `npm run build` và PS-E1-005 tests pass.

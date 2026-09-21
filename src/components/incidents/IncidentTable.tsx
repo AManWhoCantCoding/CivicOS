@@ -123,7 +123,7 @@ export function IncidentTable() {
   if (state === 'loading') {
     return (
       <div
-        className="h-40 animate-pulse rounded-xl bg-slate-900"
+        className="h-40 rounded-xl bg-slate-900 motion-safe:animate-pulse"
         aria-label="Đang tải hàng đợi Incident"
         role="status"
       />

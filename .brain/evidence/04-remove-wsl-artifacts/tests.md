@@ -145,3 +145,73 @@ The WSL process table contained no Playwright, pytest, Python, Chromium, or brow
 ### Result
 
 PASS — all requested final absence checks passed; native Python and expected native Playwright/browser paths were present; `test-results/`, `.brain/evidence/`, Docker container/database state, and existing listeners remained present/available as observed. Browser executable paths are recorded above, and the artifact root remains `D:\Project\CivicOS\playwright\test-results\`.
+
+## Infrastructure readiness — Ticket 04
+
+Commands were run through native Windows PowerShell with working directory `D:\Project\CivicOS`.
+
+### Docker Desktop check
+
+Command:
+
+```text
+powershell.exe -NoProfile -Command "Set-Location 'D:\\Project\\CivicOS'; docker.exe info"
+```
+
+Raw result:
+
+```text
+Client:
+ Version:    29.6.2
+ Context:    desktop-linux
+ Server:
+ Containers: 1
+  Running: 1
+  Paused: 0
+  Stopped: 0
+ Images: 6
+ Server Version: 29.6.2
+ Operating System: Docker Desktop
+ OSType: linux
+```
+
+### PostgreSQL startup/readiness and migration status
+
+Command:
+
+```text
+powershell.exe -NoProfile -Command "Set-Location 'D:\\Project\\CivicOS'; docker.exe compose up -d postgres; docker.exe exec civicos-postgres-1 pg_isready -U civicos -h 127.0.0.1; npx prisma migrate status"
+```
+
+Raw result:
+
+```text
+ Container civicos-postgres-1 Running 
+127.0.0.1:5432 - accepting connections
+Environment variables loaded from .env
+Prisma schema loaded from prisma\\schema.prisma
+Datasource "db": PostgreSQL database "civicos", schema "public" at "localhost:5432"
+
+5 migrations found in prisma/migrations
+
+Database schema is up to date!
+```
+
+### Prisma Client generation
+
+Command:
+
+```text
+powershell.exe -NoProfile -Command "Set-Location 'D:\\Project\\CivicOS'; npx prisma generate"
+```
+
+Raw result:
+
+```text
+Environment variables loaded from .env
+Prisma schema loaded from prisma\\schema.prisma
+
+✔ Generated Prisma Client (v6.19.3) to .\\node_modules\\@prisma\\client in 169ms
+```
+
+Result: Docker Desktop was running, PostgreSQL was accepting connections, migrations were up to date, and Prisma Client generation completed. Blocker: none observed.

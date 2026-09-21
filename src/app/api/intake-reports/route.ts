@@ -19,11 +19,13 @@ export async function POST(request: Request): Promise<NextResponse> {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'INTAKE_FAILED';
     const status =
-      message.startsWith('INVALID_') ||
-      message.endsWith('_REQUIRED') ||
-      message === 'GEOPOINT_INCOMPLETE'
-        ? 400
-        : 500;
+      message === 'FORBIDDEN'
+        ? 403
+        : message.startsWith('INVALID_') ||
+            message.endsWith('_REQUIRED') ||
+            message === 'GEOPOINT_INCOMPLETE'
+          ? 400
+          : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }

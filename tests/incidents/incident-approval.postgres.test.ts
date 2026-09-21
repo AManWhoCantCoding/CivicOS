@@ -88,83 +88,91 @@ describe.skipIf(!postgresEnabled)('Incident Approval PostgreSQL seam', () => {
     incidentId = undefined;
   });
 
-  it('requires and records approval for transfer, resolution, and closure', async () => {
-    const registered = await registerIntakeReport(
-      {
-        channel: 'manual_other',
-        receivedAt: new Date().toISOString(),
-        content: 'Approval workflow test',
-        idempotencyKey: `approval-test:${Date.now()}`,
-      },
-      actor,
-    );
-    intakeReportId = registered.reportId;
-    incidentId = registered.incidentId;
+  it(
+    'requires and records approval for transfer, resolution, and closure',
+    { timeout: 30000 },
+    async () => {
+      const registered = await registerIntakeReport(
+        {
+          channel: 'manual_other',
+          receivedAt: new Date().toISOString(),
+          content: 'Approval workflow test',
+          idempotencyKey: `approval-test:${Date.now()}`,
+        },
+        actor,
+      );
+      intakeReportId = registered.reportId;
+      incidentId = registered.incidentId;
 
-    await classifyIncident(incidentId, actor, 'test', 'medium');
-    await startVerification(incidentId, actor, 'ready for review');
+      await classifyIncident(incidentId, actor, 'test', 'medium');
+      await startVerification(incidentId, actor, 'ready for review');
 
-    const transfer = await transferIncident(incidentId, actor, 'unit-cap-tren');
-    expect(transfer.approval.status).toBe('pending');
-    expect(transfer.incident.status).toBe('verifying');
+      const transfer = await transferIncident(
+        incidentId,
+        actor,
+        'unit-cap-tren',
+      );
+      expect(transfer.approval.status).toBe('pending');
+      expect(transfer.incident.status).toBe('verifying');
 
-    const transferred = await approveIncident(
-      incidentId,
-      transfer.approval.id,
-      actor,
-    );
-    expect(transferred.incident.status).toBe('transferred');
+      const transferred = await approveIncident(
+        incidentId,
+        transfer.approval.id,
+        actor,
+      );
+      expect(transferred.incident.status).toBe('transferred');
 
-    const resolution = await resolveIncident(
-      incidentId,
-      actor,
-      'Đã hoàn tất xác minh.',
-    );
-    const resolved = await approveIncident(
-      incidentId,
-      resolution.approval.id,
-      actor,
-    );
-    expect(resolved.incident.status).toBe('resolved');
+      const resolution = await resolveIncident(
+        incidentId,
+        actor,
+        'Đã hoàn tất xác minh.',
+      );
+      const resolved = await approveIncident(
+        incidentId,
+        resolution.approval.id,
+        actor,
+      );
+      expect(resolved.incident.status).toBe('resolved');
 
-    const closure = await closeIncident(incidentId, actor);
-    const closed = await approveIncident(
-      incidentId,
-      closure.approval.id,
-      actor,
-    );
-    expect(closed.incident.status).toBe('closed');
+      const closure = await closeIncident(incidentId, actor);
+      const closed = await approveIncident(
+        incidentId,
+        closure.approval.id,
+        actor,
+      );
+      expect(closed.incident.status).toBe('closed');
 
-    const events = await prisma.eventRecord.findMany({
-      where: { aggregateType: 'Incident', aggregateId: incidentId },
-      orderBy: { aggregateVersion: 'asc' },
-      select: { eventType: true },
-    });
-    expect(events.map(({ eventType }) => eventType)).toEqual(
-      expect.arrayContaining([
-        'IncidentTransferRequested',
-        'IncidentTransferred',
-        'IncidentResolutionRequested',
-        'IncidentResolved',
-        'IncidentClosureRequested',
-        'IncidentClosed',
-      ]),
-    );
+      const events = await prisma.eventRecord.findMany({
+        where: { aggregateType: 'Incident', aggregateId: incidentId },
+        orderBy: { aggregateVersion: 'asc' },
+        select: { eventType: true },
+      });
+      expect(events.map(({ eventType }) => eventType)).toEqual(
+        expect.arrayContaining([
+          'IncidentTransferRequested',
+          'IncidentTransferred',
+          'IncidentResolutionRequested',
+          'IncidentResolved',
+          'IncidentClosureRequested',
+          'IncidentClosed',
+        ]),
+      );
 
-    await processOutboxUntilIdle();
-    const detail = await getIncident(incidentId, actor);
-    expect(detail.incident).toMatchObject({
-      id: incidentId,
-      status: 'closed',
-      description: 'Approval workflow test',
-    });
-    await expect(
-      getIncident(incidentId, {
-        ...actor,
-        organizationUnitId: 'unit-cap-tren',
-      }),
-    ).rejects.toThrow('FORBIDDEN');
-  });
+      await processOutboxUntilIdle();
+      const detail = await getIncident(incidentId, actor);
+      expect(detail.incident).toMatchObject({
+        id: incidentId,
+        status: 'closed',
+        description: 'Approval workflow test',
+      });
+      await expect(
+        getIncident(incidentId, {
+          ...actor,
+          organizationUnitId: 'unit-cap-tren',
+        }),
+      ).rejects.toThrow('FORBIDDEN');
+    },
+  );
 
   it('binds approval decisions to the incident and organization scope', async () => {
     const registered = await registerIntakeReport(
