@@ -44,6 +44,7 @@ type Recommendation = {
 
 type InspectionData = {
   inspection: InspectionState | null;
+  permissions?: { canFieldwork?: boolean };
   template: ChecklistItem[];
   findings: Finding[];
   recommendations: Recommendation[];
@@ -89,6 +90,25 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const [sessionRoles, setSessionRoles] = useState<string[]>([]);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/auth/session', { cache: 'no-store' })
+      .then(async (response) => {
+        const body = (await response.json().catch(() => null)) as {
+          user?: { roles?: unknown };
+        } | null;
+        if (response.ok && Array.isArray(body?.user?.roles)) {
+          setSessionRoles(
+            body.user.roles.filter(
+              (role): role is string => typeof role === 'string',
+            ),
+          );
+        }
+      })
+      .finally(() => setSessionLoaded(true));
+  }, []);
 
   useEffect(() => {
     if (!online) return;
@@ -192,6 +212,11 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
   const inspection = data.inspection;
   const version = inspection.version ?? 0;
   const initialResponses = responsesFrom(inspection.checklistResponses);
+  const canFieldwork =
+    sessionLoaded &&
+    sessionRoles.includes('field_officer') &&
+    data.permissions?.canFieldwork === true;
+  const canApprove = sessionLoaded && sessionRoles.includes('commander');
 
   function updateInspection(next: { version: number; status: string }) {
     setData((current) =>
@@ -264,29 +289,33 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
           </div>
         </dl>
         <div className="mt-8 space-y-6">
-          <ChecklistForm
-            inspectionId={inspectionId}
-            status={inspection.status}
-            initialVersion={version}
-            initialResponses={initialResponses}
-            items={data.template}
-            onStateChange={updateInspection}
-          />
-          <InspectionFindingForm
-            inspectionId={inspectionId}
-            initialVersion={version}
-            status={inspection.status}
-            items={data.template}
-            onVersionChange={(nextVersion) =>
-              updateInspection({
-                version: nextVersion,
-                status: inspection.status,
-              })
-            }
-            onSaved={() => {
-              if (online) setReloadToken((value) => value + 1);
-            }}
-          />
+          {canFieldwork ? (
+            <>
+              <ChecklistForm
+                inspectionId={inspectionId}
+                status={inspection.status}
+                initialVersion={version}
+                initialResponses={initialResponses}
+                items={data.template}
+                onStateChange={updateInspection}
+              />
+              <InspectionFindingForm
+                inspectionId={inspectionId}
+                initialVersion={version}
+                status={inspection.status}
+                items={data.template}
+                onVersionChange={(nextVersion) =>
+                  updateInspection({
+                    version: nextVersion,
+                    status: inspection.status,
+                  })
+                }
+                onSaved={() => {
+                  if (online) setReloadToken((value) => value + 1);
+                }}
+              />
+            </>
+          ) : null}
           <section className="rounded-xl border border-slate-800 bg-slate-900 p-5">
             <h2 className="text-sm font-semibold text-white">
               Phát hiện đã ghi
@@ -321,14 +350,17 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
               <p className="mt-3 text-sm text-slate-500">Chưa có phát hiện.</p>
             )}
           </section>
-          <RecommendationForm
-            inspectionId={inspectionId}
-            findings={data.findings}
-            onSaved={() => setReloadToken((value) => value + 1)}
-          />
+          {canFieldwork ? (
+            <RecommendationForm
+              inspectionId={inspectionId}
+              findings={data.findings}
+              onSaved={() => setReloadToken((value) => value + 1)}
+            />
+          ) : null}
           <EnforcementApprovalPanel
             inspectionId={inspectionId}
             recommendations={data.recommendations}
+            canApprove={canApprove}
             onChanged={(nextVersion) => {
               if (nextVersion !== undefined) {
                 updateInspection({

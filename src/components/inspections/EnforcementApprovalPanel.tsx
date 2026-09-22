@@ -11,6 +11,7 @@ import {
 export function EnforcementApprovalPanel({
   inspectionId,
   recommendations,
+  canApprove = true,
   onChanged,
 }: {
   inspectionId: string;
@@ -20,6 +21,7 @@ export function EnforcementApprovalPanel({
     reason?: string;
     status: string;
   }>;
+  canApprove?: boolean;
   onChanged?: (version?: number) => void;
 }) {
   const online = useOnlineStatus();
@@ -132,7 +134,7 @@ export function EnforcementApprovalPanel({
                     {recommendation.status}
                   </span>
                 </div>
-                {actionable ? (
+                {actionable && canApprove ? (
                   <div className="mt-4 space-y-3">
                     <label className="block text-xs text-slate-400">
                       Lý do từ chối

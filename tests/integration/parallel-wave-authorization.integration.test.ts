@@ -32,6 +32,7 @@ import {
   scheduleInspection,
   startInspection,
   submitRecommendation,
+  rejectRecommendation,
 } from '@/modules/inspections';
 import {
   createEvidenceRecord,
@@ -81,6 +82,26 @@ const commander = matrixUser(
 );
 const duty = matrixUser(`authmatrix-duty-${stamp}`, ['duty_officer'], ORG);
 const field = matrixUser(`authmatrix-field-${stamp}`, ['field_officer'], ORG);
+const office = matrixUser(
+  `authmatrix-office-${stamp}`,
+  ['office_officer'],
+  ORG,
+);
+const village = matrixUser(
+  `authmatrix-village-${stamp}`,
+  ['village_officer'],
+  ORG,
+);
+const superior = matrixUser(
+  `authmatrix-superior-${stamp}`,
+  ['superior_officer'],
+  ORG,
+);
+const operator = matrixUser(
+  `authmatrix-operator-${stamp}`,
+  ['system_operator'],
+  ORG,
+);
 const unassigned = matrixUser(
   `authmatrix-unassigned-${stamp}`,
   ['field_officer'],
@@ -96,7 +117,18 @@ const crossField = matrixUser(
   ['field_officer'],
   UPPER,
 );
-const dbUsers = [commander, duty, field, unassigned, crossCommander, crossField];
+const dbUsers = [
+  commander,
+  duty,
+  field,
+  office,
+  village,
+  superior,
+  operator,
+  unassigned,
+  crossCommander,
+  crossField,
+];
 const scopeActorIds = dbUsers.map(({ id }) => id);
 
 const storageRoot = `/tmp/civicos-authmatrix-${stamp}`;
@@ -603,6 +635,38 @@ describe.skipIf(!enabled)(
           getEstablishment(establishmentId, crossCommander),
         ).rejects.toThrow('FORBIDDEN');
 
+        const officeEstablishment = await registerEstablishment(
+          {
+            name: `Office establishment ${stamp}`,
+            ownerName: 'Office owner',
+            address: `Office address ${stamp}`,
+            type: establishmentType(),
+          },
+          office,
+        );
+        establishmentIds.push(officeEstablishment.id);
+        await expect(
+          scheduleInspection(
+            {
+              establishmentId: officeEstablishment.id,
+              assignedUserId: field.id,
+              scheduledAt: '2026-11-11T08:00:00.000Z',
+            },
+            office,
+          ),
+        ).rejects.toThrow('ASSIGNMENT_MANAGEMENT_FORBIDDEN');
+        const officeSchedule = await scheduleInspection(
+          {
+            establishmentId: officeEstablishment.id,
+            scheduledAt: '2026-11-12T08:00:00.000Z',
+          },
+          office,
+        );
+        inspectionIds.push(officeSchedule.id);
+        await expect(
+          prisma.assignment.count({ where: { resourceId: officeSchedule.id } }),
+        ).resolves.toBe(0);
+
         const inspection = await scheduleInspection(
           {
             establishmentId,
@@ -613,16 +677,55 @@ describe.skipIf(!enabled)(
         );
         inspectionId = inspection.id;
         inspectionIds.push(inspectionId);
-        await createAssignments(
-          {
-            resourceType: 'Inspection',
-            resourceId: inspectionId,
-            task: 'inspection_fieldwork',
-            assigneeUserIds: [commander.id],
-            organizationId: ORG,
-          },
-          commander,
+        await expect(startInspection(inspectionId, commander)).rejects.toThrow(
+          'FORBIDDEN',
         );
+        await expect(
+          prisma.inspection.findUniqueOrThrow({ where: { id: inspectionId } }),
+        ).resolves.toMatchObject({ status: 'scheduled', version: 1 });
+
+        for (const deniedActor of [duty, village, superior, operator]) {
+          await expect(
+            startInspection(inspectionId, deniedActor),
+          ).rejects.toThrow('FORBIDDEN');
+          await expect(
+            recordFinding(
+              {
+                inspectionId,
+                checklistKey: 'security',
+                description: 'Denied role must not mutate',
+                result: 'reminder',
+              },
+              deniedActor,
+            ),
+          ).rejects.toThrow('FORBIDDEN');
+          await expect(
+            submitRecommendation(
+              {
+                inspectionId,
+                findingIds: ['missing-finding'],
+                action: 'Denied',
+                reason: 'Denied',
+              },
+              deniedActor,
+            ),
+          ).rejects.toThrow('FORBIDDEN');
+        }
+        await expect(
+          createAssignments(
+            {
+              resourceType: 'Inspection',
+              resourceId: inspectionId,
+              task: 'not-an-inspection-task',
+              assigneeUserIds: [field.id],
+              organizationId: ORG,
+            },
+            commander,
+          ),
+        ).rejects.toThrow('INCOMPATIBLE_TASK');
+        await expect(
+          prisma.assignment.count({ where: { resourceId: inspectionId } }),
+        ).resolves.toBe(1);
 
         await expect(getInspection(inspectionId, field)).resolves.toMatchObject(
           {
@@ -658,6 +761,20 @@ describe.skipIf(!enabled)(
         );
         expect(finding.inspectionId).toBe(inspectionId);
         await expect(
+          submitRecommendation(
+            {
+              inspectionId,
+              findingIds: [finding.id],
+              action: 'Tu y de xuat',
+              reason: 'Khong phai fieldwork actor.',
+            },
+            commander,
+          ),
+        ).rejects.toThrow('FORBIDDEN');
+        await expect(
+          prisma.enforcementRecommendation.count({ where: { inspectionId } }),
+        ).resolves.toBe(0);
+        await expect(
           recordFinding(
             {
               inspectionId,
@@ -688,12 +805,34 @@ describe.skipIf(!enabled)(
             crossCommander,
           ),
         ).rejects.toThrow('FORBIDDEN');
+        await expect(
+          prisma.assignment.count({
+            where: { assigneeUserId: commander.id, resourceType: 'Inspection' },
+          }),
+        ).resolves.toBe(0);
+        const rejectedRecommendation = await submitRecommendation(
+          {
+            inspectionId,
+            findingIds: [finding.id],
+            action: 'Canh bao',
+            reason: 'Can xem xet them.',
+          },
+          field,
+        );
         const approved = await approveRecommendation(
           inspectionId,
           recommendation.id,
           commander,
         );
         expect(approved).toMatchObject({ status: 'approved' });
+        await expect(
+          rejectRecommendation(
+            inspectionId,
+            rejectedRecommendation.id,
+            commander,
+            'Khong phe duyet.',
+          ),
+        ).resolves.toMatchObject({ status: 'rejected' });
 
         const assignment = await prisma.assignment.findFirstOrThrow({
           where: {
@@ -724,25 +863,58 @@ describe.skipIf(!enabled)(
           inspection: expect.objectContaining({ id: inspectionId }),
         });
 
+        await createAssignments(
+          {
+            resourceType: 'Inspection',
+            resourceId: inspectionId,
+            task: 'inspection_fieldwork',
+            assigneeUserIds: [field.id],
+            organizationId: ORG,
+          },
+          commander,
+        );
+
         const listed = await listInspections(unassigned);
         expect(listed.map((entry) => String(entry.id))).not.toContain(
           inspectionId,
         );
 
+        const foreignInspection = await scheduleInspection(
+          {
+            establishmentId,
+            assignedUserId: field.id,
+            scheduledAt: '2026-11-13T08:00:00.000Z',
+          },
+          commander,
+        );
+        inspectionIds.push(foreignInspection.id);
         const evidenceId = await uploadModuleEvidence(
           'Inspection',
           inspectionId,
-          commander,
+          field,
           'inspection-proof',
         );
+        const foreignEvidenceId = await uploadModuleEvidence(
+          'Inspection',
+          foreignInspection.id,
+          field,
+          'foreign-inspection-proof',
+        );
         await expect(
-          downloadModuleEvidence(
-            'Inspection',
-            inspectionId,
-            evidenceId,
-            commander,
-          ),
+          downloadModuleEvidence('Inspection', inspectionId, evidenceId, field),
         ).resolves.toBeGreaterThan(0);
+        await expect(
+          recordFinding(
+            {
+              inspectionId,
+              checklistKey: 'safety',
+              description: 'Foreign evidence must not attach',
+              result: 'reminder',
+              evidenceIds: [foreignEvidenceId],
+            },
+            field,
+          ),
+        ).rejects.toThrow('EVIDENCE_NOT_FOUND');
         await expect(
           assertAccess(
             unassigned,
@@ -750,6 +922,23 @@ describe.skipIf(!enabled)(
             'read_sensitive',
           ),
         ).rejects.toThrow('FORBIDDEN');
+        await expect(
+          assertAccess(
+            unassigned,
+            { resourceType: 'Inspection', resourceId: inspectionId },
+            'mutate',
+          ),
+        ).rejects.toThrow('FORBIDDEN');
+        await expect(
+          prisma.auditEvent.findMany({
+            where: {
+              actorId: field.id,
+              resourceType: 'Inspection',
+              resourceId: inspectionId,
+              operation: 'evidence.downloaded',
+            },
+          }),
+        ).resolves.toHaveLength(1);
         await expect(
           assertAccess(
             crossCommander,

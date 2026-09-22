@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 
 const PASSWORD = 'civicos-dev';
 const COMMANDER = 'truong@civicos.local';
+const FIELD = 'hientruong@civicos.local';
 const UNASSIGNED = 'khongduocphancong@civicos.local';
 
 async function loginAs(page: Page, email: string): Promise<void> {
@@ -47,11 +48,19 @@ async function scheduleInspectionViaApi(
   page: Page,
   establishmentId: string,
 ): Promise<string> {
+  const directoryResponse = await page.request.get('/api/identity/users');
+  expect(directoryResponse.ok()).toBe(true);
+  const directory = (await directoryResponse.json()) as {
+    users: Array<{ id: string; email: string }>;
+  };
+  const fieldUser = directory.users.find(({ email }) => email === FIELD);
+  expect(fieldUser).toBeDefined();
   const response = await page.request.post('/api/inspections', {
     data: {
       establishmentId,
       scheduledAt: '2030-01-15T10:00:00.000Z',
       cadenceMonths: 3,
+      assignedUserId: fieldUser!.id,
     },
   });
   expect(response.ok()).toBe(true);
@@ -64,6 +73,8 @@ async function setupStartedInspection(page: Page): Promise<string> {
   const marker = uniqueMarker('setup');
   const establishment = await createEstablishmentViaApi(page, marker);
   const inspectionId = await scheduleInspectionViaApi(page, establishment.id);
+  await logout(page);
+  await loginAs(page, FIELD);
   const started = await page.request.post(`/api/inspections/${inspectionId}`, {
     data: { command: 'start' },
   });
@@ -112,8 +123,23 @@ test('establishment-to-approval lifecycle runs through the browser without autom
   await expect(
     page.getByRole('heading', { name: establishmentName }),
   ).toBeVisible();
+  const fieldDirectory = await page.request.get('/api/identity/users');
+  const fieldUsers = (await fieldDirectory.json()) as {
+    users: Array<{ id: string; email: string }>;
+  };
+  const fieldUser = fieldUsers.users.find(({ email }) => email === FIELD);
+  expect(fieldUser).toBeDefined();
   await page.getByLabel('Thời gian kiểm tra').fill('2030-01-15T10:00');
   await page.getByLabel('Chu kỳ').selectOption('3');
+  const assigneeControl = page
+    .locator('label')
+    .filter({ hasText: 'Người được giao' });
+  const assigneeSelect = assigneeControl.locator('select');
+  if (await assigneeSelect.count()) {
+    await assigneeSelect.selectOption(fieldUser!.id);
+  } else {
+    await assigneeControl.locator('input').fill(fieldUser!.id);
+  }
   const inspectionResponsePromise = page.waitForResponse(
     (response) =>
       response.url().endsWith('/api/inspections') &&
@@ -130,6 +156,8 @@ test('establishment-to-approval lifecycle runs through the browser without autom
   expect(inspectionBody.inspection?.establishmentId).toBe(establishmentId);
   await expect(page.getByText('Đã lập lịch kiểm tra.')).toBeVisible();
 
+  await logout(page);
+  await loginAs(page, FIELD);
   await page.goto(`/inspections/${inspectionId}`);
   await expect(
     page.getByText('Inspection', { exact: true }).first(),
@@ -181,8 +209,15 @@ test('establishment-to-approval lifecycle runs through the browser without autom
     .fill(`Cần phê duyệt trước khi hoàn tất ${marker}.`);
   await page.getByRole('button', { name: 'Gửi đề xuất' }).click();
   await expect(page.getByText('Đã gửi đề xuất, chờ phê duyệt.')).toBeVisible();
+  await logout(page);
+  await loginAs(page, COMMANDER);
+  await page.goto(`/inspections/${inspectionId}`);
   await page.getByRole('button', { name: 'Duyệt' }).click();
   await expect(page.getByText('Đã duyệt đề xuất.')).toBeVisible();
+
+  await logout(page);
+  await loginAs(page, FIELD);
+  await page.goto(`/inspections/${inspectionId}`);
 
   await page
     .locator('#inspection-complete-result')
@@ -300,8 +335,8 @@ test('inspection command boundary returns exact error shapes', async ({
     `/api/inspections/${inspectionId}`,
     { data: { command: 'approve', recommendationId: 'no-such-rec' } },
   );
-  expect(missingApproval.status()).toBe(404);
+  expect(missingApproval.status()).toBe(403);
   expect((await missingApproval.json()) as { error?: string }).toMatchObject({
-    error: 'RECOMMENDATION_NOT_FOUND',
+    error: 'FORBIDDEN',
   });
 });

@@ -1,10 +1,11 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { prisma } from '@/lib/prisma';
 import { processOutboxUntilIdle } from '@/modules/eventing';
 import type { IdentityUser } from '@/modules/identity';
 import {
   completeInspection,
+  getInspection,
   listInspections,
   registerEstablishment,
   saveChecklistResponses,
@@ -20,6 +21,14 @@ const actor: IdentityUser = {
   email: 'inspection-schedule-test@civicos.local',
   name: 'Inspection schedule test actor',
   roles: ['commander'],
+  organizationUnitId: 'unit-nghia-tru',
+};
+
+const fieldActor: IdentityUser = {
+  id: 'inspection-schedule-test-field',
+  email: 'inspection-schedule-test-field@civicos.local',
+  name: 'Inspection schedule test field officer',
+  roles: ['field_officer'],
   organizationUnitId: 'unit-nghia-tru',
 };
 
@@ -104,6 +113,37 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
     establishmentId = undefined;
   });
 
+  beforeAll(async () => {
+    await prisma.assignment.deleteMany({
+      where: { assigneeUserId: fieldActor.id },
+    });
+    await prisma.user.deleteMany({ where: { id: fieldActor.id } });
+    await prisma.user.create({
+      data: {
+        id: fieldActor.id,
+        email: fieldActor.email,
+        name: fieldActor.name,
+        passwordHash: 'inspection-schedule-test-hash',
+        organizationUnitId: fieldActor.organizationUnitId,
+      },
+    });
+    const role = await prisma.role.upsert({
+      where: { name: 'field_officer' },
+      update: {},
+      create: { name: 'field_officer' },
+    });
+    await prisma.userRole.create({
+      data: { userId: fieldActor.id, roleId: role.id },
+    });
+  });
+
+  afterAll(async () => {
+    await prisma.assignment.deleteMany({
+      where: { assigneeUserId: fieldActor.id },
+    });
+    await prisma.user.delete({ where: { id: fieldActor.id } });
+  });
+
   it(
     'creates the next configured occurrence after completion',
     async () => {
@@ -121,6 +161,7 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
       const first = await scheduleInspection(
         {
           establishmentId,
+          assignedUserId: fieldActor.id,
           scheduledAt: '2026-01-01T08:00:00.000Z',
           cadenceMonths: 6,
         },
@@ -138,7 +179,7 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
         ]),
       );
 
-      await startInspection(first.id, actor);
+      await startInspection(first.id, fieldActor);
       await saveChecklistResponses(
         {
           inspectionId: first.id,
@@ -147,11 +188,11 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
             { key: 'security', value: 'valid' },
           ],
         },
-        actor,
+        fieldActor,
       );
       await completeInspection(
         { inspectionId: first.id, result: 'pass' },
-        actor,
+        fieldActor,
       );
       await processOutboxUntilIdle();
 
@@ -171,6 +212,38 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
       expect(
         (await listInspections(actor)).find(({ id }) => id === next?.id),
       ).toMatchObject({ scheduleState: 'overdue' });
+    },
+    databaseTestTimeoutMs,
+  );
+
+  it(
+    'allows the assigned field officer to read an active inspection',
+    async () => {
+      const establishment = await registerEstablishment(
+        {
+          name: 'Nhà nghỉ đọc inspection',
+          ownerName: 'Chủ cơ sở',
+          address: 'Địa chỉ đọc inspection',
+          type: 'nhà nghỉ',
+        },
+        actor,
+      );
+      establishmentId = establishment.id;
+
+      const inspection = await scheduleInspection(
+        {
+          establishmentId,
+          assignedUserId: fieldActor.id,
+          scheduledAt: '2030-01-15T10:00:00.000Z',
+        },
+        actor,
+      );
+
+      await expect(
+        getInspection(inspection.id, fieldActor),
+      ).resolves.toMatchObject({
+        inspection: expect.objectContaining({ id: inspection.id }),
+      });
     },
     databaseTestTimeoutMs,
   );

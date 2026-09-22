@@ -10,7 +10,12 @@ import {
   replayEvents,
   type DomainEvent,
 } from '@/modules/eventing';
-import { assertAccess, recordAudit, requireRole } from '@/modules/identity';
+import {
+  assertAccess,
+  canAccess,
+  recordAudit,
+  requireRole,
+} from '@/modules/identity';
 
 import type { InspectionActor } from './contracts';
 
@@ -423,6 +428,11 @@ export async function getInspection(
     { resourceType: 'Inspection', resourceId: inspectionId },
     'read',
   );
+  const canFieldwork = await canAccess(
+    actor,
+    { resourceType: 'Inspection', resourceId: inspectionId },
+    'mutate',
+  );
   await recordAudit({
     actor,
     resourceType: 'Inspection',
@@ -448,6 +458,7 @@ export async function getInspection(
   ]);
   return {
     inspection: inspection.state,
+    permissions: { canFieldwork },
     template: template?.items ?? [],
     findings,
     recommendations,

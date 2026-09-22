@@ -11,6 +11,7 @@ import {
   LocalEvidenceStorage,
   markOverdue,
 } from '@/modules/platform';
+import { createAssignments } from '@/modules/identity';
 import {
   approveRecommendation,
   completeInspection,
@@ -35,7 +36,7 @@ const commander: IdentityUser = {
   id: `ps007-s46-${stamp}-commander`,
   email: `ps007-s46-${stamp}-commander@civicos.local`,
   name: 'PS007 slice 4-6 commander',
-  roles: ['commander'],
+  roles: ['commander', 'field_officer'],
   organizationUnitId: orgId,
 };
 
@@ -98,7 +99,21 @@ async function registerCatalog(
 }
 
 async function scheduleAt(establishmentId: string, scheduledAt: string) {
-  return scheduleInspection({ establishmentId, scheduledAt }, commander);
+  const inspection = await scheduleInspection(
+    { establishmentId, assignedUserId: fieldOfficer.id, scheduledAt },
+    commander,
+  );
+  await createAssignments(
+    {
+      resourceType: 'Inspection',
+      resourceId: inspection.id,
+      task: 'inspection_fieldwork',
+      assigneeUserIds: [commander.id],
+      organizationId: orgId,
+    },
+    commander,
+  );
+  return inspection;
 }
 
 describe.skipIf(!postgresEnabled)(
@@ -115,6 +130,16 @@ describe.skipIf(!postgresEnabled)(
             organizationUnitId: user.organizationUnitId,
           },
         });
+        for (const roleName of user.roles) {
+          const role = await prisma.role.upsert({
+            where: { name: roleName },
+            update: {},
+            create: { name: roleName },
+          });
+          await prisma.userRole.create({
+            data: { userId: user.id, roleId: role.id },
+          });
+        }
       }
     });
 

@@ -149,6 +149,29 @@ async function assertInspectionAccess(
   );
 }
 
+async function assertEstablishmentScope(
+  establishmentId: string,
+  actor: InspectionActor,
+  client: Prisma.TransactionClient | typeof prisma,
+) {
+  if (!actor.organizationUnitId) return;
+  const origin = await client.eventRecord.findFirst({
+    where: { aggregateType: 'Establishment', aggregateId: establishmentId },
+    orderBy: { aggregateVersion: 'asc' },
+    select: { organizationId: true },
+  });
+  if (
+    origin?.organizationId &&
+    origin.organizationId !== actor.organizationUnitId
+  ) {
+    throw new Error('FORBIDDEN');
+  }
+}
+
+function assertFieldworkRole(actor: InspectionActor) {
+  requireRole(actor, 'field_officer');
+}
+
 export async function registerEstablishment(
   input: EstablishmentInput,
   actor: InspectionActor,
@@ -224,6 +247,9 @@ export async function scheduleInspection(
   actor: InspectionActor,
 ) {
   requireRole(actor, 'commander', 'office_officer');
+  if (input.assignedUserId && !actor.roles.includes('commander')) {
+    throw new Error('ASSIGNMENT_MANAGEMENT_FORBIDDEN');
+  }
   const scheduledAt = new Date(input.scheduledAt);
   if (Number.isNaN(scheduledAt.getTime())) throw new Error('INVALID_SCHEDULE');
   const cadenceMonths = assertCadenceMonths(input.cadenceMonths);
@@ -234,6 +260,7 @@ export async function scheduleInspection(
     });
     if (!establishment || !establishment.active)
       throw new Error('ESTABLISHMENT_NOT_FOUND');
+    await assertEstablishmentScope(establishment.id, actor, tx);
     const template = await ensureTemplate(establishment.type, tx);
     const existing = await tx.inspection.findUnique({
       where: {
@@ -344,6 +371,7 @@ export async function updateEstablishment(
       where: { id: input.establishmentId },
     });
     if (!current) throw new Error('ESTABLISHMENT_NOT_FOUND');
+    await assertEstablishmentScope(current.id, actor, tx);
     const updated = await tx.establishment.update({
       where: { id: current.id },
       data: {
@@ -397,6 +425,7 @@ export async function startInspection(
   actor: InspectionActor,
   baseVersion?: number,
 ) {
+  assertFieldworkRole(actor);
   return transitionInspection(
     inspectionId,
     'in_progress',
@@ -415,6 +444,7 @@ export async function saveChecklistResponses(
   },
   actor: InspectionActor,
 ) {
+  assertFieldworkRole(actor);
   const inspection = await prisma.inspection.findUnique({
     where: { id: input.inspectionId },
   });
@@ -471,6 +501,7 @@ export async function completeInspection(
   input: { inspectionId: string; result: string; baseVersion?: number },
   actor: InspectionActor,
 ) {
+  assertFieldworkRole(actor);
   if (!isInspectionResult(input.result))
     throw new Error('INVALID_INSPECTION_RESULT');
   return transitionInspection(
@@ -719,6 +750,7 @@ export async function recordFinding(
   },
   actor: InspectionActor,
 ) {
+  assertFieldworkRole(actor);
   if (!input.checklistKey || !input.description.trim()) {
     throw new Error('FINDING_FIELDS_REQUIRED');
   }
@@ -815,6 +847,7 @@ export async function submitRecommendation(
   },
   actor: InspectionActor,
 ) {
+  assertFieldworkRole(actor);
   if (
     !input.findingIds.length ||
     !input.action.trim() ||
