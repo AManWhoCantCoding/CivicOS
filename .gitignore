@@ -15,6 +15,5 @@ __pycache__/
 storage/
 *.egg-info/
 playwright/.pytest_cache/
-.brain/
 .opencode/
 opencode.jsonc

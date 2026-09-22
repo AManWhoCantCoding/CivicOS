@@ -2,7 +2,7 @@
 
 - Status: `done`
 - Implementation commit: `60ccf3f` (`feat: complete vehicle watch roadmap ticket`)
-- Closure commit: pending Reviewer commit
+- Closure commit: `b997e27` (`chore: close Ticket 06 evidence`)
 - Agents: `developer` (initial Ticket 06 slices); `developer-fallback` (remaining slices and remediation); `tester` (verification); `reviewer` (final review and commit)
 - Final review: PASS, `.brain/evidence/06-ps009-vehicle-watch/review.md`
 - Final verification: PASS, `.brain/evidence/06-ps009-vehicle-watch/tests.md`

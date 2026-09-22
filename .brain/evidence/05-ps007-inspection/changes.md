@@ -1,0 +1,12 @@
+- `src/modules/inspections/commands.ts` — reject incomplete required checklist responses at save time, require approved recommendations for `needs_action` completion, and use configured Inspection SLAs.
+- `src/modules/inspections/config.ts` — add continuous seven-elapsed-day completion and recommendation SLA configuration.
+- `src/modules/inspections/index.ts` — export the Inspection SLA configuration seam.
+- `src/modules/inspections/schemas.ts` — map recommendation-gating command failures to conflict responses.
+- `playwright/conftest.py` — make database recreation/drop opt-in and harden Prisma generation lock ownership/stale cleanup without Unix broad process killing.
+- `playwright/pages.py` — allow browser checklist completion helpers to select the result.
+- `tests/inspections/inspection-slices-4-6.postgres.test.ts` — cover server-side blank checklist rejection and pending/rejected/approved recommendation ordering.
+- `tests/inspections/inspection-workflow.integration.test.ts` — cover whitespace rejection and continuous weekend/holiday SLA dates.
+- `tests/inspections/inspection-slice-7-8.test.ts` — retain API/domain contract coverage for the updated inspection slice.
+- `tests/e2e/ps007-inspection.spec.ts` — submit and approve the recommendation before completing a `needs_action` inspection and document test timeout seams.
+- `playwright/conftest.py` — remove arbitrary listener termination, select an available loopback port when occupied, keep service URLs/commands/health checks aligned, and retain only exact E2E child-process cleanup.
+- `playwright/test_service_ports.py` — assert occupied requested ports remain owned by their existing listener while the harness selects another port.

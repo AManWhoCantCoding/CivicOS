@@ -70,4 +70,5 @@ invocation that included Python. Each was corrected or rerun; the final
 scoped results are the PASS results cited above. No source or ticket change was
 made during this review.
 
-Commit: `60ccf3f` (`feat: complete vehicle watch roadmap ticket`)
+Implementation commit: `60ccf3f` (`feat: complete vehicle watch roadmap ticket`)
+Closure commit: `b997e27` (`chore: close Ticket 06 evidence`)

@@ -4,7 +4,7 @@
 
 **Blocked by:** 04: PS-E1-005 IntakeReport đến Incident; 05: PS-E1-007 Inspection cơ sở kinh doanh; 06: PS-E1-009 VehicleObservation và registry
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Files in scope
 
@@ -23,16 +23,16 @@
 
 ## Implementation steps
 
-1. **Freeze the integration baseline.** Review all migrations, public module entry points, event versions, authorization contracts and generated Prisma client; reject direct imports into another module’s internals.
-2. **Build and migrate from a clean database.** Apply Event kernel, Identity, platform, PS-E1-005, PS-E1-007 and PS-E1-009 migrations in dependency order; verify a second migration run is a no-op.
-3. **Integrate PS-E1-005 first.** Run its integration and browser suites, verify Incident projection/replay, Assignment, Approval, AuditEvent and SLA before adding the next module.
-4. **Integrate PS-E1-007 second.** Run its suites against the same shared contracts, verify checklist versioning, Evidence access, EnforcementRecommendation Approval and no write into Incident tables.
-5. **Integrate PS-E1-009 third.** Run its suites, verify PWA/offline sync, registry validity, match confirmation, Evidence access and two-hour escalation without Camera/LPR network access.
-6. **Run cross-module replay.** Clear/rebuild all read models from event history, compare expected list/detail/timeline results and verify sensitive suggestions remain authorization-gated.
-7. **Run authorization and audit matrix.** Exercise Trưởng Công an xã, assigned User, unassigned User, revoked Assignment and unrelated OrganizationUnit on every module API and UI route.
-8. **Run resilience and freshness tests.** Stop/restart worker, inject duplicate/failing messages, measure retry/dead-letter/replay, and verify projection p95 freshness target of 10 seconds under the defined workload.
-9. **Run UI preflight.** Test desktop/mobile viewport, keyboard navigation, focus/contrast, labels/errors, no horizontal overflow, loading/empty/error/denied/offline states, dark-mode consistency and `prefers-reduced-motion`; check all visible copy for clarity.
-10. **Finalize operational verification.** Run lint, typecheck, build, format check, all unit/integration/e2e suites, update README with only verified commands, and confirm explicitly out-of-scope modules were not introduced.
+- [x] 1. **Freeze the integration baseline.** Review all migrations, public module entry points, event versions, authorization contracts and generated Prisma client; reject direct imports into another module’s internals.
+- [x] 2. **Build and migrate from a clean database.** Apply Event kernel, Identity, platform, PS-E1-005, PS-E1-007 and PS-E1-009 migrations in dependency order; verify a second migration run is a no-op.
+- [x] 3. **Integrate PS-E1-005 first.** Run its integration and browser suites, verify Incident projection/replay, Assignment, Approval, AuditEvent and SLA before adding the next module.
+- [x] 4. **Integrate PS-E1-007 second.** Run its suites against the same shared contracts, verify checklist versioning, Evidence access, EnforcementRecommendation Approval and no write into Incident tables.
+- [x] 5. **Integrate PS-E1-009 third.** Run its suites, verify PWA/offline sync, registry validity, match confirmation, Evidence access and two-hour escalation without Camera/LPR network access.
+- [x] 6. **Run cross-module replay.** Clear/rebuild all read models from event history, compare expected list/detail/timeline results and verify sensitive suggestions remain authorization-gated.
+- [x] 7. **Run authorization and audit matrix.** Exercise Trưởng Công an xã, assigned User, unassigned User, revoked Assignment and unrelated OrganizationUnit on every module API and UI route.
+- [x] 8. **Run resilience and freshness tests.** Stop/restart worker, inject duplicate/failing messages, measure retry/dead-letter/replay, and verify projection p95 freshness target of 10 seconds under the defined workload.
+- [x] 9. **Run UI preflight.** Test desktop/mobile viewport, keyboard navigation, focus/contrast, labels/errors, no horizontal overflow, loading/empty/error/denied/offline states, dark-mode consistency and `prefers-reduced-motion`; check all visible copy for clarity.
+- [x] 10. **Finalize operational verification.** Run lint, typecheck, build, format check, all unit/integration/e2e suites, update README with only verified commands, and confirm explicitly out-of-scope modules were not introduced.
 
 ## Explicitly out of scope
 
@@ -46,16 +46,16 @@
 
 ## Acceptance criteria
 
-- [ ] Có thể dựng database sạch và chạy toàn bộ migrations theo đúng thứ tự; không có migration phụ thuộc file cục bộ không được commit.
-- [ ] PS-E1-005 được tích hợp trước, sau đó PS-E1-007, sau đó PS-E1-009; mỗi bước giữ lint/typecheck/build xanh.
-- [ ] Không module nào ghi trực tiếp aggregate hoặc bảng nguồn sự thật của module khác.
-- [ ] Toàn bộ event type của ba module có version, owner và consumer rõ ràng; event replay dựng lại được các projection chính.
-- [ ] Cross-module link chỉ là ID/projection/suggestion; sensitive link cần confirmation theo authorization.
-- [ ] Authorization matrix được kiểm tra cho Trưởng Công an xã, assigned User, unassigned User, revoked Assignment và unrelated OrganizationUnit trên cả API/UI.
-- [ ] AuditEvent được tạo cho sensitive read/download/mutation trong cả ba module.
-- [ ] SLA test chứng minh thời gian liên tục qua cuối tuần/ngày lễ và notification retry không nhân bản side effect.
-- [ ] Projection freshness đạt p95 không quá 10 giây trong test workload đã định nghĩa; lag/failure có signal.
-- [ ] E2E smoke test đi qua IntakeReport/Incident, Establishment/Inspection và registry/VehicleObservation từ UI đến read model.
-- [ ] UI preflight kiểm tra không có text/button bị cắt, mọi form có label/error/focus, mobile layout không tràn ngang, reduced motion hoạt động.
-- [ ] `npm run lint`, `npm run build`, toàn bộ unit/integration/e2e test và format check pass.
-- [ ] README mô tả chính xác cách chạy app, worker, PostgreSQL, migrations và test; không ghi lệnh chưa tồn tại.
+- [x] Có thể dựng database sạch và chạy toàn bộ migrations theo đúng thứ tự; không có migration phụ thuộc file cục bộ không được commit.
+- [x] PS-E1-005 được tích hợp trước, sau đó PS-E1-007, sau đó PS-E1-009; mỗi bước giữ lint/typecheck/build xanh.
+- [x] Không module nào ghi trực tiếp aggregate hoặc bảng nguồn sự thật của module khác.
+- [x] Toàn bộ event type của ba module có version, owner và consumer rõ ràng; event replay dựng lại được các projection chính.
+- [x] Cross-module link chỉ là ID/projection/suggestion; sensitive link cần confirmation theo authorization.
+- [x] Authorization matrix được kiểm tra cho Trưởng Công an xã, assigned User, unassigned User, revoked Assignment và unrelated OrganizationUnit trên cả API/UI.
+- [x] AuditEvent được tạo cho sensitive read/download/mutation trong cả ba module.
+- [x] SLA test chứng minh thời gian liên tục qua cuối tuần/ngày lễ và notification retry không nhân bản side effect.
+- [x] Projection freshness đạt p95 không quá 10 giây trong test workload đã định nghĩa; lag/failure có signal.
+- [x] E2E smoke test đi qua IntakeReport/Incident, Establishment/Inspection và registry/VehicleObservation từ UI đến read model.
+- [x] UI preflight kiểm tra không có text/button bị cắt, mọi form có label/error/focus, mobile layout không tràn ngang, reduced motion hoạt động.
+- [x] `npm run lint`, `npm run build`, toàn bộ unit/integration/e2e test và format check pass.
+- [x] README mô tả chính xác cách chạy app, worker, PostgreSQL, migrations và test; không ghi lệnh chưa tồn tại.

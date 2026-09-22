@@ -4,6 +4,7 @@
 - Final status: `done`
 - Review: PASS in `.brain/evidence/event-first-roadmap/review-ticket-04-final.md`
 - Commit: `20f403c23e5c850d16b1ccdca36dc56967fa2487` (`feat: complete incident intake roadmap ticket`)
+- Closure commit: `06f57aff46dff762e2021c8ac6e81f64851bcc20` (`chore: close Ticket 04 evidence`)
 - Dependencies: Tickets 01–03 are `done` and committed.
 
 ## Files changed
