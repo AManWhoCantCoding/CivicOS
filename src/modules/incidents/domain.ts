@@ -56,3 +56,48 @@ export function assertIncidentTransition(
 export function isIncidentStatus(value: string): value is IncidentStatus {
   return Object.prototype.hasOwnProperty.call(allowedTransitions, value);
 }
+
+/** Separation of duties between approval requester and decider. */
+export function assertNoSelfApproval(
+  requestedById: string,
+  actorId: string,
+): void {
+  if (requestedById && requestedById === actorId) {
+    throw new Error('SELF_APPROVAL_FORBIDDEN');
+  }
+}
+
+/** Explicit decision scope for transfer approvals across organization units. */
+export function assertTransferDecisionScope(input: {
+  action: string;
+  approvalOrganizationId?: string | null;
+  receivingOrganizationId?: string;
+  actor: {
+    id: string;
+    roles: readonly string[];
+    organizationUnitId?: string;
+  };
+}): 'same_unit' | 'superior_unit' {
+  if (input.action !== 'transfer') throw new Error('FORBIDDEN');
+  const actorUnit = input.actor.organizationUnitId;
+  const holdsCommand = input.actor.roles.includes('commander');
+  const holdsSuperiorCommand =
+    input.actor.roles.includes('superior_commander');
+  if (
+    actorUnit &&
+    input.approvalOrganizationId &&
+    input.approvalOrganizationId === actorUnit &&
+    (holdsCommand || holdsSuperiorCommand)
+  ) {
+    return 'same_unit';
+  }
+  if (
+    actorUnit &&
+    input.receivingOrganizationId &&
+    input.receivingOrganizationId === actorUnit &&
+    holdsSuperiorCommand
+  ) {
+    return 'superior_unit';
+  }
+  throw new Error('FORBIDDEN');
+}

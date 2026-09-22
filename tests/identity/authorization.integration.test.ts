@@ -53,6 +53,7 @@ describe.skipIf(!postgresEnabled)(
   'identity authorization matrix PostgreSQL seam',
   () => {
     const commander = userRef(`t02-commander-${stamp}`, ['commander'], orgA);
+    const duty = userRef(`t02-duty-${stamp}`, ['duty_officer'], orgA);
     const assigned = userRef(`t02-assigned-${stamp}`, ['field_officer'], orgA);
     const unassigned = userRef(
       `t02-unassigned-${stamp}`,
@@ -87,12 +88,18 @@ describe.skipIf(!postgresEnabled)(
         create: { name: 'commander' },
       });
       await prisma.role.upsert({
+        where: { name: 'duty_officer' },
+        update: {},
+        create: { name: 'duty_officer' },
+      });
+      await prisma.role.upsert({
         where: { name: 'field_officer' },
         update: {},
         create: { name: 'field_officer' },
       });
       for (const user of [
         commander,
+        duty,
         assigned,
         unassigned,
         crossUnit,
@@ -202,6 +209,7 @@ describe.skipIf(!postgresEnabled)(
           userId: {
             in: [
               commander,
+              duty,
               assigned,
               unassigned,
               crossUnit,
@@ -215,6 +223,7 @@ describe.skipIf(!postgresEnabled)(
           id: {
             in: [
               commander,
+              duty,
               assigned,
               unassigned,
               crossUnit,
@@ -288,7 +297,7 @@ describe.skipIf(!postgresEnabled)(
           content: 'T02 authorization boundary probe',
           idempotencyKey: `t02-authz:${stamp}`,
         },
-        commander,
+        duty,
       );
       intakeReportId = registered.reportId;
       incidentId = registered.incidentId;

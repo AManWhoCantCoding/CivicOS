@@ -1,10 +1,12 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { AccessDenied } from '@/components/identity/AccessDenied';
 import { OrganizationUnitPicker } from '@/components/identity/OrganizationUnitPicker';
+
+import { holdsCommandRole, useIncidentSession } from './useIncidentSession';
 
 type Approval = {
   id: string;
@@ -51,8 +53,29 @@ function commandError(code: string) {
     ORGANIZATION_REQUIRED: 'Cần chọn OrganizationUnit nhận.',
     REJECTION_REASON_REQUIRED: 'Cần nhập lý do từ chối Approval.',
     RESOLUTION_REQUIRED: 'Cần nhập nội dung kết quả xử lý.',
+    SELF_APPROVAL_FORBIDDEN:
+      'Người tạo yêu cầu Approval không thể tự phê duyệt.',
   };
   return messages[code] ?? 'Thao tác chưa hoàn tất. Vui lòng thử lại.';
+}
+
+async function fetchOwnAssignments(incidentId: string): Promise<string[]> {
+  const response = await fetch(
+    `/api/identity/assignments?resourceType=Incident&resourceId=${encodeURIComponent(incidentId)}`,
+    { cache: 'no-store' },
+  );
+  const body = (await response.json().catch(() => null)) as unknown;
+  if (!response.ok || !isRecord(body) || !Array.isArray(body.assignments)) {
+    return [];
+  }
+  return body.assignments
+    .filter(
+      (assignment) =>
+        isRecord(assignment) &&
+        assignment.status === 'active' &&
+        typeof assignment.assigneeUserId === 'string',
+    )
+    .map((assignment) => String((assignment as Record<string, unknown>).assigneeUserId));
 }
 
 export function IncidentStatusActions({
@@ -80,6 +103,31 @@ export function IncidentStatusActions({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
+  const { session, loaded: sessionLoaded } = useIncidentSession();
+  const [ownAssignments, setOwnAssignments] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchOwnAssignments(incidentId)
+      .then((assigneeIds) => {
+        if (!active) return;
+        setOwnAssignments(assigneeIds);
+      })
+      .catch(() => {
+        if (!active) return;
+        setOwnAssignments([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [incidentId]);
+
+  const isCommander = session ? holdsCommandRole(session.roles) : false;
+  const hasActiveAssignment = session
+    ? (ownAssignments ?? []).includes(session.userId)
+    : false;
+  const canMutate = !sessionLoaded || ownAssignments === null || hasActiveAssignment;
+  const canDecide = !sessionLoaded || ownAssignments === null || isCommander;
 
   async function send(command: string, extra: Record<string, string> = {}) {
     setPendingCommand(command);
@@ -194,7 +242,16 @@ export function IncidentStatusActions({
         sơ.
       </p>
       <div className="mt-5 space-y-5">
-        {status === 'received' ? (
+        {sessionLoaded &&
+        ownAssignments !== null &&
+        !hasActiveAssignment &&
+        !isCommander ? (
+          <p className="rounded-lg border border-dashed border-slate-700 p-4 text-sm text-slate-500">
+            Tài khoản hiện tại không có thao tác khả dụng trên Incident này.
+            Mọi lệnh vẫn được API kiểm tra lại theo role và Assignment.
+          </p>
+        ) : null}
+        {status === 'received' && canMutate ? (
           <form
             onSubmit={(event) => void classify(event)}
             className="space-y-4 border-t border-slate-800 pt-5"
@@ -241,7 +298,7 @@ export function IncidentStatusActions({
           </form>
         ) : null}
 
-        {status === 'classified' ? (
+        {status === 'classified' && canMutate ? (
           <form
             onSubmit={(event) => void verify(event)}
             className="space-y-4 border-t border-slate-800 pt-5"
@@ -272,7 +329,7 @@ export function IncidentStatusActions({
           </form>
         ) : null}
 
-        {status === 'verifying' || status === 'transferred' ? (
+        {canMutate && (status === 'verifying' || status === 'transferred') ? (
           <div className="space-y-5 border-t border-slate-800 pt-5">
             <form
               onSubmit={(event) => void resolve(event)}
@@ -329,7 +386,7 @@ export function IncidentStatusActions({
           </div>
         ) : null}
 
-        {status === 'resolved' ? (
+        {status === 'resolved' && canMutate ? (
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -356,8 +413,9 @@ export function IncidentStatusActions({
                 Approval đang chờ
               </h3>
               <p className="mt-2 text-xs leading-5 text-slate-500">
-                Chỉ Commander cùng OrganizationUnit mới quyết định được
-                Approval.
+                Chỉ Commander cùng OrganizationUnit hoặc Superior Commander ở
+                đơn vị nhận mới quyết định được Approval. Người tạo yêu cầu
+                không thể tự phê duyệt.
               </p>
             </div>
             {pendingApprovals.length > 1 ? (
@@ -408,38 +466,48 @@ export function IncidentStatusActions({
               duyệt.
             </p>
             <div className="flex flex-wrap gap-2">
-              <form onSubmit={(event) => void decide(event, 'approve')}>
-                <button
-                  type="submit"
-                  disabled={
-                    pendingCommand !== null ||
-                    (!pendingApprovals.some(
-                      (approval) => approval.id === approvalId,
-                    ) &&
-                      !pendingApprovals[0])
-                  }
-                  className="rounded-lg bg-emerald-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-emerald-200 disabled:opacity-50"
-                >
-                  {pendingCommand === 'approve'
-                    ? 'Đang phê duyệt…'
-                    : 'Phê duyệt'}
-                </button>
-              </form>
-              <form onSubmit={(event) => void decide(event, 'reject')}>
-                <button
-                  type="submit"
-                  disabled={
-                    pendingCommand !== null ||
-                    (!pendingApprovals.some(
-                      (approval) => approval.id === approvalId,
-                    ) &&
-                      !pendingApprovals[0])
-                  }
-                  className="rounded-lg border border-rose-400/60 px-4 py-2.5 text-sm text-rose-200 hover:border-rose-300 disabled:opacity-50"
-                >
-                  {pendingCommand === 'reject' ? 'Đang từ chối…' : 'Từ chối'}
-                </button>
-              </form>
+              {canDecide ? (
+                <>
+                  <form onSubmit={(event) => void decide(event, 'approve')}>
+                    <button
+                      type="submit"
+                      disabled={
+                        pendingCommand !== null ||
+                        (!pendingApprovals.some(
+                          (approval) => approval.id === approvalId,
+                        ) &&
+                          !pendingApprovals[0])
+                      }
+                      className="rounded-lg bg-emerald-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-emerald-200 disabled:opacity-50"
+                    >
+                      {pendingCommand === 'approve'
+                        ? 'Đang phê duyệt…'
+                        : 'Phê duyệt'}
+                    </button>
+                  </form>
+                  <form onSubmit={(event) => void decide(event, 'reject')}>
+                    <button
+                      type="submit"
+                      disabled={
+                        pendingCommand !== null ||
+                        (!pendingApprovals.some(
+                          (approval) => approval.id === approvalId,
+                        ) &&
+                          !pendingApprovals[0])
+                      }
+                      className="rounded-lg border border-rose-400/60 px-4 py-2.5 text-sm text-rose-200 hover:border-rose-300 disabled:opacity-50"
+                    >
+                      {pendingCommand === 'reject'
+                        ? 'Đang từ chối…'
+                        : 'Từ chối'}
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <p className="text-xs leading-5 text-slate-500">
+                  Tài khoản hiện tại không có quyền quyết định Approval này.
+                </p>
+              )}
             </div>
           </div>
         ) : null}

@@ -46,6 +46,15 @@ async function commandViaApi(
   });
 }
 
+async function assignUser(page: Page, emailPattern: RegExp): Promise<void> {
+  await page.getByLabel(emailPattern).first().scrollIntoViewIfNeeded();
+  await page.getByLabel(emailPattern).check({ force: true });
+  await page
+    .getByRole('button', { name: 'Gửi phân công' })
+    .click({ force: true });
+  await expect(page.getByText('Đã gửi phân công.')).toBeVisible();
+}
+
 test('intake screen exposes a complete labeled form', async ({ page }) => {
   await page.goto('/intake');
   await expect(
@@ -60,7 +69,7 @@ test('intake screen exposes a complete labeled form', async ({ page }) => {
 test('intake-to-close lifecycle runs through the browser with approvals', async ({
   page,
 }) => {
-  test.setTimeout(120000);
+  test.setTimeout(180000);
   const content = `PS005 E2E ${Date.now()}`;
   await loginAs(page, DUTY);
   await page.goto('/intake');
@@ -75,6 +84,11 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
   await loginAs(page, COMMANDER);
   await page.goto(`/incidents/${incidentId}`);
   await expect(page.getByText(content)).toBeVisible();
+  await assignUser(page, /trucban@civicos\.local/);
+
+  await logout(page);
+  await loginAs(page, DUTY);
+  await page.goto(`/incidents/${incidentId}`);
   await page.getByLabel('Category').selectOption('public_order');
   await page.getByLabel('Severity').selectOption('high');
   await page.getByRole('button', { name: 'Lưu phân loại' }).click();
@@ -83,10 +97,10 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
     page.locator('main').getByText('classified', { exact: true }).first(),
   ).toBeVisible();
 
-  await page.getByText(FIELD).first().scrollIntoViewIfNeeded();
-  await page.getByLabel(/hientruong@civicos\.local/).check();
-  await page.getByRole('button', { name: 'Gửi phân công' }).click();
-  await expect(page.getByText('Đã gửi phân công.')).toBeVisible();
+  await logout(page);
+  await loginAs(page, COMMANDER);
+  await page.goto(`/incidents/${incidentId}`);
+  await assignUser(page, /hientruong@civicos\.local/);
 
   await logout(page);
   await loginAs(page, FIELD);
@@ -98,6 +112,15 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
     page.locator('main').getByText('verifying', { exact: true }).first(),
   ).toBeVisible();
 
+  await page.getByRole('button', { name: 'Gửi yêu cầu chuyển' }).click();
+  await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
+    timeout: 15000,
+  });
+  await expect(page.getByText('Approval đang chờ')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Phê duyệt' }),
+  ).toHaveCount(0);
+
   await logout(page);
   await loginAs(page, COMMANDER);
   await page.goto(`/incidents/${incidentId}`);
@@ -106,30 +129,39 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
       .locator('section', { hasText: 'Timeline' })
       .getByText('IncidentVerifying', { exact: true }),
   ).toBeVisible({ timeout: 15000 });
-  await page.getByRole('button', { name: 'Gửi yêu cầu chuyển' }).click();
-  await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
-    timeout: 15000,
-  });
-  await expect(page.getByText('Approval đang chờ')).toBeVisible();
   await page.getByRole('button', { name: 'Phê duyệt' }).click();
   await expect(
     page.locator('main').getByText('transferred', { exact: true }).first(),
   ).toBeVisible();
 
+  await logout(page);
+  await loginAs(page, FIELD);
+  await page.goto(`/incidents/${incidentId}`);
   await page.getByLabel('Nội dung kết quả xử lý').fill('Da hoan tat xu ly.');
   await page.getByRole('button', { name: 'Gửi đề xuất kết quả' }).click();
   await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
     timeout: 15000,
   });
+
+  await logout(page);
+  await loginAs(page, COMMANDER);
+  await page.goto(`/incidents/${incidentId}`);
   await page.getByRole('button', { name: 'Phê duyệt' }).click();
   await expect(
     page.locator('main').getByText('resolved', { exact: true }).first(),
   ).toBeVisible();
 
+  await logout(page);
+  await loginAs(page, FIELD);
+  await page.goto(`/incidents/${incidentId}`);
   await page.getByRole('button', { name: 'Gửi yêu cầu đóng Incident' }).click();
   await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
     timeout: 15000,
   });
+
+  await logout(page);
+  await loginAs(page, COMMANDER);
+  await page.goto(`/incidents/${incidentId}`);
   await page.getByRole('button', { name: 'Phê duyệt' }).click();
   await expect(
     page.locator('main').getByText('closed', { exact: true }).first(),
@@ -148,14 +180,29 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
     'IncidentClosureRequested',
     'IncidentClosed',
   ]) {
-    await expect(timeline.getByText(eventType, { exact: true })).toBeVisible();
+    await expect(timeline.getByText(eventType, { exact: true }).first()).toBeVisible();
   }
+});
+
+test('commander cannot record intake directly', async ({ page }) => {
+  await loginAs(page, COMMANDER);
+  const forbiddenIntake = await page.request.post('/api/intake-reports', {
+    data: {
+      channel: 'in_person',
+      receivedAt: new Date().toISOString(),
+      content: `commander cannot intake ${Date.now()}`,
+    },
+  });
+  expect(forbiddenIntake.status()).toBe(403);
+  expect(((await forbiddenIntake.json()) as { error?: string }).error).toBe(
+    'FORBIDDEN',
+  );
 });
 
 test('unassigned users are denied in UI and at the API boundary', async ({
   page,
 }) => {
-  await loginAs(page, COMMANDER);
+  await loginAs(page, DUTY);
   const incidentId = await createIncidentViaApi(
     page,
     `PS005 denied ${Date.now()}`,
@@ -190,7 +237,7 @@ test('REST boundary returns exact status and idempotency shapes', async ({
     'UNAUTHENTICATED',
   );
 
-  await loginAs(page, COMMANDER);
+  await loginAs(page, DUTY);
   const badChannel = await page.request.post('/api/intake-reports', {
     data: {
       channel: 'sms',
@@ -319,7 +366,7 @@ test('work queue exposes loading, empty, error, and retry states', async ({
 test('intake stays keyboard-focusable and never clips horizontally', async ({
   page,
 }) => {
-  await loginAs(page, COMMANDER);
+  await loginAs(page, DUTY);
   const incidentId = await createIncidentViaApi(
     page,
     `PS005 layout ${Date.now()}`,

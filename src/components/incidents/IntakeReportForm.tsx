@@ -97,6 +97,10 @@ export function IntakeReportForm() {
       noValidate
       className="space-y-6 rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-7"
     >
+      <p className="rounded-lg border border-slate-800 bg-slate-950/60 p-4 text-xs leading-5 text-slate-500">
+        Biểu mẫu tiếp nhận thuộc trách nhiệm cán bộ trực ban. Tài khoản khác
+        gửi tin sẽ nhận trạng thái từ chối từ API.
+      </p>
       <label className="block text-sm text-slate-200">
         Kênh tiếp nhận
         <select

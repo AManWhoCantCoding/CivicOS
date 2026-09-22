@@ -165,7 +165,10 @@ export async function listIncidents(
   actor: IdentityUser,
   input?: { status?: string; category?: string },
 ) {
-  const assignedResourceIds = actor.roles.includes('commander')
+  const holdsCommandScope =
+    actor.roles.includes('commander') ||
+    actor.roles.includes('superior_commander');
+  const assignedResourceIds = holdsCommandScope
     ? undefined
     : (
         await prisma.assignment.findMany({

@@ -37,6 +37,10 @@ type Detail = {
       action: string;
       requestedAt: string;
     }>;
+    informant: {
+      name: string | null;
+      contact: string | null;
+    } | null;
   };
 };
 
@@ -118,6 +122,12 @@ function parseDetail(value: unknown): Detail {
       requestedAt: approval.requestedAt,
     };
   });
+  const informant = isRecord(outerIncident.informant)
+    ? {
+        name: optionalString(outerIncident.informant.name),
+        contact: optionalString(outerIncident.informant.contact),
+      }
+    : null;
   return {
     incident: {
       incident: {
@@ -134,6 +144,7 @@ function parseDetail(value: unknown): Detail {
       },
       events,
       approvals,
+      informant,
     },
   };
 }
@@ -350,6 +361,31 @@ export function IncidentDetail({ incidentId }: { incidentId: string }) {
             </p>
           </div>
         </section>
+        {currentDetail.incident.informant ? (
+          <section
+            className="mt-6 rounded-xl border border-amber-900/50 bg-amber-950/20 p-5"
+            aria-label="Nguồn tin"
+          >
+            <h2 className="text-sm font-semibold text-amber-200">Nguồn tin</h2>
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              Danh tính thật chỉ hiển thị trong phạm vi được phân quyền.
+            </p>
+            <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div>
+                <dt className="text-xs text-slate-500">Tên nguồn tin</dt>
+                <dd className="mt-1 text-sm text-slate-200">
+                  {currentDetail.incident.informant.name ?? 'Không ghi nhận'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">Liên hệ nguồn tin</dt>
+                <dd className="mt-1 text-sm text-slate-200">
+                  {currentDetail.incident.informant.contact ?? 'Không ghi nhận'}
+                </dd>
+              </div>
+            </dl>
+          </section>
+        ) : null}
         {error ? (
           <p className="mt-5 text-sm text-rose-300" role="alert">
             {error}

@@ -8,6 +8,7 @@ import {
   assertAccess,
   canAccess,
   blindIndex,
+  decryptSensitive,
   encryptSensitive,
   grantAssignments,
   recordAudit,
@@ -20,7 +21,8 @@ import type {
   IncidentStatus,
   IntakeReportInput,
 } from './contracts';
-import { assertIncidentTransition } from './domain';
+import { assertIncidentTransition, assertNoSelfApproval } from './domain';
+import { assertTransferDecisionScope } from './domain';
 import { incidentState } from './projection';
 
 function eventActor(actor: IncidentActor) {
@@ -242,12 +244,92 @@ function approvalPayload(value: Prisma.JsonValue): Record<string, unknown> {
     : {};
 }
 
+/** Receiving organization named by the latest approved transfer request. */
+function transferReceivingId(approval: { payload: Prisma.JsonValue }):
+  | string
+  | undefined {
+  const payload = approvalPayload(approval.payload);
+  return typeof payload.organizationId === 'string'
+    ? payload.organizationId
+    : undefined;
+}
+
+async function assertApprovalDecisionAccess(
+  tx: IncidentTransaction,
+  approval: {
+    action: string;
+    organizationId: string | null;
+    payload: Prisma.JsonValue;
+    requestedById: string;
+  },
+  incidentId: string,
+  actor: IncidentActor,
+): Promise<void> {
+  assertNoSelfApproval(approval.requestedById, actor.id);
+  if (approval.action === 'transfer') {
+    const scope = assertTransferDecisionScope({
+      action: approval.action,
+      approvalOrganizationId: approval.organizationId,
+      receivingOrganizationId: transferReceivingId(approval),
+      actor,
+    });
+    if (scope === 'same_unit') {
+      await assertAccess(
+        actor,
+        { resourceType: 'Incident', resourceId: incidentId },
+        'approve',
+        tx,
+      );
+    }
+    return;
+  }
+  if (
+    approval.organizationId &&
+    approval.organizationId !== actor.organizationUnitId
+  )
+    throw new Error('FORBIDDEN');
+  await assertAccess(
+    actor,
+    { resourceType: 'Incident', resourceId: incidentId },
+    'approve',
+    tx,
+  );
+}
+
+/** Receiving-unit read seam for incidents handed to the superior organization. */
+async function canReadTransferredIncident(
+  incidentId: string,
+  actor: IncidentActor,
+): Promise<boolean> {
+  if (!actor.organizationUnitId) return false;
+  if (
+    !actor.roles.includes('superior_officer') &&
+    !actor.roles.includes('superior_commander')
+  ) {
+    return false;
+  }
+  const incident = await prisma.incident.findUnique({
+    where: { id: incidentId },
+  });
+  if (!incident || incident.status !== 'transferred') return false;
+  const handoff = await prisma.approval.findFirst({
+    where: {
+      resourceType: 'Incident',
+      resourceId: incidentId,
+      action: 'transfer',
+      status: 'approved',
+    },
+    orderBy: { decidedAt: 'desc' },
+  });
+  if (!handoff) return false;
+  return transferReceivingId(handoff) === actor.organizationUnitId;
+}
+
 export async function approveIncident(
   incidentId: string,
   approvalId: string,
   actor: IncidentActor,
 ) {
-  requireRole(actor, 'commander');
   return prisma.$transaction(async (tx) => {
     const approval = await tx.approval.findUnique({
       where: { id: approvalId },
@@ -259,13 +341,9 @@ export async function approveIncident(
       throw new Error('APPROVAL_RESOURCE_INVALID');
     if (approval.resourceId !== incidentId)
       throw new Error('APPROVAL_RESOURCE_MISMATCH');
-    if (
-      approval.organizationId &&
-      approval.organizationId !== actor.organizationUnitId
-    )
-      throw new Error('FORBIDDEN');
     if (!(approval.action in approvalNextStatus))
       throw new Error('APPROVAL_ACTION_INVALID');
+    await assertApprovalDecisionAccess(tx, approval, incidentId, actor);
     const action = approval.action as IncidentApprovalAction;
     const updated = await commitIncidentStatus(
       tx,
@@ -292,7 +370,6 @@ export async function rejectIncidentApproval(
   actor: IncidentActor,
   reason: string,
 ) {
-  requireRole(actor, 'commander');
   if (!reason.trim()) throw new Error('REJECTION_REASON_REQUIRED');
   return prisma.$transaction(async (tx) => {
     const approval = await tx.approval.findUnique({
@@ -305,11 +382,7 @@ export async function rejectIncidentApproval(
       throw new Error('APPROVAL_RESOURCE_INVALID');
     if (approval.resourceId !== incidentId)
       throw new Error('APPROVAL_RESOURCE_MISMATCH');
-    if (
-      approval.organizationId &&
-      approval.organizationId !== actor.organizationUnitId
-    )
-      throw new Error('FORBIDDEN');
+    await assertApprovalDecisionAccess(tx, approval, incidentId, actor);
     const incident = await tx.incident.findUnique({
       where: { id: approval.resourceId },
     });
@@ -362,7 +435,7 @@ export async function registerIntakeReport(
   input: IntakeReportInput,
   actor: IncidentActor,
 ) {
-  requireRole(actor, 'commander', 'duty_officer');
+  requireRole(actor, 'duty_officer');
   if (!input.content.trim()) throw new Error('CONTENT_REQUIRED');
   if (
     input.channel !== 'in_person' &&
@@ -539,8 +612,12 @@ export async function assignIncident(
   assigneeUserIds: string[],
   task = 'incident_verification',
 ) {
-  requireRole(actor, 'commander');
   if (!assigneeUserIds.length) throw new Error('ASSIGNEE_REQUIRED');
+  await assertAccess(
+    actor,
+    { resourceType: 'Incident', resourceId: incidentId },
+    'assign',
+  );
   return prisma.$transaction(async (tx) => {
     const incident = await tx.incident.findUnique({
       where: { id: incidentId },
@@ -597,6 +674,7 @@ export async function startVerification(
   actor: IncidentActor,
   note?: string,
 ) {
+  requireRole(actor, 'field_officer');
   return updateIncidentStatus(incidentId, 'verifying', actor, { note });
 }
 
@@ -606,6 +684,18 @@ export async function transferIncident(
   organizationId: string,
 ) {
   if (!organizationId.trim()) throw new Error('ORGANIZATION_REQUIRED');
+  const receiving = await prisma.organizationUnit.findUnique({
+    where: { id: organizationId },
+  });
+  if (!receiving || !receiving.active) {
+    throw new Error('RECEIVING_ORGANIZATION_INVALID');
+  }
+  if (
+    actor.organizationUnitId &&
+    receiving.id === actor.organizationUnitId
+  ) {
+    throw new Error('RECEIVING_ORGANIZATION_INVALID');
+  }
   return requestIncidentApproval(incidentId, actor, 'transfer', {
     organizationId,
   });
@@ -630,7 +720,9 @@ export async function getIncident(incidentId: string, actor: IncidentActor) {
     { resourceType: 'Incident', resourceId: incidentId },
     'read',
   );
-  if (!allowed) throw new Error('FORBIDDEN');
+  if (!allowed && !(await canReadTransferredIncident(incidentId, actor))) {
+    throw new Error('FORBIDDEN');
+  }
   await recordAudit({
     actor,
     resourceType: 'Incident',
@@ -642,6 +734,28 @@ export async function getIncident(incidentId: string, actor: IncidentActor) {
   });
   if (!incidentRow) throw new Error('INCIDENT_NOT_FOUND');
   const incident = { state: incidentState(incidentRow) };
+  const report = await prisma.intakeReport.findUnique({
+    where: { id: incidentRow.intakeReportId },
+  });
+  const resource = { resourceType: 'Incident', resourceId: incidentId };
+  const mayViewSensitive = await canAccess(actor, resource, 'read_sensitive');
+  const informant =
+    report && mayViewSensitive
+      ? {
+          name: report.sourceName ? decryptSensitive(report.sourceName) : null,
+          contact: report.sourceContact
+            ? decryptSensitive(report.sourceContact)
+            : null,
+        }
+      : null;
+  if (informant) {
+    await recordAudit({
+      actor,
+      resourceType: 'Incident',
+      resourceId: incidentId,
+      operation: 'incident.sensitive_read',
+    });
+  }
   const events = await prisma.eventRecord.findMany({
     where: { aggregateType: 'Incident', aggregateId: incidentId },
     orderBy: { aggregateVersion: 'asc' },
@@ -653,7 +767,8 @@ export async function getIncident(incidentId: string, actor: IncidentActor) {
       status: 'pending',
       OR: [
         { requestedById: actor.id },
-        ...(actor.roles.includes('commander')
+        ...(actor.roles.includes('commander') ||
+        actor.roles.includes('superior_commander')
           ? [
               actor.organizationUnitId
                 ? { organizationId: actor.organizationUnitId }
@@ -664,5 +779,5 @@ export async function getIncident(incidentId: string, actor: IncidentActor) {
     },
     orderBy: { requestedAt: 'asc' },
   });
-  return { incident: incident.state, events, approvals };
+  return { incident: incident.state, events, approvals, informant };
 }

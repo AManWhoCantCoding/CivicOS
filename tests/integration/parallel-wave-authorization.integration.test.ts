@@ -79,6 +79,7 @@ const commander = matrixUser(
   ['commander'],
   ORG,
 );
+const duty = matrixUser(`authmatrix-duty-${stamp}`, ['duty_officer'], ORG);
 const field = matrixUser(`authmatrix-field-${stamp}`, ['field_officer'], ORG);
 const unassigned = matrixUser(
   `authmatrix-unassigned-${stamp}`,
@@ -95,7 +96,7 @@ const crossField = matrixUser(
   ['field_officer'],
   UPPER,
 );
-const dbUsers = [commander, field, unassigned, crossCommander, crossField];
+const dbUsers = [commander, duty, field, unassigned, crossCommander, crossField];
 const scopeActorIds = dbUsers.map(({ id }) => id);
 
 const storageRoot = `/tmp/civicos-authmatrix-${stamp}`;
@@ -468,7 +469,7 @@ describe.skipIf(!enabled)(
             sensitiveRef: SENSITIVE_MARKER,
             idempotencyKey: `authmatrix:${stamp}`,
           },
-          commander,
+          duty,
         );
         incidentId = registered.incidentId;
         reportId = registered.reportId;
@@ -516,11 +517,11 @@ describe.skipIf(!enabled)(
           assignIncident(incidentId, field, [unassigned.id]),
         ).rejects.toThrow('FORBIDDEN');
 
-        const transfer = await transferIncident(incidentId, commander, UPPER);
+        const transfer = await transferIncident(incidentId, field, UPPER);
         expect(transfer.approval.status).toBe('pending');
         await expect(
           approveIncident(incidentId, transfer.approval.id, field),
-        ).rejects.toThrow('FORBIDDEN');
+        ).rejects.toThrow('SELF_APPROVAL_FORBIDDEN');
         await expect(
           approveIncident(incidentId, transfer.approval.id, crossCommander),
         ).rejects.toThrow('FORBIDDEN');

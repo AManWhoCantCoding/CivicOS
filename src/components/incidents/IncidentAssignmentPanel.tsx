@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { AccessDenied } from '@/components/identity/AccessDenied';
 import { UserPicker } from '@/components/identity/UserPicker';
 
+import { holdsCommandRole, useIncidentSession } from './useIncidentSession';
+
 type IncidentAssignment = {
   id: string;
   resourceType: string;
@@ -107,6 +109,9 @@ export function IncidentAssignmentPanel({
   const [error, setError] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const { session, loaded: sessionLoaded } = useIncidentSession();
+  const canAssign =
+    !sessionLoaded || (session ? holdsCommandRole(session.roles) : false);
 
   useEffect(() => {
     let active = true;
@@ -279,19 +284,28 @@ export function IncidentAssignmentPanel({
             </p>
           )}
           <div className="border-t border-slate-800 pt-5">
-            <UserPicker
-              value={assigneeUserIds}
-              onChange={setAssigneeUserIds}
-              disabled={loading}
-            />
-            <button
-              type="button"
-              onClick={() => void assign()}
-              disabled={loading || !assigneeUserIds.length}
-              className="mt-4 w-full rounded-lg border border-slate-600 px-3 py-2.5 text-sm font-semibold text-slate-100 hover:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? 'Đang gửi…' : 'Gửi phân công'}
-            </button>
+            {canAssign ? (
+              <>
+                <UserPicker
+                  value={assigneeUserIds}
+                  onChange={setAssigneeUserIds}
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => void assign()}
+                  disabled={loading || !assigneeUserIds.length}
+                  className="mt-4 w-full rounded-lg border border-slate-600 px-3 py-2.5 text-sm font-semibold text-slate-100 hover:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading ? 'Đang gửi…' : 'Gửi phân công'}
+                </button>
+              </>
+            ) : (
+              <p className="rounded-lg border border-dashed border-slate-700 p-4 text-sm text-slate-500">
+                Chỉ Commander trong cùng OrganizationUnit được tạo hoặc thu hồi
+                phân công.
+              </p>
+            )}
           </div>
         </div>
       ) : null}

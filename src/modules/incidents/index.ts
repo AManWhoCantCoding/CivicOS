@@ -4,6 +4,7 @@ export type {
   IntakeReportInput,
 } from './contracts';
 export { assertIncidentTransition, isIncidentStatus } from './domain';
+export { assertNoSelfApproval, assertTransferDecisionScope } from './domain';
 export {
   assignIncident,
   approveIncident,
