@@ -20,5 +20,6 @@ export {
   getIncidentReadModel,
   listIncidents,
   rebuildIncidentProjection,
+  registerIncidentProjections,
 } from './projection';
 export { parseIntakeReport } from './schemas';

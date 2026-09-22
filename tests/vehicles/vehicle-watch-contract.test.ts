@@ -117,7 +117,9 @@ describe('PS-E1-009 slices 1-3 vehicle watch contract', () => {
     expect(Object.keys(VEHICLE_DOMAIN_EVENTS).sort()).toEqual(
       [
         'VehicleObservationRecorded',
+        'VehicleObservationEvidenceAttached',
         'SuspiciousVehicleMatched',
+        'SuspiciousVehicleMatchConfirmed',
         'VehicleVerificationRecorded',
         'VehicleEscalated',
         'SuspiciousVehicleRegistered',
@@ -125,6 +127,14 @@ describe('PS-E1-009 slices 1-3 vehicle watch contract', () => {
       ].sort(),
     );
     expect(VEHICLE_DOMAIN_EVENTS.VehicleObservationRecorded).toEqual({
+      aggregateType: 'VehicleObservation',
+      eventVersion: 1,
+    });
+    expect(VEHICLE_DOMAIN_EVENTS.VehicleObservationEvidenceAttached).toEqual({
+      aggregateType: 'VehicleObservation',
+      eventVersion: 1,
+    });
+    expect(VEHICLE_DOMAIN_EVENTS.SuspiciousVehicleMatchConfirmed).toEqual({
       aggregateType: 'VehicleObservation',
       eventVersion: 1,
     });

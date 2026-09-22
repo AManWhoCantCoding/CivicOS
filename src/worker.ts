@@ -1,10 +1,18 @@
-import { closeOutboxClient } from './modules/eventing/outbox';
-import { createEventWorker } from './modules/eventing/worker';
-import './modules/eventing/projection';
-import './modules/incidents/projection';
-import './modules/inspections/projection';
-import './modules/platform/notifications';
-import './modules/vehicles/projection';
+import {
+  closeOutboxClient,
+  createEventWorker,
+  registerEventHistoryProjection,
+} from '@/modules/eventing';
+import { registerIncidentProjections } from '@/modules/incidents';
+import { registerInspectionProjections } from '@/modules/inspections';
+import { registerNotificationConsumers } from '@/modules/platform';
+import { registerVehicleProjections } from '@/modules/vehicles';
+
+registerEventHistoryProjection();
+registerIncidentProjections();
+registerInspectionProjections();
+registerNotificationConsumers();
+registerVehicleProjections();
 
 const intervalMs = Number(process.env.EVENT_WORKER_INTERVAL_MS ?? 1000);
 const worker = createEventWorker(intervalMs);

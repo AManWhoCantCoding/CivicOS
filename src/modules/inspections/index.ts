@@ -42,4 +42,19 @@ export {
   listEstablishments,
   listInspections,
   rebuildInspectionProjection,
+  registerInspectionProjections,
 } from './projection';
+export {
+  parseEstablishmentInput,
+  parseEstablishmentPatch,
+  parseInspectionCommand,
+  parseScheduleInput,
+  selectDueInspections,
+  toApiError,
+} from './schemas';
+export type {
+  ApiError,
+  InspectionCommandInput,
+  ScheduleInput,
+  ScheduleRow,
+} from './schemas';

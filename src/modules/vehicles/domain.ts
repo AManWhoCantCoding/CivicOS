@@ -5,7 +5,9 @@ export type VehicleDomainEventOwnership = {
 
 export const VEHICLE_DOMAIN_EVENTS: Record<
   | 'VehicleObservationRecorded'
+  | 'VehicleObservationEvidenceAttached'
   | 'SuspiciousVehicleMatched'
+  | 'SuspiciousVehicleMatchConfirmed'
   | 'VehicleVerificationRecorded'
   | 'VehicleEscalated'
   | 'SuspiciousVehicleRegistered'
@@ -16,7 +18,15 @@ export const VEHICLE_DOMAIN_EVENTS: Record<
     aggregateType: 'VehicleObservation',
     eventVersion: 1,
   },
+  VehicleObservationEvidenceAttached: {
+    aggregateType: 'VehicleObservation',
+    eventVersion: 1,
+  },
   SuspiciousVehicleMatched: {
+    aggregateType: 'VehicleObservation',
+    eventVersion: 1,
+  },
+  SuspiciousVehicleMatchConfirmed: {
     aggregateType: 'VehicleObservation',
     eventVersion: 1,
   },

@@ -42,4 +42,5 @@ export {
   listObservations,
   listRegistry,
   rebuildVehicleProjection,
+  registerVehicleProjections,
 } from './projection';

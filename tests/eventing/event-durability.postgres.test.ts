@@ -228,7 +228,9 @@ describe.skipIf(!postgresEnabled)('event durability PostgreSQL seam', () => {
       metadata: {},
     });
     const outcomes = await Promise.allSettled([
-      prisma.$transaction((tx) => appendEvent(tx, inputFor(firstEventId, 'first'))),
+      prisma.$transaction((tx) =>
+        appendEvent(tx, inputFor(firstEventId, 'first')),
+      ),
       prisma.$transaction((tx) =>
         appendEvent(tx, inputFor(secondEventId, 'second')),
       ),
@@ -243,11 +245,11 @@ describe.skipIf(!postgresEnabled)('event durability PostgreSQL seam', () => {
     expect(rejected).toHaveLength(1);
     const reason =
       rejected[0].status === 'rejected'
-        ? String(
-            (rejected[0].reason as Error)?.message ?? rejected[0].reason,
-          )
+        ? String((rejected[0].reason as Error)?.message ?? rejected[0].reason)
         : '';
-    expect(reason).toMatch(/AGGREGATE_VERSION_CONFLICT|P2002|Unique constraint/i);
+    expect(reason).toMatch(
+      /AGGREGATE_VERSION_CONFLICT|P2002|Unique constraint/i,
+    );
     expect(await prisma.eventRecord.count({ where: { aggregateId } })).toBe(1);
     expect(
       await prisma.outboxMessage.count({
@@ -264,9 +266,9 @@ describe.skipIf(!postgresEnabled)('event durability PostgreSQL seam', () => {
     const winnerId = history[0].eventId;
     expect([firstEventId, secondEventId]).toContain(winnerId);
     const loserId = winnerId === firstEventId ? secondEventId : firstEventId;
-    expect(await prisma.eventRecord.count({ where: { eventId: loserId } })).toBe(
-      0,
-    );
+    expect(
+      await prisma.eventRecord.count({ where: { eventId: loserId } }),
+    ).toBe(0);
     expect(
       await prisma.outboxMessage.count({ where: { eventId: loserId } }),
     ).toBe(0);

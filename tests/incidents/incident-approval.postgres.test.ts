@@ -174,6 +174,50 @@ describe.skipIf(!postgresEnabled)('Incident Approval PostgreSQL seam', () => {
     },
   );
 
+  it(
+    'returns authoritative detail immediately after close approval',
+    { timeout: 30000 },
+    async () => {
+      const registered = await registerIntakeReport(
+        {
+          channel: 'manual_other',
+          receivedAt: new Date().toISOString(),
+          content: 'Close consistency test',
+          idempotencyKey: `close-consistency-test:${Date.now()}`,
+        },
+        actor,
+      );
+      intakeReportId = registered.reportId;
+      incidentId = registered.incidentId;
+
+      await classifyIncident(incidentId, actor, 'test', 'medium');
+      await startVerification(incidentId, actor, 'ready for review');
+      const resolution = await resolveIncident(
+        incidentId,
+        actor,
+        'Đã hoàn tất xác minh.',
+      );
+      await approveIncident(incidentId, resolution.approval.id, actor);
+      await processOutboxUntilIdle();
+
+      const closure = await closeIncident(incidentId, actor);
+      const closed = await approveIncident(
+        incidentId,
+        closure.approval.id,
+        actor,
+      );
+      expect(closed.incident.status).toBe('closed');
+
+      const detail = await getIncident(incidentId, actor);
+      const eventTypes = detail.events.map((event) => event.eventType);
+      expect(eventTypes).toContain('IncidentClosed');
+      expect(detail.incident.status).toBe('closed');
+      const lastVersion =
+        detail.events[detail.events.length - 1]?.aggregateVersion;
+      expect(detail.incident.version).toBe(lastVersion);
+    },
+  );
+
   it('binds approval decisions to the incident and organization scope', async () => {
     const registered = await registerIntakeReport(
       {

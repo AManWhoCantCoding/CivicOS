@@ -100,6 +100,12 @@ export async function ensureDevelopmentUsers(): Promise<void> {
       role: 'field_officer',
     },
     {
+      email: 'captren@civicos.local',
+      name: 'Cán bộ đơn vị cấp trên',
+      role: 'field_officer',
+      organizationUnitId: 'unit-cap-tren',
+    },
+    {
       id: 'dev-commander',
       email: 'commander@civicos.local',
       name: 'Commander workflow fixture',
@@ -115,12 +121,16 @@ export async function ensureDevelopmentUsers(): Promise<void> {
 
   for (const entry of users) {
     const fixtureId = 'id' in entry ? entry.id : undefined;
+    const entryUnitId =
+      'organizationUnitId' in entry && entry.organizationUnitId
+        ? entry.organizationUnitId
+        : unit.id;
     const user = await prisma.user.upsert({
       where: { email: entry.email },
       update: {
         name: entry.name,
         passwordHash: hashPassword(defaultPassword),
-        organizationUnitId: unit.id,
+        organizationUnitId: entryUnitId,
         active: true,
       },
       create: {
@@ -128,7 +138,7 @@ export async function ensureDevelopmentUsers(): Promise<void> {
         email: entry.email,
         name: entry.name,
         passwordHash: hashPassword(defaultPassword),
-        organizationUnitId: unit.id,
+        organizationUnitId: entryUnitId,
       },
     });
     const role = roles.find((candidate) => candidate.name === entry.role);

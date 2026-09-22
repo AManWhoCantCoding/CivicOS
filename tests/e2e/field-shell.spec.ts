@@ -207,7 +207,9 @@ test('field shell primary sync action meets touch target and contrast preflight'
     function luminance(channels: number[]) {
       const linear = channels.map((channel) => {
         const value = channel / 255;
-        return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+        return value <= 0.03928
+          ? value / 12.92
+          : ((value + 0.055) / 1.055) ** 2.4;
       });
       return 0.2126 * linear[0]! + 0.7152 * linear[1]! + 0.0722 * linear[2]!;
     }

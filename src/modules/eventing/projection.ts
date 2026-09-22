@@ -91,7 +91,8 @@ const projectionRegistration = globalThis as typeof globalThis & {
   civicosEventHistoryProjection?: boolean;
 };
 
-if (!projectionRegistration.civicosEventHistoryProjection) {
+export function registerEventHistoryProjection(): void {
+  if (projectionRegistration.civicosEventHistoryProjection) return;
   registerEventConsumer(
     '*',
     (event) => applyEventProjection(event).then(() => undefined),
@@ -99,3 +100,5 @@ if (!projectionRegistration.civicosEventHistoryProjection) {
   );
   projectionRegistration.civicosEventHistoryProjection = true;
 }
+
+registerEventHistoryProjection();

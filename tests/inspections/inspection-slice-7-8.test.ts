@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { isInspectionResult } from '@/modules/inspections';
 import {
+  isInspectionResult,
   parseEstablishmentInput,
   parseEstablishmentPatch,
   parseInspectionCommand,
   parseScheduleInput,
   selectDueInspections,
   toApiError,
-} from '@/modules/inspections/schemas';
+} from '@/modules/inspections';
 
 describe('PS-E1-007 slices 7-8 projections and APIs', () => {
   it('validates establishment fields and coordinates on the server', () => {

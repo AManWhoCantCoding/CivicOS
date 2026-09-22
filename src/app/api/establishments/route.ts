@@ -3,12 +3,10 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/modules/identity';
 import {
   listEstablishments,
-  registerEstablishment,
-} from '@/modules/inspections';
-import {
   parseEstablishmentInput,
+  registerEstablishment,
   toApiError,
-} from '@/modules/inspections/schemas';
+} from '@/modules/inspections';
 
 export async function GET(): Promise<NextResponse> {
   const user = await getCurrentUser();

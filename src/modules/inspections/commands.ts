@@ -142,7 +142,6 @@ async function assertInspectionAccess(
   actor: InspectionActor,
   action: 'read' | 'mutate',
 ) {
-  if (actor.roles.includes('commander')) return;
   await assertAccess(
     actor,
     { resourceType: 'Inspection', resourceId: inspectionId },
@@ -931,6 +930,11 @@ async function updateRecommendationStatus(
   status: 'approved' | 'rejected',
   reason?: string,
 ) {
+  await assertAccess(
+    actor,
+    { resourceType: 'Inspection', resourceId: inspectionId },
+    'approve',
+  );
   return prisma.$transaction(async (tx) => {
     const recommendation = await tx.enforcementRecommendation.findUnique({
       where: { id: recommendationId },

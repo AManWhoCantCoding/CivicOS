@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import signal
 import socket
 import subprocess
 import sys
@@ -564,7 +565,21 @@ def _select_available_loopback_port(requested_port: int) -> int:
 
 
 def _terminate(process: subprocess.Popen[str] | None) -> None:
+    """Stop a service process and its children on either Windows or POSIX."""
     if process is None or process.poll() is not None:
+        return
+    if os.name != "nt":
+        try:
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+            process.wait(timeout=10)
+            return
+        except (OSError, ProcessLookupError, subprocess.TimeoutExpired):
+            pass
+        try:
+            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+            process.wait(timeout=5)
+        except (OSError, ProcessLookupError, subprocess.TimeoutExpired):
+            pass
         return
     try:
         subprocess.run(
@@ -625,13 +640,16 @@ class E2EServices:
             return "(service log unavailable)"
 
     def _wait_for_app(self) -> None:
+        """Wait for stable logins; fail fast with the service log when Next exits."""
         deadline = time.monotonic() + self.timeout
         last_error = ""
         stable_responses = 0
         while time.monotonic() < deadline:
             if self.app_process and self.app_process.poll() is not None:
                 raise RuntimeError(
-                    "Next app exited before readiness:\n"
+                    f"Next app on {self.base_url} exited before readiness "
+                    "(a previous dev server may still hold the requested port; "
+                    "stop stale node processes before retrying):\n"
                     + self._log_excerpt("next.log")
                 )
             try:
@@ -683,17 +701,22 @@ class E2EServices:
         )
 
     def start(self) -> None:
+        """Start app and worker; tear down partial startup instead of leaking it."""
         npm = _node_command()
-        self.app_process = self._start_process(
-            [npm, "run", "dev", "--", "--hostname", "127.0.0.1", "--port", str(self.port)],
-            "next.log",
-        )
-        self._wait_for_app()
-        self.worker_process = self._start_process(
-            [npm, "run", "worker", "--", f"--e2e-run={self.run_id}"],
-            "worker.log",
-        )
-        self._wait_for_worker()
+        try:
+            self.app_process = self._start_process(
+                [npm, "run", "dev", "--", "--hostname", "127.0.0.1", "--port", str(self.port)],
+                "next.log",
+            )
+            self._wait_for_app()
+            self.worker_process = self._start_process(
+                [npm, "run", "worker", "--", f"--e2e-run={self.run_id}"],
+                "worker.log",
+            )
+            self._wait_for_worker()
+        except Exception:
+            self.stop()
+            raise
 
     def stop(self) -> None:
         _terminate(self.worker_process)

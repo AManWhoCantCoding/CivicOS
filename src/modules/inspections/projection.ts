@@ -10,13 +10,14 @@ import {
   replayEvents,
   type DomainEvent,
 } from '@/modules/eventing';
-import { canAccess, recordAudit, requireRole } from '@/modules/identity';
+import { assertAccess, recordAudit, requireRole } from '@/modules/identity';
 
 import type { InspectionActor } from './contracts';
 
 const establishmentProjectionName = 'establishment-read-model';
 const inspectionProjectionName = 'inspection-read-model';
-const inspectionEventTypes = [
+/** All establishment and inspection event types projected to read models. */
+export const inspectionEventTypes = [
   'EstablishmentRegistered',
   'EstablishmentUpdated',
   'InspectionScheduled',
@@ -190,16 +191,24 @@ const projectionRegistration = globalThis as typeof globalThis & {
   civicosInspectionProjection?: boolean;
 };
 
-if (!projectionRegistration.civicosInspectionProjection) {
+export function registerInspectionProjections(): void {
+  if (projectionRegistration.civicosInspectionProjection) return;
   for (const eventType of inspectionEventTypes) {
+    const consumer =
+      eventType === 'EstablishmentRegistered' ||
+      eventType === 'EstablishmentUpdated'
+        ? 'establishment-read-model'
+        : 'inspection-read-model';
     registerEventConsumer(
       eventType,
       (event) => projectInspectionEvent(event).then(() => undefined),
-      'inspection-read-model',
+      consumer,
     );
   }
   projectionRegistration.civicosInspectionProjection = true;
 }
+
+registerInspectionProjections();
 
 export async function rebuildInspectionProjection(
   client: PrismaClient = prisma,
@@ -273,6 +282,20 @@ export async function getEstablishment(
       return source ? { state: establishmentState(source) } : null;
     });
   if (!establishment) throw new Error('ESTABLISHMENT_NOT_FOUND');
+  const origin = await prisma.eventRecord.findFirst({
+    where: {
+      aggregateType: 'Establishment',
+      aggregateId: establishmentId,
+    },
+    orderBy: { aggregateVersion: 'asc' },
+    select: { organizationId: true },
+  });
+  if (
+    origin?.organizationId &&
+    origin.organizationId !== actor.organizationUnitId
+  ) {
+    throw new Error('FORBIDDEN');
+  }
   await recordAudit({
     actor,
     resourceType: 'Establishment',
@@ -395,14 +418,11 @@ export async function getInspection(
       return source ? { state: inspectionState(source) } : null;
     });
   if (!inspection) throw new Error('INSPECTION_NOT_FOUND');
-  if (!actor.roles.includes('commander')) {
-    const allowed = await canAccess(
-      actor,
-      { resourceType: 'Inspection', resourceId: inspectionId },
-      'read',
-    );
-    if (!allowed) throw new Error('FORBIDDEN');
-  }
+  await assertAccess(
+    actor,
+    { resourceType: 'Inspection', resourceId: inspectionId },
+    'read',
+  );
   await recordAudit({
     actor,
     resourceType: 'Inspection',

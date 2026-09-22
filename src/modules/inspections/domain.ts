@@ -11,8 +11,10 @@ export type InspectionDomainEventOwnership = {
 
 export const INSPECTION_DOMAIN_EVENTS: Record<
   | 'EstablishmentRegistered'
+  | 'EstablishmentUpdated'
   | 'InspectionScheduled'
   | 'InspectionStarted'
+  | 'InspectionChecklistSaved'
   | 'InspectionCompleted'
   | 'InspectionFindingRecorded'
   | 'EnforcementRecommendationSubmitted'
@@ -21,8 +23,10 @@ export const INSPECTION_DOMAIN_EVENTS: Record<
   InspectionDomainEventOwnership
 > = {
   EstablishmentRegistered: { aggregateType: 'Establishment', eventVersion: 1 },
+  EstablishmentUpdated: { aggregateType: 'Establishment', eventVersion: 1 },
   InspectionScheduled: { aggregateType: 'Inspection', eventVersion: 1 },
   InspectionStarted: { aggregateType: 'Inspection', eventVersion: 1 },
+  InspectionChecklistSaved: { aggregateType: 'Inspection', eventVersion: 1 },
   InspectionCompleted: { aggregateType: 'Inspection', eventVersion: 1 },
   InspectionFindingRecorded: { aggregateType: 'Inspection', eventVersion: 1 },
   EnforcementRecommendationSubmitted: {

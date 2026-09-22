@@ -59,7 +59,8 @@ const notificationRegistration = globalThis as typeof globalThis & {
   civicosSlaNotificationConsumer?: boolean;
 };
 
-if (!notificationRegistration.civicosSlaNotificationConsumer) {
+export function registerNotificationConsumers(): void {
+  if (notificationRegistration.civicosSlaNotificationConsumer) return;
   registerEventConsumer(
     'SlaOverdue',
     async (event) => {
@@ -84,3 +85,5 @@ if (!notificationRegistration.civicosSlaNotificationConsumer) {
   );
   notificationRegistration.civicosSlaNotificationConsumer = true;
 }
+
+registerNotificationConsumers();

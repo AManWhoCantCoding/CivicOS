@@ -4,9 +4,17 @@ export function AccessDenied({
   message?: string;
 }) {
   return (
-    <section className="rounded-xl border border-rose-900/60 bg-rose-950/30 p-6 text-rose-100">
+    <section
+      className="civicos-surface p-6"
+      style={{ borderColor: 'var(--civicos-danger)' }}
+    >
       <h2 className="font-semibold">Không có quyền truy cập</h2>
-      <p className="mt-2 text-sm leading-6 text-rose-200/80">{message}</p>
+      <p
+        className="mt-2 text-sm leading-6"
+        style={{ color: 'var(--civicos-text-muted)' }}
+      >
+        {message}
+      </p>
     </section>
   );
 }

@@ -3,6 +3,47 @@
 :root {
   color-scheme: dark;
   --focus-ring: rgba(103, 232, 249, 0.45);
+  --civicos-canvas: #020617;
+  --civicos-surface: #0f172a;
+  --civicos-surface-raised: #111c33;
+  --civicos-border: #1e293b;
+  --civicos-text: #f8fafc;
+  --civicos-text-muted: #94a3b8;
+  --civicos-accent: #67e8f9;
+  --civicos-accent-contrast: #020617;
+  --civicos-danger: #fda4af;
+  --civicos-success: #6ee7b7;
+  --civicos-warning: #fcd34d;
+  --civicos-radius-sm: 8px;
+  --civicos-radius-md: 12px;
+  --civicos-radius-lg: 16px;
+  --civicos-icon-sm: 16px;
+  --civicos-icon-md: 20px;
+  --civicos-icon-lg: 24px;
+  --civicos-control-min: 44px;
+}
+
+.civicos-surface {
+  background-color: var(--civicos-surface);
+  border: 1px solid var(--civicos-border);
+  border-radius: var(--civicos-radius-md);
+  color: var(--civicos-text);
+}
+
+.civicos-feedback {
+  border: 1px solid var(--civicos-border);
+  border-radius: var(--civicos-radius-sm);
+  min-height: var(--civicos-control-min);
+}
+
+.civicos-control {
+  min-height: var(--civicos-control-min);
+  border-radius: var(--civicos-radius-sm);
+}
+
+.civicos-icon {
+  width: var(--civicos-icon-md);
+  height: var(--civicos-icon-md);
 }
 
 * {
@@ -11,8 +52,8 @@
 
 body {
   margin: 0;
-  background: #020617;
-  color: #f8fafc;
+  background: var(--civicos-canvas);
+  color: var(--civicos-text);
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -22,6 +63,13 @@ input,
 select,
 textarea {
   -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+select,
+textarea {
+  border-radius: var(--civicos-radius-sm);
 }
 
 :focus-visible {

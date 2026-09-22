@@ -8,7 +8,7 @@ import {
   getMockCameraObservations,
   isMockCameraAvailable,
   MOCK_CAMERA_FIXTURES,
-} from '@/modules/vehicles/mock-camera-adapter';
+} from '@/modules/vehicles';
 import {
   describeOfflineQueueStatus,
   describeVehicleCommandError,

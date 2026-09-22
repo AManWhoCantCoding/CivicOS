@@ -94,6 +94,7 @@ export function IntakeReportForm() {
   return (
     <form
       onSubmit={submit}
+      noValidate
       className="space-y-6 rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-7"
     >
       <label className="block text-sm text-slate-200">

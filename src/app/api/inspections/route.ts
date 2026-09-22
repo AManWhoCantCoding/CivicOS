@@ -4,9 +4,10 @@ import { getCurrentUser } from '@/modules/identity';
 import {
   listDueInspections,
   listInspections,
+  parseScheduleInput,
   scheduleInspection,
+  toApiError,
 } from '@/modules/inspections';
-import { parseScheduleInput, toApiError } from '@/modules/inspections/schemas';
 
 export async function GET(request: Request): Promise<NextResponse> {
   const user = await getCurrentUser();

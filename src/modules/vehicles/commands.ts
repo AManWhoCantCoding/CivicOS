@@ -107,7 +107,6 @@ async function assertObservationAccess(
   actor: VehicleActor,
   action: 'read' | 'mutate',
 ) {
-  if (actor.roles.includes('commander')) return;
   await assertAccess(
     actor,
     { resourceType: 'VehicleObservation', resourceId: observationId },
@@ -209,6 +208,20 @@ export async function updateRegistryEntry(
         where: { id: input.entryId },
       });
       if (!current) throw new Error('REGISTRY_NOT_FOUND');
+      const origin = await tx.eventRecord.findFirst({
+        where: {
+          aggregateType: 'SuspiciousVehicleRegistry',
+          aggregateId: input.entryId,
+        },
+        orderBy: { aggregateVersion: 'asc' },
+        select: { organizationId: true },
+      });
+      if (
+        origin?.organizationId &&
+        origin.organizationId !== actor.organizationUnitId
+      ) {
+        throw new Error('FORBIDDEN');
+      }
       const nextStatus = input.status?.trim() || current.status;
       const validUntil = input.validUntil
         ? assertDate(input.validUntil, 'INVALID_REGISTRY_WINDOW')

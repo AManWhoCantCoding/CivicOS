@@ -25,9 +25,7 @@ function captureConsole() {
   };
 }
 
-function serializeCalls(
-  spies: ReturnType<typeof captureConsole>,
-): string[] {
+function serializeCalls(spies: ReturnType<typeof captureConsole>): string[] {
   return Object.values(spies).flatMap((spy) =>
     spy.mock.calls.map((args) =>
       args

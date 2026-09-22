@@ -151,9 +151,8 @@ test('unassigned user cannot upload to or download another resource', async ({
     ),
   });
   expect(created.status()).toBe(201);
-  const evidenceId = (
-    (await created.json()) as { evidence: { id: string } }
-  ).evidence.id;
+  const evidenceId = ((await created.json()) as { evidence: { id: string } })
+    .evidence.id;
 
   await page.request.delete('/api/auth/session');
   await loginAs(page, 'khongduocphancong@civicos.local');

@@ -187,7 +187,18 @@ test('establishment-to-approval lifecycle runs through the browser without autom
   await page
     .locator('#inspection-complete-result')
     .selectOption('needs_action');
+  const completeResponsePromise = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/sync') &&
+      response.request().method() === 'POST',
+  );
   await page.getByRole('button', { name: 'Hoàn tất' }).click();
+  const completeResponse = await completeResponsePromise;
+  expect(completeResponse.ok()).toBe(true);
+  const completeBody = (await completeResponse.json()) as {
+    command?: { status?: string };
+  };
+  expect(completeBody.command?.status).toBe('synced');
   await expect(page.getByText('Đã hoàn tất inspection.')).toBeVisible();
   await expect(page.getByTestId('inspection-status')).toHaveText('Đã hoàn tất');
 

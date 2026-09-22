@@ -5,16 +5,14 @@ import {
   approveRecommendation,
   completeInspection,
   getInspection,
+  parseInspectionCommand,
   recordFinding,
   rejectRecommendation,
   saveChecklistResponses,
   startInspection,
   submitRecommendation,
-} from '@/modules/inspections';
-import {
-  parseInspectionCommand,
   toApiError,
-} from '@/modules/inspections/schemas';
+} from '@/modules/inspections';
 
 function commandError(error: unknown): NextResponse {
   const apiError = toApiError(error);

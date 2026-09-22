@@ -61,14 +61,24 @@ describe('PS-E1-007 slices 1-3 inspection contract', () => {
         'EnforcementRejected',
         'EnforcementRecommendationSubmitted',
         'EstablishmentRegistered',
+        'EstablishmentUpdated',
         'InspectionScheduled',
         'InspectionStarted',
+        'InspectionChecklistSaved',
         'InspectionCompleted',
         'InspectionFindingRecorded',
       ].sort(),
     );
     expect(INSPECTION_DOMAIN_EVENTS.EstablishmentRegistered).toEqual({
       aggregateType: 'Establishment',
+      eventVersion: 1,
+    });
+    expect(INSPECTION_DOMAIN_EVENTS.EstablishmentUpdated).toEqual({
+      aggregateType: 'Establishment',
+      eventVersion: 1,
+    });
+    expect(INSPECTION_DOMAIN_EVENTS.InspectionChecklistSaved).toEqual({
+      aggregateType: 'Inspection',
       eventVersion: 1,
     });
     expect(INSPECTION_DOMAIN_EVENTS.InspectionScheduled).toEqual({

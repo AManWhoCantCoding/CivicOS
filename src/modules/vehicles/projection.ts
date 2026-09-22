@@ -16,7 +16,8 @@ import type { VehicleActor } from './contracts';
 
 const registryProjectionName = 'vehicle-registry-read-model';
 const observationProjectionName = 'vehicle-observation-read-model';
-const vehicleEventTypes = [
+/** All vehicle registry and observation event types projected to read models. */
+export const vehicleEventTypes = [
   'SuspiciousVehicleRegistered',
   'SuspiciousVehicleRegistryUpdated',
   'VehicleObservationRecorded',
@@ -184,16 +185,24 @@ const projectionRegistration = globalThis as typeof globalThis & {
   civicosVehicleProjection?: boolean;
 };
 
-if (!projectionRegistration.civicosVehicleProjection) {
+export function registerVehicleProjections(): void {
+  if (projectionRegistration.civicosVehicleProjection) return;
   for (const eventType of vehicleEventTypes) {
+    const consumer =
+      eventType === 'SuspiciousVehicleRegistered' ||
+      eventType === 'SuspiciousVehicleRegistryUpdated'
+        ? 'vehicle-registry-read-model'
+        : 'vehicle-observation-read-model';
     registerEventConsumer(
       eventType,
       (event) => projectVehicleEvent(event).then(() => undefined),
-      'vehicle-read-model',
+      consumer,
     );
   }
   projectionRegistration.civicosVehicleProjection = true;
 }
+
+registerVehicleProjections();
 
 export async function rebuildVehicleProjection(
   client: PrismaClient = prisma,
@@ -318,14 +327,12 @@ export async function getObservation(
       return source ? { state: observationState(source) } : null;
     });
   if (!observation) throw new Error('OBSERVATION_NOT_FOUND');
-  if (!actor.roles.includes('commander')) {
-    const allowed = await canAccess(
-      actor,
-      { resourceType: 'VehicleObservation', resourceId: observationId },
-      'read',
-    );
-    if (!allowed) throw new Error('FORBIDDEN');
-  }
+  const allowed = await canAccess(
+    actor,
+    { resourceType: 'VehicleObservation', resourceId: observationId },
+    'read',
+  );
+  if (!allowed) throw new Error('FORBIDDEN');
   await recordAudit({
     actor,
     resourceType: 'VehicleObservation',

@@ -133,6 +133,35 @@ describe('offline command contract', () => {
     },
   );
 
+  it.skipIf(!postgresEnabled)(
+    'reclaims an expired sync lease back to pending for retry',
+    async () => {
+      const clientCommandId = `test-device:${randomUUID()}`;
+      commandIds.push(clientCommandId);
+      const input = {
+        clientCommandId,
+        actorId: 'offline-test-actor',
+        commandType: 'test.append',
+        resourceType: 'TestResource',
+        occurredAt: new Date('2026-09-19T03:00:00.000Z'),
+        payload: { appendOnly: true },
+        payloadVersion: 1,
+      };
+      await acceptOfflineCommand(input);
+      await markOfflineCommandSyncing(clientCommandId);
+      await prisma.offlineCommand.update({
+        where: { clientCommandId },
+        data: { lastAttemptAt: new Date(Date.now() - 10 * 60 * 1000) },
+      });
+      const reclaimed = await acceptOfflineCommand(input);
+      expect(reclaimed.status).toBe('pending');
+      expect(reclaimed.error).toBe('SYNC_LEASE_EXPIRED');
+      const retry = await markOfflineCommandSyncing(clientCommandId);
+      expect(retry.status).toBe('syncing');
+      expect(retry.attemptCount).toBe(2);
+    },
+  );
+
   afterAll(async () => {
     if (!postgresEnabled || !commandIds.length) return;
     await prisma.offlineCommand.deleteMany({

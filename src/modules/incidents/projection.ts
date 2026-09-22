@@ -14,7 +14,8 @@ import { recordAudit } from '@/modules/identity';
 import type { IdentityUser } from '@/modules/identity';
 
 const incidentProjectionName = 'incident-read-model';
-const incidentEventTypes = [
+/** All incident intake event types projected to read models. */
+export const incidentEventTypes = [
   'IncidentRegistered',
   'IncidentClassified',
   'IncidentAssigned',
@@ -130,7 +131,8 @@ const projectionRegistration = globalThis as typeof globalThis & {
   civicosIncidentProjection?: boolean;
 };
 
-if (!projectionRegistration.civicosIncidentProjection) {
+export function registerIncidentProjections(): void {
+  if (projectionRegistration.civicosIncidentProjection) return;
   for (const eventType of incidentEventTypes) {
     registerEventConsumer(
       eventType,
@@ -140,6 +142,8 @@ if (!projectionRegistration.civicosIncidentProjection) {
   }
   projectionRegistration.civicosIncidentProjection = true;
 }
+
+registerIncidentProjections();
 
 export async function rebuildIncidentProjection(
   client: PrismaClient = prisma,

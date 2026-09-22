@@ -110,6 +110,7 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
   return (
     <form
       onSubmit={submit}
+      noValidate
       className="space-y-5 rounded-2xl border border-slate-800 bg-slate-900 p-5"
     >
       <div>

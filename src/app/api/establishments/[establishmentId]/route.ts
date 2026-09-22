@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 
 import { getCurrentUser } from '@/modules/identity';
-import { getEstablishment, updateEstablishment } from '@/modules/inspections';
 import {
+  getEstablishment,
   parseEstablishmentPatch,
   toApiError,
-} from '@/modules/inspections/schemas';
+  updateEstablishment,
+} from '@/modules/inspections';
 
 export async function GET(
   _request: Request,

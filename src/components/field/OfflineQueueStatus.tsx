@@ -27,7 +27,7 @@ export function OfflineQueueStatus() {
     window.addEventListener('offline', update);
     window.addEventListener('storage', read);
     window.addEventListener(offlineQueueEventName, read);
-    if (window.navigator.onLine) void syncOfflineQueue().then(read);
+    void syncOfflineQueue().then(read);
     return () => {
       window.removeEventListener('online', resume);
       window.removeEventListener('offline', update);

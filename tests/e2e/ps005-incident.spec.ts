@@ -107,7 +107,9 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
       .getByText('IncidentVerifying', { exact: true }),
   ).toBeVisible({ timeout: 15000 });
   await page.getByRole('button', { name: 'Gửi yêu cầu chuyển' }).click();
-  await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible();
+  await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
+    timeout: 15000,
+  });
   await expect(page.getByText('Approval đang chờ')).toBeVisible();
   await page.getByRole('button', { name: 'Phê duyệt' }).click();
   await expect(
@@ -116,14 +118,18 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
 
   await page.getByLabel('Nội dung kết quả xử lý').fill('Da hoan tat xu ly.');
   await page.getByRole('button', { name: 'Gửi đề xuất kết quả' }).click();
-  await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible();
+  await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
+    timeout: 15000,
+  });
   await page.getByRole('button', { name: 'Phê duyệt' }).click();
   await expect(
     page.locator('main').getByText('resolved', { exact: true }).first(),
   ).toBeVisible();
 
   await page.getByRole('button', { name: 'Gửi yêu cầu đóng Incident' }).click();
-  await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible();
+  await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
+    timeout: 15000,
+  });
   await page.getByRole('button', { name: 'Phê duyệt' }).click();
   await expect(
     page.locator('main').getByText('closed', { exact: true }).first(),

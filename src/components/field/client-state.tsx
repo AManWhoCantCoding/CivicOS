@@ -36,16 +36,33 @@ export function FeedbackMessage({
   message: string;
   tone?: 'info' | 'success' | 'error' | 'warning';
 }) {
-  const toneClass = {
-    info: 'border-slate-700 bg-slate-950/70 text-slate-300',
-    success: 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200',
-    error: 'border-rose-400/30 bg-rose-950/30 text-rose-200',
-    warning: 'border-amber-400/30 bg-amber-400/10 text-amber-200',
+  const toneStyle = {
+    info: {
+      borderColor: 'var(--civicos-border)',
+      backgroundColor: 'var(--civicos-surface)',
+      color: 'var(--civicos-text-muted)',
+    },
+    success: {
+      borderColor: 'var(--civicos-success)',
+      backgroundColor: 'var(--civicos-surface)',
+      color: 'var(--civicos-text)',
+    },
+    error: {
+      borderColor: 'var(--civicos-danger)',
+      backgroundColor: 'var(--civicos-surface)',
+      color: 'var(--civicos-text)',
+    },
+    warning: {
+      borderColor: 'var(--civicos-warning)',
+      backgroundColor: 'var(--civicos-surface)',
+      color: 'var(--civicos-text)',
+    },
   }[tone];
 
   return (
     <p
-      className={`rounded-lg border px-3 py-2 text-sm ${toneClass}`}
+      className="civicos-feedback px-3 py-2 text-sm"
+      style={toneStyle}
       role={tone === 'error' ? 'alert' : 'status'}
       aria-live="polite"
     >

@@ -5,7 +5,13 @@ import time
 from typing import Any, Callable, TypeVar
 from urllib.parse import urljoin
 
-from playwright.sync_api import APIResponse, Page, Response, expect
+from playwright.sync_api import (
+    APIResponse,
+    Page,
+    Response,
+    TimeoutError as PlaywrightTimeoutError,
+    expect,
+)
 
 
 T = TypeVar("T")
@@ -66,6 +72,13 @@ class CivicApp:
         )
 
     def _submit_login_form(self, account: Any) -> Response:
+        """Submit the login form from a clean session so exactly one POST is expected."""
+        self.page.context.clear_cookies()
+        stale = {
+            cookie["name"]: cookie["value"]
+            for cookie in self.page.context.cookies()
+        }.get("civicos_session")
+        assert not stale, "login must start without a civicos_session cookie"
         self.page.request.delete(self.url("/api/auth/session"))
         responses: list[Response] = []
         def _collect(response: Response) -> None:
@@ -88,7 +101,20 @@ class CivicApp:
             expect(login_button).to_be_visible()
             expect(login_button).to_be_enabled()
             login_button.scroll_into_view_if_needed()
-            login_button.click()
+            try:
+                with self.page.expect_response(
+                    lambda response: response.request.method == "POST"
+                    and response.url.endswith("/api/auth/session"),
+                    timeout=15_000,
+                ) as login_post:
+                    login_button.click()
+                login_post.value
+            except PlaywrightTimeoutError as error:
+                raise AssertionError(
+                    "login form submitted without a POST /api/auth/session; "
+                    "the click likely hit a native submit before React hydration "
+                    "or the dev server was unreachable"
+                ) from error
             try:
                 self._poll_value(
                     lambda: bool(
@@ -438,30 +464,42 @@ class CivicApp:
         self.open_offline_status()
         expect(self.page.get_by_text("Online", exact=True)).to_be_visible()
         if expected_total is not None:
-            self._poll_value(
-                lambda: self.page.evaluate(
+            deadline = time.monotonic() + 15
+            last: Any = None
+            while True:
+                last = self.page.evaluate(
                     """
-                    (expectedTotal) => {
+                    () => {
                       const queue = JSON.parse(
                         localStorage.getItem('civicos:offline-queue') || '[]',
                       );
-                      if (!Array.isArray(queue) || queue.length !== expectedTotal) {
-                        return false;
-                      }
-                      return queue.every(
+                      const items = Array.isArray(queue) ? queue : [];
+                      const terminal = items.filter(
                         (item) => item.status === 'synced' || item.status === 'rejected',
-                      );
+                      ).length;
+                      return {
+                        total: items.length,
+                        terminal,
+                        statuses: items.map((item) => `${item.commandType}:${item.status}:${item.error ?? ''}`),
+                      };
                     }
-                    """,
-                    expected_total,
-                ),
-                expected=True,
-                describe=(
-                    "offline queue to account for all commands as synced or rejected "
-                    "with no pending items"
-                ),
+                    """
+                )
+                if last["total"] == expected_total and last["terminal"] == expected_total:
+                    return
+                if time.monotonic() >= deadline:
+                    break
+                try:
+                    self.page.get_by_role("button", name="Đồng bộ ngay", exact=True).click(timeout=1000)
+                except Exception:
+                    pass
+                time.sleep(0.25)
+            raise AssertionError(
+                "timed out after 15000ms waiting for offline queue to account "
+                f"for all commands as synced or rejected with no pending items; "
+                f"expected_total={expected_total!r}, saw {last!r}, "
+                f"queue_error={self.offline_queue_error()!r}"
             )
-            return
         self._poll_value(
             lambda: self.page.get_by_text("Chờ gửi", exact=True)
             .locator("..")

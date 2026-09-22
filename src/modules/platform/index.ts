@@ -15,6 +15,7 @@ export {
   createInAppNotification,
   listNotifications,
   markNotificationRead,
+  registerNotificationConsumers,
 } from './notifications';
 export type { SlaRule } from './sla';
 export { createSla, dueAt, isOverdue, markOverdue } from './sla';
