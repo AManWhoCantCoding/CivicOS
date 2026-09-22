@@ -20,6 +20,11 @@ export {
 export {
   assertAccess,
   canAccess,
+  canApprove,
+  canAssign,
+  canMutate,
+  canRead,
+  canViewSensitive,
   evaluatePolicy,
   requireRole,
 } from './authorization';

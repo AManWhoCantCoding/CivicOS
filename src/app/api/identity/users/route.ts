@@ -40,7 +40,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       'field_officer',
       'office_officer',
       'village_officer',
-      'supervisor',
+      'superior_officer',
+      'superior_commander',
+      'system_operator',
     ] as const;
     if (
       !body.role ||

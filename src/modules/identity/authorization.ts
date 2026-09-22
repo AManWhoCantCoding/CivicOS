@@ -232,8 +232,12 @@ export async function canAccess(
     status: row.status as PolicyAssignment['status'],
     organizationId: row.organizationId ?? undefined,
   }));
-  return evaluatePolicy({ user, resource: effectiveResource, action, assignments })
-    .allowed;
+  return evaluatePolicy({
+    user,
+    resource: effectiveResource,
+    action,
+    assignments,
+  }).allowed;
 }
 
 export async function assertAccess(
@@ -245,6 +249,51 @@ export async function assertAccess(
   if (!(await canAccess(user, resource, action, client))) {
     throw new Error('FORBIDDEN');
   }
+}
+
+/** Read boundary over the shared policy seam. */
+export async function canRead(
+  user: IdentityUser,
+  resource: ResourceRef,
+  client?: PrismaClient | Prisma.TransactionClient,
+): Promise<boolean> {
+  return canAccess(user, resource, 'read', client);
+}
+
+/** Mutation boundary over the shared policy seam. */
+export async function canMutate(
+  user: IdentityUser,
+  resource: ResourceRef,
+  client?: PrismaClient | Prisma.TransactionClient,
+): Promise<boolean> {
+  return canAccess(user, resource, 'mutate', client);
+}
+
+/** Assignment-management boundary over the shared policy seam. */
+export async function canAssign(
+  user: IdentityUser,
+  resource: ResourceRef,
+  client?: PrismaClient | Prisma.TransactionClient,
+): Promise<boolean> {
+  return canAccess(user, resource, 'assign', client);
+}
+
+/** Approval boundary over the shared policy seam. */
+export async function canApprove(
+  user: IdentityUser,
+  resource: ResourceRef,
+  client?: PrismaClient | Prisma.TransactionClient,
+): Promise<boolean> {
+  return canAccess(user, resource, 'approve', client);
+}
+
+/** Sensitive-read boundary over the shared policy seam. */
+export async function canViewSensitive(
+  user: IdentityUser,
+  resource: ResourceRef,
+  client?: PrismaClient | Prisma.TransactionClient,
+): Promise<boolean> {
+  return canAccess(user, resource, 'read_sensitive', client);
 }
 
 export function requireRole(user: IdentityUser, ...roles: string[]): void {

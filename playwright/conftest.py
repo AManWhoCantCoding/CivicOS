@@ -108,15 +108,31 @@ ACCOUNT_SPECS: tuple[tuple[str, str, str, str, str, str], ...] = (
         "e2e-user-cross-org",
         "captren@civicos.local",
         "Cán bộ đơn vị cấp trên",
-        "field_officer",
+        "superior_officer",
         "unit-cap-tren",
     ),
     (
-        "supervisor",
-        "e2e-user-supervisor",
-        "giam_sat@civicos.local",
-        "Cán bộ giám sát",
-        "supervisor",
+        "superior_commander",
+        "e2e-user-superior-commander",
+        "captren-chihuy@civicos.local",
+        "Chỉ huy đơn vị cấp trên",
+        "superior_commander",
+        "unit-cap-tren",
+    ),
+    (
+        "system_operator",
+        "e2e-user-system-operator",
+        "system-operator@civicos.local",
+        "Vận hành hệ thống",
+        "system_operator",
+        "unit-nghia-tru",
+    ),
+    (
+        "village_officer",
+        "e2e-user-village",
+        "thon@civicos.local",
+        "Cán bộ thôn",
+        "village_officer",
         "unit-nghia-tru",
     ),
 )
@@ -127,7 +143,9 @@ ROLE_NAMES = (
     "field_officer",
     "office_officer",
     "village_officer",
-    "supervisor",
+    "superior_officer",
+    "superior_commander",
+    "system_operator",
 )
 
 REFERENCE_TABLES = (

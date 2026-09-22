@@ -60,7 +60,9 @@ export async function ensureDevelopmentUsers(): Promise<void> {
     'field_officer',
     'office_officer',
     'village_officer',
-    'supervisor',
+    'superior_officer',
+    'superior_commander',
+    'system_operator',
   ];
 
   const roles = await Promise.all(
@@ -102,8 +104,24 @@ export async function ensureDevelopmentUsers(): Promise<void> {
     {
       email: 'captren@civicos.local',
       name: 'Cán bộ đơn vị cấp trên',
-      role: 'field_officer',
+      role: 'superior_officer',
       organizationUnitId: 'unit-cap-tren',
+    },
+    {
+      email: 'captren-chihuy@civicos.local',
+      name: 'Chỉ huy đơn vị cấp trên',
+      role: 'superior_commander',
+      organizationUnitId: 'unit-cap-tren',
+    },
+    {
+      email: 'system-operator@civicos.local',
+      name: 'Vận hành hệ thống',
+      role: 'system_operator',
+    },
+    {
+      email: 'thon@civicos.local',
+      name: 'Cán bộ thôn',
+      role: 'village_officer',
     },
     {
       id: 'dev-commander',
@@ -143,6 +161,9 @@ export async function ensureDevelopmentUsers(): Promise<void> {
     });
     const role = roles.find((candidate) => candidate.name === entry.role);
     if (!role) continue;
+    await prisma.userRole.deleteMany({
+      where: { userId: user.id, roleId: { not: role.id } },
+    });
     await prisma.userRole.upsert({
       where: { userId_roleId: { userId: user.id, roleId: role.id } },
       update: {},
@@ -195,6 +216,7 @@ export async function listIdentityUsers(actor: IdentityUser) {
     email: user.email,
     name: user.name,
     roles: user.roles.map(({ role }) => role.name),
+    organizationUnitId: user.organizationUnitId,
   }));
 }
 
@@ -264,6 +286,7 @@ export async function createIdentityUser(
       email: user.email,
       name: user.name,
       roles: user.roles.map(({ role: createdRole }) => createdRole.name),
+      organizationUnitId: user.organizationUnitId,
     };
   });
 }

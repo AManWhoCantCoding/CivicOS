@@ -9,6 +9,7 @@ export type IdentityDirectoryUser = {
   email: string;
   name: string;
   roles: string[];
+  organizationUnitId: string | null;
 };
 
 class DirectoryError extends Error {
@@ -40,6 +41,10 @@ function parseUser(value: unknown): IdentityDirectoryUser {
     email: value.email,
     name: value.name,
     roles: value.roles,
+    organizationUnitId:
+      typeof value.organizationUnitId === 'string'
+        ? value.organizationUnitId
+        : null,
   };
 }
 
@@ -179,7 +184,10 @@ export function UserPicker({
               <span className="min-w-0 text-sm text-slate-200">
                 <span className="block truncate font-medium">{user.name}</span>
                 <span className="mt-0.5 block truncate text-xs text-slate-500">
-                  {user.email} · {user.roles.join(' · ')}
+                  {user.email} · Role: {user.roles.join(' · ')}
+                  {user.organizationUnitId
+                    ? ` · Unit: ${user.organizationUnitId}`
+                    : ''}
                 </span>
               </span>
             </label>

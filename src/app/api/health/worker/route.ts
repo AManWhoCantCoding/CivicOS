@@ -8,7 +8,13 @@ export async function GET(): Promise<NextResponse> {
   if (!user)
     return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
   try {
-    requireRole(user, 'commander', 'supervisor');
+    requireRole(
+      user,
+      'commander',
+      'superior_commander',
+      'system_operator',
+      'supervisor',
+    );
     return NextResponse.json(await getOutboxHealth());
   } catch (error) {
     const message = error instanceof Error ? error.message : 'HEALTH_FAILED';

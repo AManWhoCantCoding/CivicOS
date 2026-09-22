@@ -30,7 +30,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!current)
     return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
   try {
-    requireRole(current, 'commander');
+    requireRole(current, 'commander', 'superior_commander');
     const body = (await request.json()) as {
       resourceType?: string;
       resourceId?: string;

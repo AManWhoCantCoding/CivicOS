@@ -19,6 +19,19 @@ type Assignment = {
   revokeReason: string | null;
 };
 
+type DirectoryUser = {
+  id: string;
+  name: string;
+  email: string;
+  roles: string[];
+  organizationUnitId: string | null;
+};
+
+type DirectoryUnit = {
+  id: string;
+  name: string;
+};
+
 class AssignmentApiError extends Error {
   constructor(
     message: string,
@@ -93,6 +106,56 @@ async function fetchAssignments(): Promise<Assignment[]> {
   return body.assignments.map(parseAssignment);
 }
 
+async function fetchDirectoryUsers(): Promise<DirectoryUser[]> {
+  const response = await fetch('/api/identity/users', { cache: 'no-store' });
+  if (!response.ok) return [];
+  const body = await readBody(response);
+  if (!isRecord(body) || !Array.isArray(body.users)) return [];
+  const users: DirectoryUser[] = [];
+  for (const entry of body.users) {
+    if (!isRecord(entry)) continue;
+    if (
+      typeof entry.id !== 'string' ||
+      typeof entry.name !== 'string' ||
+      typeof entry.email !== 'string' ||
+      !Array.isArray(entry.roles)
+    ) {
+      continue;
+    }
+    users.push({
+      id: entry.id,
+      name: entry.name,
+      email: entry.email,
+      roles: entry.roles.filter(
+        (role): role is string => typeof role === 'string',
+      ),
+      organizationUnitId:
+        typeof entry.organizationUnitId === 'string'
+          ? entry.organizationUnitId
+          : null,
+    });
+  }
+  return users;
+}
+
+async function fetchDirectoryUnits(): Promise<DirectoryUnit[]> {
+  const response = await fetch('/api/identity/organization-units', {
+    cache: 'no-store',
+  });
+  if (!response.ok) return [];
+  const body = await readBody(response);
+  if (!isRecord(body) || !Array.isArray(body.organizationUnits)) return [];
+  const units: DirectoryUnit[] = [];
+  for (const entry of body.organizationUnits) {
+    if (!isRecord(entry)) continue;
+    if (typeof entry.id !== 'string' || typeof entry.name !== 'string') {
+      continue;
+    }
+    units.push({ id: entry.id, name: entry.name });
+  }
+  return units;
+}
+
 function formatDate(value: string | null) {
   if (!value) return '—';
   const date = new Date(value);
@@ -103,6 +166,8 @@ function formatDate(value: string | null) {
 
 export function AssignmentWorkspace() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [directoryUsers, setDirectoryUsers] = useState<DirectoryUser[]>([]);
+  const [directoryUnits, setDirectoryUnits] = useState<DirectoryUnit[]>([]);
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(
     'loading',
   );
@@ -120,10 +185,16 @@ export function AssignmentWorkspace() {
 
   useEffect(() => {
     let active = true;
-    fetchAssignments()
-      .then((nextAssignments) => {
+    Promise.all([
+      fetchAssignments(),
+      fetchDirectoryUsers(),
+      fetchDirectoryUnits(),
+    ])
+      .then(([nextAssignments, nextUsers, nextUnits]) => {
         if (!active) return;
         setAssignments(nextAssignments);
+        setDirectoryUsers(nextUsers);
+        setDirectoryUnits(nextUnits);
         setLoadState('ready');
       })
       .catch((reason: unknown) => {
@@ -147,7 +218,14 @@ export function AssignmentWorkspace() {
     setLoadState('loading');
     setLoadError(null);
     try {
-      setAssignments(await fetchAssignments());
+      const [nextAssignments, nextUsers, nextUnits] = await Promise.all([
+        fetchAssignments(),
+        fetchDirectoryUsers(),
+        fetchDirectoryUnits(),
+      ]);
+      setAssignments(nextAssignments);
+      setDirectoryUsers(nextUsers);
+      setDirectoryUnits(nextUnits);
       setLoadState('ready');
     } catch (reason: unknown) {
       setDenied(reason instanceof AssignmentApiError && reason.status === 403);
@@ -373,96 +451,112 @@ export function AssignmentWorkspace() {
         ) : null}
         {loadState === 'ready' && assignments.length ? (
           <ol className="mt-6 space-y-3">
-            {assignments.map((assignment) => (
-              <li
-                key={assignment.id}
-                className="rounded-xl border border-slate-800 bg-slate-950/60 p-4"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-slate-100">
-                      {assignment.resourceType} · {assignment.resourceId}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Task: {assignment.task} · User:{' '}
-                      {assignment.assigneeUserId}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs ${
-                      assignment.status === 'active'
-                        ? 'bg-emerald-400/10 text-emerald-200'
-                        : 'bg-slate-800 text-slate-400'
-                    }`}
-                  >
-                    {assignment.status}
-                  </span>
-                </div>
-                <p className="mt-3 text-xs text-slate-500">
-                  Cấp lúc {formatDate(assignment.grantedAt)}
-                  {assignment.revokedAt
-                    ? ` · Thu hồi lúc ${formatDate(assignment.revokedAt)}`
-                    : ''}
-                </p>
-                {assignment.revokeReason ? (
-                  <p className="mt-2 text-sm text-slate-400">
-                    Lý do thu hồi: {assignment.revokeReason}
-                  </p>
-                ) : null}
-                {assignment.status === 'active' &&
-                revokeId !== assignment.id ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRevokeId(assignment.id);
-                      setRevokeReason('');
-                    }}
-                    className="mt-4 rounded-lg border border-rose-400/50 px-3 py-2 text-sm text-rose-200 hover:border-rose-300"
-                  >
-                    Thu hồi Assignment
-                  </button>
-                ) : null}
-                {revokeId === assignment.id ? (
-                  <form
-                    onSubmit={(event) =>
-                      void revokeAssignment(event, assignment.id)
-                    }
-                    className="mt-4 space-y-3 border-t border-slate-800 pt-4"
-                  >
-                    <label className="block text-sm text-slate-200">
-                      Lý do thu hồi
-                      <textarea
-                        value={revokeReason}
-                        onChange={(event) =>
-                          setRevokeReason(event.target.value)
-                        }
-                        required
-                        rows={3}
-                        className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
-                      />
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="submit"
-                        disabled={mutation !== null}
-                        className="rounded-lg bg-rose-300 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-rose-200 disabled:opacity-50"
-                      >
-                        {mutation === 'revoke'
-                          ? 'Đang thu hồi…'
-                          : 'Xác nhận thu hồi'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setRevokeId(null)}
-                        className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-slate-500 hover:text-white"
-                      >
-                        Huỷ
-                      </button>
+            {assignments.map((assignment) => {
+              const assignee = directoryUsers.find(
+                (candidate) => candidate.id === assignment.assigneeUserId,
+              );
+              const unitName =
+                directoryUnits.find(
+                  (candidate) => candidate.id === assignment.organizationId,
+                )?.name ?? assignment.organizationId;
+              return (
+                <li
+                  key={assignment.id}
+                  className="rounded-xl border border-slate-800 bg-slate-950/60 p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-100">
+                        {assignment.resourceType} · {assignment.resourceId}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Task: {assignment.task} ·{' '}
+                        {assignee
+                          ? `${assignee.name} · Role: ${assignee.roles.join(' · ')}`
+                          : `User: ${assignment.assigneeUserId}`}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        OrganizationUnit: {unitName ?? '—'}
+                      </p>
                     </div>
-                  </form>
-                ) : null}
-              </li>
-            ))}
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs ${
+                        assignment.status === 'active'
+                          ? 'bg-emerald-400/10 text-emerald-200'
+                          : 'bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {assignment.status === 'revoked'
+                        ? 'revoked · đã thu hồi'
+                        : assignment.status}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-xs text-slate-500">
+                    Cấp lúc {formatDate(assignment.grantedAt)}
+                    {assignment.revokedAt
+                      ? ` · Thu hồi lúc ${formatDate(assignment.revokedAt)}`
+                      : ''}
+                  </p>
+                  {assignment.revokeReason ? (
+                    <p className="mt-2 text-sm text-slate-400">
+                      Lý do thu hồi: {assignment.revokeReason}
+                    </p>
+                  ) : null}
+                  {assignment.status === 'active' &&
+                  revokeId !== assignment.id ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRevokeId(assignment.id);
+                        setRevokeReason('');
+                      }}
+                      className="mt-4 rounded-lg border border-rose-400/50 px-3 py-2 text-sm text-rose-200 hover:border-rose-300"
+                    >
+                      Thu hồi Assignment
+                    </button>
+                  ) : null}
+                  {revokeId === assignment.id ? (
+                    <form
+                      onSubmit={(event) =>
+                        void revokeAssignment(event, assignment.id)
+                      }
+                      className="mt-4 space-y-3 border-t border-slate-800 pt-4"
+                    >
+                      <label className="block text-sm text-slate-200">
+                        Lý do thu hồi
+                        <textarea
+                          value={revokeReason}
+                          onChange={(event) =>
+                            setRevokeReason(event.target.value)
+                          }
+                          required
+                          rows={3}
+                          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                        />
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="submit"
+                          disabled={mutation !== null}
+                          className="rounded-lg bg-rose-300 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-rose-200 disabled:opacity-50"
+                        >
+                          {mutation === 'revoke'
+                            ? 'Đang thu hồi…'
+                            : 'Xác nhận thu hồi'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRevokeId(null)}
+                          className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-slate-500 hover:text-white"
+                        >
+                          Huỷ
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
+                </li>
+              );
+            })}
           </ol>
         ) : null}
       </section>

@@ -23,7 +23,7 @@ export async function grantAssignments(
   tx: Prisma.TransactionClient,
   input: AssignmentInput,
   actor: IdentityUser,
-  allowedRoles: string[] = ['commander'],
+  allowedRoles: string[] = ['commander', 'superior_commander'],
 ) {
   requireRole(actor, ...allowedRoles);
   if (!input.assigneeUserIds.length) throw new Error('ASSIGNEE_REQUIRED');
@@ -182,7 +182,7 @@ export async function revokeAssignment(
   actor: IdentityUser,
   reason: string,
 ) {
-  requireRole(actor, 'commander');
+  requireRole(actor, 'commander', 'superior_commander');
   if (!reason.trim()) throw new Error('REVOKE_REASON_REQUIRED');
 
   return prisma.$transaction(async (tx) => {
@@ -244,12 +244,17 @@ export async function listAssignments(input: {
   includeRevoked?: boolean;
 }) {
   const { actor, resourceType, resourceId, includeRevoked = false } = input;
+  const managesAssignments =
+    actor.roles.includes('commander' as never) ||
+    actor.roles.includes('superior_commander' as never);
   const assignments = await prisma.assignment.findMany({
     where: {
       ...(resourceType ? { resourceType } : {}),
       ...(resourceId ? { resourceId } : {}),
-      ...(actor.roles.includes('commander')
-        ? {}
+      ...(managesAssignments
+        ? actor.organizationUnitId
+          ? { organizationId: actor.organizationUnitId }
+          : {}
         : {
             assigneeUserId: actor.id,
             ...(actor.organizationUnitId

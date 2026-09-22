@@ -1,9 +1,32 @@
 import Link from 'next/link';
 
+import { AccessDenied } from '@/components/identity/AccessDenied';
 import { AssignmentWorkspace } from '@/components/identity/AssignmentWorkspace';
 import { SessionControls } from '@/components/identity/SessionControls';
+import { getCurrentUser } from '@/modules/identity';
 
-export default function AssignmentsPage() {
+export default async function AssignmentsPage() {
+  const current = await getCurrentUser();
+  if (!current) {
+    return (
+      <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
+        <div className="mx-auto max-w-6xl">
+          <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-6">
+            <Link
+              className="text-sm text-slate-400 underline-offset-4 hover:text-white hover:underline"
+              href="/"
+            >
+              ← Trung tâm
+            </Link>
+            <SessionControls />
+          </header>
+          <div className="mt-10">
+            <AccessDenied message="Cần đăng nhập để xem Assignment. Phiên hiện tại không hợp lệ hoặc đã hết hạn." />
+          </div>
+        </div>
+      </main>
+    );
+  }
   return (
     <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-6xl">

@@ -74,7 +74,7 @@ export const ROLE_BASE_CAPABILITIES: Record<RoleName, readonly Capability[]> = {
   office_officer: ['read', 'mutate', 'read_sensitive'],
   village_officer: ['read', 'mutate', 'read_sensitive'],
   superior_officer: ['read', 'mutate', 'read_sensitive'],
-  supervisor: ['read', 'mutate', 'read_sensitive'],
+  supervisor: [],
   system_operator: [],
 };
 
@@ -92,7 +92,6 @@ const BUSINESS_ROLES: readonly RoleName[] = [
   'village_officer',
   'superior_officer',
   'superior_commander',
-  'supervisor',
 ];
 
 export const TASK_CAPABILITIES: Record<string, readonly Capability[]> = {
