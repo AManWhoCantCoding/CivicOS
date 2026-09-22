@@ -45,6 +45,11 @@ type Verification = {
 type ObservationData = {
   observation: Observation | null;
   verifications: Verification[];
+  permissions: {
+    canConfirm: boolean;
+    canVerify: boolean;
+    canEscalate: boolean;
+  };
 };
 
 function evidenceIdsFrom(value: unknown) {
@@ -295,7 +300,8 @@ export function VehicleObservationDetail({
           </div>
         </dl>
         <EvidenceList evidenceIds={observationEvidence} />
-        {observation.status === 'match_suggested' ? (
+        {data.permissions.canConfirm &&
+        observation.status === 'match_suggested' ? (
           <div className="mt-5 border-t border-slate-800 pt-4">
             <p className="text-sm text-amber-200">
               Hệ thống gợi ý match với registry. Cần xác nhận trước khi xác
@@ -312,29 +318,33 @@ export function VehicleObservationDetail({
           </div>
         ) : null}
       </div>
-      <VehicleVerificationForm
-        observationId={observationId}
-        status={observation.status}
-        onSaved={({ observation: nextObservation, verification }) => {
-          updateObservation(nextObservation);
-          setData((current) =>
-            current
-              ? {
-                  ...current,
-                  verifications: [
-                    ...current.verifications,
-                    verification as Verification,
-                  ],
-                }
-              : current,
-          );
-        }}
-      />
-      <VehicleEscalationForm
-        observationId={observationId}
-        status={observation.status}
-        onSaved={updateObservation}
-      />
+      {data.permissions.canVerify ? (
+        <VehicleVerificationForm
+          observationId={observationId}
+          status={observation.status}
+          onSaved={({ observation: nextObservation, verification }) => {
+            updateObservation(nextObservation);
+            setData((current) =>
+              current
+                ? {
+                    ...current,
+                    verifications: [
+                      ...current.verifications,
+                      verification as Verification,
+                    ],
+                  }
+                : current,
+            );
+          }}
+        />
+      ) : null}
+      {data.permissions.canEscalate ? (
+        <VehicleEscalationForm
+          observationId={observationId}
+          status={observation.status}
+          onSaved={updateObservation}
+        />
+      ) : null}
       <section className="rounded-xl border border-slate-800 bg-slate-900 p-5">
         <h2 className="text-sm font-semibold text-white">Lịch sử xác minh</h2>
         {data.verifications.length ? (

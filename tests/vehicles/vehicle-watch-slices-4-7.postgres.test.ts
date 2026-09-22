@@ -712,16 +712,16 @@ describe.skipIf(!postgresEnabled)(
             result: 'Chu xe: Nguyen Van A.',
             notes: 'Doi chieu.',
           },
-          commander,
+          fieldOfficer,
         ),
       ).rejects.toThrow('MATCH_CONFIRMATION_REQUIRED');
       await expect(
-        escalateVehicleObservation(observation.id, commander, orgId),
+        escalateVehicleObservation(observation.id, fieldOfficer, orgId),
       ).rejects.toThrow('MATCH_CONFIRMATION_REQUIRED');
 
       const raced = await Promise.allSettled([
-        confirmVehicleMatch(observation.id, commander),
-        confirmVehicleMatch(observation.id, commander),
+        confirmVehicleMatch(observation.id, fieldOfficer),
+        confirmVehicleMatch(observation.id, fieldOfficer),
       ]);
       expect(raced.filter(({ status }) => status === 'fulfilled')).toHaveLength(
         1,
@@ -739,7 +739,7 @@ describe.skipIf(!postgresEnabled)(
       });
       expect(confirmed.status).toBe('match_confirmed');
       await expect(
-        confirmVehicleMatch(observation.id, commander),
+        confirmVehicleMatch(observation.id, fieldOfficer),
       ).rejects.toThrow('MATCH_NOT_PENDING');
     });
 
@@ -756,7 +756,7 @@ describe.skipIf(!postgresEnabled)(
         fieldOfficer,
       );
       trackObservation(observation.id);
-      await confirmVehicleMatch(observation.id, commander);
+      await confirmVehicleMatch(observation.id, fieldOfficer);
 
       const foreign = await photoEvidence(`foreign-${stamp}`, 'foreign');
       await expect(
@@ -767,7 +767,7 @@ describe.skipIf(!postgresEnabled)(
             notes: 'Kiem tra ngoai pham vi.',
             evidenceIds: [foreign.id],
           },
-          commander,
+          fieldOfficer,
         ),
       ).rejects.toThrow('EVIDENCE_SCOPE_FORBIDDEN');
 
@@ -782,10 +782,10 @@ describe.skipIf(!postgresEnabled)(
           longitude: 105.931,
           evidenceIds: [proof.id],
         },
-        commander,
+        fieldOfficer,
       );
       expect(verified.verification).toMatchObject({
-        verifiedById: commander.id,
+        verifiedById: fieldOfficer.id,
         result: 'Chu xe: Tran Thi B.',
         ownerLookup: 'Tra cuu dang ky: Tran Thi B, dia chi X.',
       });
@@ -850,14 +850,14 @@ describe.skipIf(!postgresEnabled)(
         fieldOfficer,
       );
       trackObservation(observation.id);
-      await confirmVehicleMatch(observation.id, commander);
+      await confirmVehicleMatch(observation.id, fieldOfficer);
       const verified = await verifyVehicleObservation(
         {
           observationId: observation.id,
           result: 'Chu xe: chua tra cuu.',
           notes: 'Ghi nhan hien truong, khong ket luan vi pham.',
         },
-        commander,
+        fieldOfficer,
       );
       expect(verified.verification.ownerLookup).toBeNull();
       const stored = await prisma.vehicleVerification.findUniqueOrThrow({
@@ -884,7 +884,7 @@ describe.skipIf(!postgresEnabled)(
       });
 
       await expect(
-        confirmVehicleMatch(observation.id, commander, {
+        confirmVehicleMatch(observation.id, fieldOfficer, {
           baseVersion: current.version - 1,
         }),
       ).rejects.toThrow('STALE_OBSERVATION');
@@ -894,13 +894,17 @@ describe.skipIf(!postgresEnabled)(
         }),
       ).rejects.toThrow('FORBIDDEN');
 
-      const confirmed = await confirmVehicleMatch(observation.id, commander, {
-        baseVersion: current.version,
-      });
+      const confirmed = await confirmVehicleMatch(
+        observation.id,
+        fieldOfficer,
+        {
+          baseVersion: current.version,
+        },
+      );
       expect(confirmed.status).toBe('match_confirmed');
 
       await expect(
-        confirmVehicleMatch(observation.id, commander, {
+        confirmVehicleMatch(observation.id, fieldOfficer, {
           baseVersion: current.version,
         }),
       ).rejects.toThrow(/MATCH_NOT_PENDING|STALE_OBSERVATION/);
@@ -1072,20 +1076,20 @@ describe.skipIf(!postgresEnabled)(
         fieldOfficer,
       );
       trackObservation(observation.id);
-      await confirmVehicleMatch(observation.id, commander);
+      await confirmVehicleMatch(observation.id, fieldOfficer);
 
       await expect(
-        escalateVehicleObservation(observation.id, commander, 'unit-peer'),
+        escalateVehicleObservation(observation.id, fieldOfficer, 'unit-peer'),
       ).rejects.toThrow('ORGANIZATION_SCOPE_FORBIDDEN');
 
       const first = await escalateVehicleObservation(
         observation.id,
-        commander,
+        fieldOfficer,
         'unit-cap-tren',
       );
       const second = await escalateVehicleObservation(
         observation.id,
-        commander,
+        fieldOfficer,
         'unit-cap-tren',
       );
       expect(second.id).toBe(first.id);

@@ -6,7 +6,10 @@ import {
   getEvidence,
   LocalEvidenceStorage,
 } from '@/modules/platform';
-import { createVehicleObservationEvidence } from '@/modules/vehicles';
+import {
+  assertVehicleObservationAccess,
+  createVehicleObservationEvidence,
+} from '@/modules/vehicles';
 import { createEvidence } from '@/modules/platform';
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -28,7 +31,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'INVALID_EVIDENCE' }, { status: 400 });
   }
   try {
-    await assertAccess(user, { resourceType, resourceId }, 'mutate');
+    if (resourceType === 'VehicleObservation')
+      await assertVehicleObservationAccess(resourceId, user, 'mutate');
+    else await assertAccess(user, { resourceType, resourceId }, 'mutate');
     const capturedAt =
       typeof capturedAtValue === 'string'
         ? new Date(capturedAtValue)
@@ -103,11 +108,17 @@ export async function GET(request: Request): Promise<NextResponse> {
   if (!evidence)
     return NextResponse.json({ error: 'EVIDENCE_NOT_FOUND' }, { status: 404 });
   try {
-    await assertAccess(
-      user,
-      { resourceType: evidence.resourceType, resourceId: evidence.resourceId },
-      'read_sensitive',
-    );
+    if (evidence.resourceType === 'VehicleObservation')
+      await assertVehicleObservationAccess(evidence.resourceId, user, 'read');
+    else
+      await assertAccess(
+        user,
+        {
+          resourceType: evidence.resourceType,
+          resourceId: evidence.resourceId,
+        },
+        'read_sensitive',
+      );
     const bytes = await new LocalEvidenceStorage().read(evidence.storageKey);
     await recordAudit({
       actor: user,

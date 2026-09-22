@@ -113,6 +113,8 @@ test('PS-009 registry, observation, confirmation, verification and escalation fl
     .getByLabel('Có hiệu lực từ')
     .fill(isoLocal(new Date(now.getTime() - 3600000)));
   await page
+    .getByRole('heading', { name: 'Thêm vào registry' })
+    .locator('../..')
     .getByLabel('Hết hạn')
     .fill(isoLocal(new Date(now.getTime() + 86400000)));
   const registryResponsePromise = page.waitForResponse(
@@ -141,6 +143,8 @@ test('PS-009 registry, observation, confirmation, verification and escalation fl
     new Date(now.getTime() - 86400000),
   );
   expect(expired.entry.status).toBe('active');
+  await logout(page);
+  await loginAs(page, FIELD);
   const expiredObservation = await recordObservationViaApi(page, expiredPlate);
   expect(expiredObservation.result.match).toBeNull();
   expect(expiredObservation.result.observation.status).toBe('recorded');
@@ -368,6 +372,22 @@ test('PS-009 registry, observation, confirmation, verification and escalation fl
       .observation.id,
   ).toBe(observationId);
 
+  await logout(page);
+  await loginAs(page, COMMANDER);
+  await page.goto(`/field/vehicles/${observationId}`);
+  await expect(page.getByText(plate, { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Xác nhận match' }),
+  ).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Lưu xác minh' })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole('button', { name: 'Chuyển đơn vị' })).toHaveCount(
+    0,
+  );
+  await logout(page);
+  await loginAs(page, FIELD);
+
   const staleOffline = await page.request.post('/api/sync', {
     data: {
       clientCommandId: `stale-${suffix}`,
@@ -499,6 +519,15 @@ test('vehicle offline queue is honest, duplicate client IDs are idempotent, and 
   await loginAs(page, UNASSIGNED);
   await page.goto(`/field/vehicles/${observationId}`);
   await expect(page.getByText(/Không có quyền xem quan sát/)).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Xác nhận match' }),
+  ).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Lưu xác minh' })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole('button', { name: 'Chuyển đơn vị' })).toHaveCount(
+    0,
+  );
   const deniedRead = await page.request.get(
     `/api/vehicles/observations/${observationId}`,
   );

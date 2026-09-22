@@ -10,7 +10,7 @@ import {
   replayEvents,
   type DomainEvent,
 } from '@/modules/eventing';
-import { canAccess, recordAudit, requireRole } from '@/modules/identity';
+import { recordAudit, requireRole } from '@/modules/identity';
 
 import type { VehicleActor } from './contracts';
 
@@ -222,22 +222,35 @@ export async function rebuildVehicleProjection(
 }
 
 export async function listRegistry(actor: VehicleActor) {
-  requireRole(actor, 'commander', 'office_officer');
+  requireRole(actor, 'commander', 'superior_commander');
   const projected = await readModels(
     registryProjectionName,
     'SuspiciousVehicleRegistry',
     { organizationId: actor.organizationUnitId },
   );
-  const registry = projected.length
-    ? projected.map(({ state }) => state)
-    : actor.organizationUnitId
-      ? []
-      : (
-          await prisma.suspiciousVehicleEntry.findMany({
-            orderBy: { updatedAt: 'desc' },
-            take: 100,
-          })
-        ).map(registryState);
+  const users = actor.organizationUnitId
+    ? await prisma.user.findMany({
+        where: { organizationUnitId: actor.organizationUnitId },
+        select: { id: true },
+      })
+    : null;
+  const sourceEntries = await prisma.suspiciousVehicleEntry.findMany({
+    where: users
+      ? { createdById: { in: users.map(({ id }) => id) } }
+      : undefined,
+    orderBy: { updatedAt: 'desc' },
+    take: 100,
+  });
+  const projectedEntries = projected.map(({ state }) => state);
+  const projectedIds = new Set(
+    projectedEntries.map((entry) => String((entry as { id: string }).id)),
+  );
+  const registry = [
+    ...projectedEntries,
+    ...sourceEntries
+      .filter((entry) => !projectedIds.has(entry.id))
+      .map(registryState),
+  ];
   await recordAudit({
     actor,
     resourceType: 'SuspiciousVehicleRegistry',
@@ -249,21 +262,23 @@ export async function listRegistry(actor: VehicleActor) {
 }
 
 export async function listObservations(actor: VehicleActor) {
-  const assignedResourceIds = actor.roles.includes('commander')
-    ? undefined
-    : (
-        await prisma.assignment.findMany({
-          where: {
-            resourceType: 'VehicleObservation',
-            assigneeUserId: actor.id,
-            status: 'active',
-            ...(actor.organizationUnitId
-              ? { organizationId: actor.organizationUnitId }
-              : {}),
-          },
-          select: { resourceId: true },
-        })
-      ).map(({ resourceId }) => resourceId);
+  const assignedResourceIds =
+    actor.roles.includes('commander') ||
+    actor.roles.includes('superior_commander')
+      ? undefined
+      : (
+          await prisma.assignment.findMany({
+            where: {
+              resourceType: 'VehicleObservation',
+              assigneeUserId: actor.id,
+              status: 'active',
+              ...(actor.organizationUnitId
+                ? { organizationId: actor.organizationUnitId }
+                : {}),
+            },
+            select: { resourceId: true },
+          })
+        ).map(({ resourceId }) => resourceId);
   const allowedIds = assignedResourceIds
     ? new Set(assignedResourceIds)
     : undefined;
@@ -276,21 +291,33 @@ export async function listObservations(actor: VehicleActor) {
       take: assignedResourceIds ? undefined : 100,
     },
   );
-  const observations = (
-    projected.length
-      ? projected.map(({ state }) => state)
-      : actor.organizationUnitId && !assignedResourceIds
-        ? []
-        : (
-            await prisma.vehicleObservation.findMany({
-              where: assignedResourceIds
-                ? { id: { in: assignedResourceIds } }
-                : undefined,
-              orderBy: { observedAt: 'desc' },
-              take: 100,
-            })
-          ).map(observationState)
-  )
+  const users = actor.organizationUnitId
+    ? await prisma.user.findMany({
+        where: { organizationUnitId: actor.organizationUnitId },
+        select: { id: true },
+      })
+    : null;
+  const sourceObservations = await prisma.vehicleObservation.findMany({
+    where: assignedResourceIds
+      ? { id: { in: assignedResourceIds } }
+      : users
+        ? { observedById: { in: users.map(({ id }) => id) } }
+        : undefined,
+    orderBy: { observedAt: 'desc' },
+    take: 100,
+  });
+  const projectedObservations = projected.map(({ state }) => state);
+  const projectedObservationIds = new Set(
+    projectedObservations.map((observation) =>
+      String((observation as { id: string }).id),
+    ),
+  );
+  const observations = [
+    ...projectedObservations,
+    ...sourceObservations
+      .filter((observation) => !projectedObservationIds.has(observation.id))
+      .map(observationState),
+  ]
     .map((state) => state as Record<string, unknown>)
     .filter(
       (observation) => !allowedIds || allowedIds.has(String(observation.id)),
@@ -327,11 +354,47 @@ export async function getObservation(
       return source ? { state: observationState(source) } : null;
     });
   if (!observation) throw new Error('OBSERVATION_NOT_FOUND');
-  const allowed = await canAccess(
-    actor,
-    { resourceType: 'VehicleObservation', resourceId: observationId },
-    'read',
-  );
+  const observer = await prisma.vehicleObservation.findUnique({
+    where: { id: observationId },
+    select: { observedById: true },
+  });
+  const observerUser = observer
+    ? await prisma.user.findUnique({
+        where: { id: observer.observedById },
+        select: { organizationUnitId: true },
+      })
+    : null;
+  const assignment = await prisma.assignment.findFirst({
+    where: {
+      resourceType: 'VehicleObservation',
+      resourceId: observationId,
+      assigneeUserId: actor.id,
+      status: 'active',
+      task: { in: ['vehicle_report', 'vehicle_verification'] },
+      ...(actor.organizationUnitId
+        ? { organizationId: actor.organizationUnitId }
+        : {}),
+    },
+  });
+  const verificationAssignment = await prisma.assignment.findFirst({
+    where: {
+      resourceType: 'VehicleObservation',
+      resourceId: observationId,
+      assigneeUserId: actor.id,
+      status: 'active',
+      task: 'vehicle_verification',
+      ...(actor.organizationUnitId
+        ? { organizationId: actor.organizationUnitId }
+        : {}),
+    },
+  });
+  const allowed =
+    (!actor.organizationUnitId ||
+      !observerUser?.organizationUnitId ||
+      actor.organizationUnitId === observerUser.organizationUnitId) &&
+    (Boolean(assignment) ||
+      actor.roles.includes('commander') ||
+      actor.roles.includes('superior_commander'));
   if (!allowed) throw new Error('FORBIDDEN');
   await recordAudit({
     actor,
@@ -345,5 +408,16 @@ export async function getObservation(
       orderBy: { verifiedAt: 'asc' },
     }),
   ]);
-  return { observation: observation.state, verifications };
+  const isFieldOfficer = actor.roles.includes('field_officer');
+  const hasAssignment = Boolean(assignment);
+  const hasVerificationAssignment = Boolean(verificationAssignment);
+  return {
+    observation: observation.state,
+    verifications,
+    permissions: {
+      canConfirm: isFieldOfficer && hasAssignment,
+      canVerify: isFieldOfficer && hasVerificationAssignment,
+      canEscalate: isFieldOfficer && hasVerificationAssignment,
+    },
+  };
 }

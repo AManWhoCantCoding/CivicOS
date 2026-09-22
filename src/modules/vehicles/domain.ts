@@ -78,7 +78,21 @@ export function isRegistryActive(
 }
 
 export function canVerifyVehicle(roles: string[]): boolean {
-  return roles.includes('commander') || roles.includes('field_officer');
+  return roles.includes('field_officer');
+}
+
+export const VEHICLE_TASK_COMPATIBILITY: Record<string, readonly string[]> = {
+  vehicle_report: ['village_officer', 'field_officer'],
+  vehicle_verification: ['field_officer'],
+};
+
+export function isVehicleTaskCompatible(
+  task: string,
+  roles: string[],
+): boolean {
+  const allowed = VEHICLE_TASK_COMPATIBILITY[task];
+  if (!allowed) return false;
+  return roles.some((role) => allowed.includes(role));
 }
 
 export function isMatchSuggestion(status: string): boolean {

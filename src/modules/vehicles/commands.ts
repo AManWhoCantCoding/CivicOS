@@ -4,12 +4,7 @@ import { Prisma } from '@prisma/client';
 
 import { prisma } from '@/lib/prisma';
 import { appendEvent, getAggregateVersion } from '@/modules/eventing';
-import {
-  assertAccess,
-  grantAssignments,
-  recordAudit,
-  requireRole,
-} from '@/modules/identity';
+import { recordAudit, requireRole } from '@/modules/identity';
 import {
   createGeoPoint,
   createInAppNotification,
@@ -107,9 +102,95 @@ async function assertObservationAccess(
   actor: VehicleActor,
   action: 'read' | 'mutate',
 ) {
-  await assertAccess(
+  const observer = await prisma.user.findUnique({
+    where: { id: observedById },
+    select: { organizationUnitId: true },
+  });
+  if (
+    actor.organizationUnitId &&
+    observer?.organizationUnitId &&
+    actor.organizationUnitId !== observer.organizationUnitId
+  )
+    throw new Error('FORBIDDEN');
+  const assignment = await prisma.assignment.findFirst({
+    where: {
+      resourceType: 'VehicleObservation',
+      resourceId: observationId,
+      assigneeUserId: actor.id,
+      status: 'active',
+      task: { in: ['vehicle_report', 'vehicle_verification'] },
+      ...(actor.organizationUnitId
+        ? { organizationId: actor.organizationUnitId }
+        : {}),
+    },
+  });
+  const commandRead =
+    action === 'read' &&
+    (actor.roles.includes('commander') ||
+      actor.roles.includes('superior_commander'));
+  if (!assignment && !commandRead) throw new Error('FORBIDDEN');
+}
+
+async function grantVehicleAssignment(
+  tx: Prisma.TransactionClient,
+  observationId: string,
+  actor: VehicleActor,
+  task: 'vehicle_report' | 'vehicle_verification' = 'vehicle_report',
+) {
+  const assignment = await tx.assignment.create({
+    data: {
+      resourceType: 'VehicleObservation',
+      resourceId: observationId,
+      task,
+      assigneeUserId: actor.id,
+      grantedById: actor.id,
+      organizationId: actor.organizationUnitId,
+    },
+  });
+  await appendEvent(tx, {
+    eventId: randomUUID(),
+    eventType: 'AssignmentGranted',
+    eventVersion: 1,
+    aggregateType: 'Assignment',
+    aggregateId: assignment.id,
+    aggregateVersion: 1,
+    occurredAt: assignment.grantedAt,
+    actor: actorSnapshot(actor),
+    payload: {
+      resourceType: assignment.resourceType,
+      resourceId: assignment.resourceId,
+      assigneeUserId: assignment.assigneeUserId,
+      task: assignment.task,
+    },
+    metadata: {},
+  });
+  await recordAudit(
+    {
+      actor,
+      resourceType: 'VehicleObservation',
+      resourceId: observationId,
+      operation: 'assignment.granted',
+      reason: assignment.task,
+      metadata: { assignmentIds: [assignment.id] },
+    },
+    tx,
+  );
+}
+
+export async function assertVehicleObservationAccess(
+  observationId: string,
+  actor: VehicleActor,
+  action: 'read' | 'mutate',
+) {
+  const observation = await prisma.vehicleObservation.findUnique({
+    where: { id: observationId },
+    select: { observedById: true },
+  });
+  if (!observation) throw new Error('OBSERVATION_NOT_FOUND');
+  await assertObservationAccess(
+    observationId,
+    observation.observedById,
     actor,
-    { resourceType: 'VehicleObservation', resourceId: observationId },
     action,
   );
 }
@@ -124,7 +205,7 @@ export async function createRegistryEntry(
   },
   actor: VehicleActor,
 ) {
-  requireRole(actor, 'commander', 'office_officer');
+  requireRole(actor, 'commander');
   if (!input.plate?.trim() || !input.source.trim() || !input.reason.trim()) {
     throw new Error('REGISTRY_FIELDS_REQUIRED');
   }
@@ -200,7 +281,7 @@ export async function updateRegistryEntry(
   },
   actor: VehicleActor,
 ) {
-  requireRole(actor, 'commander', 'office_officer');
+  requireRole(actor, 'commander');
   if (input.status !== undefined) assertRegistryStatus(input.status.trim());
   try {
     return await prisma.$transaction(async (tx) => {
@@ -294,7 +375,7 @@ export async function recordVehicleObservation(
   input: VehicleObservationInput,
   actor: VehicleActor,
 ) {
-  requireRole(actor, 'commander', 'field_officer', 'village_officer');
+  requireRole(actor, 'field_officer', 'village_officer');
   if (!input.plate?.trim()) throw new Error('OBSERVATION_FIELDS_REQUIRED');
   const plate = assertPlateFormat(input.plate);
   const observedAt = assertDate(
@@ -406,18 +487,14 @@ export async function recordVehicleObservation(
           tx,
         );
       }
-      await grantAssignments(
-        tx,
-        {
-          resourceType: 'VehicleObservation',
-          resourceId: observation.id,
-          task: 'vehicle_verification',
-          assigneeUserIds: [actor.id],
-          organizationId: actor.organizationUnitId,
-        },
-        actor,
-        ['commander', 'field_officer', 'village_officer'],
-      );
+      await grantVehicleAssignment(tx, observation.id, actor);
+      if (actor.roles.includes('field_officer'))
+        await grantVehicleAssignment(
+          tx,
+          observation.id,
+          actor,
+          'vehicle_verification',
+        );
       await createSla(
         {
           resourceType: 'VehicleObservation',
@@ -465,7 +542,7 @@ export async function attachVehicleObservationEvidence(
     where: { id: observationId },
   });
   if (!observation) throw new Error('OBSERVATION_NOT_FOUND');
-  requireRole(actor, 'commander', 'field_officer', 'village_officer');
+  requireRole(actor, 'field_officer', 'village_officer');
   await assertObservationAccess(
     observationId,
     observation.observedById,
@@ -550,7 +627,10 @@ export async function createVehicleObservationEvidence(
   input: EvidenceInput,
   actor: VehicleActor,
 ) {
-  requireRole(actor, 'commander', 'field_officer', 'village_officer');
+  requireRole(actor, 'field_officer', 'village_officer');
+  if (input.resourceType !== 'VehicleObservation')
+    throw new Error('EVIDENCE_RESOURCE_TYPE_FORBIDDEN');
+  if (input.actorId !== actor.id) throw new Error('EVIDENCE_ACTOR_MISMATCH');
   const observation = await prisma.vehicleObservation.findUnique({
     where: { id: input.resourceId },
   });
@@ -617,8 +697,8 @@ export async function createVehicleObservationEvidence(
       await recordAudit(
         {
           actor,
-          resourceType: input.resourceType,
-          resourceId: input.resourceId,
+          resourceType: 'VehicleObservation',
+          resourceId: observation.id,
           operation: 'evidence.uploaded',
           metadata: {
             evidenceId: created.evidence.id,
@@ -654,7 +734,7 @@ export async function confirmVehicleMatch(
     where: { id: observationId },
   });
   if (!observation) throw new Error('OBSERVATION_NOT_FOUND');
-  requireRole(actor, 'commander', 'field_officer', 'village_officer');
+  requireRole(actor, 'field_officer');
   await assertObservationAccess(
     observationId,
     observation.observedById,

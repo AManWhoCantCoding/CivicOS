@@ -1024,17 +1024,6 @@ describe.skipIf(!enabled)(
         observationId = observation.id;
         observationIds.push(observationId);
         expect(observation.status).toBe('match_suggested');
-        await createAssignments(
-          {
-            resourceType: 'VehicleObservation',
-            resourceId: observationId,
-            task: 'vehicle_verification',
-            assigneeUserIds: [commander.id],
-            organizationId: ORG,
-          },
-          commander,
-        );
-
         await expect(
           getObservation(observationId, field),
         ).resolves.toMatchObject({
@@ -1066,7 +1055,7 @@ describe.skipIf(!enabled)(
           mimeType: 'image/jpeg',
           bytes: new TextEncoder().encode(`${EVIDENCE_MARKER}-verify`),
           capturedAt: new Date('2026-09-19T02:00:00.000Z'),
-          actorId: commander.id,
+          actorId: field.id,
           latitude: 20.961,
           longitude: 105.931,
         });
@@ -1079,17 +1068,17 @@ describe.skipIf(!enabled)(
             ownerLookup: 'Tra cuu dang ky: Tran Thi B, dia chi X.',
             evidenceIds: [proof.id],
           },
-          commander,
+          field,
         );
         expect(verified.verification).toMatchObject({
-          verifiedById: commander.id,
+          verifiedById: field.id,
         });
         await expect(
           escalateVehicleObservation(observationId, crossCommander, UPPER),
         ).rejects.toThrow('FORBIDDEN');
         const escalated = await escalateVehicleObservation(
           observationId,
-          commander,
+          field,
           UPPER,
         );
         expect(escalated.status).toBe('escalated');
@@ -1104,7 +1093,7 @@ describe.skipIf(!enabled)(
           field,
         );
         observationIds.push(revokeTarget.observation.id);
-        const revokeAssignmentRow = await prisma.assignment.findFirstOrThrow({
+        const revokeAssignmentRows = await prisma.assignment.findMany({
           where: {
             resourceType: 'VehicleObservation',
             resourceId: revokeTarget.observation.id,
@@ -1112,11 +1101,12 @@ describe.skipIf(!enabled)(
             status: 'active',
           },
         });
-        await revokeAssignment(
-          revokeAssignmentRow.id,
-          commander,
-          'Ket thuc nhiem vu.',
-        );
+        for (const revokeAssignmentRow of revokeAssignmentRows)
+          await revokeAssignment(
+            revokeAssignmentRow.id,
+            commander,
+            'Ket thuc nhiem vu.',
+          );
         await expect(
           getObservation(revokeTarget.observation.id, field),
         ).rejects.toThrow('FORBIDDEN');
@@ -1136,7 +1126,7 @@ describe.skipIf(!enabled)(
         const downloadId = await uploadModuleEvidence(
           'VehicleObservation',
           observationId,
-          commander,
+          field,
           'vehicle-proof',
         );
         await expect(
@@ -1144,7 +1134,7 @@ describe.skipIf(!enabled)(
             'VehicleObservation',
             observationId,
             downloadId,
-            commander,
+            field,
           ),
         ).resolves.toBeGreaterThan(0);
         await expect(
