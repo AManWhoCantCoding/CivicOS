@@ -1,11 +1,29 @@
 export type {
   AssignmentInput,
   AuthorizationAction,
+  AssignmentTask,
+  Capability,
   IdentityUser,
+  PolicyAssignment,
+  PolicyAssignmentStatus,
   ResourceRef,
   RoleName,
 } from './contracts';
-export { assertAccess, canAccess, requireRole } from './authorization';
+export {
+  ASSIGNMENT_TASKS,
+  ROLE_BASE_CAPABILITIES,
+  ROLE_CATALOG,
+  TASK_ALLOWED_ROLES,
+  TASK_CAPABILITIES,
+  isTaskCompatibleWithRoles,
+} from './contracts';
+export {
+  assertAccess,
+  canAccess,
+  evaluatePolicy,
+  requireRole,
+} from './authorization';
+export type { EvaluatePolicyInput, PolicyEvaluation } from './authorization';
 export { recordAudit } from './audit';
 export {
   carryActiveAssignments,

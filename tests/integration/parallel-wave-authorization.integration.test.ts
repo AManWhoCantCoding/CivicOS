@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { processOutboxUntilIdle } from '@/modules/eventing';
 import {
   assertAccess,
+  createAssignments,
   recordAudit,
   revokeAssignment,
   type IdentityUser,
@@ -432,6 +433,16 @@ describe.skipIf(!enabled)(
             organizationUnitId: user.organizationUnitId,
           },
         });
+        for (const roleName of user.roles) {
+          const role = await prisma.role.upsert({
+            where: { name: roleName },
+            update: {},
+            create: { name: roleName },
+          });
+          await prisma.userRole.create({
+            data: { userId: user.id, roleId: role.id },
+          });
+        }
       }
     });
 
@@ -469,6 +480,7 @@ describe.skipIf(!enabled)(
             incident: expect.objectContaining({ id: incidentId }),
           },
         );
+        await assignIncident(incidentId, commander, [commander.id]);
         await classifyIncident(incidentId, commander, 'public_order', 'high');
 
         await expect(getIncident(incidentId, unassigned)).rejects.toThrow(
@@ -600,6 +612,16 @@ describe.skipIf(!enabled)(
         );
         inspectionId = inspection.id;
         inspectionIds.push(inspectionId);
+        await createAssignments(
+          {
+            resourceType: 'Inspection',
+            resourceId: inspectionId,
+            task: 'inspection_fieldwork',
+            assigneeUserIds: [commander.id],
+            organizationId: ORG,
+          },
+          commander,
+        );
 
         await expect(getInspection(inspectionId, field)).resolves.toMatchObject(
           {
@@ -812,6 +834,16 @@ describe.skipIf(!enabled)(
         observationId = observation.id;
         observationIds.push(observationId);
         expect(observation.status).toBe('match_suggested');
+        await createAssignments(
+          {
+            resourceType: 'VehicleObservation',
+            resourceId: observationId,
+            task: 'vehicle_verification',
+            assigneeUserIds: [commander.id],
+            organizationId: ORG,
+          },
+          commander,
+        );
 
         await expect(
           getObservation(observationId, field),

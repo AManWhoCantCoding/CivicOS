@@ -228,20 +228,20 @@ describe.skipIf(!postgresEnabled)(
       });
     });
 
-    it('grants the commander full command scope on the resource', async () => {
+    it('grants the commander assignment-free command scope but requires an assignment for mutate and read_sensitive', async () => {
       await expect(canAccess(commander, resource, 'read')).resolves.toBe(true);
-      await expect(canAccess(commander, resource, 'mutate')).resolves.toBe(
-        true,
-      );
-      await expect(
-        canAccess(commander, resource, 'read_sensitive'),
-      ).resolves.toBe(true);
       await expect(canAccess(commander, resource, 'assign')).resolves.toBe(
         true,
       );
       await expect(canAccess(commander, resource, 'approve')).resolves.toBe(
         true,
       );
+      await expect(canAccess(commander, resource, 'mutate')).resolves.toBe(
+        false,
+      );
+      await expect(
+        canAccess(commander, resource, 'read_sensitive'),
+      ).resolves.toBe(false);
     });
 
     it('grants the assigned user task capabilities without command powers', async () => {

@@ -6,7 +6,8 @@ import { prisma } from '@/lib/prisma';
 import { appendEvent, getAggregateVersion } from '@/modules/eventing';
 
 import { recordAudit } from './audit';
-import type { AssignmentInput, IdentityUser } from './contracts';
+import type { AssignmentInput, IdentityUser, RoleName } from './contracts';
+import { isTaskCompatibleWithRoles } from './contracts';
 import { requireRole } from './authorization';
 
 function actorSnapshot(actor: IdentityUser) {
@@ -39,9 +40,19 @@ export async function grantAssignments(
   for (const assigneeUserId of input.assigneeUserIds) {
     const assignee = await tx.user.findUnique({
       where: { id: assigneeUserId },
-      select: { active: true, organizationUnitId: true },
+      select: {
+        active: true,
+        organizationUnitId: true,
+        roles: { select: { role: { select: { name: true } } } },
+      },
     });
     if (!assignee?.active) throw new Error('ASSIGNEE_NOT_FOUND');
+    const assigneeRoles = (assignee.roles ?? []).map(
+      ({ role }) => role.name as RoleName,
+    );
+    if (!isTaskCompatibleWithRoles(input.task, assigneeRoles)) {
+      throw new Error('INCOMPATIBLE_TASK');
+    }
     const organizationId = input.organizationId ?? actor.organizationUnitId;
     if (organizationId && assignee.organizationUnitId !== organizationId) {
       throw new Error('ASSIGNEE_ORGANIZATION_MISMATCH');

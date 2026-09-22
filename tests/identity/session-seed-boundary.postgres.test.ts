@@ -39,6 +39,11 @@ describe('identity public entry point', () => {
   it('exposes only the documented domain surface without database internals', () => {
     expect(Object.keys(identity).sort()).toEqual(
       [
+        'ASSIGNMENT_TASKS',
+        'ROLE_BASE_CAPABILITIES',
+        'ROLE_CATALOG',
+        'TASK_ALLOWED_ROLES',
+        'TASK_CAPABILITIES',
         'assertAccess',
         'authenticateLocal',
         'blindIndex',
@@ -51,8 +56,10 @@ describe('identity public entry point', () => {
         'deleteCurrentSession',
         'encryptSensitive',
         'ensureDevelopmentUsers',
+        'evaluatePolicy',
         'getCurrentUser',
         'grantAssignments',
+        'isTaskCompatibleWithRoles',
         'listAssignments',
         'listIdentityUsers',
         'listOrganizationUnits',
