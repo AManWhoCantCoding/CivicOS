@@ -418,3 +418,79 @@ model VehicleVerification {
 
   @@index([observationId, verifiedAt])
 }
+
+model Subject {
+  id               String   @id @default(cuid())
+  displayName      String
+  subjectType      String
+  sensitiveProfile String?
+  sensitiveIndex   String?
+  status           String   @default("active")
+  latitude         Decimal?
+  longitude        Decimal?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  records          SubjectManagementRecord[]
+
+  @@index([subjectType, status])
+}
+
+model SubjectManagementRecord {
+  id                     String   @id @default(cuid())
+  subjectId              String
+  purpose                String
+  riskLevel              String   @default("normal")
+  status                 String   @default("open")
+  assignedOrganizationId String?
+  sourceOrganizationId   String?
+  nextCheckAt            DateTime?
+  version                Int      @default(1)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  subject                Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  activities             SubjectManagementActivity[]
+
+  @@index([subjectId, status])
+  @@index([assignedOrganizationId, status])
+}
+
+model SubjectManagementActivity {
+  id             String   @id @default(cuid())
+  recordId       String
+  activityType   String
+  occurredAt     DateTime
+  content        String
+  evaluation     String?
+  latitude       Decimal?
+  longitude      Decimal?
+  actorId        String?
+  assignmentId   String?
+  evidenceIds    Json     @default("[]")
+  idempotencyKey String?  @unique
+  createdAt      DateTime @default(now())
+  record         SubjectManagementRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@index([recordId, occurredAt])
+}
+
+model ResidentMonthlyReport {
+  id               String    @id @default(cuid())
+  organizationId   String
+  period           String
+  status           String    @default("draft")
+  sourceRecordIds  Json      @default("[]")
+  aggregateCounts  Json      @default("{}")
+  snapshotPayload  Json?
+  snapshotHash     String?
+  approvedById     String?
+  approvedAt       DateTime?
+  sentAt           DateTime?
+  sendTargetId     String?
+  idempotencyKey   String?   @unique
+  version          Int       @default(1)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([organizationId, period])
+  @@index([organizationId, status])
+}

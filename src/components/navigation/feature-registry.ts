@@ -1,7 +1,7 @@
 import { ROLE_BASE_CAPABILITIES } from '@/modules/identity/contracts';
 
 export type ModuleId =
-  'incidents' | 'inspections' | 'vehicles' | 'identity' | 'map';
+  'incidents' | 'inspections' | 'vehicles' | 'identity' | 'map' | 'residents';
 
 export type ModuleDef = {
   id: ModuleId;
@@ -67,6 +67,12 @@ export const MODULES: Record<ModuleId, ModuleDef> = {
     label: 'Bản đồ',
     homeHref: '/map',
     description: 'Workspace bản đồ nghiệp vụ và điều hướng tác nghiệp.',
+  },
+  residents: {
+    id: 'residents',
+    label: 'Cư dân đặc biệt',
+    homeHref: '/residents',
+    description: 'Theo dõi tạm trú, người nước ngoài và tái hòa nhập.',
   },
 };
 
@@ -188,6 +194,32 @@ export const FEATURES: readonly FeatureDef[] = [
     visibleRoles: ['commander'],
     activeExact: '/users',
     activePrefixes: ['/users/'],
+  },
+  {
+    id: 'resident-list',
+    moduleId: 'residents',
+    label: 'Danh sách cư dân đặc biệt',
+    href: '/residents',
+    visibleRoles: [
+      'commander',
+      'superior_commander',
+      'duty_officer',
+      'field_officer',
+      'office_officer',
+      'village_officer',
+    ],
+    requiresTask: 'resident_followup',
+    bypassTaskRoles: COMMAND_ROLES,
+    activeExact: '/residents',
+    activePrefixes: ['/residents/'],
+  },
+  {
+    id: 'resident-reports',
+    moduleId: 'residents',
+    label: 'Báo cáo tháng cư dân',
+    href: '/residents/reports',
+    visibleRoles: ['commander', 'office_officer'],
+    activeExact: '/residents/reports',
   },
   {
     id: 'map-workspace',
