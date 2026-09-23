@@ -1,9 +1,15 @@
 import Link from 'next/link';
 
+import { AccessDenied } from '@/components/identity/AccessDenied';
 import { SessionControls } from '@/components/identity/SessionControls';
 import { IncidentTable } from '@/components/incidents/IncidentTable';
+import { canEnterEntry } from '@/components/shell/feature-entry';
+import { getCurrentUser } from '@/modules/identity';
 
-export default function IncidentsPage() {
+export default async function IncidentsPage() {
+  const current = await getCurrentUser();
+  const denied =
+    current !== null && !(await canEnterEntry(current, ['incident-queue']));
   return (
     <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-6xl">
@@ -44,7 +50,11 @@ export default function IncidentsPage() {
           </Link>
         </div>
         <div className="mt-10">
-          <IncidentTable />
+          {denied ? (
+            <AccessDenied message="Hàng đợi Incident không thuộc nhiệm vụ hoặc phạm vi của tài khoản hiện tại." />
+          ) : (
+            <IncidentTable />
+          )}
         </div>
       </div>
     </main>

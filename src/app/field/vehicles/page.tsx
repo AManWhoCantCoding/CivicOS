@@ -1,8 +1,25 @@
 import Link from 'next/link';
 
+import { AccessDenied } from '@/components/identity/AccessDenied';
 import { VehicleObservationWorkspace } from '@/components/vehicles/VehicleObservationWorkspace';
+import { canEnterEntry } from '@/components/shell/feature-entry';
+import { getCurrentUser } from '@/modules/identity';
 
-export default function VehicleFieldPage() {
+export default async function VehicleFieldPage() {
+  const current = await getCurrentUser();
+  const denied =
+    current !== null &&
+    !(await canEnterEntry(current, [
+      'vehicle-observation',
+      'vehicle-verification',
+    ]));
+  if (denied) {
+    return (
+      <section className="space-y-6">
+        <AccessDenied message="Quan sát hiện trường không thuộc nhiệm vụ hoặc phạm vi của tài khoản hiện tại." />
+      </section>
+    );
+  }
   return (
     <section className="space-y-6">
       <div>
