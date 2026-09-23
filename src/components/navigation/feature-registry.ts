@@ -1,6 +1,7 @@
 import { ROLE_BASE_CAPABILITIES } from '@/modules/identity/contracts';
 
-export type ModuleId = 'incidents' | 'inspections' | 'vehicles' | 'identity';
+export type ModuleId =
+  'incidents' | 'inspections' | 'vehicles' | 'identity' | 'map';
 
 export type ModuleDef = {
   id: ModuleId;
@@ -60,6 +61,12 @@ export const MODULES: Record<ModuleId, ModuleDef> = {
     label: 'Identity',
     homeHref: '/identity',
     description: 'User và Assignment trong phạm vi chỉ huy.',
+  },
+  map: {
+    id: 'map',
+    label: 'Bản đồ',
+    homeHref: '/map',
+    description: 'Workspace bản đồ nghiệp vụ và điều hướng tác nghiệp.',
   },
 };
 
@@ -181,6 +188,23 @@ export const FEATURES: readonly FeatureDef[] = [
     visibleRoles: ['commander'],
     activeExact: '/users',
     activePrefixes: ['/users/'],
+  },
+  {
+    id: 'map-workspace',
+    moduleId: 'map',
+    label: 'Workspace bản đồ',
+    href: '/map',
+    visibleRoles: [
+      'commander',
+      'superior_commander',
+      'duty_officer',
+      'field_officer',
+      'office_officer',
+      'village_officer',
+      'superior_officer',
+    ],
+    activeExact: '/map',
+    activePrefixes: ['/map/'],
   },
 ];
 

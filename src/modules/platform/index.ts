@@ -11,6 +11,26 @@ export {
 } from './evidence';
 export type { GeoArea, GeoPoint } from './geo';
 export { createGeoArea, createGeoPoint } from './geo';
+export type {
+  MapErrorCode,
+  MapMarker,
+  MapProjectionRow,
+  MapProviderConfig,
+} from './map';
+export {
+  CADN_BOUNDS,
+  DEFAULT_TILE_BASE_URL,
+  MAP_ERRORS,
+  MAP_PROJECTION_SOURCE_AGGREGATES,
+  OSM_ATTRIBUTION,
+  assertMapWriteAllowed,
+  mapTileHealthUrl,
+  maskMapMarker,
+  projectToMapMarkers,
+  resolveMapPermission,
+  resolveMapProvider,
+  toMapMarker,
+} from './map';
 export {
   createInAppNotification,
   listNotifications,
