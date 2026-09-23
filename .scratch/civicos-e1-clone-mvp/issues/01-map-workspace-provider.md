@@ -1,6 +1,6 @@
 # Nền tảng MapLibre và workspace PS-E1
 
-- **Status:** ready-for-agent
+- **Status:** done
 - **Blocked by:** 00
 - **File được phép sửa:**
   - `src/modules/platform/**`
@@ -75,4 +75,4 @@ Không.
 
 ## Trạng thái cuối
 
-pending
+done
