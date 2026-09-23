@@ -1,6 +1,6 @@
 # 00 — Agent preflight: quyền, phạm vi file và hạ tầng
 
-- **Status:** ready-for-agent
+- **Status:** done
 - **Blocked by:** không
 - **Owner:** Planner điều phối; Research hỏi user khi phát sinh quyền/infra còn thiếu
 - **File được phép sửa:**
@@ -238,4 +238,4 @@ Không còn câu hỏi Research đang chờ cho batch TileServer GL/MapLibre sau
 
 ## Trạng thái cuối
 
-pending
+done
