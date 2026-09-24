@@ -48,7 +48,5 @@ export function useIncidentSession() {
 
 /** Command-role check shared by incident action surfaces. */
 export function holdsCommandRole(roles: readonly string[]): boolean {
-  return (
-    roles.includes('commander') || roles.includes('superior_commander')
-  );
+  return roles.includes('commander') || roles.includes('superior_commander');
 }

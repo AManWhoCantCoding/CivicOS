@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 
 import { getEventConsumers } from './event-store';
 import type { DomainEvent } from './contracts';
+import { e2eTrace, e2eTraceError } from './e2e-trace';
 
 const maxAttempts = Number(process.env.EVENT_MAX_ATTEMPTS ?? 5);
 const processingLeaseMs = 5 * 60 * 1000;
@@ -87,9 +88,47 @@ async function dispatchConsumer(
         (value): value is string => typeof value === 'string',
       )
     : [];
-  if (processed.includes(event.eventId)) return;
+  if (processed.includes(event.eventId)) {
+    e2eTrace({
+      kind: 'consumer',
+      status: 'skipped',
+      reason: 'checkpoint',
+      eventType: event.eventType,
+      eventId: event.eventId,
+      aggregateType: event.aggregateType,
+      aggregateId: event.aggregateId,
+      aggregateVersion: event.aggregateVersion,
+      consumerName: registration.name,
+    });
+    return;
+  }
 
-  await registration.handler(event);
+  try {
+    await registration.handler(event);
+    e2eTrace({
+      kind: 'consumer',
+      status: 'success',
+      eventType: event.eventType,
+      eventId: event.eventId,
+      aggregateType: event.aggregateType,
+      aggregateId: event.aggregateId,
+      aggregateVersion: event.aggregateVersion,
+      consumerName: registration.name,
+    });
+  } catch (error) {
+    e2eTrace({
+      kind: 'consumer',
+      status: 'throw',
+      eventType: event.eventType,
+      eventId: event.eventId,
+      aggregateType: event.aggregateType,
+      aggregateId: event.aggregateId,
+      aggregateVersion: event.aggregateVersion,
+      consumerName: registration.name,
+      ...e2eTraceError(error),
+    });
+    throw error;
+  }
   await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`
       SELECT pg_advisory_xact_lock(hashtext(${checkpointName}))
@@ -130,7 +169,9 @@ export async function processOneOutboxMessage(): Promise<boolean> {
       status: 'pending',
       availableAt: { lte: new Date() },
     },
-    orderBy: { createdAt: 'asc' },
+    orderBy: {
+      createdAt: process.env.CIVICOS_E2E_RUN === '1' ? 'desc' : 'asc',
+    },
   });
 
   if (!message) return false;
@@ -143,11 +184,21 @@ export async function processOneOutboxMessage(): Promise<boolean> {
 
   if (claimed.count !== 1) return false;
 
+  e2eTrace({
+    kind: 'outbox',
+    status: 'processing',
+    outboxMessageId: message.id,
+    outboxAttempt: message.attempts,
+    outboxStatus: 'processing',
+    eventId: message.eventId,
+  });
+
+  let event: DomainEvent | undefined;
   try {
     const eventRecord = await prisma.eventRecord.findUniqueOrThrow({
       where: { eventId: message.eventId },
     });
-    const event = toDomainEvent({ eventRecord });
+    event = toDomainEvent({ eventRecord });
     for (const consumer of getEventConsumers(event.eventType)) {
       await dispatchConsumer(event, consumer);
     }
@@ -159,6 +210,19 @@ export async function processOneOutboxMessage(): Promise<boolean> {
         claimedAt: null,
         claimToken: null,
       },
+    });
+    e2eTrace({
+      kind: 'outbox',
+      status: 'processed',
+      outboxMessageId: message.id,
+      outboxAttempt: message.attempts,
+      outboxStatus: 'processed',
+      eventType: event.eventType,
+      eventId: event.eventId,
+      aggregateType: event.aggregateType,
+      aggregateId: event.aggregateId,
+      aggregateVersion: event.aggregateVersion,
+      organizationId: event.actor.organizationId,
     });
   } catch (error) {
     const attempts = message.attempts + 1;
@@ -174,6 +238,24 @@ export async function processOneOutboxMessage(): Promise<boolean> {
         lastError: error instanceof Error ? error.message : String(error),
         deadLetterAt: terminal ? new Date() : null,
       },
+    });
+    e2eTrace({
+      kind: 'outbox',
+      status: terminal ? 'dead_letter' : 'retry',
+      outboxMessageId: message.id,
+      outboxAttempt: attempts,
+      outboxStatus: terminal ? 'dead_letter' : 'pending',
+      eventId: message.eventId,
+      ...(event
+        ? {
+            eventType: event.eventType,
+            aggregateType: event.aggregateType,
+            aggregateId: event.aggregateId,
+            aggregateVersion: event.aggregateVersion,
+            organizationId: event.actor.organizationId,
+          }
+        : {}),
+      ...e2eTraceError(error),
     });
     return true;
   }

@@ -14,6 +14,7 @@ import { recordAudit } from '@/modules/identity';
 import type { IdentityUser } from '@/modules/identity';
 
 const incidentProjectionName = 'incident-read-model';
+const intakeProjectionName = 'intake-read-model';
 /** All incident intake event types projected to read models. */
 export const incidentEventTypes = [
   'IncidentRegistered',
@@ -129,6 +130,7 @@ async function projectIncidentEvent(
 
 const projectionRegistration = globalThis as typeof globalThis & {
   civicosIncidentProjection?: boolean;
+  civicosIntakeProjection?: boolean;
 };
 
 export function registerIncidentProjections(): void {
@@ -144,6 +146,113 @@ export function registerIncidentProjections(): void {
 }
 
 registerIncidentProjections();
+
+/** IntakeReport lifecycle events projected to the intake read model. */
+export const intakeEventTypes = [
+  'IntakeReportReceived',
+  'IntakeReportVerified',
+  'IntakeReportProcessed',
+  'IntakeReportRejected',
+  'IntakeReportClosed',
+  'IntakeReportConvertedToIncident',
+  'IntakeReportTransferred',
+];
+
+const intakeStatusByEvent: Record<string, string> = {
+  IntakeReportReceived: 'RECEIVED',
+  IntakeReportVerified: 'VERIFIED',
+  IntakeReportProcessed: 'PROCESSED',
+  IntakeReportRejected: 'REJECTED',
+  IntakeReportClosed: 'CLOSED',
+};
+
+async function projectIntakeEvent(
+  event: DomainEvent,
+  client: PrismaClient = prisma,
+) {
+  if (event.aggregateType !== 'IntakeReport') return;
+  await reduceReadModel(
+    client,
+    intakeProjectionName,
+    event,
+    (previous, currentEvent) => {
+      const fromEvent = eventState(currentEvent);
+      if (fromEvent) return fromEvent;
+      const current = (previous ?? {
+        id: currentEvent.aggregateId,
+        status: 'RECEIVED',
+        version: 0,
+      }) as Record<string, unknown>;
+      return {
+        ...current,
+        id: currentEvent.aggregateId,
+        version: currentEvent.aggregateVersion,
+        updatedAt: currentEvent.occurredAt.toISOString(),
+        ...(intakeStatusByEvent[currentEvent.eventType]
+          ? { status: intakeStatusByEvent[currentEvent.eventType] }
+          : {}),
+      };
+    },
+  );
+}
+
+export function registerIntakeProjections(): void {
+  if (projectionRegistration.civicosIntakeProjection) return;
+  for (const eventType of intakeEventTypes) {
+    registerEventConsumer(
+      eventType,
+      (event) => projectIntakeEvent(event).then(() => undefined),
+      'intake-read-model',
+    );
+  }
+  projectionRegistration.civicosIntakeProjection = true;
+}
+
+registerIntakeProjections();
+
+export async function rebuildIntakeProjection(
+  client: PrismaClient = prisma,
+): Promise<number> {
+  await client.projectionRecord.deleteMany({
+    where: {
+      projectionName: intakeProjectionName,
+      aggregateType: 'IntakeReport',
+    },
+  });
+  return replayEvents(
+    client,
+    (event) => projectIntakeEvent(event, client).then(() => undefined),
+    { aggregateType: 'IntakeReport', take: 1000 },
+  );
+}
+
+export function getIntakeReadModel(reportId: string) {
+  return prisma.projectionRecord
+    .findUnique({
+      where: {
+        projectionName_aggregateType_aggregateId: {
+          projectionName: intakeProjectionName,
+          aggregateType: 'IntakeReport',
+          aggregateId: reportId,
+        },
+      },
+    })
+    .then(async (projection) => {
+      if (projection) return projection;
+      const report = await prisma.intakeReport.findUnique({
+        where: { id: reportId },
+      });
+      return report
+        ? {
+            state: {
+              id: report.id,
+              status: report.status,
+              version: report.version,
+            },
+          }
+        : null;
+    });
+}
 
 export async function rebuildIncidentProjection(
   client: PrismaClient = prisma,

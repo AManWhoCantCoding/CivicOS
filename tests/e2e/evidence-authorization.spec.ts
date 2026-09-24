@@ -24,6 +24,52 @@ function uploadFields(
   };
 }
 
+async function createAssignedIncident(page: Page): Promise<string> {
+  const created = await page.request.post('/api/intake-reports', {
+    data: {
+      sourceChannel: 'direct',
+      receivedAt: '2026-09-20T01:00:00.000Z',
+      content: `Evidence auth probe ${randomUUID()}`,
+    },
+  });
+  if (created.status() !== 201) {
+    throw new Error(`INTAKE_SETUP_FAILED:${created.status()}`);
+  }
+  const { reportId } = (await created.json()) as { reportId: string };
+  const verified = await page.request.post(
+    `/api/intake-reports/${reportId}/commands`,
+    { data: { command: 'verify', classification: 'sufficient' } },
+  );
+  if (!verified.ok()) {
+    throw new Error(`VERIFY_SETUP_FAILED:${verified.status()}`);
+  }
+  const confirmed = await page.request.post(
+    `/api/intake-reports/${reportId}/commands`,
+    { data: { command: 'confirm' } },
+  );
+  if (!confirmed.ok()) {
+    throw new Error(`CONFIRM_SETUP_FAILED:${confirmed.status()}`);
+  }
+  const converted = await page.request.post(
+    `/api/intake-reports/${reportId}/commands`,
+    { data: { command: 'convert_to_incident' } },
+  );
+  if (!converted.ok()) {
+    throw new Error(`CONVERT_SETUP_FAILED:${converted.status()}`);
+  }
+  const { incidentId } = (await converted.json()) as { incidentId: string };
+  const session = await page.request.get('/api/auth/session');
+  const me = (await session.json()) as { user: { id: string } };
+  const assigned = await page.request.post(
+    `/api/incidents/${incidentId}/commands`,
+    { data: { command: 'assign', assigneeUserIds: [me.user.id] } },
+  );
+  if (!assigned.ok()) {
+    throw new Error(`ASSIGN_SETUP_FAILED:${assigned.status()}`);
+  }
+  return incidentId;
+}
+
 test('unauthenticated evidence upload and download are rejected', async ({
   page,
 }) => {
@@ -53,7 +99,7 @@ test('authorized upload persists hash, actor, capture time, and GPS, then downlo
   const session = await page.request.get('/api/auth/session');
   const me = (await session.json()) as { user: { id: string } };
 
-  const resourceId = randomUUID();
+  const resourceId = await createAssignedIncident(page);
   const bytes = Buffer.from(`field-evidence-${randomUUID()}`);
   const capturedAt = '2026-09-20T01:02:03.000Z';
   const upload = await page.request.post('/api/evidence', {
@@ -141,7 +187,7 @@ test('unassigned user cannot upload to or download another resource', async ({
   page,
 }) => {
   await loginAs(page, 'truong@civicos.local');
-  const resourceId = `evidence-auth-${randomUUID()}`;
+  const resourceId = await createAssignedIncident(page);
   const created = await page.request.post('/api/evidence', {
     multipart: uploadFields(
       resourceId,

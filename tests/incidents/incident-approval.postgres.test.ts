@@ -8,11 +8,14 @@ import {
   assignIncident,
   closeIncident,
   classifyIncident,
+  convertIntakeToIncident,
   getIncident,
   registerIntakeReport,
   resolveIncident,
   startVerification,
   transferIncident,
+  verifyIntakeReport,
+  confirmIntakeReport,
 } from '@/modules/incidents';
 
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
@@ -38,11 +41,7 @@ function testUser(
 const duty = testUser('approval-test-duty', ['duty_officer'], ORG);
 const field = testUser('approval-test-field', ['field_officer'], ORG);
 const commander = testUser('approval-test-commander', ['commander'], ORG);
-const crossCommander = testUser(
-  'approval-test-cross',
-  ['commander'],
-  UPPER,
-);
+const crossCommander = testUser('approval-test-cross', ['commander'], UPPER);
 const seededUsers = [duty, field, commander];
 
 let intakeReportId: string | undefined;
@@ -167,16 +166,23 @@ async function cleanupIncident(): Promise<void> {
 async function registerProbe(tag: string) {
   const registered = await registerIntakeReport(
     {
-      channel: 'manual_other',
+      sourceChannel: 'direct',
       receivedAt: new Date().toISOString(),
       content: `Approval workflow ${tag}`,
       idempotencyKey: `approval-test:${tag}:${Date.now()}`,
     },
     duty,
   );
+  await verifyIntakeReport(registered.reportId, duty, {
+    classification: 'sufficient',
+    verificationNote: 'Approval test verification.',
+  });
+  await confirmIntakeReport(registered.reportId, duty);
+  const converted = await convertIntakeToIncident(registered.reportId, duty);
+  if (!converted.incidentId) throw new Error('APPROVAL_CONVERT_FAILED');
   intakeReportId = registered.reportId;
-  incidentId = registered.incidentId;
-  return registered;
+  incidentId = converted.incidentId;
+  return { reportId: registered.reportId, incidentId: converted.incidentId };
 }
 
 async function prepareVerifyingIncident(tag: string) {
@@ -248,7 +254,10 @@ describe.skipIf(!postgresEnabled)('Incident Approval PostgreSQL seam', () => {
       expect(closed.incident.status).toBe('closed');
 
       const events = await prisma.eventRecord.findMany({
-        where: { aggregateType: 'Incident', aggregateId: registered.incidentId },
+        where: {
+          aggregateType: 'Incident',
+          aggregateId: registered.incidentId,
+        },
         orderBy: { aggregateVersion: 'asc' },
         select: { eventType: true },
       });
@@ -330,7 +339,11 @@ describe.skipIf(!postgresEnabled)('Incident Approval PostgreSQL seam', () => {
       approveIncident(registered.incidentId, transfer.approval.id, field),
     ).rejects.toThrow('SELF_APPROVAL_FORBIDDEN');
     await expect(
-      approveIncident(registered.incidentId, transfer.approval.id, crossCommander),
+      approveIncident(
+        registered.incidentId,
+        transfer.approval.id,
+        crossCommander,
+      ),
     ).rejects.toThrow('FORBIDDEN');
 
     const pending = await prisma.approval.findUnique({

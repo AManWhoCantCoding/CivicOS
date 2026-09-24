@@ -39,7 +39,12 @@ const expectedMigrationChain = [
   '20260922070000_ps_e1_007_inspection_contract',
   '20260922080000_ps_e1_009_vehicle_watch_contract',
   '20260922090000_ps_e1_009_vehicle_active_identity',
+  '20260922092751_civicos',
   '20260922100000_ps_e1_009_vehicle_owner_lookup',
+  '20260922_identity_role_catalog',
+  '20260923090000_ps_e1004_resident_management',
+  '20260924090000_ps_e1005_intake_report',
+  '20260924100000_ps_e1005_canonical_channel',
 ];
 
 const expectedModels = [

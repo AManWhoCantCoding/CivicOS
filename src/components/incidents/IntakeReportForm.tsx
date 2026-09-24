@@ -53,7 +53,7 @@ export function IntakeReportForm() {
           'Idempotency-Key': globalThis.crypto.randomUUID(),
         },
         body: JSON.stringify({
-          channel: form.get('channel'),
+          sourceChannel: form.get('sourceChannel'),
           receivedAt: receivedAt.toISOString(),
           content: form.get('content'),
           sourceName: form.get('sourceName'),
@@ -71,11 +71,13 @@ export function IntakeReportForm() {
           typeof result.error === 'string' ? result.error : 'INTAKE_FAILED',
         );
       }
-      if (typeof result.incidentId !== 'string' || !result.incidentId) {
+      if (typeof result.reportId !== 'string' || !result.reportId) {
         throw new Error('INVALID_API_RESPONSE');
       }
-      setSuccess('Đã ghi nhận tin báo. Đang mở hồ sơ Incident…');
-      router.push(`/incidents/${result.incidentId}`);
+      setSuccess(
+        'Đã ghi nhận tin báo. Hồ sơ chờ phân loại, chưa tạo Incident.',
+      );
+      router.push(`/intake/${result.reportId}`);
     } catch (reason: unknown) {
       const code = reason instanceof Error ? reason.message : 'INTAKE_FAILED';
       const messages: Record<string, string> = {
@@ -98,19 +100,21 @@ export function IntakeReportForm() {
       className="space-y-6 rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-7"
     >
       <p className="rounded-lg border border-slate-800 bg-slate-950/60 p-4 text-xs leading-5 text-slate-500">
-        Biểu mẫu tiếp nhận thuộc trách nhiệm cán bộ trực ban. Tài khoản khác
-        gửi tin sẽ nhận trạng thái từ chối từ API.
+        Biểu mẫu tiếp nhận thuộc trách nhiệm cán bộ trực ban. Tin mới chỉ tạo
+        IntakeReport chờ phân loại; Incident chỉ tạo khi cán bộ xác nhận chuyển.
+        Tài khoản khác gửi tin sẽ nhận trạng thái từ chối từ API.
       </p>
       <label className="block text-sm text-slate-200">
         Kênh tiếp nhận
         <select
-          name="channel"
-          defaultValue="in_person"
+          name="sourceChannel"
+          defaultValue="direct"
           className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
         >
-          <option value="in_person">Trực tiếp</option>
-          <option value="telephone">Điện thoại</option>
-          <option value="manual_other">Kênh khác</option>
+          <option value="direct">Trực tiếp</option>
+          <option value="phone">Điện thoại</option>
+          <option value="app">Ứng dụng</option>
+          <option value="district_transfer">Chuyển đơn vị</option>
         </select>
       </label>
       <label className="block text-sm text-slate-200">
@@ -209,7 +213,7 @@ export function IntakeReportForm() {
         className="rounded-lg bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 active:translate-y-px disabled:opacity-60"
         type="submit"
       >
-        {loading ? 'Đang lưu…' : 'Tạo Incident'}
+        {loading ? 'Đang lưu…' : 'Ghi nhận tin báo'}
       </button>
     </form>
   );

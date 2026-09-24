@@ -52,6 +52,24 @@ export const EVENT_CATALOG: readonly EventCatalogEntry[] = [
   define('IntakeReportReceived', 'incidents', 'IntakeReport', [
     'event-history-projection',
   ]),
+  define('IntakeReportVerified', 'incidents', 'IntakeReport', [
+    'event-history-projection',
+  ]),
+  define('IntakeReportProcessed', 'incidents', 'IntakeReport', [
+    'event-history-projection',
+  ]),
+  define('IntakeReportRejected', 'incidents', 'IntakeReport', [
+    'event-history-projection',
+  ]),
+  define('IntakeReportClosed', 'incidents', 'IntakeReport', [
+    'event-history-projection',
+  ]),
+  define('IntakeReportConvertedToIncident', 'incidents', 'IntakeReport', [
+    'event-history-projection',
+  ]),
+  define('IntakeReportTransferred', 'incidents', 'IntakeReport', [
+    'event-history-projection',
+  ]),
   incident('IncidentRegistered', 'Incident'),
   incident('IncidentClassified', 'Incident'),
   incident('IncidentAssigned', 'Incident'),

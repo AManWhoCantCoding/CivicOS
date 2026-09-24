@@ -4,6 +4,7 @@ import type { PrismaClient } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 import type { DomainEvent } from './contracts';
+import { e2eTrace } from './e2e-trace';
 
 type ReadModelClient = PrismaClient | Prisma.TransactionClient;
 export type ReadModelState = Record<string, unknown>;
@@ -28,6 +29,10 @@ export async function upsertReadModel(
   event: DomainEvent,
   state: Record<string, unknown>,
 ) {
+  const organizationId =
+    typeof state.organizationId === 'string' ? state.organizationId : undefined;
+  const projectionStatus =
+    typeof state.status === 'string' ? state.status : undefined;
   const key = {
     projectionName_aggregateType_aggregateId: {
       projectionName,
@@ -37,6 +42,19 @@ export async function upsertReadModel(
   };
   const existing = await client.projectionRecord.findUnique({ where: key });
   if (existing && existing.aggregateVersion >= event.aggregateVersion) {
+    e2eTrace({
+      kind: 'projection',
+      operation: 'upsert',
+      result: 'stale',
+      projectionName,
+      eventType: event.eventType,
+      eventId: event.eventId,
+      aggregateType: event.aggregateType,
+      aggregateId: event.aggregateId,
+      aggregateVersion: event.aggregateVersion,
+      organizationId,
+      projectionStatus,
+    });
     return existing;
   }
   const updated = await client.projectionRecord.updateMany({
@@ -53,11 +71,25 @@ export async function upsertReadModel(
     },
   });
   if (updated.count) {
-    return client.projectionRecord.findUnique({ where: key });
+    const result = await client.projectionRecord.findUnique({ where: key });
+    e2eTrace({
+      kind: 'projection',
+      operation: 'upsert',
+      result: 'updated',
+      projectionName,
+      eventType: event.eventType,
+      eventId: event.eventId,
+      aggregateType: event.aggregateType,
+      aggregateId: event.aggregateId,
+      aggregateVersion: event.aggregateVersion,
+      organizationId,
+      projectionStatus,
+    });
+    return result;
   }
 
   try {
-    return await client.projectionRecord.create({
+    const result = await client.projectionRecord.create({
       data: {
         projectionName,
         aggregateType: event.aggregateType,
@@ -67,6 +99,20 @@ export async function upsertReadModel(
         state: state as Prisma.InputJsonValue,
       },
     });
+    e2eTrace({
+      kind: 'projection',
+      operation: 'upsert',
+      result: 'created',
+      projectionName,
+      eventType: event.eventType,
+      eventId: event.eventId,
+      aggregateType: event.aggregateType,
+      aggregateId: event.aggregateId,
+      aggregateVersion: event.aggregateVersion,
+      organizationId,
+      projectionStatus,
+    });
+    return result;
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -97,6 +143,17 @@ export async function reduceReadModel(
     },
   });
   if (existing && existing.aggregateVersion >= event.aggregateVersion) {
+    e2eTrace({
+      kind: 'projection',
+      operation: 'reduce',
+      result: 'stale',
+      projectionName,
+      eventType: event.eventType,
+      eventId: event.eventId,
+      aggregateType: event.aggregateType,
+      aggregateId: event.aggregateId,
+      aggregateVersion: event.aggregateVersion,
+    });
     return existing;
   }
   const previous = objectState(existing?.state);
@@ -109,15 +166,30 @@ export async function reduceReadModel(
       ? previous.organizationId
       : undefined) ??
     event.actor.organizationId;
-  return upsertReadModel(
+  const result = await upsertReadModel(
     client,
     projectionName,
     event,
     organizationId ? { ...reduced, organizationId } : reduced,
   );
+  e2eTrace({
+    kind: 'projection',
+    operation: 'reduce',
+    result: 'success',
+    projectionName,
+    eventType: event.eventType,
+    eventId: event.eventId,
+    aggregateType: event.aggregateType,
+    aggregateId: event.aggregateId,
+    aggregateVersion: event.aggregateVersion,
+    organizationId,
+    projectionStatus:
+      typeof reduced.status === 'string' ? reduced.status : undefined,
+  });
+  return result;
 }
 
-export function readModels(
+export async function readModels(
   projectionName: string,
   aggregateType: string,
   options: {
@@ -127,7 +199,7 @@ export function readModels(
   } = {},
   client: PrismaClient = prisma,
 ) {
-  return client.projectionRecord.findMany({
+  const result = await client.projectionRecord.findMany({
     where: {
       projectionName,
       aggregateType,
@@ -143,4 +215,20 @@ export function readModels(
     orderBy: { updatedAt: 'desc' },
     take: options.take ?? 100,
   });
+  e2eTrace({
+    kind: 'read-model-query',
+    operation: 'list',
+    status: 'completed',
+    projectionName,
+    aggregateType,
+    organizationId: options.organizationId,
+    requestedAggregateCount: options.aggregateIds?.length ?? null,
+    resultCount: result.length,
+    requestedAggregatePresent: options.aggregateIds
+      ? result.some((entry) =>
+          options.aggregateIds?.includes(entry.aggregateId),
+        )
+      : null,
+  });
+  return result;
 }

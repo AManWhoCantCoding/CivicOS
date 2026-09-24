@@ -18,22 +18,61 @@ async function logout(page: Page): Promise<void> {
   await page.request.delete('/api/auth/session');
 }
 
-async function createIncidentViaApi(
+async function createRawIntakeViaApi(
   page: Page,
   content: string,
 ): Promise<string> {
   const response = await page.request.post('/api/intake-reports', {
-    headers: { 'Idempotency-Key': `ps005-${Date.now()}-${Math.random()}` },
+    headers: {
+      'Idempotency-Key': `ps005-raw-${Date.now()}-${Math.random()}`,
+    },
     data: {
-      channel: 'in_person',
+      sourceChannel: 'direct',
       receivedAt: new Date().toISOString(),
       content,
     },
   });
   expect(response.ok()).toBe(true);
-  const body = (await response.json()) as { incidentId: string };
-  expect(typeof body.incidentId).toBe('string');
-  return body.incidentId;
+  const body = (await response.json()) as {
+    reportId: string;
+    incidentId: string | null;
+  };
+  expect(typeof body.reportId).toBe('string');
+  expect(body.incidentId).toBeNull();
+  return body.reportId;
+}
+
+async function createVerifiedIntakeViaApi(
+  page: Page,
+  content: string,
+): Promise<string> {
+  const reportId = await createRawIntakeViaApi(page, content);
+  const verified = await page.request.post(
+    `/api/intake-reports/${reportId}/commands`,
+    { data: { command: 'verify', classification: 'sufficient' } },
+  );
+  expect(verified.ok()).toBe(true);
+  const confirmed = await page.request.post(
+    `/api/intake-reports/${reportId}/commands`,
+    { data: { command: 'confirm' } },
+  );
+  expect(confirmed.ok()).toBe(true);
+  return reportId;
+}
+
+async function createIncidentViaApi(
+  page: Page,
+  content: string,
+): Promise<string> {
+  const reportId = await createVerifiedIntakeViaApi(page, content);
+  const converted = await page.request.post(
+    `/api/intake-reports/${reportId}/commands`,
+    { data: { command: 'convert_to_incident' } },
+  );
+  expect(converted.ok()).toBe(true);
+  const convertedBody = (await converted.json()) as { incidentId: string };
+  expect(typeof convertedBody.incidentId).toBe('string');
+  return convertedBody.incidentId;
 }
 
 async function commandViaApi(
@@ -46,6 +85,51 @@ async function commandViaApi(
   });
 }
 
+async function userIdByEmail(page: Page, email: string): Promise<string> {
+  const usersResponse = await page.request.get('/api/identity/users');
+  expect(usersResponse.ok()).toBe(true);
+  const usersBody = (await usersResponse.json()) as {
+    users: Array<{ id: string; email: string }>;
+  };
+  const match = usersBody.users.find((entry) => entry.email === email);
+  expect(match?.id).toBeTruthy();
+  return match?.id ?? '';
+}
+
+async function assignViaApi(
+  page: Page,
+  incidentId: string,
+  assigneeUserId: string,
+): Promise<void> {
+  const assigned = await commandViaApi(page, incidentId, {
+    command: 'assign',
+    assigneeUserIds: [assigneeUserId],
+  });
+  expect(assigned.ok()).toBe(true);
+}
+
+async function createClassifiedAssignedIncident(
+  page: Page,
+  content: string,
+): Promise<string> {
+  const incidentId = await createIncidentViaApi(page, content);
+  await assignViaApi(page, incidentId, await userIdByEmail(page, DUTY));
+  await logout(page);
+  await loginAs(page, DUTY);
+  const classified = await commandViaApi(page, incidentId, {
+    command: 'classify',
+    category: 'public_order',
+    severity: 'high',
+  });
+  expect(classified.ok()).toBe(true);
+  await logout(page);
+  await loginAs(page, COMMANDER);
+  await assignViaApi(page, incidentId, await userIdByEmail(page, FIELD));
+  await logout(page);
+  await loginAs(page, FIELD);
+  return incidentId;
+}
+
 async function assignUser(page: Page, emailPattern: RegExp): Promise<void> {
   await page.getByLabel(emailPattern).first().scrollIntoViewIfNeeded();
   await page.getByLabel(emailPattern).check({ force: true });
@@ -55,37 +139,102 @@ async function assignUser(page: Page, emailPattern: RegExp): Promise<void> {
   await expect(page.getByText('Đã gửi phân công.')).toBeVisible();
 }
 
-test('intake screen exposes a complete labeled form', async ({ page }) => {
+test('[Web] intake page exposes a complete labeled form', async ({ page }) => {
   await page.goto('/intake');
   await expect(
     page.getByRole('heading', { name: 'Ghi nhận tin báo' }),
   ).toBeVisible();
   await expect(page.getByLabel('Nội dung tin báo')).toBeVisible();
   await expect(
-    page.getByRole('button', { name: 'Tạo Incident' }),
+    page.getByRole('button', { name: 'Ghi nhận tin báo' }),
   ).toBeVisible();
 });
 
-test('intake-to-close lifecycle runs through the browser with approvals', async ({
+test('[Web] duty officer creates an intake report without an incident', async ({
   page,
 }) => {
-  test.setTimeout(180000);
   const content = `PS005 E2E ${Date.now()}`;
   await loginAs(page, DUTY);
   await page.goto('/intake');
   await page.getByLabel('Nội dung tin báo').fill(content);
   await page.getByLabel('Tên nguồn tin').fill('Nguyen Van E2E');
-  await page.getByRole('button', { name: 'Tạo Incident' }).click();
-  await page.waitForURL(/\/incidents\/.+/);
-  const incidentId = page.url().split('/incidents/')[1];
-  expect(incidentId).toBeTruthy();
+  await page.getByRole('button', { name: 'Ghi nhận tin báo' }).click();
+  await page.waitForURL(/\/intake\/.+/);
+  const reportId = page.url().split('/intake/')[1];
+  expect(reportId).toBeTruthy();
+  await expect(
+    page.getByRole('button', { name: 'Lưu xác minh (không tạo Incident)' }),
+  ).toBeVisible();
+});
 
+test('[Web] verify action on an intake creates no incident', async ({
+  page,
+}) => {
+  await loginAs(page, DUTY);
+  const reportId = await createRawIntakeViaApi(
+    page,
+    `PS005 verify ${Date.now()}`,
+  );
+  await page.goto(`/intake/${reportId}`);
+  await expect(
+    page.getByRole('button', { name: 'Lưu xác minh (không tạo Incident)' }),
+  ).toBeVisible();
+  await page.getByLabel('Phân loại').selectOption('sufficient');
+  await page.getByLabel('Ghi chú xác minh').fill('Da xuong hien truong.');
+  await page
+    .getByRole('button', { name: 'Lưu xác minh (không tạo Incident)' })
+    .click();
+  await expect(page.getByText('Đã ghi nhận thao tác.')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Xác nhận hồ sơ' }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Tạo Incident' })).toHaveCount(
+    0,
+  );
+});
+
+test('[Web] convert action on a verified intake creates one incident', async ({
+  page,
+}) => {
+  await loginAs(page, DUTY);
+  const reportId = await createVerifiedIntakeViaApi(
+    page,
+    `PS005 convert ${Date.now()}`,
+  );
+  await page.goto(`/intake/${reportId}`);
+  await expect(
+    page.getByRole('button', { name: 'Xác nhận hồ sơ' }),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Tạo Incident' }).click();
+  await expect(page.getByText('Đã tạo Incident từ tin báo.')).toBeVisible();
+  const incidentHref = await page
+    .locator('a[href^="/incidents/"]')
+    .first()
+    .getAttribute('href');
+  const incidentId = incidentHref?.split('/incidents/')[1];
+  expect(incidentId).toBeTruthy();
+});
+
+test('[Web] commander sees a converted incident and assigns duty', async ({
+  page,
+}) => {
+  const content = `PS005 assign ${Date.now()}`;
+  await loginAs(page, DUTY);
+  const incidentId = await createIncidentViaApi(page, content);
   await logout(page);
   await loginAs(page, COMMANDER);
   await page.goto(`/incidents/${incidentId}`);
   await expect(page.getByText(content)).toBeVisible();
   await assignUser(page, /trucban@civicos\.local/);
+});
 
+test('[Web] duty officer classifies an assigned incident', async ({ page }) => {
+  await loginAs(page, COMMANDER);
+  const incidentId = await createIncidentViaApi(
+    page,
+    `PS005 classify ${Date.now()}`,
+  );
+  await assignViaApi(page, incidentId, await userIdByEmail(page, DUTY));
   await logout(page);
   await loginAs(page, DUTY);
   await page.goto(`/incidents/${incidentId}`);
@@ -96,14 +245,17 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
   await expect(
     page.locator('main').getByText('classified', { exact: true }).first(),
   ).toBeVisible();
+});
 
-  await logout(page);
+test('[Web] field officer verifies and requests a transfer', async ({
+  page,
+}) => {
+  test.setTimeout(120000);
   await loginAs(page, COMMANDER);
-  await page.goto(`/incidents/${incidentId}`);
-  await assignUser(page, /hientruong@civicos\.local/);
-
-  await logout(page);
-  await loginAs(page, FIELD);
+  const incidentId = await createClassifiedAssignedIncident(
+    page,
+    `PS005 transfer ${Date.now()}`,
+  );
   await page.goto(`/incidents/${incidentId}`);
   await page.getByLabel('Ghi chú xác minh').fill('Da xuong hien truong.');
   await page.getByRole('button', { name: 'Bắt đầu xác minh' }).click();
@@ -111,16 +263,29 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
   await expect(
     page.locator('main').getByText('verifying', { exact: true }).first(),
   ).toBeVisible();
-
   await page.getByRole('button', { name: 'Gửi yêu cầu chuyển' }).click();
   await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
     timeout: 15000,
   });
   await expect(page.getByText('Approval đang chờ')).toBeVisible();
-  await expect(
-    page.getByRole('button', { name: 'Phê duyệt' }),
-  ).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Phê duyệt' })).toHaveCount(0);
+});
 
+test('[Web] commander approves a transfer request', async ({ page }) => {
+  test.setTimeout(120000);
+  await loginAs(page, COMMANDER);
+  const incidentId = await createClassifiedAssignedIncident(
+    page,
+    `PS005 approve transfer ${Date.now()}`,
+  );
+  await page.goto(`/incidents/${incidentId}`);
+  await page.getByLabel('Ghi chú xác minh').fill('Da xuong hien truong.');
+  await page.getByRole('button', { name: 'Bắt đầu xác minh' }).click();
+  await expect(page.getByText('Đã ghi nhận thao tác.')).toBeVisible();
+  await page.getByRole('button', { name: 'Gửi yêu cầu chuyển' }).click();
+  await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
+    timeout: 15000,
+  });
   await logout(page);
   await loginAs(page, COMMANDER);
   await page.goto(`/incidents/${incidentId}`);
@@ -133,7 +298,115 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
   await expect(
     page.locator('main').getByText('transferred', { exact: true }).first(),
   ).toBeVisible();
+});
 
+test('[Web] field officer proposes a resolution for approval', async ({
+  page,
+}) => {
+  test.setTimeout(120000);
+  await loginAs(page, COMMANDER);
+  const incidentId = await createClassifiedAssignedIncident(
+    page,
+    `PS005 resolve ${Date.now()}`,
+  );
+  await page.goto(`/incidents/${incidentId}`);
+  await page.getByLabel('Ghi chú xác minh').fill('Da xuong hien truong.');
+  await page.getByRole('button', { name: 'Bắt đầu xác minh' }).click();
+  await expect(page.getByText('Đã ghi nhận thao tác.')).toBeVisible();
+  await page.getByLabel('Nội dung kết quả xử lý').fill('Da hoan tat xu ly.');
+  await page.getByRole('button', { name: 'Gửi đề xuất kết quả' }).click();
+  await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
+    timeout: 15000,
+  });
+  await logout(page);
+  await loginAs(page, COMMANDER);
+  await page.goto(`/incidents/${incidentId}`);
+  await page.getByRole('button', { name: 'Phê duyệt' }).click();
+  await expect(
+    page.locator('main').getByText('resolved', { exact: true }).first(),
+  ).toBeVisible();
+});
+
+test('[Web] field officer requests closure and commander closes', async ({
+  page,
+}) => {
+  test.setTimeout(120000);
+  await loginAs(page, COMMANDER);
+  const incidentId = await createClassifiedAssignedIncident(
+    page,
+    `PS005 close ${Date.now()}`,
+  );
+  await page.goto(`/incidents/${incidentId}`);
+  await page.getByLabel('Ghi chú xác minh').fill('Da xuong hien truong.');
+  await page.getByRole('button', { name: 'Bắt đầu xác minh' }).click();
+  await expect(page.getByText('Đã ghi nhận thao tác.')).toBeVisible();
+  await page.getByLabel('Nội dung kết quả xử lý').fill('Da hoan tat xu ly.');
+  await page.getByRole('button', { name: 'Gửi đề xuất kết quả' }).click();
+  await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
+    timeout: 15000,
+  });
+  await logout(page);
+  await loginAs(page, COMMANDER);
+  await page.goto(`/incidents/${incidentId}`);
+  await page.getByRole('button', { name: 'Phê duyệt' }).click();
+  await expect(
+    page.locator('main').getByText('resolved', { exact: true }).first(),
+  ).toBeVisible();
+  await logout(page);
+  await loginAs(page, FIELD);
+  await page.goto(`/incidents/${incidentId}`);
+  await page.getByRole('button', { name: 'Gửi yêu cầu đóng Incident' }).click();
+  await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
+    timeout: 15000,
+  });
+  await logout(page);
+  await loginAs(page, COMMANDER);
+  await page.goto(`/incidents/${incidentId}`);
+  await page.getByRole('button', { name: 'Phê duyệt' }).click();
+  await expect(
+    page.locator('main').getByText('closed', { exact: true }).first(),
+  ).toBeVisible();
+});
+
+test('[Web] closed incident timeline lists every lifecycle event', async ({
+  page,
+}) => {
+  test.setTimeout(180000);
+  const content = `PS005 timeline ${Date.now()}`;
+  await loginAs(page, DUTY);
+  const incidentId = await createIncidentViaApi(page, content);
+  await logout(page);
+  await loginAs(page, COMMANDER);
+  await page.goto(`/incidents/${incidentId}`);
+  await assignUser(page, /trucban@civicos\.local/);
+  await logout(page);
+  await loginAs(page, DUTY);
+  await page.goto(`/incidents/${incidentId}`);
+  await page.getByLabel('Category').selectOption('public_order');
+  await page.getByLabel('Severity').selectOption('high');
+  await page.getByRole('button', { name: 'Lưu phân loại' }).click();
+  await expect(page.getByText('Đã ghi nhận thao tác.')).toBeVisible();
+  await logout(page);
+  await loginAs(page, COMMANDER);
+  await page.goto(`/incidents/${incidentId}`);
+  await assignUser(page, /hientruong@civicos\.local/);
+  await logout(page);
+  await loginAs(page, FIELD);
+  await page.goto(`/incidents/${incidentId}`);
+  await page.getByLabel('Ghi chú xác minh').fill('Da xuong hien truong.');
+  await page.getByRole('button', { name: 'Bắt đầu xác minh' }).click();
+  await expect(page.getByText('Đã ghi nhận thao tác.')).toBeVisible();
+  await page.getByRole('button', { name: 'Gửi yêu cầu chuyển' }).click();
+  await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
+    timeout: 15000,
+  });
+  await logout(page);
+  await loginAs(page, COMMANDER);
+  await page.goto(`/incidents/${incidentId}`);
+  await page.getByRole('button', { name: 'Phê duyệt' }).click();
+  await expect(
+    page.locator('main').getByText('transferred', { exact: true }).first(),
+  ).toBeVisible();
   await logout(page);
   await loginAs(page, FIELD);
   await page.goto(`/incidents/${incidentId}`);
@@ -142,7 +415,6 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
   await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
     timeout: 15000,
   });
-
   await logout(page);
   await loginAs(page, COMMANDER);
   await page.goto(`/incidents/${incidentId}`);
@@ -150,7 +422,6 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
   await expect(
     page.locator('main').getByText('resolved', { exact: true }).first(),
   ).toBeVisible();
-
   await logout(page);
   await loginAs(page, FIELD);
   await page.goto(`/incidents/${incidentId}`);
@@ -158,7 +429,6 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
   await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
     timeout: 15000,
   });
-
   await logout(page);
   await loginAs(page, COMMANDER);
   await page.goto(`/incidents/${incidentId}`);
@@ -166,10 +436,10 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
   await expect(
     page.locator('main').getByText('closed', { exact: true }).first(),
   ).toBeVisible();
-
   const timeline = page.locator('section', { hasText: 'Timeline' });
   for (const eventType of [
     'IncidentRegistered',
+    'IncidentAssigned',
     'IncidentClassified',
     'IncidentAssigned',
     'IncidentVerifying',
@@ -180,26 +450,31 @@ test('intake-to-close lifecycle runs through the browser with approvals', async 
     'IncidentClosureRequested',
     'IncidentClosed',
   ]) {
-    await expect(timeline.getByText(eventType, { exact: true }).first()).toBeVisible();
+    await expect(
+      timeline.getByText(eventType, { exact: true }).first(),
+    ).toBeVisible();
   }
 });
 
-test('commander cannot record intake directly', async ({ page }) => {
+test('[Web] commander intake creates no incident', async ({ page }) => {
   await loginAs(page, COMMANDER);
-  const forbiddenIntake = await page.request.post('/api/intake-reports', {
+  const intake = await page.request.post('/api/intake-reports', {
     data: {
-      channel: 'in_person',
+      sourceChannel: 'direct',
       receivedAt: new Date().toISOString(),
-      content: `commander cannot intake ${Date.now()}`,
+      content: `commander intake ${Date.now()}`,
     },
   });
-  expect(forbiddenIntake.status()).toBe(403);
-  expect(((await forbiddenIntake.json()) as { error?: string }).error).toBe(
-    'FORBIDDEN',
-  );
+  expect(intake.status()).toBe(201);
+  const intakeBody = (await intake.json()) as {
+    reportId?: string;
+    incidentId?: string | null;
+  };
+  expect(typeof intakeBody.reportId).toBe('string');
+  expect(intakeBody.incidentId).toBeNull();
 });
 
-test('unassigned users are denied in UI and at the API boundary', async ({
+test('[Web] unassigned users are denied in UI and at the API boundary', async ({
   page,
 }) => {
   await loginAs(page, DUTY);
@@ -207,14 +482,12 @@ test('unassigned users are denied in UI and at the API boundary', async ({
     page,
     `PS005 denied ${Date.now()}`,
   );
-
   await logout(page);
   await loginAs(page, UNASSIGNED);
   await page.goto(`/incidents/${incidentId}`);
   await expect(
     page.getByRole('heading', { name: 'Không có quyền truy cập' }),
   ).toBeVisible();
-
   const deniedRead = await page.request.get(`/api/incidents/${incidentId}`);
   expect(deniedRead.status()).toBe(403);
   const deniedCommand = await commandViaApi(page, incidentId, {
@@ -227,8 +500,7 @@ test('unassigned users are denied in UI and at the API boundary', async ({
   expect(deniedBody.error).toBe('FORBIDDEN');
 });
 
-test('REST boundary returns exact status and idempotency shapes', async ({
-  page,
+test('[Web] anonymous incident list is rejected as unauthenticated', async ({
   request,
 }) => {
   const anonymous = await request.get('/api/incidents');
@@ -236,7 +508,9 @@ test('REST boundary returns exact status and idempotency shapes', async ({
   expect(((await anonymous.json()) as { error?: string }).error).toBe(
     'UNAUTHENTICATED',
   );
+});
 
+test('[Web] intake API rejects unknown channels', async ({ page }) => {
   await loginAs(page, DUTY);
   const badChannel = await page.request.post('/api/intake-reports', {
     data: {
@@ -249,7 +523,10 @@ test('REST boundary returns exact status and idempotency shapes', async ({
   expect(((await badChannel.json()) as { error?: string }).error).toBe(
     'INVALID_CHANNEL',
   );
+});
 
+test('[Web] intake API rejects empty content', async ({ page }) => {
+  await loginAs(page, DUTY);
   const emptyContent = await page.request.post('/api/intake-reports', {
     data: {
       channel: 'in_person',
@@ -261,7 +538,12 @@ test('REST boundary returns exact status and idempotency shapes', async ({
   expect(((await emptyContent.json()) as { error?: string }).error).toBe(
     'CONTENT_REQUIRED',
   );
+});
 
+test('[Web] intake idempotency key returns the same report', async ({
+  page,
+}) => {
+  await loginAs(page, DUTY);
   const key = `ps005-idem-${Date.now()}`;
   const payload = {
     channel: 'telephone',
@@ -278,19 +560,59 @@ test('REST boundary returns exact status and idempotency shapes', async ({
     data: payload,
   });
   expect(second.status()).toBe(201);
-  const firstBody = (await first.json()) as { incidentId: string };
-  const secondBody = (await second.json()) as { incidentId: string };
-  expect(secondBody.incidentId).toBe(firstBody.incidentId);
+  const firstBody = (await first.json()) as {
+    reportId: string;
+    incidentId: string | null;
+  };
+  const secondBody = (await second.json()) as {
+    reportId: string;
+    incidentId: string | null;
+  };
+  expect(secondBody.reportId).toBe(firstBody.reportId);
+  expect(secondBody.incidentId).toBeNull();
+  expect(firstBody.incidentId).toBeNull();
+});
 
-  const unknown = await commandViaApi(page, firstBody.incidentId, {
+test('[Web] converted intake exposes incident commands', async ({ page }) => {
+  await loginAs(page, DUTY);
+  const reportId = await createRawIntakeViaApi(
+    page,
+    `PS005 commands ${Date.now()}`,
+  );
+  const verified = await page.request.post(
+    `/api/intake-reports/${reportId}/commands`,
+    { data: { command: 'verify', classification: 'sufficient' } },
+  );
+  expect(verified.ok()).toBe(true);
+  const confirmed = await page.request.post(
+    `/api/intake-reports/${reportId}/commands`,
+    { data: { command: 'confirm' } },
+  );
+  expect(confirmed.ok()).toBe(true);
+  const converted = await page.request.post(
+    `/api/intake-reports/${reportId}/commands`,
+    { data: { command: 'convert_to_incident' } },
+  );
+  expect(converted.ok()).toBe(true);
+  const convertedBody = (await converted.json()) as { incidentId: string };
+  const unknown = await commandViaApi(page, convertedBody.incidentId, {
     command: 'escalate',
   });
   expect(unknown.status()).toBe(400);
   expect(((await unknown.json()) as { error?: string }).error).toBe(
     'UNKNOWN_COMMAND',
   );
+});
 
-  const missingApproval = await commandViaApi(page, firstBody.incidentId, {
+test('[Web] approving a missing approval reports not found', async ({
+  page,
+}) => {
+  await loginAs(page, DUTY);
+  const incidentId = await createIncidentViaApi(
+    page,
+    `PS005 approval ${Date.now()}`,
+  );
+  const missingApproval = await commandViaApi(page, incidentId, {
     command: 'approve',
     approvalId: 'no-such-approval',
   });
@@ -298,8 +620,9 @@ test('REST boundary returns exact status and idempotency shapes', async ({
   expect(((await missingApproval.json()) as { error?: string }).error).toBe(
     'APPROVAL_NOT_FOUND',
   );
+});
 
-  await logout(page);
+test('[Web] field officer is forbidden from intake', async ({ page }) => {
   await loginAs(page, FIELD);
   const forbiddenIntake = await page.request.post('/api/intake-reports', {
     data: {
@@ -311,11 +634,8 @@ test('REST boundary returns exact status and idempotency shapes', async ({
   expect(forbiddenIntake.status()).toBe(403);
 });
 
-test('work queue exposes loading, empty, error, and retry states', async ({
-  page,
-}) => {
+test('[Web] incident queue shows a loading state', async ({ page }) => {
   await loginAs(page, COMMANDER);
-
   await page.route('/api/incidents', async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 800));
     await route.continue();
@@ -329,7 +649,10 @@ test('work queue exposes loading, empty, error, and retry states', async ({
       .first(),
   ).toBeVisible({ timeout: 15000 });
   await page.unroute('/api/incidents');
+});
 
+test('[Web] incident queue shows an empty state', async ({ page }) => {
+  await loginAs(page, COMMANDER);
   await page.route('/api/incidents', async (route) => {
     await route.fulfill({
       status: 200,
@@ -341,7 +664,13 @@ test('work queue exposes loading, empty, error, and retry states', async ({
   await expect(
     page.getByText('Chưa có Incident trong phạm vi hiển thị.'),
   ).toBeVisible();
+  await page.unroute('/api/incidents');
+});
 
+test('[Web] incident queue shows an error state with retry', async ({
+  page,
+}) => {
+  await loginAs(page, COMMANDER);
   await page.route('/api/incidents', async (route) => {
     await route.fulfill({
       status: 500,
@@ -363,16 +692,9 @@ test('work queue exposes loading, empty, error, and retry states', async ({
   ).toBeVisible({ timeout: 15000 });
 });
 
-test('intake stays keyboard-focusable and never clips horizontally', async ({
-  page,
-}) => {
-  await loginAs(page, DUTY);
-  const incidentId = await createIncidentViaApi(
-    page,
-    `PS005 layout ${Date.now()}`,
-  );
-
-  for (const url of ['/intake', '/incidents', `/incidents/${incidentId}`]) {
+for (const url of ['/intake', '/incidents']) {
+  test(`[Web] ${url} never clips horizontally`, async ({ page }) => {
+    await loginAs(page, DUTY);
     await page.goto(url);
     const overflow = await page.evaluate(
       () =>
@@ -380,11 +702,34 @@ test('intake stays keyboard-focusable and never clips horizontally', async ({
         document.documentElement.clientWidth,
     );
     expect(overflow).toBeLessThanOrEqual(1);
-  }
+  });
+}
 
+test('[Web] incident detail never clips horizontally', async ({ page }) => {
+  await loginAs(page, DUTY);
+  const incidentId = await createIncidentViaApi(
+    page,
+    `PS005 layout ${Date.now()}`,
+  );
+  await page.goto(`/incidents/${incidentId}`);
+  const overflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test('[Web] intake controls keep a visible keyboard focus', async ({
+  page,
+}) => {
+  await loginAs(page, DUTY);
   await page.goto('/intake');
-  await page.getByLabel('Kênh tiếp nhận').focus();
-  await expect(page.getByLabel('Kênh tiếp nhận')).toBeFocused();
+  const intakeForm = page.locator('form').filter({
+    has: page.getByRole('button', { name: 'Ghi nhận tin báo' }),
+  });
+  await intakeForm.getByLabel('Kênh tiếp nhận').focus();
+  await expect(intakeForm.getByLabel('Kênh tiếp nhận')).toBeFocused();
   await page.getByLabel('Nội dung tin báo').focus();
   await expect(page.getByLabel('Nội dung tin báo')).toBeFocused();
   await page.keyboard.press('Tab');

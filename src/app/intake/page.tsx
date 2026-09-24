@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { SessionControls } from '@/components/identity/SessionControls';
 import { IntakeReportForm } from '@/components/incidents/IntakeReportForm';
+import { IntakeReportQueue } from '@/components/incidents/IntakeReportQueue';
 
 export default function IntakePage() {
   return (
@@ -24,11 +25,24 @@ export default function IntakePage() {
             Ghi nhận tin báo
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-slate-400">
-            Tạo IntakeReport và Incident từ thông tin cán bộ tiếp nhận.
+            Tạo IntakeReport chờ phân loại. Incident chỉ tạo khi cán bộ xác nhận
+            chuyển, không tạo tự động khi nhập tin.
           </p>
         </div>
         <div className="mt-10">
           <IntakeReportForm />
+        </div>
+        <div className="mt-12">
+          <h2 className="text-xl font-semibold tracking-tight text-white">
+            Hàng đợi IntakeReport
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            Danh tính nguồn tin đã che theo vai trò; SLA tính liên tục từ thời
+            điểm tiếp nhận.
+          </p>
+          <div className="mt-6">
+            <IntakeReportQueue />
+          </div>
         </div>
       </div>
     </main>

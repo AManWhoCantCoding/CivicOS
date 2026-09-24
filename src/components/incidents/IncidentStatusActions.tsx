@@ -75,7 +75,9 @@ async function fetchOwnAssignments(incidentId: string): Promise<string[]> {
         assignment.status === 'active' &&
         typeof assignment.assigneeUserId === 'string',
     )
-    .map((assignment) => String((assignment as Record<string, unknown>).assigneeUserId));
+    .map((assignment) =>
+      String((assignment as Record<string, unknown>).assigneeUserId),
+    );
 }
 
 export function IncidentStatusActions({
@@ -126,7 +128,8 @@ export function IncidentStatusActions({
   const hasActiveAssignment = session
     ? (ownAssignments ?? []).includes(session.userId)
     : false;
-  const canMutate = !sessionLoaded || ownAssignments === null || hasActiveAssignment;
+  const canMutate =
+    !sessionLoaded || ownAssignments === null || hasActiveAssignment;
   const canDecide = !sessionLoaded || ownAssignments === null || isCommander;
 
   async function send(command: string, extra: Record<string, string> = {}) {
@@ -247,8 +250,8 @@ export function IncidentStatusActions({
         !hasActiveAssignment &&
         !isCommander ? (
           <p className="rounded-lg border border-dashed border-slate-700 p-4 text-sm text-slate-500">
-            Tài khoản hiện tại không có thao tác khả dụng trên Incident này.
-            Mọi lệnh vẫn được API kiểm tra lại theo role và Assignment.
+            Tài khoản hiện tại không có thao tác khả dụng trên Incident này. Mọi
+            lệnh vẫn được API kiểm tra lại theo role và Assignment.
           </p>
         ) : null}
         {status === 'received' && canMutate ? (

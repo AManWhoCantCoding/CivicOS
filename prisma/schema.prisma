@@ -237,7 +237,9 @@ model OfflineCommand {
 
 model IntakeReport {
   id                String   @id @default(cuid())
-  channel           String
+  channel           String?
+  sourceChannel     String?
+  status            String   @default("RECEIVED")
   receivedAt        DateTime
   content           String
   sourceName        String?
@@ -247,14 +249,39 @@ model IntakeReport {
   sensitiveRef      String?
   sensitiveRefIndex String?
   createdById       String
+  organizationId    String?
+  classification    String?
+  verificationNote  String?
+  verificationResult String?
+  processedNote     String?
+  confirmedAt       DateTime?
+  confirmedById     String?
+  transferToId      String?
   idempotencyKey    String?  @unique
   incidentId        String?  @unique
+  version           Int      @default(1)
   createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([status, receivedAt])
+  @@index([organizationId, status])
+}
+
+model IntakeCommand {
+  id             String   @id @default(cuid())
+  reportId       String
+  command        String
+  idempotencyKey String
+  response       Json
+  createdAt      DateTime @default(now())
+
+  @@unique([reportId, command, idempotencyKey])
+  @@index([reportId, command])
 }
 
 model Incident {
   id             String    @id @default(cuid())
-  intakeReportId String    @unique
+  intakeReportId String?   @unique
   status         String    @default("received")
   category       String?
   severity       String?

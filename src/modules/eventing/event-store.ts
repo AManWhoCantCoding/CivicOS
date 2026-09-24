@@ -8,6 +8,7 @@ import type {
   EventConsumer,
   RegisteredEventConsumer,
 } from './contracts';
+import { e2eTrace } from './e2e-trace';
 
 type EventingClient = PrismaClient | Prisma.TransactionClient;
 
@@ -27,6 +28,12 @@ export function registerEventConsumer(
   const registration = { name: consumerName, handler: consumer };
   entries.push(registration);
   consumers.set(eventType, entries);
+  e2eTrace({
+    kind: 'consumer-registration',
+    status: 'registered',
+    eventType,
+    consumerName,
+  });
 
   return () => {
     const current = consumers.get(eventType) ?? [];
@@ -113,6 +120,16 @@ export async function appendEvent(
       existing.aggregateId === input.aggregateId &&
       existing.aggregateVersion === input.aggregateVersion;
     if (!sameEvent) throw new Error(`DUPLICATE_EVENT_ID:${eventId}`);
+    e2eTrace({
+      kind: 'event',
+      operation: 'append',
+      status: 'replayed',
+      eventType: existing.eventType,
+      eventId: existing.eventId,
+      aggregateType: existing.aggregateType,
+      aggregateId: existing.aggregateId,
+      aggregateVersion: existing.aggregateVersion,
+    });
     return toDomainEvent(existing);
   }
 
@@ -150,22 +167,37 @@ export async function appendEvent(
       aggregateVersion: event.aggregateVersion,
       occurredAt: event.occurredAt,
       recordedAt: event.recordedAt,
-      actorId: event.actorId,
-      actorRole: event.actorRole,
-      actorName: event.actorName,
-      organizationId: event.organizationId,
-      correlationId: event.correlationId,
-      causationId: event.causationId,
+      ...(event.actorId ? { actorId: event.actorId } : {}),
+      ...(event.actorRole ? { actorRole: event.actorRole } : {}),
+      ...(event.actorName ? { actorName: event.actorName } : {}),
+      ...(event.organizationId ? { organizationId: event.organizationId } : {}),
+      ...(event.correlationId ? { correlationId: event.correlationId } : {}),
+      ...(event.causationId ? { causationId: event.causationId } : {}),
       payload: event.payload,
       metadata: event.metadata,
     },
   });
 
-  await client.outboxMessage.create({
+  const outboxMessage = await client.outboxMessage.create({
     data: {
       eventId: event.eventId,
       availableAt: recordedAt,
     },
+  });
+
+  e2eTrace({
+    kind: 'event',
+    operation: 'append',
+    status: 'created',
+    eventType: event.eventType,
+    eventId: event.eventId,
+    aggregateType: event.aggregateType,
+    aggregateId: event.aggregateId,
+    aggregateVersion: event.aggregateVersion,
+    organizationId: event.organizationId,
+    outboxMessageId: outboxMessage.id,
+    outboxAttempt: outboxMessage.attempts,
+    outboxStatus: outboxMessage.status,
   });
 
   return {

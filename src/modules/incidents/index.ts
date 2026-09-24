@@ -1,26 +1,70 @@
 export type {
   IncidentActor,
+  IncidentInput,
   IncidentStatus,
+  IntakeChannelInput,
+  IntakeClassification,
+  IntakeCloseInput,
+  IntakeLegacyChannel,
+  IntakeProcessInput,
+  IntakeRejectInput,
   IntakeReportInput,
+  IntakeReportStatus,
+  IntakeReportView,
+  IntakeSourceChannel,
+  IntakeTransferInput,
+  IntakeVerifyInput,
 } from './contracts';
-export { assertIncidentTransition, isIncidentStatus } from './domain';
-export { assertNoSelfApproval, assertTransferDecisionScope } from './domain';
+export {
+  INTAKE_DOMAIN_EVENTS,
+  INTAKE_SLA,
+  INTAKE_SOURCE_CHANNELS,
+  MASKED_IDENTITY,
+  assertIncidentTransition,
+  assertIntakeTransition,
+  assertNoSelfApproval,
+  assertTransferDecisionScope,
+  isIncidentStatus,
+  isIntakeChannelInput,
+  isIntakeStatus,
+  normalizeSourceChannel,
+} from './domain';
 export {
   assignIncident,
   approveIncident,
+  approveIntakeTransfer,
   classifyIncident,
   closeIncident,
+  closeIntakeReport,
+  confirmIntakeReport,
+  convertIntakeToIncident,
   getIncident,
+  getIntakeReport,
+  intakeSlaSummary,
+  listIntakeReports,
+  maskIntakeReport,
+  processIntakeReport,
+  registerIncident,
   registerIntakeReport,
   rejectIncidentApproval,
+  rejectIntakeReport,
   resolveIncident,
   startVerification,
   transferIncident,
+  transferIntakeReport,
+  verifyIntakeReport,
 } from './commands';
 export {
   getIncidentReadModel,
+  getIntakeReadModel,
   listIncidents,
   rebuildIncidentProjection,
+  rebuildIntakeProjection,
   registerIncidentProjections,
+  registerIntakeProjections,
 } from './projection';
-export { parseIntakeReport } from './schemas';
+export {
+  parseIncident,
+  parseIntakeClassification,
+  parseIntakeReport,
+} from './schemas';

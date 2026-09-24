@@ -101,8 +101,9 @@ export const FEATURES: readonly FeatureDef[] = [
     moduleId: 'incidents',
     label: 'Ghi nhận tin báo',
     href: '/intake',
-    visibleRoles: ['duty_officer'],
+    visibleRoles: ['duty_officer', 'commander', 'superior_commander'],
     activeExact: '/intake',
+    activePrefixes: ['/intake/'],
   },
   {
     id: 'incident-assignment',

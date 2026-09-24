@@ -9,8 +9,12 @@ export function createEventWorker(intervalMs = 1000) {
     if (stopping || tickInFlight) return;
     tickInFlight = true;
     try {
-      await markOverdue();
       await processOneOutboxMessage();
+    } catch (error) {
+      console.error('CivicOS worker tick failed', error);
+    }
+    try {
+      await markOverdue();
     } catch (error) {
       console.error('CivicOS worker tick failed', error);
     } finally {
