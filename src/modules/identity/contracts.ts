@@ -10,16 +10,14 @@ export type RoleName =
   | 'system_operator';
 
 export type Capability =
-  | 'read'
-  | 'mutate'
-  | 'assign'
-  | 'approve'
-  | 'read_sensitive';
+  'read' | 'mutate' | 'assign' | 'approve' | 'read_sensitive';
 
 export type AssignmentTask =
   | 'incident_verification'
   | 'inspection_fieldwork'
   | 'vehicle_verification'
+  | 'resident_followup'
+  | 'mobile_read'
   | (string & {});
 
 export type PolicyAssignmentStatus = 'active' | 'revoked';
@@ -82,6 +80,8 @@ export const ASSIGNMENT_TASKS: readonly string[] = [
   'incident_verification',
   'inspection_fieldwork',
   'vehicle_verification',
+  'resident_followup',
+  'mobile_read',
 ];
 
 const BUSINESS_ROLES: readonly RoleName[] = [
@@ -98,12 +98,16 @@ export const TASK_CAPABILITIES: Record<string, readonly Capability[]> = {
   incident_verification: ['read', 'mutate', 'read_sensitive'],
   inspection_fieldwork: ['read', 'mutate', 'read_sensitive'],
   vehicle_verification: ['read', 'mutate', 'read_sensitive'],
+  resident_followup: ['read', 'mutate', 'read_sensitive'],
+  mobile_read: ['read'],
 };
 
 export const TASK_ALLOWED_ROLES: Record<string, readonly RoleName[]> = {
   incident_verification: BUSINESS_ROLES,
   inspection_fieldwork: BUSINESS_ROLES,
   vehicle_verification: BUSINESS_ROLES,
+  resident_followup: BUSINESS_ROLES,
+  mobile_read: BUSINESS_ROLES,
 };
 
 export function isTaskCompatibleWithRoles(

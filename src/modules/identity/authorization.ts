@@ -173,6 +173,11 @@ const resourceAggregateTypes: Record<string, string> = {
   Inspection: 'Inspection',
   SuspiciousVehicleRegistry: 'SuspiciousVehicleRegistry',
   VehicleObservation: 'VehicleObservation',
+  Subject: 'Subject',
+  SubjectManagementRecord: 'SubjectManagementRecord',
+  InspectionFinding: 'InspectionFinding',
+  ProjectionRecord: 'ProjectionRecord',
+  Notification: 'Notification',
 };
 
 async function resourceOrganizationId(
@@ -191,6 +196,67 @@ async function resourceOrganizationId(
     select: { organizationId: true },
   });
   return event?.organizationId ?? undefined;
+}
+
+async function mobileResourceOrganizationId(
+  client: PrismaClient | Prisma.TransactionClient,
+  resource: ResourceRef,
+): Promise<string | undefined> {
+  if (resource.resourceType === 'Establishment') {
+    return (
+      (
+        await client.establishment.findUnique({
+          where: { id: resource.resourceId },
+          select: { organizationId: true },
+        })
+      )?.organizationId ?? undefined
+    );
+  }
+  if (resource.resourceType === 'SubjectManagementRecord') {
+    return (
+      (
+        await client.subjectManagementRecord.findUnique({
+          where: { id: resource.resourceId },
+          select: { assignedOrganizationId: true },
+        })
+      )?.assignedOrganizationId ?? undefined
+    );
+  }
+  if (resource.resourceType === 'InspectionFinding') {
+    const finding = await client.inspectionFinding.findUnique({
+      where: { id: resource.resourceId },
+      select: { inspectionId: true },
+    });
+    if (!finding) return undefined;
+    const inspection = await client.inspection.findUnique({
+      where: { id: finding.inspectionId },
+      select: { establishmentId: true },
+    });
+    if (!inspection) return undefined;
+    return (
+      (
+        await client.establishment.findUnique({
+          where: { id: inspection.establishmentId },
+          select: { organizationId: true },
+        })
+      )?.organizationId ?? undefined
+    );
+  }
+  if (resource.resourceType === 'Incident') {
+    return (
+      (
+        await client.eventRecord.findFirst({
+          where: {
+            aggregateType: 'Incident',
+            aggregateId: resource.resourceId,
+          },
+          orderBy: { aggregateVersion: 'asc' },
+          select: { organizationId: true },
+        })
+      )?.organizationId ?? undefined
+    );
+  }
+  return undefined;
 }
 
 export async function canAccess(
@@ -294,6 +360,43 @@ export async function canViewSensitive(
   client?: PrismaClient | Prisma.TransactionClient,
 ): Promise<boolean> {
   return canAccess(user, resource, 'read_sensitive', client);
+}
+
+/** Mobile read boundary requiring an active, compatible Assignment for every role. */
+export async function hasActiveAssignmentForRead(
+  user: IdentityUser,
+  resource: ResourceRef,
+  client: PrismaClient | Prisma.TransactionClient = prisma,
+): Promise<boolean> {
+  const organizationId = await mobileResourceOrganizationId(client, resource);
+  if (!user.organizationUnitId || !organizationId) return false;
+  if (organizationId !== user.organizationUnitId) return false;
+  const assignments = await client.assignment.findMany({
+    where: {
+      assigneeUserId: user.id,
+      resourceType: resource.resourceType,
+      resourceId: resource.resourceId,
+      organizationId,
+      status: 'active',
+    },
+    select: { task: true },
+  });
+  return assignments.some(
+    ({ task }) =>
+      TASK_CAPABILITIES[task]?.includes('read') === true &&
+      isTaskCompatibleWithRoles(task, user.roles),
+  );
+}
+
+/** Throwing form of the mobile read boundary. */
+export async function requireMobileReadAccess(
+  user: IdentityUser,
+  resource: ResourceRef,
+  client: PrismaClient | Prisma.TransactionClient = prisma,
+): Promise<void> {
+  if (!(await hasActiveAssignmentForRead(user, resource, client))) {
+    throw new Error('FORBIDDEN');
+  }
 }
 
 export function requireRole(user: IdentityUser, ...roles: string[]): void {

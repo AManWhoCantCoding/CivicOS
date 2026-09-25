@@ -26,6 +26,8 @@ export {
   canRead,
   canViewSensitive,
   evaluatePolicy,
+  hasActiveAssignmentForRead,
+  requireMobileReadAccess,
   requireRole,
 } from './authorization';
 export type { EvaluatePolicyInput, PolicyEvaluation } from './authorization';
