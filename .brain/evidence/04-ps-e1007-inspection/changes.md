@@ -91,3 +91,21 @@ Acceptance Criteria chính: cadence 6 tháng/SLA 7 ngày, checklist/evidence GPS
 - `src/modules/inspections/projection.ts`: `getInspection` đọc state/version từ bản ghi `Inspection` authoritative thay vì trả projection có thể lag; giữ nguyên `baseVersion` và stale-version protection trong command.
 - Nguyên nhân gốc: approval tăng `prisma.inspection.version`, nhưng endpoint detail ưu tiên `inspection-read-model` chưa kịp cập nhật, nên Field officer nhận version cũ và `inspection.complete` bị từ chối với `STALE_OFFLINE_COMMAND`.
 - `Lesson-learned.md`: ghi mới mục `Authoritative aggregate version at command boundaries`.
+
+## Sửa blocker code-review lần này
+
+- `src/components/inspections/EnforcementApprovalPanel.tsx`: tải danh sách OrganizationUnit cấu hình được và hiển thị tên/cấp dữ liệu thật; bỏ các nhãn, placeholder và thông báo cố định cho một cấp hành chính.
+- `src/modules/inspections/commands.ts`: xác thực target transfer là OrganizationUnit active trong chuỗi parentId của actor, không dùng alias level cố định.
+- `src/modules/inspections/projection.ts`: giữ nguyên implementation vì `readModels` đã lọc JSON state theo `organizationId`; không thêm điều kiện scope trùng lặp.
+- `tests/inspections/inspection-slices-4-6.postgres.test.ts`: thêm regression projected-path với hai OrganizationUnit và fixture hierarchy cấu hình bằng parentId.
+- Chưa chạy verification theo yêu cầu Developer; không ghi nhận PASS.
+
+## Sửa lỗi typecheck lần này
+
+- `src/modules/inspections/commands.ts`: khởi tạo duyệt hierarchy transfer bằng giá trị `assertOrganizationUnit(actor)` đã được narrow thành `string`, giữ nguyên kiểm tra `parentId`, target active và configurable `name/level`.
+- Chưa chạy test/lint/typecheck/format/build theo yêu cầu Developer.
+
+## Sửa lỗi type inference lần thực thi này
+
+- `src/modules/inspections/commands.ts`: thêm annotation tường minh `{ parentId: string | null } | null` cho kết quả truy vấn `current` trong vòng duyệt OrganizationUnit hierarchy; giữ nguyên kiểm tra target là ancestor, active và configurable.
+- Chưa chạy test/lint/typecheck/format/build theo yêu cầu Developer.

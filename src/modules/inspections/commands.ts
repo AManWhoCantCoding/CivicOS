@@ -1131,15 +1131,32 @@ export async function transferRecommendation(
       throw new Error('SELF_APPROVAL_FORBIDDEN');
     const target = await tx.organizationUnit.findUnique({
       where: { id: organizationId },
-      select: { id: true, level: true, active: true },
+      select: { id: true, active: true },
     });
+    const visited = new Set<string>();
+    let currentId: string | null = assertOrganizationUnit(actor);
+    let targetIsAncestor = false;
+    while (currentId) {
+      if (visited.has(currentId))
+        throw new Error('ORGANIZATION_HIERARCHY_INVALID');
+      visited.add(currentId);
+      if (currentId === organizationId) {
+        targetIsAncestor = true;
+        break;
+      }
+      const current: { parentId: string | null } | null =
+        await tx.organizationUnit.findUnique({
+          where: { id: currentId },
+          select: { parentId: true },
+        });
+      currentId = current?.parentId ?? null;
+    }
     if (
       !target?.active ||
-      !['district', 'huyen', 'huyện'].includes(target.level)
+      !targetIsAncestor ||
+      target.id === actor.organizationUnitId
     )
       throw new Error('TRANSFER_TARGET_INVALID');
-    if (target.id === actor.organizationUnitId)
-      throw new Error('TRANSFER_TARGET_SAME_UNIT');
     const approval = await tx.approval.create({
       data: {
         resourceType: 'EnforcementRecommendation',

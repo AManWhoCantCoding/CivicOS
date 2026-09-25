@@ -16,6 +16,7 @@ import {
   completeInspection,
   getInspection,
   listInspections,
+  listEstablishments,
   recordFinding,
   registerEstablishment,
   rejectRecommendation,
@@ -30,7 +31,7 @@ import {
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
 const databaseTestTimeoutMs = 15_000;
 const stamp = randomUUID().slice(0, 8);
-const orgId = 'unit-nghia-tru';
+const orgId = `unit-commune-${stamp}`;
 const districtOrgId = `unit-district-${stamp}`;
 const storageRoot = `/tmp/civicos-inspection-s46-${stamp}`;
 
@@ -152,6 +153,14 @@ describe.skipIf(!postgresEnabled)(
           level: 'district',
         },
       });
+      await prisma.organizationUnit.create({
+        data: {
+          id: orgId,
+          name: 'Inspection commune synthetic',
+          level: 'commune',
+          parentId: districtOrgId,
+        },
+      });
       for (const user of [
         commander,
         approvalCommander,
@@ -205,6 +214,7 @@ describe.skipIf(!postgresEnabled)(
           },
         },
       });
+      await prisma.organizationUnit.delete({ where: { id: orgId } });
       await prisma.organizationUnit.delete({ where: { id: districtOrgId } });
     });
 
@@ -426,6 +436,24 @@ describe.skipIf(!postgresEnabled)(
           commander,
         ),
       ).rejects.toThrow('INVALID_LATITUDE');
+    });
+
+    it('scopes projected establishment reads to the actor OrganizationUnit', async () => {
+      const localId = await registerCatalog();
+      const upperId = await registerCatalog(
+        {},
+        {
+          ...commander,
+          id: `${commander.id}-upper`,
+          organizationUnitId: districtOrgId,
+        },
+      );
+      await rebuildInspectionProjection();
+
+      const establishments = await listEstablishments(commander);
+
+      expect(establishments.map(({ id }) => id)).toContain(localId);
+      expect(establishments.map(({ id }) => id)).not.toContain(upperId);
     });
 
     it('rejects duplicate schedule commands and emits InspectionScheduled exactly once', async () => {

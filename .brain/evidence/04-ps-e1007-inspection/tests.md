@@ -1236,3 +1236,84 @@ Log đầy đủ: `.brain/evidence/04-ps-e1007-inspection/logs/run28-test_e2e.lo
 | test | `npm run test` | PASS | 20.2s |
 | test:e2e | `npm run test:e2e` | PASS | 123.8s |
 | build | `npm run build` | PASS | 10.9s |
+
+## Lần chạy 31 — 2026-09-25T05:28:31.901Z (scope=full)
+
+- HEAD: 22b3765 | file chưa commit: 84 | Tree: caf14d38
+- Kết quả: **FAIL**
+
+| Bước | Lệnh | Kết quả | Thời gian |
+|---|---|---|---|
+| prisma:generate | `npm run prisma:generate` | PASS | 2.2s |
+| typecheck | `npm run typecheck` | FAIL | 7.6s |
+| lint | `npm run lint` | NOT_RUN | - |
+| format:check | `npm run format:check` | NOT_RUN | - |
+| test | `npm run test` | NOT_RUN | - |
+| test:e2e | `npm run test:e2e` | NOT_RUN | - |
+| build | `npm run build` | NOT_RUN | - |
+
+### Lỗi: typecheck
+
+Log đầy đủ: `.brain/evidence/04-ps-e1007-inspection/logs/run31-typecheck.log`. 60 dòng cuối (đã bỏ mã màu ANSI, đã che giá trị bí mật):
+
+````text
+
+> civic-os@0.1.0 typecheck
+> tsc --noEmit
+
+src/modules/inspections/commands.ts(1137,9): error TS2322: Type 'string | undefined' is not assignable to type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+````
+
+## Lần chạy 32 — 2026-09-25T05:32:09.457Z (scope=fast)
+
+- HEAD: 22b3765 | file chưa commit: 85 | Tree: 6d4b6200
+- Kết quả: **FAIL**
+
+| Bước | Lệnh | Kết quả | Thời gian |
+|---|---|---|---|
+| prisma:generate | `npm run prisma:generate` | PASS | 2.6s |
+| typecheck | `npm run typecheck` | FAIL | 7.7s |
+| lint | `npm run lint` | NOT_RUN | - |
+| format:check | `npm run format:check` | NOT_RUN | - |
+| test | `npm run test` | NOT_RUN | - |
+
+### Lỗi: typecheck
+
+Log đầy đủ: `.brain/evidence/04-ps-e1007-inspection/logs/run32-typecheck.log`. 60 dòng cuối (đã bỏ mã màu ANSI, đã che giá trị bí mật):
+
+````text
+
+> civic-os@0.1.0 typecheck
+> tsc --noEmit
+
+src/modules/inspections/commands.ts(1147,13): error TS7022: 'current' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
+````
+
+## Lần chạy 33 — 2026-09-25T05:37:23.349Z (scope=fast)
+
+- HEAD: 22b3765 | file chưa commit: 85 | Tree: 1908e3f6
+- Kết quả: **PASS**
+
+| Bước | Lệnh | Kết quả | Thời gian |
+|---|---|---|---|
+| prisma:generate | `npm run prisma:generate` | PASS | 2.3s |
+| typecheck | `npm run typecheck` | PASS | 5.5s |
+| lint | `npm run lint` | PASS | 14.3s |
+| format:check | `npm run format:check` | PASS | 8.4s |
+| test | `npm run test` | PASS | 22.4s |
+
+## Lần chạy 34 — 2026-09-25T05:41:56.552Z (scope=full)
+
+- HEAD: 22b3765 | file chưa commit: 85 | Tree: a88d1cfb
+- Kết quả: **PASS**
+
+| Bước | Lệnh | Kết quả | Thời gian |
+|---|---|---|---|
+| prisma:generate | `npm run prisma:generate` | PASS | 2.3s |
+| typecheck | `npm run typecheck` | PASS | 4.6s |
+| lint | `npm run lint` | PASS | 14.4s |
+| format:check | `npm run format:check` | PASS | 8.4s |
+| test | `npm run test` | PASS | 22.0s |
+| test:e2e | `npm run test:e2e` | PASS | 139.8s |
+| build | `npm run build` | PASS | 12.1s |

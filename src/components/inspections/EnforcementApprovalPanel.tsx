@@ -1,12 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   FeedbackMessage,
   readResponseError,
   useOnlineStatus,
 } from '@/components/field/client-state';
+
+type OrganizationUnit = {
+  id: string;
+  name: string;
+  level: string;
+  parentId: string | null;
+};
 
 export function EnforcementApprovalPanel({
   inspectionId,
@@ -32,9 +39,25 @@ export function EnforcementApprovalPanel({
   );
   const [message, setMessage] = useState<string | null>(null);
   const [tone, setTone] = useState<'success' | 'error' | 'warning'>('success');
+  const [organizationUnits, setOrganizationUnits] = useState<
+    OrganizationUnit[]
+  >([]);
   const [transferTargets, setTransferTargets] = useState<
     Record<string, string>
   >({});
+
+  useEffect(() => {
+    if (!online) return;
+    fetch('/api/identity/organization-units', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const body = (await response.json()) as {
+          organizationUnits?: OrganizationUnit[];
+        };
+        setOrganizationUnits(body.organizationUnits ?? []);
+      })
+      .catch(() => setOrganizationUnits([]));
+  }, [online]);
 
   async function decide(
     recommendationId: string,
@@ -99,7 +122,7 @@ export function EnforcementApprovalPanel({
     const organizationId = transferTargets[recommendationId]?.trim() ?? '';
     if (!organizationId) {
       setTone('error');
-      setMessage('Nhập OrganizationUnit cấp huyện để chuyển đề xuất.');
+      setMessage('Chọn OrganizationUnit đích để chuyển đề xuất.');
       return;
     }
     if (!online) {
@@ -128,7 +151,7 @@ export function EnforcementApprovalPanel({
       }
       const body = (await response.json()) as { inspectionVersion?: unknown };
       setTone('success');
-      setMessage('Đã chuyển đề xuất đến CA huyện.');
+      setMessage('Đã chuyển đề xuất đến OrganizationUnit đã chọn.');
       onChanged?.(
         typeof body.inspectionVersion === 'number'
           ? body.inspectionVersion
@@ -226,25 +249,49 @@ export function EnforcementApprovalPanel({
                           ? 'Đang xử lý…'
                           : 'Duyệt'}
                       </button>
-                      <input
-                        value={transferTargets[recommendation.id] ?? ''}
-                        onChange={(event) =>
-                          setTransferTargets((current) => ({
-                            ...current,
-                            [recommendation.id]: event.target.value,
-                          }))
-                        }
-                        placeholder="Mã unit cấp huyện"
-                        disabled={loadingId === recommendation.id}
-                        className="civicos-control min-h-[44px] min-w-48 border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-2 text-xs text-[var(--civicos-text)]"
-                      />
+                      {organizationUnits.length ? (
+                        <select
+                          aria-label="OrganizationUnit đích"
+                          value={transferTargets[recommendation.id] ?? ''}
+                          onChange={(event) =>
+                            setTransferTargets((current) => ({
+                              ...current,
+                              [recommendation.id]: event.target.value,
+                            }))
+                          }
+                          disabled={loadingId === recommendation.id}
+                          className="civicos-control min-h-[44px] min-w-48 border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-2 text-xs text-[var(--civicos-text)]"
+                        >
+                          <option value="" disabled>
+                            Chọn OrganizationUnit
+                          </option>
+                          {organizationUnits.map((unit) => (
+                            <option key={unit.id} value={unit.id}>
+                              {unit.name} · {unit.level}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          value={transferTargets[recommendation.id] ?? ''}
+                          onChange={(event) =>
+                            setTransferTargets((current) => ({
+                              ...current,
+                              [recommendation.id]: event.target.value,
+                            }))
+                          }
+                          placeholder="Mã OrganizationUnit đích"
+                          disabled={loadingId === recommendation.id}
+                          className="civicos-control min-h-[44px] min-w-48 border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-2 text-xs text-[var(--civicos-text)]"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => void transfer(recommendation.id)}
                         disabled={loadingId === recommendation.id || !online}
                         className="civicos-control border-[var(--civicos-warning)] px-3 py-2 text-xs text-[var(--civicos-warning)] hover:opacity-80 disabled:opacity-50"
                       >
-                        Chuyển CA huyện
+                        Chuyển đơn vị
                       </button>
                       <button
                         type="button"
