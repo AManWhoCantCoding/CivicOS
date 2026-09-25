@@ -1,6 +1,6 @@
 # Backend owner — HTTP contract cho mobile read-only
 
-- **Status:** pending
+- **Status:** done
 - **Blocked by:** 01, 02, 03, 04
 - **Loại:** feature
 - **Gate hướng:** có
