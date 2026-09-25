@@ -139,3 +139,7 @@ Sau khi hoàn tất phần suy ngược, ticket gốc mới được mở và đ
 ### Kết luận round-trip
 
 **PASS.** Phần suy ngược trước khi đọc ticket khớp với toàn bộ 15 AC và 4 rubric bắt buộc; không phát hiện yêu cầu nghiệp vụ nào bị code/test diễn giải lệch. Không chạy test, lint, typecheck, format-check, build, verify và không commit theo đúng yêu cầu.
+
+## Commit
+
+- Commit: `6783f46745f3864b34c07e1949bb21128d831edf`
