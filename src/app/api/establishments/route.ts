@@ -8,13 +8,17 @@ import {
   toApiError,
 } from '@/modules/inspections';
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
   const user = await getCurrentUser();
   if (!user)
     return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
   try {
     return NextResponse.json({
-      establishments: await listEstablishments(user),
+      establishments: await listEstablishments(user, {
+        type: new URL(request.url).searchParams.get('type') ?? undefined,
+        risk: new URL(request.url).searchParams.get('risk') ?? undefined,
+        status: new URL(request.url).searchParams.get('status') ?? undefined,
+      }),
     });
   } catch (error) {
     const apiError = toApiError(error);

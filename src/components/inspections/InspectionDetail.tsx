@@ -32,6 +32,8 @@ type Finding = {
   checklistKey: string;
   description: string;
   result: string;
+  severity?: string | null;
+  category?: string | null;
   evidenceIds?: unknown;
 };
 
@@ -40,6 +42,7 @@ type Recommendation = {
   action: string;
   reason?: string;
   status: string;
+  sla?: { dueAt: string; status: string } | null;
 };
 
 type InspectionData = {
@@ -174,7 +177,7 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
 
   if (!online && !data)
     return (
-      <main className="min-h-dvh bg-slate-950 p-8 text-slate-100">
+      <main className="min-h-dvh bg-[var(--civicos-canvas)] p-8 text-[var(--civicos-text)]">
         <FeedbackMessage
           message="Offline: inspection cần kết nối để tải hồ sơ."
           tone="warning"
@@ -183,16 +186,19 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
     );
   if (loading && !data)
     return (
-      <main className="min-h-dvh bg-slate-950 p-8 text-slate-400" role="status">
+      <main
+        className="min-h-dvh bg-[var(--civicos-canvas)] p-8 text-[var(--civicos-text-muted)]"
+        role="status"
+      >
         Đang tải inspection…
       </main>
     );
   if (error || !data?.inspection)
     return (
-      <main className="min-h-dvh bg-slate-950 p-8 text-slate-100">
+      <main className="min-h-dvh bg-[var(--civicos-canvas)] p-8 text-[var(--civicos-text)]">
         <div className="mx-auto max-w-4xl space-y-5">
           <Link
-            className="text-sm text-slate-400 hover:text-white"
+            className="text-sm text-[var(--civicos-text-muted)] hover:text-[var(--civicos-accent)]"
             href="/inspections/establishments"
           >
             ← Cơ sở
@@ -205,6 +211,19 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
             }
             tone={denied ? 'warning' : 'error'}
           />
+          {!denied ? (
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                setReloadToken((value) => value + 1);
+              }}
+              className="civicos-control border-[var(--civicos-border)] px-3 py-2 text-xs text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
+            >
+              Thử lại
+            </button>
+          ) : null}
         </div>
       </main>
     );
@@ -232,30 +251,30 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
   }
 
   return (
-    <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6">
+    <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6">
       <div className="mx-auto max-w-5xl">
         <Link
           href="/inspections/establishments"
-          className="text-sm text-slate-400 hover:text-white"
+          className="text-sm text-[var(--civicos-text-muted)] hover:text-[var(--civicos-accent)]"
         >
           ← Cơ sở
         </Link>
         <div className="mt-10 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+            <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
               Inspection
             </p>
-            <h1 className="mt-3 text-3xl font-semibold break-all text-white">
+            <h1 className="mt-3 text-3xl font-semibold break-all text-[var(--civicos-text)]">
               {inspection.id}
             </h1>
-            <p className="mt-3 text-sm text-slate-400">
+            <p className="mt-3 text-sm text-[var(--civicos-text-muted)]">
               Cơ sở: {inspection.establishmentId} · Lịch:{' '}
               {new Date(inspection.scheduledAt).toLocaleString('vi-VN')}
             </p>
           </div>
           <span
             data-testid="inspection-status"
-            className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200"
+            className="rounded-full bg-[var(--civicos-surface-raised)] px-3 py-1 text-xs text-[var(--civicos-accent)]"
           >
             {statusLabel(inspection.status)}
           </span>
@@ -268,22 +287,24 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
             />
           </div>
         ) : null}
-        <dl className="mt-6 grid gap-4 rounded-xl border border-slate-800 bg-slate-900 p-5 text-sm sm:grid-cols-3">
+        <dl className="civicos-surface mt-6 grid gap-4 rounded-xl p-5 text-sm sm:grid-cols-3">
           <div>
-            <dt className="text-slate-500">Chu kỳ</dt>
-            <dd className="mt-1 text-slate-200">
+            <dt className="text-[var(--civicos-text-muted)]">Chu kỳ</dt>
+            <dd className="mt-1 text-[var(--civicos-text)]">
               {inspection.cadenceMonths} tháng
             </dd>
           </div>
           <div>
-            <dt className="text-slate-500">Người được giao</dt>
-            <dd className="mt-1 break-all text-slate-200">
+            <dt className="text-[var(--civicos-text-muted)]">
+              Người được giao
+            </dt>
+            <dd className="mt-1 break-all text-[var(--civicos-text)]">
               {inspection.assignedUserId ?? 'Chưa giao'}
             </dd>
           </div>
           <div>
-            <dt className="text-slate-500">Kết quả</dt>
-            <dd className="mt-1 text-slate-200">
+            <dt className="text-[var(--civicos-text-muted)]">Kết quả</dt>
+            <dd className="mt-1 text-[var(--civicos-text)]">
               {inspection.result ?? 'Chưa có'}
             </dd>
           </div>
@@ -316,8 +337,8 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
               />
             </>
           ) : null}
-          <section className="rounded-xl border border-slate-800 bg-slate-900 p-5">
-            <h2 className="text-sm font-semibold text-white">
+          <section className="civicos-surface rounded-xl p-5">
+            <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
               Phát hiện đã ghi
             </h2>
             {data.findings.length ? (
@@ -325,18 +346,22 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
                 {data.findings.map((finding) => (
                   <article
                     key={finding.id}
-                    className="rounded-lg border border-slate-800 p-4"
+                    className="rounded-lg border border-[var(--civicos-border)] p-4"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="font-mono text-xs text-cyan-300">
+                        <p className="font-mono text-xs text-[var(--civicos-accent)]">
                           {finding.checklistKey}
                         </p>
-                        <p className="mt-2 text-sm text-slate-200">
+                        <p className="mt-2 text-sm text-[var(--civicos-text)]">
                           {finding.description}
                         </p>
+                        <p className="mt-1 text-xs text-[var(--civicos-text-muted)]">
+                          {finding.category ?? 'Chưa phân nhóm'} · mức độ{' '}
+                          {finding.severity ?? 'medium'}
+                        </p>
                       </div>
-                      <span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300">
+                      <span className="rounded-full bg-[var(--civicos-surface-raised)] px-3 py-1 text-xs text-[var(--civicos-text)]">
                         {finding.result}
                       </span>
                     </div>
@@ -347,7 +372,9 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
                 ))}
               </div>
             ) : (
-              <p className="mt-3 text-sm text-slate-500">Chưa có phát hiện.</p>
+              <p className="mt-3 text-sm text-[var(--civicos-text-muted)]">
+                Chưa có phát hiện.
+              </p>
             )}
           </section>
           {canFieldwork ? (

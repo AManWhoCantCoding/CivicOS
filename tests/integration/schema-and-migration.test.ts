@@ -45,6 +45,7 @@ const expectedMigrationChain = [
   '20260923090000_ps_e1004_resident_management',
   '20260924090000_ps_e1005_intake_report',
   '20260924100000_ps_e1005_canonical_channel',
+  '20260925000000_ps_e1007_completion',
 ];
 
 const expectedModels = [

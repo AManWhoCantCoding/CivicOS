@@ -7,6 +7,7 @@ import {
   readModels,
   registerEventConsumer,
   reduceReadModel,
+  replayAggregate,
   replayEvents,
   type DomainEvent,
 } from '@/modules/eventing';
@@ -33,6 +34,7 @@ export const inspectionEventTypes = [
   'EnforcementRecommendationSubmitted',
   'EnforcementApproved',
   'EnforcementRejected',
+  'EnforcementTransferred',
 ];
 
 export function establishmentState(establishment: {
@@ -44,6 +46,9 @@ export function establishmentState(establishment: {
   licenseRef: string | null;
   latitude: Prisma.Decimal | null;
   longitude: Prisma.Decimal | null;
+  risk: string;
+  status: string;
+  organizationId: string | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -57,6 +62,9 @@ export function establishmentState(establishment: {
     licenseRef: establishment.licenseRef,
     latitude: establishment.latitude?.toString() ?? null,
     longitude: establishment.longitude?.toString() ?? null,
+    risk: establishment.risk,
+    status: establishment.status,
+    organizationId: establishment.organizationId,
     active: establishment.active,
     createdAt: establishment.createdAt.toISOString(),
     updatedAt: establishment.updatedAt.toISOString(),
@@ -217,14 +225,28 @@ registerInspectionProjections();
 
 export async function rebuildInspectionProjection(
   client: PrismaClient = prisma,
+  inspectionIds?: string[],
 ): Promise<number> {
   await client.projectionRecord.deleteMany({
     where: {
-      projectionName: {
-        in: [establishmentProjectionName, inspectionProjectionName],
-      },
+      projectionName: inspectionIds
+        ? inspectionProjectionName
+        : { in: [establishmentProjectionName, inspectionProjectionName] },
+      ...(inspectionIds ? { aggregateId: { in: inspectionIds } } : {}),
     },
   });
+  if (inspectionIds) {
+    let count = 0;
+    for (const inspectionId of inspectionIds) {
+      count += await replayAggregate(
+        client,
+        'Inspection',
+        inspectionId,
+        (event) => projectInspectionEvent(event, client).then(() => undefined),
+      );
+    }
+    return count;
+  }
   return replayEvents(
     client,
     (event) => projectInspectionEvent(event, client).then(() => undefined),
@@ -232,8 +254,12 @@ export async function rebuildInspectionProjection(
   );
 }
 
-export async function listEstablishments(actor: InspectionActor) {
+export async function listEstablishments(
+  actor: InspectionActor,
+  filters: { type?: string; risk?: string; status?: string } = {},
+) {
   requireRole(actor, 'commander', 'office_officer');
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
   const projected = await readModels(
     establishmentProjectionName,
     'Establishment',
@@ -242,17 +268,27 @@ export async function listEstablishments(actor: InspectionActor) {
   const establishments = (
     projected.length
       ? projected.map(({ state }) => state as Record<string, unknown>)
-      : actor.organizationUnitId
-        ? []
-        : (
-            await prisma.establishment.findMany({
-              where: { active: true },
-              orderBy: { name: 'asc' },
-              take: 100,
-            })
-          ).map(establishmentState)
+      : (
+          await prisma.establishment.findMany({
+            where: {
+              active: filters.status === 'archived' ? false : true,
+              ...(actor.organizationUnitId
+                ? { organizationId: actor.organizationUnitId }
+                : {}),
+            },
+            orderBy: { name: 'asc' },
+            take: 100,
+          })
+        ).map(establishmentState)
   )
-    .filter(({ active }) => active === true)
+    .filter(
+      ({ active, status, type, risk }) =>
+        (filters.status === 'archived' ? active === false : active === true) &&
+        (!filters.status || status === filters.status) &&
+        (!filters.type || type === filters.type) &&
+        (!filters.risk || risk === filters.risk) &&
+        (filters.status !== 'archived' || status === 'archived'),
+    )
     .sort((left, right) => String(left.name).localeCompare(String(right.name)));
   await recordAudit({
     actor,
@@ -269,6 +305,7 @@ export async function getEstablishment(
   actor: InspectionActor,
 ) {
   requireRole(actor, 'commander', 'office_officer');
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
   const establishment = await prisma.projectionRecord
     .findUnique({
       where: {
@@ -295,10 +332,10 @@ export async function getEstablishment(
     orderBy: { aggregateVersion: 'asc' },
     select: { organizationId: true },
   });
-  if (
-    origin?.organizationId &&
-    origin.organizationId !== actor.organizationUnitId
-  ) {
+  const organizationId =
+    (establishment.state as Record<string, unknown>).organizationId ??
+    origin?.organizationId;
+  if (!organizationId || organizationId !== actor.organizationUnitId) {
     throw new Error('FORBIDDEN');
   }
   await recordAudit({
@@ -311,6 +348,7 @@ export async function getEstablishment(
 }
 
 export async function listInspections(actor: InspectionActor) {
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
   const assignedResourceIds = actor.roles.includes('commander')
     ? undefined
     : (
@@ -401,28 +439,131 @@ export async function listDueInspections(
   );
 }
 
+export async function inspectionStats(
+  actor: InspectionActor,
+  filters: { from?: string; to?: string; establishmentType?: string } = {},
+) {
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
+  requireRole(actor, 'commander', 'office_officer');
+  const from = filters.from ? new Date(filters.from) : undefined;
+  const to = filters.to ? new Date(filters.to) : undefined;
+  const establishmentIds = (
+    await prisma.establishment.findMany({
+      where: {
+        ...(actor.organizationUnitId
+          ? { organizationId: actor.organizationUnitId }
+          : {}),
+        ...(filters.establishmentType
+          ? { type: filters.establishmentType }
+          : {}),
+      },
+      select: { id: true },
+    })
+  ).map(({ id }) => id);
+  const inspections = await prisma.inspection.findMany({
+    where: {
+      establishmentId: { in: establishmentIds },
+      ...(from || to
+        ? {
+            scheduledAt: {
+              ...(from ? { gte: from } : {}),
+              ...(to ? { lte: to } : {}),
+            },
+          }
+        : {}),
+    },
+  });
+  const scoped = inspections;
+  const totalEstablishments = await prisma.establishment.count({
+    where: {
+      ...(actor.organizationUnitId
+        ? { organizationId: actor.organizationUnitId }
+        : {}),
+      ...(filters.establishmentType ? { type: filters.establishmentType } : {}),
+      active: true,
+    },
+  });
+  const results = { pass: 0, reminder: 0, needs_action: 0 } as Record<
+    'pass' | 'reminder' | 'needs_action',
+    number
+  >;
+  for (const inspection of scoped)
+    if (inspection.result && inspection.result in results)
+      results[inspection.result as keyof typeof results] += 1;
+  const recommendations = {
+    pending_approval: 0,
+    approved: 0,
+    rejected: 0,
+    transferred: 0,
+  };
+  const recommendationRows = await prisma.enforcementRecommendation.findMany({
+    where: { inspectionId: { in: scoped.map(({ id }) => id) } },
+    select: { status: true },
+  });
+  for (const recommendation of recommendationRows)
+    if (recommendation.status in recommendations)
+      recommendations[recommendation.status as keyof typeof recommendations] +=
+        1;
+  const grouped = new Map<string, { total: number; results: typeof results }>();
+  for (const inspection of scoped) {
+    const type = await prisma.establishment
+      .findUnique({
+        where: { id: inspection.establishmentId },
+        select: { type: true },
+      })
+      .then((establishment) => establishment?.type ?? 'unknown');
+    const group = grouped.get(type) ?? {
+      total: 0,
+      results: { pass: 0, reminder: 0, needs_action: 0 },
+    };
+    group.total += 1;
+    if (inspection.result && inspection.result in group.results)
+      group.results[inspection.result as keyof typeof group.results] += 1;
+    grouped.set(type, group);
+  }
+  const ratesByType = Object.fromEntries(
+    [...grouped.entries()].map(([type, group]) => [
+      type,
+      {
+        total: group.total,
+        passRate: group.total ? group.results.pass / group.total : 0,
+        reminderRate: group.total ? group.results.reminder / group.total : 0,
+        needsActionRate: group.total
+          ? group.results.needs_action / group.total
+          : 0,
+      },
+    ]),
+  );
+  return {
+    generatedAt: new Date().toISOString(),
+    ...filters,
+    totalEstablishments,
+    totalInspections: scoped.length,
+    results,
+    recommendations,
+    ratesByType,
+  };
+}
+
 export async function getInspection(
   inspectionId: string,
   actor: InspectionActor,
 ) {
-  const inspection = await prisma.projectionRecord
-    .findUnique({
-      where: {
-        projectionName_aggregateType_aggregateId: {
-          projectionName: inspectionProjectionName,
-          aggregateType: 'Inspection',
-          aggregateId: inspectionId,
-        },
-      },
-    })
-    .then(async (projection) => {
-      if (projection) return projection;
-      const source = await prisma.inspection.findUnique({
-        where: { id: inspectionId },
-      });
-      return source ? { state: inspectionState(source) } : null;
-    });
-  if (!inspection) throw new Error('INSPECTION_NOT_FOUND');
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
+  const source = await prisma.inspection.findUnique({
+    where: { id: inspectionId },
+  });
+  if (!source) throw new Error('INSPECTION_NOT_FOUND');
+  const inspection = { state: inspectionState(source) };
+  const establishment = await prisma.establishment.findUnique({
+    where: { id: source.establishmentId },
+    select: { organizationId: true },
+  });
+  if (
+    !establishment?.organizationId ||
+    establishment.organizationId !== actor.organizationUnitId
+  )
+    throw new Error('FORBIDDEN');
   await assertAccess(
     actor,
     { resourceType: 'Inspection', resourceId: inspectionId },
@@ -443,24 +584,45 @@ export async function getInspection(
     inspection.state && typeof inspection.state === 'object'
       ? String((inspection.state as Record<string, unknown>).templateId ?? '')
       : '';
-  const [findings, recommendations, template] = await Promise.all([
-    prisma.inspectionFinding.findMany({
-      where: { inspectionId },
-      orderBy: { createdAt: 'asc' },
-    }),
-    prisma.enforcementRecommendation.findMany({
-      where: { inspectionId },
-      orderBy: { createdAt: 'asc' },
-    }),
-    templateId
-      ? prisma.checklistTemplate.findUnique({ where: { id: templateId } })
-      : null,
-  ]);
+  const [findings, recommendations, template, recommendationSlas] =
+    await Promise.all([
+      prisma.inspectionFinding.findMany({
+        where: { inspectionId },
+        orderBy: { createdAt: 'asc' },
+      }),
+      prisma.enforcementRecommendation.findMany({
+        where: { inspectionId },
+        orderBy: { createdAt: 'asc' },
+      }),
+      templateId
+        ? prisma.checklistTemplate.findUnique({ where: { id: templateId } })
+        : null,
+      prisma.slaInstance.findMany({
+        where: {
+          resourceType: 'EnforcementRecommendation',
+          resourceId: {
+            in: (
+              await prisma.enforcementRecommendation.findMany({
+                where: { inspectionId },
+                select: { id: true },
+              })
+            ).map(({ id }) => id),
+          },
+        },
+        select: { resourceId: true, dueAt: true, status: true },
+      }),
+    ]);
+  const slaByRecommendation = new Map(
+    recommendationSlas.map((sla) => [sla.resourceId, sla]),
+  );
   return {
     inspection: inspection.state,
     permissions: { canFieldwork },
     template: template?.items ?? [],
     findings,
-    recommendations,
+    recommendations: recommendations.map((recommendation) => ({
+      ...recommendation,
+      sla: slaByRecommendation.get(recommendation.id) ?? null,
+    })),
   };
 }

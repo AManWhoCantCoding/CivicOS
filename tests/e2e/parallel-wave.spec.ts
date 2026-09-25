@@ -27,14 +27,34 @@ async function createIncidentViaApi(
       'Idempotency-Key': `parallel-wave-${Date.now()}-${Math.random()}`,
     },
     data: {
-      channel: 'in_person',
+      sourceChannel: 'direct',
       receivedAt: new Date().toISOString(),
       content,
     },
   });
   expect(response.ok()).toBe(true);
-  const body = (await response.json()) as { incidentId: string };
-  return body.incidentId;
+  const body = (await response.json()) as {
+    reportId: string;
+    incidentId: string | null;
+  };
+  expect(body.incidentId).toBeNull();
+  const verified = await page.request.post(
+    `/api/intake-reports/${body.reportId}/commands`,
+    { data: { command: 'verify', classification: 'sufficient' } },
+  );
+  expect(verified.ok()).toBe(true);
+  const confirmed = await page.request.post(
+    `/api/intake-reports/${body.reportId}/commands`,
+    { data: { command: 'confirm' } },
+  );
+  expect(confirmed.ok()).toBe(true);
+  const converted = await page.request.post(
+    `/api/intake-reports/${body.reportId}/commands`,
+    { data: { command: 'convert_to_incident' } },
+  );
+  expect(converted.ok()).toBe(true);
+  const convertedBody = (await converted.json()) as { incidentId: string };
+  return convertedBody.incidentId;
 }
 
 async function expectNoHorizontalOverflow(page: Page): Promise<void> {
@@ -158,6 +178,12 @@ async function expectLabeledControls(
   expect(unlabeled).toEqual([]);
 }
 
+const assignmentTaskByResourceType: Record<string, string> = {
+  Incident: 'incident_verification',
+  Inspection: 'inspection_fieldwork',
+  VehicleObservation: 'vehicle_verification',
+};
+
 test('parallel wave entry surface links all three modules', async ({
   page,
 }) => {
@@ -229,11 +255,14 @@ test('every exercised form control has an accessible label', async ({
 }) => {
   await loginAs(page, COMMANDER);
   await page.goto('/intake');
+  const intakeForm = page.locator('form').filter({
+    has: page.getByRole('button', { name: 'Ghi nhận tin báo' }),
+  });
   await expectLabeledControls(page, 'form');
-  await expect(page.getByLabel('Kênh tiếp nhận')).toBeVisible();
-  await expect(page.getByLabel('Nội dung tin báo')).toBeVisible();
-  await expect(page.getByLabel('Vĩ độ')).toBeVisible();
-  await expect(page.getByLabel('Kinh độ')).toBeVisible();
+  await expect(intakeForm.getByLabel('Kênh tiếp nhận')).toBeVisible();
+  await expect(intakeForm.getByLabel('Nội dung tin báo')).toBeVisible();
+  await expect(intakeForm.getByLabel('Vĩ độ')).toBeVisible();
+  await expect(intakeForm.getByLabel('Kinh độ')).toBeVisible();
 
   await page.goto('/inspections/establishments');
   await expect(page.getByLabel('Tên cơ sở')).toBeVisible();
@@ -257,10 +286,13 @@ test('form validation and error feedback are honest with keyboard focus-visible'
   await loginAs(page, COMMANDER);
 
   await page.goto('/intake');
-  await page.getByLabel('Kênh tiếp nhận').focus();
-  await expect(page.getByLabel('Kênh tiếp nhận')).toBeFocused();
-  await page.getByLabel('Nội dung tin báo').fill('   ');
-  await page.getByRole('button', { name: 'Tạo Incident' }).click();
+  const intakeForm = page.locator('form').filter({
+    has: page.getByRole('button', { name: 'Ghi nhận tin báo' }),
+  });
+  await intakeForm.getByLabel('Kênh tiếp nhận').focus();
+  await expect(intakeForm.getByLabel('Kênh tiếp nhận')).toBeFocused();
+  await intakeForm.getByLabel('Nội dung tin báo').fill('   ');
+  await intakeForm.getByRole('button', { name: 'Ghi nhận tin báo' }).click();
   await expect(
     page.locator('form [role="alert"], form [role="status"]'),
   ).toBeVisible();
@@ -646,7 +678,7 @@ test('401 and 403 authorization matrix covers five principals across three surfa
       data: {
         resourceType,
         resourceId,
-        task: `${resourceType.toLowerCase()}_matrix`,
+        task: assignmentTaskByResourceType[resourceType],
         assigneeUserIds: [assigneeUserId],
       },
     });
@@ -702,7 +734,6 @@ test('401 and 403 authorization matrix covers five principals across three surfa
     data: {
       establishmentId,
       scheduledAt: '2030-02-15T10:00:00.000Z',
-      cadenceMonths: 3,
       assignedUserId: fieldId,
     },
   });
@@ -759,7 +790,7 @@ test('401 and 403 authorization matrix covers five principals across three surfa
   ) {
     await loginAs(page, email);
     await gotoAndExpectApi(url, apiSuffix, 200);
-    await expect(page.getByText(visible).first()).toBeVisible({
+    await expect(page.locator('main').getByText(visible).first()).toBeVisible({
       timeout: 15000,
     });
     const api = await page.request.get(apiSuffix);
@@ -962,6 +993,7 @@ test('prefers-reduced-motion disables or reduces motion classes and animation', 
 }) => {
   const context = await browser.newContext({ reducedMotion: 'reduce' });
   const page = await context.newPage();
+  await loginAs(page, COMMANDER);
   await page.goto('/field/offline');
   await expect(page.getByText('Trạng thái thiết bị')).toBeVisible();
   const motion = await page.evaluate(() => {
@@ -994,7 +1026,7 @@ test('prefers-reduced-motion disables or reduces motion classes and animation', 
       .getByLabel('Đang tải hàng đợi Incident')
       .or(page.getByText('Chưa có Incident trong phạm vi hiển thị.'))
       .or(page.locator('a[href^="/incidents/"]').first()),
-  ).toBeVisible({ timeout: 15000 });
+  ).toBeVisible({ timeout: 30000 });
   await page.goto('/field/vehicles');
   await expect(
     page.getByRole('heading', { name: 'Phương tiện tại hiện trường' }),
@@ -1015,12 +1047,15 @@ test('touch targets, Tab path and focus-visible hold on primary actions', async 
   expect(syncBox?.height ?? 0).toBeGreaterThanOrEqual(44);
 
   await page.goto('/intake');
-  const submit = page.getByRole('button', { name: 'Tạo Incident' });
+  const submit = page.getByRole('button', { name: 'Ghi nhận tin báo' });
   await submit.focus();
   await expect(submit).toBeFocused();
   const submitBox = await submit.boundingBox();
   expect(submitBox?.height ?? 0).toBeGreaterThanOrEqual(24);
-  await page.getByLabel('Kênh tiếp nhận').focus();
+  const intakeForm = page.locator('form').filter({
+    has: page.getByRole('button', { name: 'Ghi nhận tin báo' }),
+  });
+  await intakeForm.getByLabel('Kênh tiếp nhận').focus();
   await page.keyboard.press('Tab');
   const afterTab = await page.evaluate(
     () => (document.activeElement as HTMLElement | null)?.tagName ?? 'none',

@@ -1,4 +1,4 @@
-import { isInspectionResult } from './domain';
+import { assertEstablishmentRisk, isInspectionResult } from './domain';
 
 export type EstablishmentInput = {
   name: string;
@@ -8,6 +8,8 @@ export type EstablishmentInput = {
   licenseRef?: string;
   latitude?: number;
   longitude?: number;
+  risk?: 'low' | 'medium' | 'high';
+  status?: 'active' | 'archived';
 };
 
 export type ScheduleInput = {
@@ -30,15 +32,18 @@ export type InspectionCommandInput =
       description: string;
       result: string;
       evidenceIds: string[];
+      severity?: string;
+      category?: string;
     }
   | {
-      command: 'recommend';
+      command: 'recommend' | 'submit_recommendation';
       findingIds: string[];
       action: string;
       reason: string;
     }
   | { command: 'approve'; recommendationId: string }
-  | { command: 'reject'; recommendationId: string; reason: string };
+  | { command: 'reject'; recommendationId: string; reason: string }
+  | { command: 'transfer'; recommendationId: string; organizationId: string };
 
 export type ApiError = {
   code: string;
@@ -101,6 +106,16 @@ export function parseEstablishmentInput(value: unknown): EstablishmentInput {
   if (hasLatitude && (latitude === undefined || longitude === undefined)) {
     throw new Error('GEOPOINT_INCOMPLETE');
   }
+  const riskValue = optionalTrimmed(input.risk) ?? 'medium';
+  assertEstablishmentRisk(riskValue);
+  const risk =
+    riskValue === 'low' || riskValue === 'medium' || riskValue === 'high'
+      ? riskValue
+      : undefined;
+  if (!risk) throw new Error('INVALID_ESTABLISHMENT_RISK');
+  const status = optionalTrimmed(input.status) ?? 'active';
+  if (status !== 'active' && status !== 'archived')
+    throw new Error('INVALID_ESTABLISHMENT_STATUS');
   return {
     name,
     ownerName,
@@ -111,6 +126,8 @@ export function parseEstablishmentInput(value: unknown): EstablishmentInput {
       : {}),
     ...(latitude !== undefined ? { latitude } : {}),
     ...(longitude !== undefined ? { longitude } : {}),
+    risk,
+    status,
   };
 }
 
@@ -175,16 +192,27 @@ export function parseInspectionCommand(value: unknown): InspectionCommandInput {
       description,
       result,
       evidenceIds: stringList(input.evidenceIds),
+      ...(optionalTrimmed(input.severity)
+        ? { severity: optionalTrimmed(input.severity) }
+        : {}),
+      ...(optionalTrimmed(input.category)
+        ? { category: optionalTrimmed(input.category) }
+        : {}),
     };
   }
-  if (command === 'recommend') {
+  if (command === 'recommend' || command === 'submit_recommendation') {
     const findingIds = stringList(input.findingIds);
     const action = trimmed(input.action);
     const reason = trimmed(input.reason);
     if (!findingIds.length || !action || !reason) {
       throw new Error('RECOMMENDATION_FIELDS_REQUIRED');
     }
-    return { command: 'recommend', findingIds, action, reason };
+    return {
+      command: command === 'submit_recommendation' ? command : 'recommend',
+      findingIds,
+      action,
+      reason,
+    };
   }
   if (command === 'approve') {
     const recommendationId = trimmed(input.recommendationId);
@@ -197,6 +225,13 @@ export function parseInspectionCommand(value: unknown): InspectionCommandInput {
     if (!recommendationId) throw new Error('RECOMMENDATION_NOT_FOUND');
     if (!reason) throw new Error('REJECTION_REASON_REQUIRED');
     return { command: 'reject', recommendationId, reason };
+  }
+  if (command === 'transfer') {
+    const recommendationId = trimmed(input.recommendationId);
+    const organizationId = trimmed(input.organizationId);
+    if (!recommendationId || !organizationId)
+      throw new Error('TRANSFER_TARGET_REQUIRED');
+    return { command: 'transfer', recommendationId, organizationId };
   }
   throw new Error('UNKNOWN_COMMAND');
 }
@@ -215,6 +250,17 @@ export function parseEstablishmentPatch(
   }
   if (input.licenseRef !== undefined) {
     patch.licenseRef = trimmed(input.licenseRef);
+  }
+  if (input.risk !== undefined) {
+    const risk = trimmed(input.risk);
+    assertEstablishmentRisk(risk);
+    patch.risk = risk;
+  }
+  if (input.status !== undefined) {
+    const status = trimmed(input.status);
+    if (status !== 'active' && status !== 'archived')
+      throw new Error('INVALID_ESTABLISHMENT_STATUS');
+    patch.status = status;
   }
   const hasLatitude =
     input.latitude !== undefined && String(input.latitude).trim() !== '';

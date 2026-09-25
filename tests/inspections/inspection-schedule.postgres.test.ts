@@ -1,7 +1,8 @@
+import { randomUUID } from 'node:crypto';
+
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { prisma } from '@/lib/prisma';
-import { processOutboxUntilIdle } from '@/modules/eventing';
 import type { IdentityUser } from '@/modules/identity';
 import {
   completeInspection,
@@ -11,10 +12,13 @@ import {
   saveChecklistResponses,
   scheduleInspection,
   startInspection,
+  rebuildInspectionProjection,
 } from '@/modules/inspections';
 
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
 const databaseTestTimeoutMs = 15_000;
+const fixtureStamp = randomUUID().slice(0, 8);
+const recurringEstablishmentType = `nhà nghỉ-${fixtureStamp}`;
 
 const actor: IdentityUser = {
   id: 'inspection-schedule-test-actor',
@@ -107,7 +111,7 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
       where: { id: { in: inspectionIds } },
     });
     await prisma.checklistTemplate.deleteMany({
-      where: { establishmentType: 'nhà nghỉ' },
+      where: { establishmentType: recurringEstablishmentType },
     });
     await prisma.establishment.deleteMany({ where: { id: establishmentId } });
     establishmentId = undefined;
@@ -149,10 +153,10 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
     async () => {
       const establishment = await registerEstablishment(
         {
-          name: 'Nhà nghỉ lịch định kỳ',
+          name: `Nhà nghỉ lịch định kỳ ${fixtureStamp}`,
           ownerName: 'Chủ cơ sở',
-          address: 'Địa chỉ kiểm tra lịch định kỳ',
-          type: 'nhà nghỉ',
+          address: `Địa chỉ kiểm tra lịch định kỳ ${fixtureStamp}`,
+          type: recurringEstablishmentType,
         },
         actor,
       );
@@ -194,8 +198,7 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
         { inspectionId: first.id, result: 'pass' },
         fieldActor,
       );
-      await processOutboxUntilIdle();
-
+      await rebuildInspectionProjection();
       const next = await prisma.inspection.findUnique({
         where: {
           establishmentId_scheduledAt: {
@@ -221,10 +224,10 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
     async () => {
       const establishment = await registerEstablishment(
         {
-          name: 'Nhà nghỉ đọc inspection',
+          name: `Nhà nghỉ đọc inspection ${fixtureStamp}`,
           ownerName: 'Chủ cơ sở',
-          address: 'Địa chỉ đọc inspection',
-          type: 'nhà nghỉ',
+          address: `Địa chỉ đọc inspection ${fixtureStamp}`,
+          type: recurringEstablishmentType,
         },
         actor,
       );

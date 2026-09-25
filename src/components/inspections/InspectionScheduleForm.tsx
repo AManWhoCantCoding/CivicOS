@@ -113,13 +113,13 @@ export function InspectionScheduleForm({
   return (
     <form
       onSubmit={submit}
-      className="space-y-5 rounded-2xl border border-slate-800 bg-slate-900 p-5"
+      className="civicos-surface space-y-5 rounded-2xl p-5"
     >
       <div>
-        <h2 className="text-base font-semibold text-white">
+        <h2 className="text-base font-semibold text-[var(--civicos-text)]">
           Lập lịch kiểm tra
         </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-400">
+        <p className="mt-2 text-sm leading-6 text-[var(--civicos-text-muted)]">
           Chọn cơ sở, ngày kiểm tra, chu kỳ và người được giao.
         </p>
       </div>
@@ -130,21 +130,21 @@ export function InspectionScheduleForm({
         />
       ) : null}
       {establishmentId ? (
-        <div className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-3 text-sm text-slate-300">
+        <div className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-sm text-[var(--civicos-text)]">
           Cơ sở:{' '}
-          <span className="font-medium text-white">
+          <span className="font-medium text-[var(--civicos-text)]">
             {establishments.find((item) => item.id === establishmentId)?.name ??
               establishmentId}
           </span>
         </div>
       ) : (
-        <label className="block text-sm text-slate-200">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Cơ sở
           <select
             name="establishmentId"
             required
             defaultValue=""
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+            className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
           >
             <option value="" disabled>
               Chọn cơ sở
@@ -157,21 +157,21 @@ export function InspectionScheduleForm({
           </select>
         </label>
       )}
-      <label className="block text-sm text-slate-200">
+      <label className="block text-sm text-[var(--civicos-text)]">
         Thời gian kiểm tra
         <input
           name="scheduledAt"
           required
           type="datetime-local"
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+          className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
         />
       </label>
-      <label className="block text-sm text-slate-200">
+      <label className="block text-sm text-[var(--civicos-text)]">
         Chu kỳ
         <select
           name="cadenceMonths"
           defaultValue="6"
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+          className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
         >
           {[1, 2, 3, 4, 5, 6].map((months) => (
             <option key={months} value={months}>
@@ -180,13 +180,14 @@ export function InspectionScheduleForm({
           ))}
         </select>
       </label>
-      <label className="block text-sm text-slate-200">
-        Người được giao <span className="text-slate-500">(tuỳ chọn)</span>
+      <label className="block text-sm text-[var(--civicos-text)]">
+        Người được giao{' '}
+        <span className="text-[var(--civicos-text-muted)]">(tuỳ chọn)</span>
         {users.length ? (
           <select
             value={assigneeUserId}
             onChange={(event) => setAssigneeUserId(event.target.value)}
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+            className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
           >
             <option value="">Chưa giao</option>
             {users.map((user) => (
@@ -200,12 +201,12 @@ export function InspectionScheduleForm({
             value={assigneeUserId}
             onChange={(event) => setAssigneeUserId(event.target.value)}
             placeholder="Mã user nếu đã biết"
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+            className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
           />
         )}
       </label>
       {assigneeMessage ? (
-        <p className="text-xs text-slate-500" role="status">
+        <p className="text-xs text-[var(--civicos-text-muted)]" role="status">
           {assigneeMessage}
         </p>
       ) : null}
@@ -215,7 +216,7 @@ export function InspectionScheduleForm({
         disabled={
           loading || !online || (!establishmentId && !establishments.length)
         }
-        className="w-full rounded-lg bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+        className="civicos-control w-full bg-[var(--civicos-accent)] px-4 py-3 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? 'Đang lập lịch…' : 'Tạo lịch kiểm tra'}
       </button>

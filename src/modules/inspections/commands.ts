@@ -57,6 +57,31 @@ function assertCadenceMonths(value: number | undefined): number {
   return cadenceMonths;
 }
 
+async function assertCadenceCapability(
+  actor: InspectionActor,
+  cadenceMonths: number,
+  establishmentId: string,
+  client: Prisma.TransactionClient | typeof prisma,
+) {
+  if (cadenceMonths >= 6) return;
+  assertOrganizationUnit(actor);
+  try {
+    await assertAccess(
+      actor,
+      { resourceType: 'Establishment', resourceId: establishmentId },
+      'mutate',
+      client,
+    );
+  } catch {
+    throw new Error('INSPECTION_CADENCE_PERMISSION_REQUIRED');
+  }
+}
+
+function assertOrganizationUnit(actor: InspectionActor): string {
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
+  return actor.organizationUnitId;
+}
+
 function addMonths(date: Date, months: number): Date {
   const next = new Date(date);
   const day = next.getUTCDate();
@@ -74,55 +99,97 @@ async function ensureTemplate(
   client: Prisma.TransactionClient | typeof prisma,
 ) {
   const normalizedType = type.trim().toLowerCase();
-  const items = normalizedType.includes('nhà nghỉ')
-    ? [
-        { key: 'license', label: 'Giấy phép lưu trú hợp lệ', required: true },
-        {
-          key: 'security',
-          label: 'Sổ theo dõi khách lưu trú và điều kiện an ninh',
-          required: true,
-        },
-        {
-          key: 'safety',
-          label: 'Điều kiện an toàn tại cơ sở',
-          required: false,
-        },
-      ]
-    : normalizedType.includes('karaoke') || normalizedType.includes('bar')
+  const items =
+    normalizedType.includes('nhà nghỉ') || normalizedType.includes('khách sạn')
       ? [
-          {
-            key: 'license',
-            label: 'Giấy phép kinh doanh hợp lệ',
-            required: true,
-          },
+          { key: 'license', label: 'Giấy phép lưu trú hợp lệ', required: true },
           {
             key: 'security',
-            label: 'Điều kiện an ninh và kiểm soát ra vào',
-            required: true,
-          },
-          {
-            key: 'safety',
-            label: 'Điều kiện phòng cháy và an toàn',
-            required: false,
-          },
-        ]
-      : [
-          {
-            key: 'license',
-            label: 'Giấy phép và hồ sơ hợp lệ',
-            required: true,
-          },
-          {
-            key: 'security',
-            label: 'Điều kiện an ninh, trật tự',
+            label: 'Sổ theo dõi khách lưu trú và điều kiện an ninh',
             required: true,
           },
           {
             key: 'safety',
             label: 'Điều kiện an toàn tại cơ sở',
             required: false,
+            evidenceRequired: true,
           },
-        ];
+        ]
+      : normalizedType.includes('karaoke') || normalizedType.includes('bar')
+        ? [
+            {
+              key: 'license',
+              label: 'Giấy phép kinh doanh hợp lệ',
+              required: true,
+            },
+            {
+              key: 'security',
+              label: 'Điều kiện an ninh và kiểm soát ra vào',
+              required: true,
+            },
+            {
+              key: 'safety',
+              label: 'Điều kiện phòng cháy và an toàn',
+              required: false,
+              evidenceRequired: true,
+            },
+          ]
+        : normalizedType.includes('cầm đồ') || normalizedType.includes('cam do')
+          ? [
+              {
+                key: 'license',
+                label: 'Giấy phép kinh doanh và hồ sơ tài sản',
+                required: true,
+              },
+              {
+                key: 'security',
+                label: 'Sổ giao nhận và nhận diện tài sản',
+                required: true,
+              },
+              {
+                key: 'safety',
+                label: 'Điều kiện an toàn kho',
+                required: false,
+                evidenceRequired: true,
+              },
+            ]
+          : normalizedType.includes('game')
+            ? [
+                {
+                  key: 'license',
+                  label: 'Giấy phép kinh doanh trò chơi',
+                  required: true,
+                },
+                {
+                  key: 'security',
+                  label: 'Kiểm soát người chơi và an ninh',
+                  required: true,
+                },
+                {
+                  key: 'safety',
+                  label: 'Điều kiện an toàn thiết bị',
+                  required: false,
+                  evidenceRequired: true,
+                },
+              ]
+            : [
+                {
+                  key: 'license',
+                  label: 'Giấy phép và hồ sơ hợp lệ',
+                  required: true,
+                },
+                {
+                  key: 'security',
+                  label: 'Điều kiện an ninh, trật tự',
+                  required: true,
+                },
+                {
+                  key: 'safety',
+                  label: 'Điều kiện an toàn tại cơ sở',
+                  required: false,
+                  evidenceRequired: true,
+                },
+              ];
   return client.checklistTemplate.upsert({
     where: {
       establishmentType_version: { establishmentType: type, version: 1 },
@@ -140,8 +207,24 @@ async function ensureTemplate(
 async function assertInspectionAccess(
   inspectionId: string,
   actor: InspectionActor,
-  action: 'read' | 'mutate',
+  action: 'read' | 'mutate' | 'approve',
 ) {
+  const organizationId = assertOrganizationUnit(actor);
+  const inspection = await prisma.inspection.findUnique({
+    where: { id: inspectionId },
+    select: { establishmentId: true },
+  });
+  const establishment = inspection
+    ? await prisma.establishment.findUnique({
+        where: { id: inspection.establishmentId },
+        select: { organizationId: true },
+      })
+    : null;
+  if (
+    !establishment?.organizationId ||
+    establishment.organizationId !== organizationId
+  )
+    throw new Error('FORBIDDEN');
   await assertAccess(
     actor,
     { resourceType: 'Inspection', resourceId: inspectionId },
@@ -154,15 +237,14 @@ async function assertEstablishmentScope(
   actor: InspectionActor,
   client: Prisma.TransactionClient | typeof prisma,
 ) {
-  if (!actor.organizationUnitId) return;
-  const origin = await client.eventRecord.findFirst({
-    where: { aggregateType: 'Establishment', aggregateId: establishmentId },
-    orderBy: { aggregateVersion: 'asc' },
+  const organizationId = assertOrganizationUnit(actor);
+  const establishment = await client.establishment.findUnique({
+    where: { id: establishmentId },
     select: { organizationId: true },
   });
   if (
-    origin?.organizationId &&
-    origin.organizationId !== actor.organizationUnitId
+    !establishment?.organizationId ||
+    establishment.organizationId !== organizationId
   ) {
     throw new Error('FORBIDDEN');
   }
@@ -177,6 +259,7 @@ export async function registerEstablishment(
   actor: InspectionActor,
 ) {
   requireRole(actor, 'commander', 'office_officer');
+  assertOrganizationUnit(actor);
   if (
     !input.name.trim() ||
     !input.ownerName.trim() ||
@@ -193,6 +276,9 @@ export async function registerEstablishment(
         name: input.name.trim(),
         address: input.address.trim(),
         active: true,
+        ...(actor.organizationUnitId
+          ? { organizationId: actor.organizationUnitId }
+          : {}),
       },
     });
     if (duplicate) throw new Error('DUPLICATE_ESTABLISHMENT');
@@ -203,9 +289,16 @@ export async function registerEstablishment(
         ownerName: input.ownerName.trim(),
         address: input.address.trim(),
         type: input.type.trim(),
-        licenseRef: input.licenseRef?.trim() || undefined,
-        latitude: input.latitude,
-        longitude: input.longitude,
+        ...(input.licenseRef?.trim()
+          ? { licenseRef: input.licenseRef.trim() }
+          : {}),
+        ...(input.latitude !== undefined ? { latitude: input.latitude } : {}),
+        ...(input.longitude !== undefined
+          ? { longitude: input.longitude }
+          : {}),
+        risk: input.risk ?? 'medium',
+        status: input.status ?? 'active',
+        organizationId: actor.organizationUnitId,
       },
     });
     await appendEvent(tx, {
@@ -253,7 +346,6 @@ export async function scheduleInspection(
   const scheduledAt = new Date(input.scheduledAt);
   if (Number.isNaN(scheduledAt.getTime())) throw new Error('INVALID_SCHEDULE');
   const cadenceMonths = assertCadenceMonths(input.cadenceMonths);
-
   return prisma.$transaction(async (tx) => {
     const establishment = await tx.establishment.findUnique({
       where: { id: input.establishmentId },
@@ -261,6 +353,7 @@ export async function scheduleInspection(
     if (!establishment || !establishment.active)
       throw new Error('ESTABLISHMENT_NOT_FOUND');
     await assertEstablishmentScope(establishment.id, actor, tx);
+    await assertCadenceCapability(actor, cadenceMonths, establishment.id, tx);
     const template = await ensureTemplate(establishment.type, tx);
     const existing = await tx.inspection.findUnique({
       where: {
@@ -361,10 +454,13 @@ export async function updateEstablishment(
     licenseRef?: string;
     latitude?: number;
     longitude?: number;
+    risk?: 'low' | 'medium' | 'high';
+    status?: 'active' | 'archived';
   },
   actor: InspectionActor,
 ) {
   requireRole(actor, 'commander', 'office_officer');
+  assertOrganizationUnit(actor);
   assertCoordinates(input);
   return prisma.$transaction(async (tx) => {
     const current = await tx.establishment.findUnique({
@@ -381,6 +477,10 @@ export async function updateEstablishment(
           : {}),
         ...(input.address?.trim() ? { address: input.address.trim() } : {}),
         ...(input.type?.trim() ? { type: input.type.trim() } : {}),
+        ...(input.risk ? { risk: input.risk } : {}),
+        ...(input.status
+          ? { status: input.status, active: input.status === 'active' }
+          : {}),
         ...(input.licenseRef !== undefined
           ? { licenseRef: input.licenseRef.trim() }
           : {}),
@@ -417,6 +517,53 @@ export async function updateEstablishment(
       tx,
     );
     return updated;
+  });
+}
+
+export async function archiveEstablishment(
+  establishmentId: string,
+  actor: InspectionActor,
+) {
+  requireRole(actor, 'commander', 'office_officer');
+  assertOrganizationUnit(actor);
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.establishment.findUnique({
+      where: { id: establishmentId },
+    });
+    if (!current) throw new Error('ESTABLISHMENT_NOT_FOUND');
+    await assertEstablishmentScope(establishmentId, actor, tx);
+    const archived = await tx.establishment.update({
+      where: { id: establishmentId },
+      data: { active: false, status: 'archived' },
+    });
+    const aggregateVersion =
+      (await getAggregateVersion(tx, 'Establishment', establishmentId)) + 1;
+    await appendEvent(tx, {
+      eventId: randomUUID(),
+      eventType: 'EstablishmentUpdated',
+      eventVersion: 1,
+      aggregateType: 'Establishment',
+      aggregateId: establishmentId,
+      aggregateVersion,
+      occurredAt: archived.updatedAt,
+      actor: actorSnapshot(actor),
+      payload: {
+        establishmentId,
+        archived: true,
+        state: establishmentState(archived),
+      },
+      metadata: {},
+    });
+    await recordAudit(
+      {
+        actor,
+        resourceType: 'Establishment',
+        resourceId: establishmentId,
+        operation: 'establishment.archived',
+      },
+      tx,
+    );
+    return archived;
   });
 }
 
@@ -746,6 +893,8 @@ export async function recordFinding(
     description: string;
     result: string;
     evidenceIds?: string[];
+    severity?: string;
+    category?: string;
     baseVersion?: number;
   },
   actor: InspectionActor,
@@ -800,6 +949,8 @@ export async function recordFinding(
         checklistKey: input.checklistKey,
         description: input.description.trim(),
         result: input.result,
+        ...(input.severity?.trim() ? { severity: input.severity.trim() } : {}),
+        ...(input.category?.trim() ? { category: input.category.trim() } : {}),
         evidenceIds: evidenceIds as Prisma.InputJsonValue,
       },
     });
@@ -860,6 +1011,8 @@ export async function submitRecommendation(
   });
   if (!inspection) throw new Error('INSPECTION_NOT_FOUND');
   await assertInspectionAccess(input.inspectionId, actor, 'mutate');
+  if (inspection.status === 'completed')
+    throw new Error('INSPECTION_COMPLETED_IMMUTABLE');
 
   return prisma.$transaction(async (tx) => {
     const findings = await tx.inspectionFinding.findMany({
@@ -956,6 +1109,92 @@ export async function rejectRecommendation(
   );
 }
 
+export async function transferRecommendation(
+  inspectionId: string,
+  recommendationId: string,
+  organizationId: string,
+  actor: InspectionActor,
+) {
+  requireRole(actor, 'commander');
+  assertOrganizationUnit(actor);
+  if (!organizationId.trim()) throw new Error('TRANSFER_TARGET_REQUIRED');
+  await assertInspectionAccess(inspectionId, actor, 'approve');
+  return prisma.$transaction(async (tx) => {
+    const recommendation = await tx.enforcementRecommendation.findUnique({
+      where: { id: recommendationId },
+    });
+    if (!recommendation || recommendation.inspectionId !== inspectionId)
+      throw new Error('RECOMMENDATION_NOT_FOUND');
+    if (recommendation.status !== 'pending_approval')
+      throw new Error('RECOMMENDATION_ALREADY_DECIDED');
+    if (recommendation.submittedById === actor.id)
+      throw new Error('SELF_APPROVAL_FORBIDDEN');
+    const target = await tx.organizationUnit.findUnique({
+      where: { id: organizationId },
+      select: { id: true, level: true, active: true },
+    });
+    if (
+      !target?.active ||
+      !['district', 'huyen', 'huyện'].includes(target.level)
+    )
+      throw new Error('TRANSFER_TARGET_INVALID');
+    if (target.id === actor.organizationUnitId)
+      throw new Error('TRANSFER_TARGET_SAME_UNIT');
+    const approval = await tx.approval.create({
+      data: {
+        resourceType: 'EnforcementRecommendation',
+        resourceId: recommendationId,
+        action: 'transfer',
+        status: 'approved',
+        organizationId,
+        requestedById: recommendation.submittedById,
+        decidedById: actor.id,
+        decidedAt: new Date(),
+        payload: { organizationId },
+      },
+    });
+    const updated = await tx.enforcementRecommendation.update({
+      where: { id: recommendationId },
+      data: { status: 'transferred' },
+    });
+    const inspection = await tx.inspection.findUniqueOrThrow({
+      where: { id: inspectionId },
+    });
+    const updatedInspection = await tx.inspection.update({
+      where: { id: inspectionId, version: inspection.version },
+      data: { version: inspection.version + 1 },
+    });
+    await appendEvent(tx, {
+      eventId: randomUUID(),
+      eventType: 'EnforcementTransferred',
+      eventVersion: 1,
+      aggregateType: 'Inspection',
+      aggregateId: inspectionId,
+      aggregateVersion: updatedInspection.version,
+      occurredAt: new Date(),
+      actor: actorSnapshot(actor),
+      payload: {
+        recommendationId,
+        organizationId,
+        approvalId: approval.id,
+        state: inspectionState(updatedInspection),
+      },
+      metadata: {},
+    });
+    await recordAudit(
+      {
+        actor,
+        resourceType: 'Inspection',
+        resourceId: inspectionId,
+        operation: 'inspection.recommendation_transferred',
+        metadata: { recommendationId, organizationId, approvalId: approval.id },
+      },
+      tx,
+    );
+    return { ...updated, inspectionVersion: updatedInspection.version };
+  });
+}
+
 async function updateRecommendationStatus(
   inspectionId: string,
   recommendationId: string,
@@ -963,11 +1202,7 @@ async function updateRecommendationStatus(
   status: 'approved' | 'rejected',
   reason?: string,
 ) {
-  await assertAccess(
-    actor,
-    { resourceType: 'Inspection', resourceId: inspectionId },
-    'approve',
-  );
+  await assertInspectionAccess(inspectionId, actor, 'approve');
   return prisma.$transaction(async (tx) => {
     const recommendation = await tx.enforcementRecommendation.findUnique({
       where: { id: recommendationId },
@@ -978,6 +1213,8 @@ async function updateRecommendationStatus(
     if (recommendation.status !== 'pending_approval') {
       throw new Error('RECOMMENDATION_ALREADY_DECIDED');
     }
+    if (recommendation.submittedById === actor.id)
+      throw new Error('SELF_APPROVAL_FORBIDDEN');
     const inspection = await tx.inspection.findUnique({
       where: { id: recommendation.inspectionId },
     });
@@ -989,6 +1226,20 @@ async function updateRecommendationStatus(
         ...(status === 'approved'
           ? { approvedById: actor.id, approvedAt: new Date() }
           : {}),
+      },
+    });
+    await tx.approval.create({
+      data: {
+        resourceType: 'EnforcementRecommendation',
+        resourceId: recommendationId,
+        action: status === 'approved' ? 'approve' : 'reject',
+        status,
+        organizationId: actor.organizationUnitId,
+        requestedById: recommendation.submittedById,
+        decidedById: actor.id,
+        reason,
+        payload: { inspectionId },
+        decidedAt: new Date(),
       },
     });
     const updatedInspection = await tx.inspection.update({

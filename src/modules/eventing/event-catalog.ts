@@ -91,6 +91,7 @@ export const EVENT_CATALOG: readonly EventCatalogEntry[] = [
   inspection('EnforcementRecommendationSubmitted'),
   inspection('EnforcementApproved'),
   inspection('EnforcementRejected'),
+  inspection('EnforcementTransferred'),
   registry('SuspiciousVehicleRegistered'),
   registry('SuspiciousVehicleRegistryUpdated'),
   observation('VehicleObservationRecorded'),

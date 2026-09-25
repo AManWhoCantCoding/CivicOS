@@ -326,11 +326,15 @@ model Establishment {
   licenseRef String?
   latitude   Decimal?
   longitude  Decimal?
+  risk       String   @default("medium")
+  status     String   @default("active")
+  organizationId String?
   active     Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@index([type, active])
+  @@index([organizationId, status])
 }
 
 model ChecklistTemplate {
@@ -373,6 +377,8 @@ model InspectionFinding {
   checklistKey String
   description  String
   result       String
+  severity     String?
+  category     String?
   evidenceIds  Json
   createdAt    DateTime @default(now())
 

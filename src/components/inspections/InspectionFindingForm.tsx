@@ -65,6 +65,8 @@ export function InspectionFindingForm({
           checklistKey: String(form.get('checklistKey') ?? ''),
           description: String(form.get('description') ?? ''),
           result: String(form.get('result') ?? ''),
+          severity: String(form.get('severity') ?? ''),
+          category: String(form.get('category') ?? ''),
           evidenceIds,
         },
       });
@@ -95,11 +97,13 @@ export function InspectionFindingForm({
   return (
     <form
       onSubmit={submit}
-      className="space-y-5 rounded-xl border border-slate-800 bg-slate-900 p-5"
+      className="civicos-surface space-y-5 rounded-xl p-5"
     >
       <div>
-        <h2 className="text-sm font-semibold text-white">Ghi phát hiện</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-400">
+        <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
+          Ghi phát hiện
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-[var(--civicos-text-muted)]">
           Mỗi phát hiện phải gắn với một mục checklist và kết quả kiểm tra.
         </p>
       </div>
@@ -110,13 +114,13 @@ export function InspectionFindingForm({
         />
       ) : null}
       {!enabled ? (
-        <p className="rounded-lg border border-slate-800 px-3 py-2 text-sm text-slate-500">
+        <p className="civicos-feedback rounded-lg px-3 py-2 text-sm text-[var(--civicos-text-muted)]">
           Bắt đầu inspection để mở biểu mẫu phát hiện.
         </p>
       ) : null}
       <label
         htmlFor="inspection-finding-checklist"
-        className="block text-sm text-slate-200"
+        className="block text-sm text-[var(--civicos-text)]"
       >
         Mục checklist
         <select
@@ -125,7 +129,7 @@ export function InspectionFindingForm({
           required
           disabled={!enabled || loading}
           defaultValue=""
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+          className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] disabled:opacity-60"
         >
           <option value="" disabled>
             Chọn mục checklist
@@ -137,19 +141,42 @@ export function InspectionFindingForm({
           ))}
         </select>
       </label>
-      <label className="block text-sm text-slate-200">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block text-sm text-[var(--civicos-text)]">
+          Mức độ
+          <select
+            name="severity"
+            disabled={!enabled || loading}
+            defaultValue="medium"
+            className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] disabled:opacity-60"
+          >
+            <option value="low">Thấp</option>
+            <option value="medium">Trung bình</option>
+            <option value="high">Cao</option>
+          </select>
+        </label>
+        <label className="block text-sm text-[var(--civicos-text)]">
+          Nhóm vi phạm
+          <input
+            name="category"
+            disabled={!enabled || loading}
+            className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] disabled:opacity-60"
+          />
+        </label>
+      </div>
+      <label className="block text-sm text-[var(--civicos-text)]">
         Mô tả phát hiện
         <textarea
           name="description"
           required
           rows={4}
           disabled={!enabled || loading}
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+          className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] disabled:opacity-60"
         />
       </label>
       <label
         htmlFor="inspection-finding-result"
-        className="block text-sm text-slate-200"
+        className="block text-sm text-[var(--civicos-text)]"
       >
         Kết quả
         <select
@@ -158,7 +185,7 @@ export function InspectionFindingForm({
           required
           disabled={!enabled || loading}
           defaultValue=""
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+          className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] disabled:opacity-60"
         >
           <option value="" disabled>
             Chọn kết quả
@@ -183,7 +210,7 @@ export function InspectionFindingForm({
         }
       />
       {evidenceIds.length ? (
-        <p className="text-xs text-emerald-300" role="status">
+        <p className="text-xs text-[var(--civicos-success)]" role="status">
           Đã gắn {evidenceIds.length} bằng chứng vào phát hiện mới.
         </p>
       ) : null}
@@ -191,7 +218,7 @@ export function InspectionFindingForm({
       <button
         type="submit"
         disabled={!enabled || loading || uploading}
-        className="w-full rounded-lg bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+        className="civicos-control w-full bg-[var(--civicos-accent)] px-4 py-3 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? 'Đang lưu…' : 'Lưu phát hiện'}
       </button>

@@ -25,6 +25,7 @@ export {
 } from './domain';
 export {
   approveRecommendation,
+  archiveEstablishment,
   completeInspection,
   recordFinding,
   rejectRecommendation,
@@ -33,6 +34,7 @@ export {
   startInspection,
   saveChecklistResponses,
   submitRecommendation,
+  transferRecommendation,
   updateEstablishment,
 } from './commands';
 export {
@@ -41,6 +43,7 @@ export {
   listDueInspections,
   listEstablishments,
   listInspections,
+  inspectionStats,
   rebuildInspectionProjection,
   registerInspectionProjections,
 } from './projection';

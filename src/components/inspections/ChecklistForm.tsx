@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 
 import {
   FeedbackMessage,
@@ -12,6 +12,7 @@ export type ChecklistItem = {
   key: string;
   label: string;
   required: boolean;
+  evidenceRequired?: boolean;
 };
 
 const defaultChecklistItems: ChecklistItem[] = [
@@ -63,8 +64,19 @@ export function ChecklistForm({
   const [loadingCommand, setLoadingCommand] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [tone, setTone] = useState<'success' | 'error' | 'warning'>('success');
+  const [dirty, setDirty] = useState(false);
 
   const editable = status === 'in_progress';
+
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
 
   async function command(
     commandName: string,
@@ -134,18 +146,21 @@ export function ChecklistForm({
     void command('save_checklist', {
       responses: items.map(({ key }) => ({ key, value: responses[key] ?? '' })),
     });
+    setDirty(false);
   }
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900 p-5">
+    <section className="civicos-surface rounded-xl p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-white">Checklist</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
+          <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
+            Checklist
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--civicos-text-muted)]">
             Trạng thái checklist đi theo vòng đời của inspection.
           </p>
         </div>
-        <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">
+        <span className="rounded-full bg-[var(--civicos-surface-raised)] px-3 py-1 text-xs text-[var(--civicos-accent)]">
           {statusLabel(status)}
         </span>
       </div>
@@ -158,31 +173,43 @@ export function ChecklistForm({
         </div>
       ) : null}
       <form onSubmit={saveChecklist} className="mt-5 space-y-4">
-        {items.map(({ key, label, required }) => (
-          <label key={key} className="block text-sm text-slate-200">
+        {items.map(({ key, label, required, evidenceRequired }) => (
+          <label key={key} className="block text-sm text-[var(--civicos-text)]">
             {label}
-            {required ? <span className="ml-1 text-cyan-300">*</span> : null}
+            {required ? (
+              <span className="ml-1 text-[var(--civicos-accent)]">*</span>
+            ) : null}
+            {evidenceRequired ? (
+              <span className="ml-2 text-xs text-[var(--civicos-warning)]">
+                cần Evidence
+              </span>
+            ) : null}
             <textarea
               value={responses[key] ?? ''}
-              onChange={(event) =>
+              onChange={(event) => {
                 setResponses((current) => ({
                   ...current,
                   [key]: event.target.value,
-                }))
-              }
+                }));
+                setDirty(true);
+              }}
               disabled={!editable || loadingCommand !== null}
               rows={2}
-              className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30 disabled:opacity-60"
+              className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-2 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] disabled:opacity-60"
             />
           </label>
         ))}
+        <p className="text-xs text-[var(--civicos-text-muted)]" role="status">
+          Tiến độ: {items.filter(({ key }) => responses[key]?.trim()).length}/
+          {items.length} mục đã trả lời
+        </p>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           {status === 'scheduled' ? (
             <button
               type="button"
               onClick={() => void command('start')}
               disabled={loadingCommand !== null}
-              className="min-h-[44px] rounded-lg bg-cyan-300 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-60 motion-reduce:transition-none"
+              className="civicos-control min-h-[44px] bg-[var(--civicos-accent)] px-3 py-2 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:opacity-90 disabled:opacity-60 motion-reduce:transition-none"
             >
               {loadingCommand === 'start'
                 ? 'Đang bắt đầu…'
@@ -193,7 +220,7 @@ export function ChecklistForm({
             <button
               type="submit"
               disabled={loadingCommand !== null}
-              className="min-h-[44px] rounded-lg border border-cyan-300/60 px-3 py-2 text-sm text-cyan-100 hover:border-cyan-200 disabled:opacity-60 motion-reduce:transition-none"
+              className="civicos-control min-h-[44px] border border-[var(--civicos-accent)] px-3 py-2 text-sm text-[var(--civicos-accent)] hover:opacity-80 disabled:opacity-60 motion-reduce:transition-none"
             >
               {loadingCommand === 'save_checklist'
                 ? 'Đang lưu…'
@@ -203,7 +230,7 @@ export function ChecklistForm({
         </div>
       </form>
       {editable ? (
-        <div className="mt-4 flex min-w-56 flex-1 items-center gap-2 text-sm text-slate-300 sm:flex-none">
+        <div className="mt-4 flex min-w-56 flex-1 items-center gap-2 text-sm text-[var(--civicos-text-muted)] sm:flex-none">
           <label
             htmlFor="inspection-complete-result"
             className="flex min-w-0 flex-1 items-center gap-2"
@@ -215,7 +242,7 @@ export function ChecklistForm({
               onChange={(event) => setCompletionResult(event.target.value)}
               disabled={loadingCommand !== null}
               required
-              className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+              className="civicos-control min-w-0 flex-1 border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-2 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] disabled:opacity-60"
             >
               <option value="" disabled>
                 Chọn kết quả hoàn tất
@@ -233,14 +260,14 @@ export function ChecklistForm({
             onClick={() =>
               void command('complete', { result: completionResult })
             }
-            className="min-h-[44px] rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:border-cyan-300 disabled:opacity-50 motion-reduce:transition-none"
+            className="civicos-control min-h-[44px] border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] disabled:opacity-50 motion-reduce:transition-none"
           >
             Hoàn tất
           </button>
         </div>
       ) : null}
       {status === 'completed' ? (
-        <p className="mt-4 text-sm text-slate-500">
+        <p className="mt-4 text-sm text-[var(--civicos-text-muted)]">
           Inspection đã hoàn tất; checklist chỉ đọc.
         </p>
       ) : null}

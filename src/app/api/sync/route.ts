@@ -118,6 +118,8 @@ async function dispatchOfflineCommand(
           checklistKey: stringPayload(payload, 'checklistKey'),
           description: stringPayload(payload, 'description'),
           result: stringPayload(payload, 'result'),
+          severity: stringPayload(payload, 'severity') || undefined,
+          category: stringPayload(payload, 'category') || undefined,
           evidenceIds: Array.isArray(payload.evidenceIds)
             ? payload.evidenceIds.filter(
                 (value): value is string => typeof value === 'string',
@@ -127,7 +129,12 @@ async function dispatchOfflineCommand(
         },
         actor,
       );
-      return { findingId: finding.id };
+      return {
+        findingId: finding.id,
+        severity: finding.severity,
+        category: finding.category,
+        evidenceIds: finding.evidenceIds,
+      };
     }
     case 'inspection.complete': {
       const inspection = await completeInspection(

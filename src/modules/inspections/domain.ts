@@ -19,7 +19,8 @@ export const INSPECTION_DOMAIN_EVENTS: Record<
   | 'InspectionFindingRecorded'
   | 'EnforcementRecommendationSubmitted'
   | 'EnforcementApproved'
-  | 'EnforcementRejected',
+  | 'EnforcementRejected'
+  | 'EnforcementTransferred',
   InspectionDomainEventOwnership
 > = {
   EstablishmentRegistered: { aggregateType: 'Establishment', eventVersion: 1 },
@@ -35,10 +36,11 @@ export const INSPECTION_DOMAIN_EVENTS: Record<
   },
   EnforcementApproved: { aggregateType: 'Inspection', eventVersion: 1 },
   EnforcementRejected: { aggregateType: 'Inspection', eventVersion: 1 },
+  EnforcementTransferred: { aggregateType: 'Inspection', eventVersion: 1 },
 };
 
 export const ENFORCEMENT_RECOMMENDATION_STATUSES: EnforcementRecommendationStatus[] =
-  ['pending_approval', 'approved', 'rejected'];
+  ['pending_approval', 'approved', 'rejected', 'transferred'];
 
 const transitions: Record<InspectionStatus, InspectionStatus[]> = {
   scheduled: ['in_progress'],
@@ -64,6 +66,14 @@ export type ChecklistItem = {
   required?: boolean;
   evidenceRequired?: boolean;
 };
+
+export const ESTABLISHMENT_RISKS = ['low', 'medium', 'high'] as const;
+export const ESTABLISHMENT_STATUSES = ['active', 'archived'] as const;
+
+export function assertEstablishmentRisk(value: string): void {
+  if (!(ESTABLISHMENT_RISKS as readonly string[]).includes(value))
+    throw new Error('INVALID_ESTABLISHMENT_RISK');
+}
 
 export type ChecklistResponse = {
   key: string;

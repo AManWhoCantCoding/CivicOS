@@ -12,7 +12,7 @@ export default async function InspectionsLayout({
   }
   if (!hasBusinessCapability(current.roles)) {
     return (
-      <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
+      <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
         <div className="mx-auto max-w-6xl">
           <ModuleShell module="inspections">
             <div className="mt-2">

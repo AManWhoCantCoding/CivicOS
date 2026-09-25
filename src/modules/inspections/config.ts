@@ -5,7 +5,7 @@ export const INSPECTION_SLA = {
     durationMs: 7 * 24 * 60 * 60 * 1000,
   },
   recommendation: {
-    kind: 'inspection_recommendation_7d',
+    kind: 'inspection_violation_resolution_7d',
     durationMs: 7 * 24 * 60 * 60 * 1000,
   },
 } as const;

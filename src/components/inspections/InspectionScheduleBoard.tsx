@@ -123,21 +123,21 @@ export function InspectionScheduleBoard() {
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+            <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
               Schedule
             </p>
-            <h2 className="mt-2 text-xl font-semibold text-white">
+            <h2 className="mt-2 text-xl font-semibold text-[var(--civicos-text)]">
               Lịch kiểm tra
             </h2>
           </div>
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-[var(--civicos-text-muted)]">
             Lọc lịch
             <select
               value={filter}
               onChange={(event) =>
                 setFilter(event.target.value as 'all' | 'overdue' | 'upcoming')
               }
-              className="mt-2 min-h-[44px] rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-300"
+              className="civicos-control mt-2 min-h-[44px] border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-2 text-sm text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
             >
               <option value="all">Tất cả</option>
               <option value="overdue">Quá hạn</option>
@@ -152,7 +152,7 @@ export function InspectionScheduleBoard() {
           />
         ) : null}
         {online && loadState === 'loading' ? (
-          <p className="text-sm text-slate-400" role="status">
+          <p className="text-sm text-[var(--civicos-text-muted)]" role="status">
             Đang tải lịch kiểm tra…
           </p>
         ) : null}
@@ -163,13 +163,22 @@ export function InspectionScheduleBoard() {
           />
         ) : null}
         {loadState === 'error' ? (
-          <FeedbackMessage
-            message={error ?? 'Không thể tải lịch kiểm tra.'}
-            tone="error"
-          />
+          <div className="space-y-3">
+            <FeedbackMessage
+              message={error ?? 'Không thể tải lịch kiểm tra.'}
+              tone="error"
+            />
+            <button
+              type="button"
+              onClick={() => setReloadToken((value) => value + 1)}
+              className="civicos-control border-[var(--civicos-border)] px-3 py-2 text-xs text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
+            >
+              Thử lại
+            </button>
+          </div>
         ) : null}
         {loadState === 'ready' && !inspections.length ? (
-          <div className="rounded-xl border border-dashed border-slate-700 p-6 text-sm text-slate-400">
+          <div className="civicos-feedback rounded-xl border-dashed p-6 text-sm text-[var(--civicos-text-muted)]">
             Chưa có lịch kiểm tra.
           </div>
         ) : null}
@@ -192,42 +201,48 @@ export function InspectionScheduleBoard() {
                 return (
                   <article
                     key={inspection.id}
-                    className="rounded-xl border border-slate-800 bg-slate-900 p-4"
+                    className="civicos-surface rounded-xl p-4"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <Link
                           href={`/inspections/${inspection.id}`}
-                          className="font-medium text-white hover:text-cyan-200"
+                          className="font-medium text-[var(--civicos-text)] hover:text-[var(--civicos-accent)]"
                         >
                           {establishment?.name ?? inspection.establishmentId}
                         </Link>
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-[var(--civicos-text-muted)]">
                           {new Date(inspection.scheduledAt).toLocaleString(
                             'vi-VN',
                           )}
                         </p>
                       </div>
-                      <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">
+                      <span className="rounded-full bg-[var(--civicos-surface-raised)] px-3 py-1 text-xs text-[var(--civicos-accent)]">
                         {statusLabel(scheduleState)}
                       </span>
                     </div>
-                    <dl className="mt-4 grid gap-3 text-xs text-slate-400 sm:grid-cols-3">
+                    <dl className="mt-4 grid gap-3 text-xs text-[var(--civicos-text-muted)] sm:grid-cols-3">
                       <div>
-                        <dt className="text-slate-600">Trạng thái nghiệp vụ</dt>
-                        <dd className="mt-1 text-slate-300">
+                        <dt className="text-[var(--civicos-text-muted)]">
+                          Trạng thái nghiệp vụ
+                        </dt>
+                        <dd className="mt-1 text-[var(--civicos-text)]">
                           {statusLabel(inspection.status)}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-slate-600">Chu kỳ</dt>
-                        <dd className="mt-1 text-slate-300">
+                        <dt className="text-[var(--civicos-text-muted)]">
+                          Chu kỳ
+                        </dt>
+                        <dd className="mt-1 text-[var(--civicos-text)]">
                           {inspection.cadenceMonths} tháng
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-slate-600">Người được giao</dt>
-                        <dd className="mt-1 break-all text-slate-300">
+                        <dt className="text-[var(--civicos-text-muted)]">
+                          Người được giao
+                        </dt>
+                        <dd className="mt-1 break-all text-[var(--civicos-text)]">
                           {inspection.assignedUserId ?? 'Chưa giao'}
                         </dd>
                       </div>

@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { prisma } from '@/lib/prisma';
-import { processOutboxUntilIdle } from '@/modules/eventing';
 import type { IdentityUser } from '@/modules/identity';
 import {
   acceptOfflineCommand,
@@ -24,12 +23,15 @@ import {
   scheduleInspection,
   startInspection,
   submitRecommendation,
+  transferRecommendation,
+  rebuildInspectionProjection,
 } from '@/modules/inspections';
 
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
 const databaseTestTimeoutMs = 15_000;
 const stamp = randomUUID().slice(0, 8);
 const orgId = 'unit-nghia-tru';
+const districtOrgId = `unit-district-${stamp}`;
 const storageRoot = `/tmp/civicos-inspection-s46-${stamp}`;
 
 const commander: IdentityUser = {
@@ -37,6 +39,14 @@ const commander: IdentityUser = {
   email: `ps007-s46-${stamp}-commander@civicos.local`,
   name: 'PS007 slice 4-6 commander',
   roles: ['commander', 'field_officer'],
+  organizationUnitId: orgId,
+};
+
+const approvalCommander: IdentityUser = {
+  id: `ps007-s46-${stamp}-approver`,
+  email: `ps007-s46-${stamp}-approver@civicos.local`,
+  name: 'PS007 slice 4-6 approval commander',
+  roles: ['commander'],
   organizationUnitId: orgId,
 };
 
@@ -98,6 +108,21 @@ async function registerCatalog(
   return trackEstablishment(establishment.id);
 }
 
+async function registerTypedCatalog(type: string) {
+  const marker = randomUUID().slice(0, 8);
+  const establishment = await registerEstablishment(
+    {
+      name: `Co so ${type} ${stamp} ${marker}`,
+      ownerName: 'Chu co so',
+      address: `Dia chi ${type} ${stamp} ${marker}`,
+      type,
+    },
+    commander,
+  );
+  templateTypes.push(type);
+  return trackEstablishment(establishment.id);
+}
+
 async function scheduleAt(establishmentId: string, scheduledAt: string) {
   const inspection = await scheduleInspection(
     { establishmentId, assignedUserId: fieldOfficer.id, scheduledAt },
@@ -120,7 +145,19 @@ describe.skipIf(!postgresEnabled)(
   'PS-E1-007 slices 4-6 PostgreSQL seam',
   () => {
     beforeAll(async () => {
-      for (const user of [commander, fieldOfficer, unassignedOfficer]) {
+      await prisma.organizationUnit.create({
+        data: {
+          id: districtOrgId,
+          name: 'CA huyện synthetic',
+          level: 'district',
+        },
+      });
+      for (const user of [
+        commander,
+        approvalCommander,
+        fieldOfficer,
+        unassignedOfficer,
+      ]) {
         await prisma.user.create({
           data: {
             id: user.id,
@@ -146,14 +183,29 @@ describe.skipIf(!postgresEnabled)(
     afterAll(async () => {
       await prisma.session.deleteMany({
         where: {
-          userId: { in: [commander.id, fieldOfficer.id, unassignedOfficer.id] },
+          userId: {
+            in: [
+              commander.id,
+              approvalCommander.id,
+              fieldOfficer.id,
+              unassignedOfficer.id,
+            ],
+          },
         },
       });
       await prisma.user.deleteMany({
         where: {
-          id: { in: [commander.id, fieldOfficer.id, unassignedOfficer.id] },
+          id: {
+            in: [
+              commander.id,
+              approvalCommander.id,
+              fieldOfficer.id,
+              unassignedOfficer.id,
+            ],
+          },
         },
       });
+      await prisma.organizationUnit.delete({ where: { id: districtOrgId } });
     });
 
     afterEach(async () => {
@@ -314,6 +366,17 @@ describe.skipIf(!postgresEnabled)(
       expect(source).toMatchObject({ active: true });
 
       await expect(
+        scheduleInspection(
+          {
+            establishmentId,
+            scheduledAt: '2026-09-01T08:00:00.000Z',
+            cadenceMonths: 3,
+          },
+          commander,
+        ),
+      ).rejects.toThrow('INSPECTION_CADENCE_PERMISSION_REQUIRED');
+
+      await expect(
         registerEstablishment(
           {
             name: source.name,
@@ -431,7 +494,11 @@ describe.skipIf(!postgresEnabled)(
           establishmentId,
           '2026-01-05T08:00:00.000Z',
         );
-        await processOutboxUntilIdle();
+        await rebuildInspectionProjection(prisma, [
+          inspection.id,
+          future.id,
+          past.id,
+        ]);
         const view = await listInspections(commander);
         expect(view.find(({ id }) => id === future.id)).toMatchObject({
           scheduleState: 'upcoming',
@@ -495,12 +562,19 @@ describe.skipIf(!postgresEnabled)(
         commander,
       );
       trackEstablishment(generic.id);
+      const barId = await registerTypedCatalog(`bar-${stamp}`);
+      const pawnId = await registerTypedCatalog(`cầm đồ-${stamp}`);
+      const gameId = await registerTypedCatalog(`game-${stamp}`);
 
-      const [karaoke, nghiStay, genericStay] = await Promise.all([
-        scheduleAt(karaokeId, '2026-11-01T08:00:00.000Z'),
-        scheduleAt(nghi.id, '2026-11-01T08:00:00.000Z'),
-        scheduleAt(generic.id, '2026-11-01T08:00:00.000Z'),
-      ]);
+      const [karaoke, nghiStay, genericStay, bar, pawn, game] =
+        await Promise.all([
+          scheduleAt(karaokeId, '2026-11-01T08:00:00.000Z'),
+          scheduleAt(nghi.id, '2026-11-01T08:00:00.000Z'),
+          scheduleAt(generic.id, '2026-11-01T08:00:00.000Z'),
+          scheduleAt(barId, '2026-11-01T08:00:00.000Z'),
+          scheduleAt(pawnId, '2026-11-01T08:00:00.000Z'),
+          scheduleAt(gameId, '2026-11-01T08:00:00.000Z'),
+        ]);
       const templates = await prisma.checklistTemplate.findMany({
         where: {
           id: {
@@ -508,6 +582,9 @@ describe.skipIf(!postgresEnabled)(
               karaoke.templateId,
               nghiStay.templateId,
               genericStay.templateId,
+              bar.templateId,
+              pawn.templateId,
+              game.templateId,
             ],
           },
         },
@@ -523,6 +600,15 @@ describe.skipIf(!postgresEnabled)(
       expect(karaokeItems).not.toBe(nghiItems);
       expect(karaokeItems).not.toBe(genericItems);
       expect(nghiItems).toContain('lưu trú');
+      expect(JSON.stringify(byId.get(bar.templateId)?.items)).toContain(
+        'kiểm soát ra vào',
+      );
+      expect(JSON.stringify(byId.get(pawn.templateId)?.items)).toContain(
+        'tài sản',
+      );
+      expect(JSON.stringify(byId.get(game.templateId)?.items)).toContain(
+        'trò chơi',
+      );
 
       await prisma.checklistTemplate.create({
         data: {
@@ -647,10 +733,13 @@ describe.skipIf(!postgresEnabled)(
           commander,
         ),
       ).rejects.toThrow('RECOMMENDATION_PENDING_APPROVAL');
+      await expect(
+        approveRecommendation(inspection.id, pending.id, commander),
+      ).rejects.toThrow('SELF_APPROVAL_FORBIDDEN');
       await rejectRecommendation(
         inspection.id,
         pending.id,
-        commander,
+        approvalCommander,
         'Chua du can cu.',
       );
       await expect(
@@ -668,7 +757,11 @@ describe.skipIf(!postgresEnabled)(
         },
         commander,
       );
-      await approveRecommendation(inspection.id, approved.id, commander);
+      await approveRecommendation(
+        inspection.id,
+        approved.id,
+        approvalCommander,
+      );
       const completed = await completeInspection(
         { inspectionId: inspection.id, result: 'needs_action' },
         commander,
@@ -841,7 +934,14 @@ describe.skipIf(!postgresEnabled)(
         },
         commander,
       );
-      await approveRecommendation(inspection.id, recommendation.id, commander);
+      await expect(
+        approveRecommendation(inspection.id, recommendation.id, commander),
+      ).rejects.toThrow('SELF_APPROVAL_FORBIDDEN');
+      await approveRecommendation(
+        inspection.id,
+        recommendation.id,
+        approvalCommander,
+      );
 
       const events = await prisma.eventRecord.findMany({
         where: { aggregateType: 'Inspection', aggregateId: inspection.id },
@@ -935,6 +1035,31 @@ describe.skipIf(!postgresEnabled)(
         commander,
       );
       expect(decided).toMatchObject({ status: 'approved' });
+
+      const transferCandidate = await submitRecommendation(
+        {
+          inspectionId: inspection.id,
+          findingIds: [finding.id],
+          action: 'Chuyển cấp huyện',
+          reason: 'Cần phối hợp xử lý.',
+        },
+        fieldOfficer,
+      );
+      await expect(
+        transferRecommendation(
+          inspection.id,
+          transferCandidate.id,
+          districtOrgId,
+          fieldOfficer,
+        ),
+      ).rejects.toThrow('FORBIDDEN');
+      const transferred = await transferRecommendation(
+        inspection.id,
+        transferCandidate.id,
+        districtOrgId,
+        commander,
+      );
+      expect(transferred).toMatchObject({ status: 'transferred' });
     });
 
     it('preserves rejected and revised recommendation history', async () => {
@@ -976,10 +1101,18 @@ describe.skipIf(!postgresEnabled)(
       await expect(
         rejectRecommendation(inspection.id, first.id, commander, '  '),
       ).rejects.toThrow('REJECTION_REASON_REQUIRED');
+      await expect(
+        rejectRecommendation(
+          inspection.id,
+          first.id,
+          commander,
+          'Chua du can cu de phe duyet.',
+        ),
+      ).rejects.toThrow('SELF_APPROVAL_FORBIDDEN');
       const rejected = await rejectRecommendation(
         inspection.id,
         first.id,
-        commander,
+        approvalCommander,
         'Chua du can cu de phe duyet.',
       );
       expect(rejected).toMatchObject({ status: 'rejected' });
@@ -1013,7 +1146,7 @@ describe.skipIf(!postgresEnabled)(
       const approved = await approveRecommendation(
         inspection.id,
         revised.id,
-        commander,
+        approvalCommander,
       );
       expect(approved).toMatchObject({ status: 'approved' });
 
@@ -1027,7 +1160,7 @@ describe.skipIf(!postgresEnabled)(
       ]);
 
       await expect(
-        approveRecommendation(inspection.id, first.id, commander),
+        approveRecommendation(inspection.id, first.id, approvalCommander),
       ).rejects.toThrow('RECOMMENDATION_ALREADY_DECIDED');
     });
   },

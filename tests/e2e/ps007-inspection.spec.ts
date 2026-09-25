@@ -59,7 +59,6 @@ async function scheduleInspectionViaApi(
     data: {
       establishmentId,
       scheduledAt: '2030-01-15T10:00:00.000Z',
-      cadenceMonths: 3,
       assignedUserId: fieldUser!.id,
     },
   });
@@ -103,7 +102,7 @@ test('establishment-to-approval lifecycle runs through the browser without autom
   await page.getByLabel('Tên cơ sở').fill(establishmentName);
   await page.getByLabel('Chủ cơ sở').fill(`Chủ PS007 ${marker}`);
   await page.getByLabel('Địa chỉ').fill(`Địa chỉ PS007 ${marker}`);
-  await page.getByLabel('Loại hình').fill('Karaoke');
+  await page.getByLabel('Loại hình', { exact: true }).fill('Karaoke');
   await page.getByLabel(/Mã giấy phép/).fill(`GP-PS007-${marker}`);
   const establishmentResponsePromise = page.waitForResponse(
     (response) =>
@@ -130,7 +129,6 @@ test('establishment-to-approval lifecycle runs through the browser without autom
   const fieldUser = fieldUsers.users.find(({ email }) => email === FIELD);
   expect(fieldUser).toBeDefined();
   await page.getByLabel('Thời gian kiểm tra').fill('2030-01-15T10:00');
-  await page.getByLabel('Chu kỳ').selectOption('3');
   const assigneeControl = page
     .locator('label')
     .filter({ hasText: 'Người được giao' });

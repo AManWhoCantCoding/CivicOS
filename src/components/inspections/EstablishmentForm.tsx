@@ -17,6 +17,8 @@ export type EstablishmentRecord = {
   licenseRef?: string | null;
   latitude?: string | number | null;
   longitude?: string | number | null;
+  risk?: string | null;
+  status?: string | null;
 };
 
 export const establishmentChangedEventName = 'civicos:establishment-changed';
@@ -51,6 +53,8 @@ export function EstablishmentForm({
       ownerName: String(form.get('ownerName') ?? ''),
       address: String(form.get('address') ?? ''),
       type: String(form.get('type') ?? ''),
+      risk: String(form.get('risk') ?? 'medium'),
+      status: String(form.get('status') ?? 'active'),
       licenseRef: initial
         ? String(form.get('licenseRef') ?? '').trim()
         : String(form.get('licenseRef') ?? '').trim() || undefined,
@@ -116,13 +120,13 @@ export function EstablishmentForm({
     <form
       onSubmit={submit}
       noValidate
-      className="space-y-5 rounded-2xl border border-slate-800 bg-slate-900 p-5"
+      className="civicos-surface space-y-5 rounded-2xl p-5"
     >
       <div>
-        <h2 className="text-base font-semibold text-white">
+        <h2 className="text-base font-semibold text-[var(--civicos-text)]">
           {initial ? 'Chỉnh sửa cơ sở' : 'Thêm cơ sở kinh doanh'}
         </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-400">
+        <p className="mt-2 text-sm leading-6 text-[var(--civicos-text-muted)]">
           Thông tin này là nguồn cho checklist và lịch kiểm tra.
         </p>
       </div>
@@ -133,84 +137,110 @@ export function EstablishmentForm({
         />
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm text-slate-200">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Tên cơ sở
           <input
             id="establishment-name"
             name="name"
             required
             defaultValue={initial?.name}
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+            className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
           />
         </label>
-        <label className="block text-sm text-slate-200">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Chủ cơ sở
           <input
             id="establishment-owner"
             name="ownerName"
             required
             defaultValue={initial?.ownerName}
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+            className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
           />
         </label>
+        <label className="block text-sm text-[var(--civicos-text)]">
+          Risk
+          <select
+            name="risk"
+            defaultValue={initial?.risk ?? 'medium'}
+            className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
+          >
+            <option value="low">Thấp</option>
+            <option value="medium">Trung bình</option>
+            <option value="high">Cao</option>
+          </select>
+        </label>
+        {initial ? (
+          <label className="block text-sm text-[var(--civicos-text)]">
+            Trạng thái
+            <select
+              name="status"
+              defaultValue={initial.status ?? 'active'}
+              className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
+            >
+              <option value="active">Đang hoạt động</option>
+              <option value="archived">Đã lưu trữ</option>
+            </select>
+          </label>
+        ) : null}
       </div>
-      <label className="block text-sm text-slate-200">
+      <label className="block text-sm text-[var(--civicos-text)]">
         Địa chỉ
         <input
           id="establishment-address"
           name="address"
           required
           defaultValue={initial?.address}
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+          className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
         />
       </label>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm text-slate-200">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Loại hình
           <input
             id="establishment-type"
             name="type"
             required
             defaultValue={initial?.type}
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+            className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
           />
         </label>
-        <label className="block text-sm text-slate-200">
-          Mã giấy phép <span className="text-slate-500">(tuỳ chọn)</span>
+        <label className="block text-sm text-[var(--civicos-text)]">
+          Mã giấy phép{' '}
+          <span className="text-[var(--civicos-text-muted)]">(tuỳ chọn)</span>
           <input
             id="establishment-license"
             name="licenseRef"
             defaultValue={initial?.licenseRef ?? ''}
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+            className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
           />
         </label>
       </div>
       <div>
-        <p className="text-sm text-slate-200">
+        <p className="text-sm text-[var(--civicos-text)]">
           Tọa độ{' '}
-          <span className="text-slate-500">
+          <span className="text-[var(--civicos-text-muted)]">
             (cần nhập cả hai hoặc để trống)
           </span>
         </p>
         <div className="mt-2 grid gap-4 sm:grid-cols-2">
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-[var(--civicos-text-muted)]">
             Vĩ độ
             <input
               name="latitude"
               type="number"
               step="any"
               defaultValue={initial?.latitude ?? ''}
-              className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+              className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
             />
           </label>
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-[var(--civicos-text-muted)]">
             Kinh độ
             <input
               name="longitude"
               type="number"
               step="any"
               defaultValue={initial?.longitude ?? ''}
-              className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+              className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
             />
           </label>
         </div>
@@ -219,7 +249,7 @@ export function EstablishmentForm({
       <button
         type="submit"
         disabled={loading || !online}
-        className="w-full rounded-lg bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+        className="civicos-control w-full bg-[var(--civicos-accent)] px-4 py-3 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? 'Đang lưu…' : initial ? 'Lưu thay đổi' : 'Tạo cơ sở'}
       </button>

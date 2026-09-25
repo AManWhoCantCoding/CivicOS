@@ -24,6 +24,7 @@ export function EstablishmentDetail({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     if (!online) return;
@@ -67,11 +68,11 @@ export function EstablishmentDetail({
     return () => {
       cancelled = true;
     };
-  }, [establishmentId, online]);
+  }, [establishmentId, online, reloadToken]);
 
   if (!online && !item)
     return (
-      <main className="min-h-dvh bg-slate-950 p-8 text-slate-400">
+      <main className="min-h-dvh bg-[var(--civicos-canvas)] p-8 text-[var(--civicos-text-muted)]">
         <FeedbackMessage
           message="Offline: cơ sở cần kết nối để tải dữ liệu."
           tone="warning"
@@ -80,16 +81,19 @@ export function EstablishmentDetail({
     );
   if (loading)
     return (
-      <main className="min-h-dvh bg-slate-950 p-8 text-slate-400" role="status">
+      <main
+        className="min-h-dvh bg-[var(--civicos-canvas)] p-8 text-[var(--civicos-text-muted)]"
+        role="status"
+      >
         Đang tải cơ sở…
       </main>
     );
   if (error || !item)
     return (
-      <main className="min-h-dvh bg-slate-950 p-8 text-slate-100">
+      <main className="min-h-dvh bg-[var(--civicos-canvas)] p-8 text-[var(--civicos-text)]">
         <div className="mx-auto max-w-4xl space-y-5">
           <Link
-            className="text-sm text-slate-400 hover:text-white"
+            className="text-sm text-[var(--civicos-text-muted)] hover:text-[var(--civicos-accent)]"
             href="/inspections/establishments"
           >
             ← Danh mục
@@ -102,27 +106,40 @@ export function EstablishmentDetail({
             }
             tone={denied ? 'warning' : 'error'}
           />
+          {!denied ? (
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                setReloadToken((value) => value + 1);
+              }}
+              className="civicos-control border-[var(--civicos-border)] px-3 py-2 text-xs text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
+            >
+              Thử lại
+            </button>
+          ) : null}
         </div>
       </main>
     );
 
   return (
-    <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
+    <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
       <div className="mx-auto max-w-6xl">
         <Link
-          className="text-sm text-slate-400 hover:text-white"
+          className="text-sm text-[var(--civicos-text-muted)] hover:text-[var(--civicos-accent)]"
           href="/inspections/establishments"
         >
           ← Danh mục
         </Link>
         <div className="mt-10">
-          <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+          <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
             Cơ sở
           </p>
-          <h1 className="mt-3 text-3xl font-semibold text-white">
+          <h1 className="mt-3 text-3xl font-semibold text-[var(--civicos-text)]">
             {item.name}
           </h1>
-          <p className="mt-3 text-sm text-slate-400">
+          <p className="mt-3 text-sm text-[var(--civicos-text-muted)]">
             Chỉnh sửa hồ sơ hoặc lập lịch kiểm tra cho cơ sở này.
           </p>
         </div>

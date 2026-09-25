@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/modules/identity';
 import {
   listDueInspections,
   listInspections,
+  inspectionStats,
   parseScheduleInput,
   scheduleInspection,
   toApiError,
@@ -15,6 +16,16 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
   try {
     const state = new URL(request.url).searchParams.get('state');
+    if (new URL(request.url).searchParams.has('stats')) {
+      const params = new URL(request.url).searchParams;
+      return NextResponse.json({
+        stats: await inspectionStats(user, {
+          from: params.get('from') ?? undefined,
+          to: params.get('to') ?? undefined,
+          establishmentType: params.get('establishmentType') ?? undefined,
+        }),
+      });
+    }
     const inspections =
       state === 'due' || state === 'overdue'
         ? await listDueInspections(user)

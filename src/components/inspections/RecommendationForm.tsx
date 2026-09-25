@@ -54,16 +54,19 @@ export function RecommendationForm({
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`/api/inspections/${inspectionId}`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          command: 'recommend',
-          findingIds,
-          action: String(form.get('action') ?? ''),
-          reason: String(form.get('reason') ?? ''),
-        }),
-      });
+      const response = await fetch(
+        `/api/inspections/${inspectionId}/commands`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            command: 'submit_recommendation',
+            findingIds,
+            action: String(form.get('action') ?? ''),
+            reason: String(form.get('reason') ?? ''),
+          }),
+        },
+      );
       if (!response.ok) {
         const error = await readResponseError(
           response,
@@ -96,11 +99,13 @@ export function RecommendationForm({
   return (
     <form
       onSubmit={submit}
-      className="space-y-5 rounded-xl border border-slate-800 bg-slate-900 p-5"
+      className="civicos-surface space-y-5 rounded-xl p-5"
     >
       <div>
-        <h2 className="text-sm font-semibold text-white">Gửi đề xuất xử lý</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-400">
+        <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
+          Gửi đề xuất xử lý
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-[var(--civicos-text-muted)]">
           Chọn các phát hiện làm căn cứ, sau đó ghi hành động và lý do.
         </p>
       </div>
@@ -111,31 +116,31 @@ export function RecommendationForm({
         />
       ) : null}
       {!findings.length ? (
-        <p className="rounded-lg border border-dashed border-slate-700 px-3 py-4 text-sm text-slate-500">
+        <p className="civicos-feedback rounded-lg border-dashed px-3 py-4 text-sm text-[var(--civicos-text-muted)]">
           Chưa có phát hiện để làm căn cứ.
         </p>
       ) : (
         <fieldset disabled={disabled || loading}>
-          <legend className="text-sm text-slate-200">
+          <legend className="text-sm text-[var(--civicos-text)]">
             Phát hiện liên quan
           </legend>
           <div className="mt-3 space-y-2">
             {findings.map((finding) => (
               <label
                 key={finding.id}
-                className="flex gap-3 rounded-lg border border-slate-800 px-3 py-3 text-sm text-slate-300"
+                className="flex gap-3 rounded-lg border border-[var(--civicos-border)] px-3 py-3 text-sm text-[var(--civicos-text-muted)]"
               >
                 <input
                   type="checkbox"
                   name="findingIds"
                   value={finding.id}
-                  className="mt-0.5 accent-cyan-300"
+                  className="mt-0.5 accent-[var(--civicos-accent)]"
                 />
                 <span>
-                  <span className="block text-slate-200">
+                  <span className="block text-[var(--civicos-text)]">
                     {finding.checklistKey}
                   </span>
-                  <span className="mt-1 block text-xs text-slate-500">
+                  <span className="mt-1 block text-xs text-[var(--civicos-text-muted)]">
                     {finding.description} · {finding.result}
                   </span>
                 </span>
@@ -144,30 +149,30 @@ export function RecommendationForm({
           </div>
         </fieldset>
       )}
-      <label className="block text-sm text-slate-200">
+      <label className="block text-sm text-[var(--civicos-text)]">
         Hành động đề xuất
         <input
           name="action"
           required
           disabled={disabled || loading || !findings.length}
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+          className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] disabled:opacity-60"
         />
       </label>
-      <label className="block text-sm text-slate-200">
+      <label className="block text-sm text-[var(--civicos-text)]">
         Lý do
         <textarea
           name="reason"
           required
           rows={4}
           disabled={disabled || loading || !findings.length}
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+          className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] disabled:opacity-60"
         />
       </label>
       {message ? <FeedbackMessage message={message} tone={tone} /> : null}
       <button
         type="submit"
         disabled={disabled || loading || !online || !findings.length}
-        className="w-full rounded-lg border border-cyan-300/60 px-4 py-3 text-sm font-semibold text-cyan-100 hover:border-cyan-200 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+        className="civicos-control w-full border border-[var(--civicos-accent)] px-4 py-3 text-sm font-semibold text-[var(--civicos-accent)] hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? 'Đang gửi…' : 'Gửi đề xuất'}
       </button>
