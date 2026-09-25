@@ -1,0 +1,11 @@
+# Test skeleton — 06-mobile-readonly-backend-contract
+
+- **AC-01:** Input: authenticated session thuộc OU `ou-a`, request `GET /api/map/layers`; session không có quyền layer. Expected: response in-scope là `200` với key `layers` và item đủ `id,label,visibleByDefault,entityTypes`; request không quyền là `403`.
+- **AC-02:** Input: seed backend `RESIDENT:r1` in-scope, `BUSINESS:b1` khác OU, `HOTSPOT:h1` thiếu active Assignment; gọi search `q=an`, `entityType=RESIDENT`, `status=active`, `page=2`, `pageSize=20`. Expected: response có `data,total,page=2,pageSize=20`; chỉ record đúng OU + Assignment xuất hiện; item có đủ shape và không có raw PII.
+- **AC-03:** Input: cùng session/filter gọi `GET /api/related-info/counts`. Expected: JSON có đúng `ALL,RESIDENT,BUSINESS,HOTSPOT,VIOLATION`; mọi value là integer `>= 0`; count không gồm record khác OU/thiếu Assignment.
+- **AC-04:** Input: gọi detail `GET /api/related-info/RESIDENT/r1` với r1 in-scope và `r2` khác OU/Assignment. Expected: r1 trả `200` với `{entityType:"RESIDENT",data}`; r2 trả `403`; `data` có `masked` và không có raw PII keys.
+- **AC-05:** Input: seed alarm, dispatch, task có deep-link metadata và một record khác boundary; gọi các GET alarm/dispatch/task list/detail. Expected: record in-scope trả `incidentId/resourceId` khi có, `coordinates`, `relatedInfo`, `assignmentSummary` đúng dữ liệu; record ngoài boundary không trả; response không có raw PII.
+- **AC-06:** Input: gọi `GET /api/forces/tasksbydispatchid?dispatchId=d1` với d1 in-scope và d2 ngoài boundary. Expected: d1 trả list envelope có `data,total,page,pageSize`; d2 không trả task ngoài scope và detail ngoài boundary là `403`.
+- **AC-07:** Input: gọi list/detail bằng session OU khác hoặc Assignment bị revoke. Expected: server lọc record khỏi list; detail trả `403`; thay đổi query/client filter không làm lộ record.
+- **AC-08:** Input: gửi `POST`, `PUT`, `PATCH`, `DELETE` tới các read-only surface với payload có ý định đổi status/title. Expected: không có mutation được thực thi; dữ liệu trước và sau request giữ nguyên.
+- **AC-09:** Input: chạy toàn bộ `tests/mobile-readonly/**` trên seed gồm in-scope, khác OU, thiếu Assignment, masked, deep-link. Expected: assertions shape/403/filter/masking/no-PII đều pass và test không phụ thuộc mobile fixture/client adapter.

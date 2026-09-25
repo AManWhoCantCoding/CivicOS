@@ -60,6 +60,7 @@ describe('PS-E1-007 slices 1-3 inspection contract', () => {
         'EnforcementApproved',
         'EnforcementRejected',
         'EnforcementRecommendationSubmitted',
+        'EnforcementTransferred',
         'EstablishmentRegistered',
         'EstablishmentUpdated',
         'InspectionScheduled',

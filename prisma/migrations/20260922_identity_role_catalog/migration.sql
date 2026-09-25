@@ -15,15 +15,4 @@ SELECT u."id", r."id" FROM "User" u JOIN "Role" r ON r."name" = 'superior_office
 WHERE u."email" = 'captren@civicos.local'
 ON CONFLICT DO NOTHING;
 
--- Drops only the stale field_officer link for captren once the superior link exists.
-DELETE FROM "UserRole"
-USING "User" u, "Role" r
-WHERE "UserRole"."userId" = u."id"
-AND "UserRole"."roleId" = r."id"
-AND u."email" = 'captren@civicos.local'
-AND r."name" = 'field_officer'
-AND EXISTS (
-  SELECT 1 FROM "UserRole" "kept"
-  JOIN "Role" "keptRole" ON "keptRole"."id" = "kept"."roleId"
-  WHERE "kept"."userId" = u."id" AND "keptRole"."name" = 'superior_officer'
-);
+-- Preserve any legacy field_officer link and all historical authorization data.

@@ -28,6 +28,7 @@ import {
   assertIncidentTransition,
   classifyIncident,
   closeIncident,
+  convertIntakeToIncident,
   getIncident,
   getIncidentReadModel,
   listIncidents,
@@ -36,6 +37,7 @@ import {
   resolveIncident,
   startVerification,
   transferIncident,
+  verifyIntakeReport,
 } from '@/modules/incidents';
 import {
   approveRecommendation,
@@ -372,6 +374,38 @@ describe.skipIf(!psE1005Enabled)(
         roles: ['field_officer'],
         organizationUnitId: field.organizationUnitId ?? PS_ORG,
       };
+      for (const name of ['commander', 'field_officer'] as const) {
+        await prisma.role.upsert({
+          where: { name },
+          update: {},
+          create: { name },
+        });
+      }
+      const seeds = [
+        { user: psCommander, role: 'commander' },
+        { user: psUnassigned, role: 'field_officer' },
+        { user: psCrossCommander, role: 'commander' },
+      ] as const;
+      for (const { user, role } of seeds) {
+        await prisma.user.upsert({
+          where: { id: user.id },
+          update: { organizationUnitId: user.organizationUnitId },
+          create: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            organizationUnitId: user.organizationUnitId,
+          },
+        });
+        const roleRow = await prisma.role.findUniqueOrThrow({
+          where: { name: role },
+        });
+        await prisma.userRole.upsert({
+          where: { userId_roleId: { userId: user.id, roleId: roleRow.id } },
+          update: {},
+          create: { userId: user.id, roleId: roleRow.id },
+        });
+      }
       psModuleCounts = await psModuleTableCounts();
     });
 
@@ -383,7 +417,7 @@ describe.skipIf(!psE1005Enabled)(
       'registers one IntakeReport and one Incident with versioned domain events',
       { timeout: 30000 },
       async () => {
-        const registered = await registerIntakeReport(
+        const created = await registerIntakeReport(
           {
             channel: 'in_person',
             receivedAt: new Date().toISOString(),
@@ -396,6 +430,20 @@ describe.skipIf(!psE1005Enabled)(
           },
           psCommander,
         );
+        expect(created.incidentId).toBeNull();
+        await verifyIntakeReport(created.reportId, psCommander, {
+          classification: 'sufficient',
+          verificationNote: 'PS-E1-005 parallel verification.',
+        });
+        const converted = await convertIntakeToIncident(
+          created.reportId,
+          psCommander,
+        );
+        if (!converted.incidentId) throw new Error('PS005_CONVERT_FAILED');
+        const registered = {
+          reportId: created.reportId,
+          incidentId: converted.incidentId,
+        };
         psMain = { ...registered };
         psTracked.push({ ...registered });
 
@@ -406,6 +454,7 @@ describe.skipIf(!psE1005Enabled)(
         expect(reports).toHaveLength(1);
         expect(incidents).toHaveLength(1);
         expect(reports[0].incidentId).toBe(registered.incidentId);
+        expect(reports[0].status).toBe('PROCESSED');
         expect(incidents[0].status).toBe('received');
 
         const reportEvents = await readAggregateEvents(
@@ -415,6 +464,8 @@ describe.skipIf(!psE1005Enabled)(
         );
         expect(reportEvents.map(({ eventType }) => eventType)).toEqual([
           'IntakeReportReceived',
+          'IntakeReportVerified',
+          'IntakeReportConvertedToIncident',
         ]);
         expect(reportEvents[0].eventVersion).toBe(1);
         const incidentEvents = await readAggregateEvents(
@@ -501,6 +552,12 @@ describe.skipIf(!psE1005Enabled)(
       { timeout: 30000 },
       async () => {
         expect(psMain.incidentId).toBeTruthy();
+        const { assignments: commanderAssignments } = await assignIncident(
+          psMain.incidentId,
+          psCommander,
+          [psCommander.id],
+        );
+        psAssignmentIds.push(...commanderAssignments.map(({ id }) => id));
         await classifyIncident(
           psMain.incidentId,
           psCommander,
@@ -624,6 +681,7 @@ describe.skipIf(!psE1005Enabled)(
         });
         expect(events.map(({ eventType }) => eventType)).toEqual([
           'IncidentRegistered',
+          'IncidentAssigned',
           'IncidentClassified',
           'IncidentAssigned',
           'IncidentVerifying',
@@ -700,7 +758,7 @@ describe.skipIf(!psE1005Enabled)(
       'retries the continuous SLA notification without duplicating side effects',
       { timeout: 60000 },
       async () => {
-        const registered = await registerIntakeReport(
+        const created = await registerIntakeReport(
           {
             channel: 'telephone',
             receivedAt: new Date().toISOString(),
@@ -709,6 +767,19 @@ describe.skipIf(!psE1005Enabled)(
           },
           psCommander,
         );
+        await verifyIntakeReport(created.reportId, psCommander, {
+          classification: 'sufficient',
+          verificationNote: 'PS-E1-005 SLA verification.',
+        });
+        const converted = await convertIntakeToIncident(
+          created.reportId,
+          psCommander,
+        );
+        if (!converted.incidentId) throw new Error('PS005_SLA_CONVERT_FAILED');
+        const registered = {
+          reportId: created.reportId,
+          incidentId: converted.incidentId,
+        };
         psTracked.push({ ...registered });
 
         const active = await prisma.slaInstance.findFirstOrThrow({
@@ -2309,29 +2380,29 @@ describe.skipIf(!psE1009Enabled)(
               result: 'Chu xe: Nguyen Van A.',
               notes: 'Doi chieu.',
             },
-            ps009Commander,
+            ps009Field,
           ),
         ).rejects.toThrow('MATCH_CONFIRMATION_REQUIRED');
         await expect(
-          escalateVehicleObservation(observation.id, ps009Commander, PS_UPPER),
+          escalateVehicleObservation(observation.id, ps009Field, PS_UPPER),
         ).rejects.toThrow('MATCH_CONFIRMATION_REQUIRED');
 
         const current = await prisma.vehicleObservation.findUniqueOrThrow({
           where: { id: observation.id },
         });
         await expect(
-          confirmVehicleMatch(observation.id, ps009Commander, {
+          confirmVehicleMatch(observation.id, ps009Field, {
             baseVersion: current.version - 1,
           }),
         ).rejects.toThrow('STALE_OBSERVATION');
         const confirmed = await confirmVehicleMatch(
           observation.id,
-          ps009Commander,
+          ps009Field,
           { baseVersion: current.version },
         );
         expect(confirmed.status).toBe('match_confirmed');
         await expect(
-          confirmVehicleMatch(observation.id, ps009Commander),
+          confirmVehicleMatch(observation.id, ps009Field),
         ).rejects.toThrow('MATCH_NOT_PENDING');
       },
     );
@@ -2352,7 +2423,7 @@ describe.skipIf(!psE1009Enabled)(
           ps009Field,
         );
         ps009TrackObservation(observation.id);
-        await confirmVehicleMatch(observation.id, ps009Commander);
+        await confirmVehicleMatch(observation.id, ps009Field);
         ps009VerifiedObservationId = observation.id;
 
         const sla = await prisma.slaInstance.findFirstOrThrow({
@@ -2380,7 +2451,7 @@ describe.skipIf(!psE1009Enabled)(
               notes: 'Kiem tra ngoai pham vi.',
               evidenceIds: [foreign.id],
             },
-            ps009Commander,
+            ps009Field,
           ),
         ).rejects.toThrow('EVIDENCE_SCOPE_FORBIDDEN');
 
@@ -2406,10 +2477,10 @@ describe.skipIf(!psE1009Enabled)(
             longitude: 105.931,
             evidenceIds: [proof.id],
           },
-          ps009Commander,
+          ps009Field,
         );
         expect(verified.verification).toMatchObject({
-          verifiedById: ps009Commander.id,
+          verifiedById: ps009Field.id,
           result: 'Chu xe: Tran Thi B.',
           ownerLookup: 'Tra cuu dang ky: Tran Thi B, dia chi X.',
         });
@@ -2460,14 +2531,14 @@ describe.skipIf(!psE1009Enabled)(
           ps009Field,
         );
         ps009TrackObservation(second.observation.id);
-        await confirmVehicleMatch(second.observation.id, ps009Commander);
+        await confirmVehicleMatch(second.observation.id, ps009Field);
         const verifiedNull = await verifyVehicleObservation(
           {
             observationId: second.observation.id,
             result: 'Chu xe: chua tra cuu.',
             notes: 'Ghi nhan hien truong, khong ket luan vi pham.',
           },
-          ps009Commander,
+          ps009Field,
         );
         expect(verifiedNull.verification.ownerLookup).toBeNull();
       },
@@ -2489,24 +2560,20 @@ describe.skipIf(!psE1009Enabled)(
           ps009Field,
         );
         ps009TrackObservation(observation.id);
-        await confirmVehicleMatch(observation.id, ps009Commander);
+        await confirmVehicleMatch(observation.id, ps009Field);
 
         await expect(
-          escalateVehicleObservation(
-            observation.id,
-            ps009Commander,
-            'unit-peer',
-          ),
+          escalateVehicleObservation(observation.id, ps009Field, 'unit-peer'),
         ).rejects.toThrow('ORGANIZATION_SCOPE_FORBIDDEN');
         const first = await escalateVehicleObservation(
           observation.id,
-          ps009Commander,
+          ps009Field,
           PS_UPPER,
         );
         expect(first.status).toBe('escalated');
         const second = await escalateVehicleObservation(
           observation.id,
-          ps009Commander,
+          ps009Field,
           PS_UPPER,
         );
         expect(second.id).toBe(first.id);

@@ -125,7 +125,7 @@ describe.skipIf(!postgresEnabled)(
     it('stores only ciphertext and blind index for sensitive intake fields', async () => {
       const registered = await registerIntakeReport(
         {
-          channel: 'manual_other',
+          sourceChannel: 'direct',
           receivedAt: new Date().toISOString(),
           content: 'T02 encryption persistence probe',
           sensitiveRef: sensitiveMarker,
@@ -134,7 +134,7 @@ describe.skipIf(!postgresEnabled)(
         encryptionActor,
       );
       reportId = registered.reportId;
-      incidentId = registered.incidentId;
+      incidentId = registered.incidentId ?? '';
 
       const stored = await prisma.intakeReport.findUniqueOrThrow({
         where: { id: reportId },

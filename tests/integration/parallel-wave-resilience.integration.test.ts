@@ -14,8 +14,10 @@ import {
 } from '@/modules/eventing';
 import type { IdentityUser } from '@/modules/identity';
 import {
+  convertIntakeToIncident,
   registerIntakeReport,
   rebuildIncidentProjection,
+  verifyIntakeReport,
 } from '@/modules/incidents';
 import {
   rebuildInspectionProjection,
@@ -592,7 +594,7 @@ describe.skipIf(!enabled)(
       'replays after failure without duplicating notifications or audit side effects',
       { timeout: 90000 },
       async () => {
-        const registered = await registerIntakeReport(
+        const created = await registerIntakeReport(
           {
             channel: 'in_person',
             receivedAt: new Date().toISOString(),
@@ -601,6 +603,19 @@ describe.skipIf(!enabled)(
           },
           commander,
         );
+        await verifyIntakeReport(created.reportId, commander, {
+          classification: 'sufficient',
+          verificationNote: 'Resilience replay verification.',
+        });
+        const converted = await convertIntakeToIncident(
+          created.reportId,
+          commander,
+        );
+        if (!converted.incidentId) throw new Error('RESIL_CONVERT_FAILED');
+        const registered = {
+          reportId: created.reportId,
+          incidentId: converted.incidentId,
+        };
         incidentIds.push(registered.incidentId);
         reportIds.push(registered.reportId);
         const establishment = await registerEstablishment(
@@ -741,7 +756,7 @@ describe.skipIf(!enabled)(
           const samples: Sample[] = [];
           for (let index = 0; index < 3; index += 1) {
             const startedAt = Date.now();
-            const registered = await registerIntakeReport(
+            const created = await registerIntakeReport(
               {
                 channel: 'in_person',
                 receivedAt: new Date().toISOString(),
@@ -750,6 +765,21 @@ describe.skipIf(!enabled)(
               },
               commander,
             );
+            await verifyIntakeReport(created.reportId, commander, {
+              classification: 'sufficient',
+              verificationNote: 'Resilience freshness verification.',
+            });
+            const converted = await convertIntakeToIncident(
+              created.reportId,
+              commander,
+            );
+            if (!converted.incidentId) {
+              throw new Error('RESIL_FRESH_CONVERT_FAILED');
+            }
+            const registered = {
+              reportId: created.reportId,
+              incidentId: converted.incidentId,
+            };
             incidentIds.push(registered.incidentId);
             reportIds.push(registered.reportId);
             samples.push({
@@ -821,9 +851,6 @@ describe.skipIf(!enabled)(
           const sorted = [...latencies].sort((left, right) => left - right);
           const p95 = sorted[Math.max(0, Math.ceil(0.95 * sorted.length) - 1)];
           const max = sorted[sorted.length - 1] ?? 0;
-          console.log(
-            `RESILIENCE_FRESHNESS sample=${sorted.length} threshold_ms=${FRESHNESS_P95_THRESHOLD_MS} p95_ms=${p95} max_ms=${max} latencies_ms=${sorted.join(',')}`,
-          );
           expect(sorted).toHaveLength(FRESHNESS_SAMPLE_SIZE);
           expect(p95).toBeLessThanOrEqual(FRESHNESS_P95_THRESHOLD_MS);
           expect(max).toBeLessThanOrEqual(FRESHNESS_P95_THRESHOLD_MS);

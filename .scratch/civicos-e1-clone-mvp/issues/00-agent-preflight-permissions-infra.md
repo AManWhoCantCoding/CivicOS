@@ -128,6 +128,13 @@ Các câu trả lời dưới đây được ghi theo nguyên ý user; không su
 
 Không có quyết định nào làm đổi boundary trong `spec.md`; chưa cập nhật `spec.md`.
 
+### Quyết định user bổ sung cho ticket 05 — 2026-09-25
+
+- User chấp thuận nguyên batch React Native/toolchain: `react@19.2.3` (MIT), `react-native@0.85.3` (MIT), `@maplibre/maplibre-react-native@11.4.0` (MIT), `@types/react@19.2.14` (MIT), `typescript@5.9.3` (Apache-2.0), `@react-native/typescript-config@0.85.3` (MIT), `@react-native/babel-preset@0.85.3` (MIT), `@react-native/metro-config@0.85.3` (MIT), `@react-native/jest-preset@0.85.3` (MIT), `jest@29.7.0` (MIT), `@types/jest@29.5.14` (MIT), và `@react-native-community/cli@20.0.0` (MIT) nếu scaffold/build cần.
+- Lý do đã chốt: package RN độc lập, tương thích peer của MapLibre 11.4.0, có TS/Babel/Metro/CLI, test JS/API contract và Android build.
+- Exact install/CI/build/test commands được ghi tại mục `## Đang chờ Research` của ticket `05-mobile-readonly-client`.
+- Không tạo hoặc commit `mobile/.env.example`, không sửa `.env.*`; API base URL do runtime/build-time injection, không commit secret.
+
 Không ghi secret thật vào bảng; chỉ ghi “user injects via local environment”.
 
 ## Batch hạ tầng và dependency đã chốt — 2026-09-23

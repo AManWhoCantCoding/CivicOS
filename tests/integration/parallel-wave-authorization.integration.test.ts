@@ -16,11 +16,13 @@ import {
   approveIncident,
   assignIncident,
   classifyIncident,
+  convertIntakeToIncident,
   getIncident,
   listIncidents,
   registerIntakeReport,
   startVerification,
   transferIncident,
+  verifyIntakeReport,
 } from '@/modules/incidents';
 import {
   approveRecommendation,
@@ -492,7 +494,7 @@ describe.skipIf(!enabled)(
       'gates Incident and IntakeReport by commander, assignment, revocation and organization',
       { timeout: 90000 },
       async () => {
-        const registered = await registerIntakeReport(
+        const created = await registerIntakeReport(
           {
             channel: 'in_person',
             receivedAt: new Date('2026-09-19T01:00:00.000Z').toISOString(),
@@ -503,8 +505,14 @@ describe.skipIf(!enabled)(
           },
           duty,
         );
-        incidentId = registered.incidentId;
-        reportId = registered.reportId;
+        await verifyIntakeReport(created.reportId, duty, {
+          classification: 'sufficient',
+          verificationNote: 'Auth matrix verification.',
+        });
+        const converted = await convertIntakeToIncident(created.reportId, duty);
+        if (!converted.incidentId) throw new Error('AUTHMATRIX_CONVERT_FAILED');
+        incidentId = converted.incidentId;
+        reportId = created.reportId;
         incidentIds.push(incidentId);
         reportIds.push(reportId);
 

@@ -59,6 +59,7 @@ describe('event catalog', () => {
       'EnforcementRecommendationSubmitted',
       'EnforcementApproved',
       'EnforcementRejected',
+      'EnforcementTransferred',
       'SuspiciousVehicleRegistered',
       'SuspiciousVehicleRegistryUpdated',
       'VehicleObservationRecorded',
@@ -104,7 +105,7 @@ describe('event catalog', () => {
       expect(entry?.eventVersion).toBe(1);
     }
     expect(incidentEventTypes.length).toBe(11);
-    expect(inspectionEventTypes.length).toBe(10);
+    expect(inspectionEventTypes.length).toBe(11);
     expect(vehicleEventTypes.length).toBe(8);
   });
 });

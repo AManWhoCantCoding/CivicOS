@@ -1,2 +1,0 @@
-playwright/pages.py — changed offline queue synchronization to wait for the expected number of local queue commands to reach terminal synced/rejected states, avoiding a stale rendered exact-count assertion.
-playwright/test_inspections.py — changed the inspection offline flow to assert four commands are accounted for as terminal queue items before verifying completed inspection and evidence/finding behavior.

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { prisma } from '@/lib/prisma';
 import type { IdentityUser } from '@/modules/identity';
@@ -13,6 +13,7 @@ import {
   assertIncidentTransition,
   closeIncident,
   classifyIncident,
+  convertIntakeToIncident,
   getIncident,
   isIncidentStatus,
   listIncidents,
@@ -23,6 +24,8 @@ import {
   resolveIncident,
   startVerification,
   transferIncident,
+  verifyIntakeReport,
+  confirmIntakeReport,
 } from '@/modules/incidents';
 import { createSla, dueAt, isOverdue, markOverdue } from '@/modules/platform';
 
@@ -332,16 +335,84 @@ async function registerProbe(
     },
     actor,
   );
+  await verifyIntakeReport(registered.reportId, actor, {
+    classification: 'sufficient',
+    verificationNote: 'T04 probe verification.',
+  });
+  await confirmIntakeReport(registered.reportId, actor);
+  const converted = await convertIntakeToIncident(registered.reportId, actor);
+  if (!converted.incidentId) throw new Error('T04_CONVERT_FAILED');
   tracked.push({
-    incidentId: registered.incidentId,
+    incidentId: converted.incidentId,
     reportId: registered.reportId,
   });
-  return registered;
+  return { reportId: registered.reportId, incidentId: converted.incidentId };
 }
 
 describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
+  beforeAll(async () => {
+    await prisma.organizationUnit.upsert({
+      where: { id: ORG },
+      update: {},
+      create: { id: ORG, name: 'Ticket 04 unit', level: 'commune' },
+    });
+    await prisma.organizationUnit.upsert({
+      where: { id: UPPER },
+      update: {},
+      create: { id: UPPER, name: 'Ticket 04 upper unit', level: 'district' },
+    });
+    const roleNames = ['commander', 'duty_officer', 'field_officer'] as const;
+    const roleIds: Record<string, string> = {};
+    for (const name of roleNames) {
+      const role = await prisma.role.upsert({
+        where: { name },
+        update: {},
+        create: { name },
+      });
+      roleIds[name] = role.id;
+    }
+    const seeds = [
+      { user: commander, role: 'commander' },
+      { user: duty, role: 'duty_officer' },
+      { user: fieldOfficer, role: 'field_officer' },
+      { user: unassigned, role: 'field_officer' },
+      { user: crossCommander, role: 'commander' },
+      { user: seededAssignee, role: 'field_officer' },
+    ] as const;
+    for (const { user, role } of seeds) {
+      await prisma.user.upsert({
+        where: { id: user.id },
+        update: { organizationUnitId: user.organizationUnitId },
+        create: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          organizationUnitId: user.organizationUnitId,
+        },
+      });
+      await prisma.userRole.upsert({
+        where: { userId_roleId: { userId: user.id, roleId: roleIds[role] } },
+        update: {},
+        create: { userId: user.id, roleId: roleIds[role] },
+      });
+    }
+  });
+
   afterAll(async () => {
     await cleanupTracked();
+    await prisma.user.deleteMany({
+      where: {
+        id: {
+          in: [
+            commander.id,
+            duty.id,
+            fieldOfficer.id,
+            unassigned.id,
+            crossCommander.id,
+          ],
+        },
+      },
+    });
   });
 
   it('validates channel, time, content, location, and role server-side', async () => {
@@ -380,6 +451,7 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
     expect(reports).toHaveLength(1);
     expect(incidents).toHaveLength(1);
     expect(reports[0].incidentId).toBe(incidentId);
+    expect(reports[0].status).toBe('PROCESSED');
     expect(incidents[0].intakeReportId).toBe(reportId);
     expect(incidents[0].status).toBe('received');
 
@@ -392,10 +464,20 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
       },
       orderBy: { aggregateVersion: 'asc' },
     });
-    expect(events.map(({ eventType }) => eventType)).toEqual([
+    expect(
+      events
+        .filter(({ aggregateType }) => aggregateType === 'IntakeReport')
+        .map(({ eventType }) => eventType),
+    ).toEqual([
       'IntakeReportReceived',
-      'IncidentRegistered',
+      'IntakeReportVerified',
+      'IntakeReportConvertedToIncident',
     ]);
+    expect(
+      events
+        .filter(({ aggregateType }) => aggregateType === 'Incident')
+        .map(({ eventType }) => eventType),
+    ).toEqual(['IncidentRegistered']);
 
     const sla = await prisma.slaInstance.findMany({
       where: { resourceType: 'Incident', resourceId: incidentId },
@@ -414,18 +496,20 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
     expect(audit).toBe(1);
   });
 
-  it('rolls back the intake operation atomically on mid-transaction failure', async () => {
+  it('rolls back the convert operation atomically on mid-transaction failure', async () => {
     const sentinel = `T04 rollback sentinel ${stamp}`;
-    const tableCounts = () =>
-      Promise.all([
-        prisma.intakeReport.count(),
-        prisma.incident.count(),
-        prisma.eventRecord.count(),
-        prisma.outboxMessage.count(),
-        prisma.auditEvent.count(),
-        prisma.slaInstance.count(),
-      ]);
-    const before = await tableCounts();
+    const created = await registerIntakeReport(
+      {
+        ...validIntake({ content: sentinel }),
+        idempotencyKey: `t04-rollback:${stamp}:${randomUUID()}`,
+      },
+      commander,
+    );
+    tracked.push({ incidentId: '', reportId: created.reportId });
+    await verifyIntakeReport(created.reportId, commander, {
+      classification: 'sufficient',
+      verificationNote: 'T04 rollback verification.',
+    });
     await prisma.$executeRawUnsafe(
       "CREATE OR REPLACE FUNCTION t04_abort_sentinel() RETURNS trigger AS $$ BEGIN IF NEW.description = '" +
         sentinel +
@@ -439,21 +523,25 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
     );
     try {
       await expect(
-        registerIntakeReport(
-          {
-            ...validIntake({ content: sentinel }),
-            idempotencyKey: `t04-rollback:${stamp}:${randomUUID()}`,
-          },
-          commander,
-        ),
+        convertIntakeToIncident(created.reportId, commander),
       ).rejects.toThrow('T04_INJECTED_FAILURE');
-      expect(await tableCounts()).toEqual(before);
-      await expect(
-        prisma.intakeReport.findFirst({ where: { content: sentinel } }),
-      ).resolves.toBeNull();
       await expect(
         prisma.incident.findFirst({ where: { description: sentinel } }),
       ).resolves.toBeNull();
+      const report = await prisma.intakeReport.findUniqueOrThrow({
+        where: { id: created.reportId },
+      });
+      expect(report.incidentId).toBeNull();
+      expect(report.status).toBe('VERIFIED');
+      await expect(
+        prisma.eventRecord.count({
+          where: {
+            aggregateType: 'IntakeReport',
+            aggregateId: created.reportId,
+            eventType: 'IntakeReportConvertedToIncident',
+          },
+        }),
+      ).resolves.toBe(0);
     } finally {
       await prisma.$executeRawUnsafe(
         'DROP TRIGGER IF EXISTS t04_abort_incident ON "Incident";',
@@ -478,7 +566,8 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
       { ...validIntake(), idempotencyKey: key },
       commander,
     );
-    expect(second).toEqual(first);
+    expect(second.reportId).toBe(first.reportId);
+    expect(second.incidentId).toBe(first.incidentId);
     const after = await Promise.all([
       prisma.intakeReport.count({ where: { idempotencyKey: key } }),
       prisma.incident.count({ where: { id: first.incidentId } }),
@@ -495,6 +584,12 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
     await expect(
       classifyIncident(incidentId, duty, 'public_order', 'high'),
     ).rejects.toThrow('FORBIDDEN');
+    const { assignments: commanderAssignments } = await assignIncident(
+      incidentId,
+      commander,
+      [commander.id],
+    );
+    trackedAssignmentIds.push(...commanderAssignments.map(({ id }) => id));
     await classifyIncident(incidentId, commander, 'public_order', 'high');
 
     await expect(startVerification(incidentId, unassigned)).rejects.toThrow(
@@ -521,6 +616,12 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
 
   it('denies unassigned and cross-unit reads and writes', async () => {
     const { incidentId } = await registerProbe(commander);
+    const { assignments: commanderAssignments } = await assignIncident(
+      incidentId,
+      commander,
+      [commander.id],
+    );
+    trackedAssignmentIds.push(...commanderAssignments.map(({ id }) => id));
     await classifyIncident(incidentId, commander, 'residential', 'medium');
 
     await expect(getIncident(incidentId, unassigned)).rejects.toThrow(
@@ -543,6 +644,12 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
 
   it('requires approval for transfer, resolve, and close with full history', async () => {
     const { incidentId } = await registerProbe(commander);
+    const { assignments: ownerAssignments } = await assignIncident(
+      incidentId,
+      commander,
+      [commander.id],
+    );
+    trackedAssignmentIds.push(...ownerAssignments.map(({ id }) => id));
     await classifyIncident(incidentId, commander, 'property', 'low');
     const { assignments } = await assignIncident(incidentId, commander, [
       seededAssignee.id,
@@ -629,6 +736,7 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
     });
     expect(events.map(({ eventType }) => eventType)).toEqual([
       'IncidentRegistered',
+      'IncidentAssigned',
       'IncidentClassified',
       'IncidentAssigned',
       'IncidentVerifying',
@@ -652,6 +760,12 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
         sourceName: 'Nguyen Van A',
         sensitiveRef: 'T04-SENSITIVE',
       });
+      const { assignments: timelineAssignments } = await assignIncident(
+        incidentId,
+        commander,
+        [commander.id],
+      );
+      trackedAssignmentIds.push(...timelineAssignments.map(({ id }) => id));
       await classifyIncident(incidentId, commander, 't04-timeline-cat', 'high');
 
       const detail = await getIncident(incidentId, commander);
@@ -661,6 +775,7 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
       expect(versions).toEqual([...versions].sort((a, b) => a - b));
       expect(detail.events.map(({ eventType }) => eventType)).toEqual([
         'IncidentRegistered',
+        'IncidentAssigned',
         'IncidentClassified',
       ]);
 
@@ -694,6 +809,12 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
 
   it('records audit for sensitive reads and every mutation', async () => {
     const { incidentId, reportId } = await registerProbe(commander);
+    const { assignments: auditAssignments } = await assignIncident(
+      incidentId,
+      commander,
+      [commander.id],
+    );
+    trackedAssignmentIds.push(...auditAssignments.map(({ id }) => id));
     await classifyIncident(incidentId, commander, 'violence', 'critical');
     const { assignments } = await assignIncident(incidentId, commander, [
       seededAssignee.id,
@@ -741,6 +862,12 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
 
   it('advances SLA kinds and emits overdue events past thresholds', async () => {
     const { incidentId } = await registerProbe(commander);
+    const { assignments: slaAssignments } = await assignIncident(
+      incidentId,
+      commander,
+      [commander.id],
+    );
+    trackedAssignmentIds.push(...slaAssignments.map(({ id }) => id));
     const activeKind = () =>
       prisma.slaInstance.findFirst({
         where: {

@@ -50,4 +50,4 @@
 ## Evidence
 
 - Review này được cập nhật tại `.brain/evidence/02-ps-e1004-resident-management/review.md`.
-- Chưa commit.
+- Đã commit với hash `b065e63` bằng message `feat(residents): add PS-E1 resident management`.

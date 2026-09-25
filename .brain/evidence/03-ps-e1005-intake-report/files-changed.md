@@ -1,24 +1,26 @@
 # Evidence đóng ticket — 03-ps-e1005-intake-report
 
-## Kết quả
+## Kết quả cuối
 
-- Trạng thái cuối: **wontfix**.
-- Lý do: sau 3 vòng sửa lỗi bounded worker cùng nhóm E2E read-model timeout, full run 55 vẫn có 3 test timeout tại `waitForReadModel` sau `90000ms`; log cuối: `.brain/evidence/03-ps-e1005-intake-report/logs/run55-test_e2e.log`.
-- Fast run 54 PASS; full run 55 có `88 passed, 1 skipped, 3 failed`; `build` NOT_RUN. Docker/PostgreSQL PASS.
-- Đã thử: bounded E2E batch `10`; xử lý outbox trước `markOverdue` và batch `100`; bounded catch-up batch `1000`. Giữ nguyên timeout/predicate/assertion, event/projection semantics, lease/claim/retry/error handling; không reset/drop/seed hoặc query DB từ test.
+- Trạng thái: **done**.
+- Tester: Lần chạy 65 `scope=full` PASS cả `prisma:generate`, `typecheck`, `lint`, `format:check`, `test`, `test:e2e`, `build`; Tree `9c2ac856`.
+- Reviewer: PASS AC-01..AC-13, R-01..R-04, 8 bước thực hiện và round-trip check; fingerprint độc lập khớp.
+- Commit: `76e25478447e9b92e50d0a94c3506092ca00cd6d` — `feat(incidents): complete PS-E1-005 intake workflow`.
+- Gate hướng: **đã thực hiện và PASS**, không bỏ qua. Chromium-only là verification boundary tạm thời theo quyết định user; mobile/full cross-platform defer đến ticket 05.
 
-## Tiến độ dở dang
+## File đã đổi trong commit
 
-- Implementation IntakeReport, canonical channel, explicit convert, masking/capability, event catalog, API/UI, SLA/transfer/idempotency và test artifacts đã được tạo hoặc sửa trong working tree.
-- Fast verification gần nhất: `prisma:generate`, `typecheck`, `lint`, `format:check`, `test` PASS.
-- Full verification gần nhất: `test:e2e` FAIL cùng 3 timeout; `build` chưa chạy.
-- Chưa tick Acceptance Criteria hoặc Các bước thực hiện.
-- Chưa gọi Reviewer checkpoint cuối/round-trip; không có commit cho ticket.
+- Evidence/tracker: `.brain/evidence/03-ps-e1005-intake-report/{changes.md,diff.patch,files-changed.md,plan.md,read-model-diagnosis.md,review.md,tests.md}`, `logs/e2e-read-model-http.jsonl`, `logs/e2e-read-model-trace.jsonl`; `.scratch/civicos-e1-clone-mvp/issues/03-ps-e1005-intake-report.md`.
+- Cấu hình/migration: `playwright.config.ts`, `prisma/schema.prisma`, `prisma/migrations/20260924090000_ps_e1005_intake_report/migration.sql`, `prisma/migrations/20260924100000_ps_e1005_canonical_channel/migration.sql`.
+- Seed/E2E: `scripts/demo/seed.ts`, `scripts/e2e/playwright-services.mjs`.
+- API/page/UI: `src/app/api/incidents/route.ts`, `src/app/api/intake-reports/route.ts`, `src/app/api/intake-reports/[reportId]/route.ts`, `src/app/api/intake-reports/[reportId]/commands/route.ts`, `src/app/intake/page.tsx`, `src/app/intake/[reportId]/page.tsx`, `src/components/incidents/IncidentStatusActions.tsx`, `IntakeReportDetail.tsx`, `IntakeReportForm.tsx`, `IntakeReportQueue.tsx`, `useIncidentSession.ts`, `src/components/navigation/feature-registry.ts`.
+- Eventing: `src/modules/eventing/e2e-trace.ts`, `event-catalog.ts`, `event-store.ts`, `outbox.ts`, `read-model.ts`, `worker.ts`.
+- Incident domain: `src/modules/incidents/commands.ts`, `contracts.ts`, `domain.ts`, `index.ts`, `notification-adapter.ts`, `projection.ts`, `schemas.ts`.
+- Tests: `tests/demo/demo-bootstrap.test.ts`, `tests/e2e/evidence-authorization.spec.ts`, `tests/e2e/ps005-incident.spec.ts`, `tests/incidents/incident-approval.postgres.test.ts`, `incident-authorization.postgres.test.ts`, `intake-report-lifecycle.test.ts`, `intake-report-notification.test.ts`, `intake-report-separation.postgres.test.ts`, `tests/integration/schema-and-migration.test.ts`.
 
-## File đã đổi
+## Agent chịu trách nhiệm
 
-- Toàn bộ source/schema/migration/API/UI/test/evidence của implementation được liệt kê theo từng vòng trong `.brain/evidence/03-ps-e1005-intake-report/changes.md`.
-- Các file của vòng bounded worker: `src/modules/eventing/worker.ts`, `src/worker.ts`, `scripts/e2e/playwright-services.mjs`.
-- Evidence/chẩn đoán: `.brain/evidence/03-ps-e1005-intake-report/changes.md`, `plan.md`, `read-model-diagnosis.md`, `tests.md`, các log `run48`–`run55`, và file này.
-- Bài học chung: `Lesson-learned.md` (Developer/developer-fallback hợp nhất bài học worker; Planner cập nhật biến thể dừng sau 3 vòng).
-- Agent đổi file: Developer/developer-fallback (source/evidence), Tester (tests.md/logs), Planner (ticket status, Lesson-learned và file evidence này). Không có commit cuối.
+- `developer-fallback`: source, tests và evidence implementation.
+- `tester`: `tests.md`, log và verification run 65.
+- `reviewer`: direction/final/round-trip review và commit.
+- Planner: tick AC/bước thực hiện, đổi trạng thái `done` và cập nhật evidence này.

@@ -148,6 +148,14 @@ ROLE_NAMES = (
     "system_operator",
 )
 
+# Nhan kich ban demo on dinh, khop voi scripts/demo/seed.ts de nguoi trinh
+# dien chon dung ho so tren database demo co lap.
+DEMO_SCENARIO_LABELS = (
+    "[DEMO-INCIDENT-01]",
+    "[DEMO] Quan karaoke Sao Dem",
+    "43DEMO01",
+)
+
 REFERENCE_TABLES = (
     "Assignment",
     "OutboxMessage",
@@ -842,6 +850,11 @@ def base_url(e2e_services: E2EServices) -> str:
 @pytest.fixture(scope="session")
 def accounts(e2e_database: E2EDatabase) -> dict[str, TestAccount]:
     return e2e_database.accounts
+
+
+@pytest.fixture(scope="session")
+def demo_labels() -> tuple[str, str, str]:
+    return DEMO_SCENARIO_LABELS
 
 
 @pytest.fixture(autouse=True)

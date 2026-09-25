@@ -1,2 +1,0 @@
-- `tests/inspections/inspection-schedule.postgres.test.ts`: added a 15-second timeout to the PostgreSQL schedule completion test to accommodate cold Prisma/database startup timing.
-- `tests/inspections/inspection-slices-4-6.postgres.test.ts`: added the same explicit per-test timeout to the seven-day SLA PostgreSQL test.

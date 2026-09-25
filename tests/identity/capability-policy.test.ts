@@ -9,17 +9,20 @@ import {
   isTaskCompatibleWithRoles,
 } from '@/modules/identity/contracts';
 import { evaluatePolicy } from '@/modules/identity/authorization';
-import type {
-  IdentityUser,
-  ResourceRef,
-} from '@/modules/identity/contracts';
+import type { IdentityUser, ResourceRef } from '@/modules/identity/contracts';
 
 function user(
   id: string,
   roles: IdentityUser['roles'],
   organizationUnitId = 'unit-a',
 ): IdentityUser {
-  return { id, email: `${id}@civicos.local`, name: id, roles, organizationUnitId };
+  return {
+    id,
+    email: `${id}@civicos.local`,
+    name: id,
+    roles,
+    organizationUnitId,
+  };
 }
 
 const resource: ResourceRef = {
@@ -165,12 +168,13 @@ describe('capability policy contract', () => {
     );
   });
 
-  it('rejects incompatible tasks before assignment creation', () => {    expect(
+  it('rejects incompatible tasks before assignment creation', () => {
+    expect(
       isTaskCompatibleWithRoles('incident_verification', ['field_officer']),
     ).toBe(true);
-    expect(isTaskCompatibleWithRoles('unknown_task_xyz', ['field_officer'])).toBe(
-      false,
-    );
+    expect(
+      isTaskCompatibleWithRoles('unknown_task_xyz', ['field_officer']),
+    ).toBe(false);
     expect(
       isTaskCompatibleWithRoles('incident_verification', ['system_operator']),
     ).toBe(false);
@@ -195,14 +199,22 @@ describe('capability policy contract', () => {
     };
     for (const action of ['read', 'assign', 'approve'] as const) {
       expect(
-        evaluatePolicy({ user: commander, resource: cross, action, assignments: [] })
-          .allowed,
+        evaluatePolicy({
+          user: commander,
+          resource: cross,
+          action,
+          assignments: [],
+        }).allowed,
       ).toBe(false);
     }
     const superior = user('u-superior', ['superior_commander']);
     expect(
-      evaluatePolicy({ user: superior, resource, action: 'read', assignments: [] })
-        .allowed,
+      evaluatePolicy({
+        user: superior,
+        resource,
+        action: 'read',
+        assignments: [],
+      }).allowed,
     ).toBe(true);
   });
 
@@ -217,12 +229,20 @@ describe('capability policy contract', () => {
     } as const;
     for (const action of ['mutate', 'read_sensitive'] as const) {
       expect(
-        evaluatePolicy({ user: commander, resource, action, assignments: [] })
-          .allowed,
+        evaluatePolicy({
+          user: commander,
+          resource,
+          action,
+          assignments: [],
+        }).allowed,
       ).toBe(false);
       expect(
-        evaluatePolicy({ user: commander, resource, action, assignments: [compatible] })
-          .allowed,
+        evaluatePolicy({
+          user: commander,
+          resource,
+          action,
+          assignments: [compatible],
+        }).allowed,
       ).toBe(true);
       expect(
         evaluatePolicy({

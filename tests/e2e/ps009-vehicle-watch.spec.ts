@@ -106,10 +106,13 @@ test('PS-009 registry, observation, confirmation, verification and escalation fl
 
   await loginAs(page, COMMANDER);
   await page.goto('/vehicles/registry');
-  await page.getByLabel('Biển số').fill(plate);
-  await page.getByLabel('Nguồn').fill(`Nguồn ${suffix}`);
-  await page.getByLabel('Lý do').fill(`Lý do ${suffix}`);
-  await page
+  const registryForm = page.locator('form').filter({
+    has: page.getByRole('heading', { name: 'Thêm vào registry' }),
+  });
+  await registryForm.getByLabel('Biển số').fill(plate);
+  await registryForm.getByLabel('Nguồn').fill(`Nguồn ${suffix}`);
+  await registryForm.getByLabel('Lý do').fill(`Lý do ${suffix}`);
+  await registryForm
     .getByLabel('Có hiệu lực từ')
     .fill(isoLocal(new Date(now.getTime() - 3600000)));
   await page

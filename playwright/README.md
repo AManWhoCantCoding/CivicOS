@@ -39,6 +39,10 @@ The harness waits for PostgreSQL, then drops and recreates the dedicated `civico
 
 Business records are never inserted by the test code. Tests create and mutate Incidents, Establishments, Inspections, Evidence, registry entries, and observations through visible UI controls. The only HTTP calls outside browser-rendered UI are authentication/readiness during service startup and the authenticated worker/projection health check. PostgreSQL is used by fixtures for database lifecycle, reference seeding, and destructive test isolation only.
 
+## Fixture dữ liệu demo
+
+Fixture `demo_labels` trả về ba nhãn ổn định khớp với `scripts/demo/seed.ts`: `[DEMO-INCIDENT-01]` (Incident), `[DEMO] Quan karaoke Sao Dem` (Inspection) và `43DEMO01` (Vehicle). Dùng các nhãn này để chọn đúng hồ sơ khi trình diễn trên database demo cô lập (`civicos_demo`); mật khẩu demo là `civicos-dev`, chỉ dùng cho demo.
+
 ## Artifacts and cleanup
 
 Service logs are written to `test-results/services/next.log` and `test-results/services/worker.log` (`D:\Project\CivicOS\playwright\test-results\services\next.log` and `worker.log` from `D:\Project\CivicOS\playwright`). Each test node gets a directory below `test-results/` (`D:\Project\CivicOS\playwright\test-results\`) holding `trace.zip` and `failure-*.png` on failure; passed-test videos are deleted. Use `--keep-e2e-db` when inspecting a failed database state.

@@ -252,7 +252,7 @@ describe.skipIf(!postgresEnabled)(
       try {
         const registered = await registerIntakeReport(
           {
-            channel: 'manual_other',
+            sourceChannel: 'direct',
             receivedAt: new Date().toISOString(),
             content: 'T02 log-leak persistence probe',
             sensitiveRef: intakeMarker,
@@ -261,7 +261,7 @@ describe.skipIf(!postgresEnabled)(
           commander,
         );
         reportId = registered.reportId;
-        incidentId = registered.incidentId;
+        incidentId = registered.incidentId ?? '';
         const chunks = serializeCalls(spies);
         expectNoPlaintext(chunks, intakeMarker);
       } finally {

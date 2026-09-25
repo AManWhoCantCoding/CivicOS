@@ -11,12 +11,15 @@ import {
 } from '@/modules/eventing';
 import type { IdentityUser } from '@/modules/identity';
 import {
+  assignIncident,
   classifyIncident,
+  convertIntakeToIncident,
   getIncident,
   getIncidentReadModel,
   listIncidents,
   rebuildIncidentProjection,
   registerIntakeReport,
+  verifyIntakeReport,
 } from '@/modules/incidents';
 import {
   approveRecommendation,
@@ -524,7 +527,7 @@ describe.skipIf(!replayEnabled)(
       'builds unique Incident, Inspection and Vehicle flows through public entrypoints',
       { timeout: 120000 },
       async () => {
-        const registered = await registerIntakeReport(
+        const created = await registerIntakeReport(
           {
             channel: 'in_person',
             receivedAt: new Date().toISOString(),
@@ -536,8 +539,20 @@ describe.skipIf(!replayEnabled)(
           },
           replayCommander,
         );
-        replayIds.reportId = registered.reportId;
-        replayIds.incidentId = registered.incidentId;
+        await verifyIntakeReport(created.reportId, replayCommander, {
+          classification: 'sufficient',
+          verificationNote: 'Replay verification.',
+        });
+        const converted = await convertIntakeToIncident(
+          created.reportId,
+          replayCommander,
+        );
+        if (!converted.incidentId) throw new Error('REPLAY_CONVERT_FAILED');
+        replayIds.reportId = created.reportId;
+        replayIds.incidentId = converted.incidentId;
+        await assignIncident(replayIds.incidentId, replayCommander, [
+          replayCommander.id,
+        ]);
         await classifyIncident(
           replayIds.incidentId,
           replayCommander,

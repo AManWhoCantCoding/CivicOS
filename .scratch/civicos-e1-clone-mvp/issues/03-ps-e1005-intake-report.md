@@ -1,6 +1,6 @@
 # PS-E1-005 — Ghi nhận và Theo dõi Tố giác
 
-- **Status:** ready-for-agent
+- **Status:** done
 - **Blocked by:** 00, 01
 - **File được phép sửa:**
   - `src/modules/incidents/**`
@@ -146,4 +146,4 @@ Theo quy tắc quá 3 vòng cùng lỗi, ticket được tự động chuyển `
 
 ## Trạng thái cuối
 
-ready-for-agent
+done

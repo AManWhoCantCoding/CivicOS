@@ -1,0 +1,15 @@
+# Test skeleton — 05-mobile-readonly-client
+
+
+- **AC-01:** Input: package `mobile/` được cài từ lockfile đã duyệt và chạy build/typecheck trong môi trường không có import server-only. Expected: package tồn tại độc lập; build/typecheck exit `0`; không có import từ server-only Next.js.
+- **AC-02:** Input: session hợp lệ → login → main navigation → logout; session hết hạn trong lúc đang ở màn dữ liệu. Expected: login tạo session state; logout xóa state và về auth route; session hết hạn xóa state và hiển thị flow đăng nhập lại.
+- **AC-03:** Input: MapLibre provider OSS, một point, một polygon, layer toggle, location permission denied/granted. Expected: point/polygon render; toggle đổi `visible`; permission denied hiển thị permission-denied state; màn map hiển thị OSM attribution.
+- **AC-04:** Input: thiết bị offline có basemap/cache và thử một write command E1-004/E1-007. Expected: basemap/cache vẫn xem được; write command không gửi request và hiển thị read-only/offline reason.
+- **AC-05:** Input: gọi `GET /api/related-info/search` với `q=nguyen`, `entityType=RESIDENT`, `page=1`, `pageSize=20`, rồi mở item Resident/Business/Hotspot/Violation từ list/map sheet và detail. Expected: client đọc đúng response contract ticket 06; debounce/filter/layer/map sheet/list/detail cập nhật theo response; không tạo HTTP response bằng fixture phía client.
+- **AC-06:** Input: backend trả một item `masked=true` và một response không có raw PII; user không thuộc OU/Assignment. Expected: field nhạy cảm chỉ hiển thị masked/omitted; client không tự unmask; permission denied phản ánh `403`; backend là boundary quyết định.
+- **AC-07:** Input: gọi alarm/dispatch/task GET với item có `incidentId`, `resourceId`, `coordinates`, `relatedInfo`, `assignmentSummary`. Expected: route/flow source-compatible; tap deep-link mở đúng map/RelatedInfo/incident context bằng id/reference; không có write CTA; client không tự sinh deep-link từ dữ liệu khác.
+- **AC-08:** Input: lần lượt loading, response `data=[]`, HTTP `500` rồi retry, HTTP `403`, item `masked`, offline. Expected: mỗi trạng thái hiển thị đúng loading/empty/error+retry/permission-denied/masked/offline state và retry gọi lại endpoint thật.
+- **AC-09:** Input: render mobile MVP và inspect action controls trên E1-004/E1-007/E1-005. Expected: không có CTA create/update E1-004/E1-007 và không có public citizen intake route/action.
+- **AC-10:** Input: chạy mobile/API contract test suite và build check theo command được ticket 00 duyệt. Expected: test suite và build check exit `0`; có assertion cho API contract, masking, boundary và read-only flow.
+- **AC-11:** Input: build/run với API base URL được inject runtime/build-time ở hai giá trị local khác nhau; repo không có secret file. Expected: app gọi đúng URL được inject ở mỗi lần chạy; không hard-code production URL; không tạo/commit `mobile/.env.example` hoặc secret.
+- **AC-12:** Input: dependency/toolchain đúng batch đã user APPROVED ngày `2026-09-25`; backend ticket 06 chưa pass. Expected: Planner không giao implementation ticket 05; sau khi ticket 06 pass, mobile dùng HTTP contract thật; không đổi sang mock pass.

@@ -10,7 +10,12 @@ import {
   revokeAssignment,
 } from '@/modules/identity';
 import type { IdentityUser } from '@/modules/identity';
-import { getIncident, registerIntakeReport } from '@/modules/incidents';
+import {
+  convertIntakeToIncident,
+  getIncident,
+  registerIntakeReport,
+  verifyIntakeReport,
+} from '@/modules/incidents';
 
 describe('identity authorization matrix', () => {
   it('allows only the commander role to perform command-only actions', () => {
@@ -290,17 +295,23 @@ describe.skipIf(!postgresEnabled)(
     });
 
     it('enforces the domain read boundary on a real incident record', async () => {
-      const registered = await registerIntakeReport(
+      const created = await registerIntakeReport(
         {
-          channel: 'manual_other',
+          sourceChannel: 'direct',
           receivedAt: new Date().toISOString(),
           content: 'T02 authorization boundary probe',
           idempotencyKey: `t02-authz:${stamp}`,
         },
         duty,
       );
-      intakeReportId = registered.reportId;
-      incidentId = registered.incidentId;
+      await verifyIntakeReport(created.reportId, duty, {
+        classification: 'sufficient',
+        verificationNote: 'T02 boundary verification.',
+      });
+      const converted = await convertIntakeToIncident(created.reportId, duty);
+      if (!converted.incidentId) throw new Error('T02_CONVERT_FAILED');
+      intakeReportId = created.reportId;
+      incidentId = converted.incidentId;
       await createAssignments(
         {
           resourceType: 'Incident',

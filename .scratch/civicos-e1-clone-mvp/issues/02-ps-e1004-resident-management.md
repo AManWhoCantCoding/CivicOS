@@ -1,6 +1,6 @@
 # PS-E1-004 — Quản lý Cư dân Đặc biệt
 
-- **Status:** ready-for-agent
+- **Status:** done
 - **Blocked by:** 00, 01
 - **File được phép sửa:**
   - `src/modules/residents/**`
@@ -92,4 +92,4 @@ Không.
 
 ## Trạng thái cuối
 
-pending
+done

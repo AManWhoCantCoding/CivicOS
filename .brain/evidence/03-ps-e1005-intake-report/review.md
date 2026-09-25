@@ -103,3 +103,7 @@
 - **PASS — không phát hiện lệch nghiệp vụ cụ thể** giữa yêu cầu suy ngược từ diff + test PASS và ticket/Acceptance Criteria.
 - Regression Evidence mới khớp trực tiếp yêu cầu Evidence persistence/linkage/readback; `IntakeReportDetail` hiện mount capture/list đúng resource và refresh sau upload.
 - Không dùng round-trip này để thay thế kiểm tra verification của cây mã hiện tại; không chạy lệnh kiểm tra và không commit.
+
+## Commit
+
+- Hash: `76e2547`

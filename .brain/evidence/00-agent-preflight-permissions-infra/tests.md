@@ -441,3 +441,53 @@
 - **AC “Đã chốt tile data/provider/TileServer” — PASS/APPROVED tại ticket 00:** user đã chốt OSS tự host TileServer GL, OSM/OpenMapTiles/PMTiles, bbox `105.93,20.91,106.03,20.99`, OSM attribution/license, volume `./storage/tiles/cadn:/data:ro`, host port `8080`, outbound network tới Geofabrik/npm/Docker Hub, tối thiểu `10 GB` disk, network local, và exact effective fallback tag `maptiler/tileserver-gl:v5.6.0`; manifest evidence của tag `v5.6.0` đã có ở trên. TileServer live smoke và tile-data smoke là deliverable được ghi rõ của ticket `01`, không phải runtime bắt buộc của preflight ticket `00`. Đây là evidence phạm vi/traceability; không tuyên bố TileServer live hoặc tile-data smoke đã pass.
 - **AC “Đã chốt khả năng build mobile” — PASS/APPROVED tại ticket 00:** user đã chốt Android native; JDK/Android SDK/ADB/emulator đã PASS theo evidence ở trên. Gradle wrapper và mobile project là deliverable của ticket `05`, không được tạo trong preflight ticket `00`; việc chưa có các artifact đó không chuyển AC này thành blocker của ticket `00`.
 - **AC status/dependency:** chỉ ticket `01` được mở sau khi ticket `00` đóng. Ticket `02`–`05` vẫn blocked theo dependency graph tương ứng và không giao Developer bị block. Đây là evidence phạm vi/traceability, không phải kết quả triển khai downstream.
+
+## Kiểm tra lại theo yêu cầu Planner — native Windows PowerShell, read-only
+
+- **Phạm vi:** chỉ kiểm tra Docker Desktop, compose PostgreSQL đang chạy, PostgreSQL readiness và read-only connectivity tới database target đã duyệt `civicos_demo`; không chạy `up`, migration, reset, drop, source tests hoặc npm.
+- **Wrapper:** các lệnh chạy qua native `powershell.exe` với wrapper `Invoke-Safe` inline. Không sửa compose và không dừng PostgreSQL.
+
+### Kết quả thô
+
+- **PASS** — `docker.exe info`
+  ```text
+  Client:
+   Version:    29.6.2
+   Context:    desktop-linux
+  Server:
+   Containers: 2
+    Running: 1
+    Paused: 0
+    Stopped: 1
+   Server Version: 29.6.2
+   Operating System: Docker Desktop
+   OSType: linux
+   Architecture: x86_64
+  EXIT_CODE=0
+  ```
+
+- **PASS** — `docker.exe compose -f D:/Project/CivicOS/docker-compose.yml ps`
+  ```text
+  NAME                 IMAGE                COMMAND                  SERVICE    CREATED       STATUS       PORTS
+  civicos-postgres-1   postgres:16-alpine   "docker-entrypoint.s…"   postgres   3 hours ago   Up 3 hours   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+  EXIT_CODE=0
+  ```
+
+- **PASS** — PostgreSQL readiness
+  ```text
+  /var/run/postgresql:5432 - accepting connections
+  EXIT_CODE=0
+  ```
+
+- **PASS** — read-only connectivity tới `civicos_demo`
+  ```text
+  BEGIN
+  civicos_demo|civicos|f
+  ROLLBACK
+  EXIT_CODE=0
+  ```
+  Query chỉ dùng `BEGIN READ ONLY`, `SELECT current_database(), current_user, pg_is_in_recovery()` và `ROLLBACK`.
+
+### Trục trặc trong lần chạy
+
+- Lần probe connectivity đầu tiên lỗi do quoting PowerShell lồng nhau; PostgreSQL vẫn reachable nhưng `psql` trả `ERROR:  syntax error at or near "primary"`. Đã không retry bằng lệnh mutation; đã chạy lại riêng probe read-only với câu SQL không cần nested string literal và nhận kết quả PASS ở trên.
