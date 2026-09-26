@@ -12,13 +12,7 @@
 // Exit code: 0 = PASS, 1 = FAIL, 2 = INCOMPLETE (thiếu script / bước không chạy), 64 = sai tham số.
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const DEFAULT_FULL = [
   'prisma:generate',
@@ -152,13 +146,13 @@ const EXCLUDE = [
 ];
 const isExcluded = (f) => EXCLUDE.some((p) => f === p || f.startsWith(`${p}/`));
 function isGeneratedArtifact(f) {
-// Loại generated Android build, Gradle và CMake output khỏi fingerprint Tree.
+  // Loại generated Android build, Gradle và CMake output khỏi fingerprint Tree.
   const normalized = f.replace(/\\/g, '/');
   return (
     normalized.startsWith('mobile/android/') &&
-    normalized.split('/').some(
-      (s) => s === 'build' || s === '.gradle' || s === '.cxx',
-    )
+    normalized
+      .split('/')
+      .some((s) => s === 'build' || s === '.gradle' || s === '.cxx')
   );
 }
 function treeFingerprint() {
@@ -180,17 +174,16 @@ function treeFingerprint() {
     .filter(Boolean)) {
     if (isExcluded(f) || isGeneratedArtifact(f)) continue;
     try {
-      const s = statSync(f);
-      h.update(`${f}:${s.size}:${s.mtimeMs}`);
+      h.update(f);
+      h.update(readFileSync(f));
     } catch {
       /* file vừa bị xóa */
     }
   }
   return h.digest('hex').slice(0, 8);
 }
-const tree = treeFingerprint();
 if (treeOnly) {
-  console.log(`Tree: ${tree}`);
+  console.log(`Tree: ${treeFingerprint()}`);
   process.exit(0);
 }
 
@@ -239,6 +232,7 @@ for (const name of steps) {
   results.push(r);
   if (r.status === 'FAIL' && !keepGoing) halted = true;
 }
+const tree = treeFingerprint();
 
 const has = (s) => results.some((r) => r.status === s);
 const overall = has('FAIL')
