@@ -1,0 +1,14 @@
+
+> civic-os@0.1.0 typecheck
+> tsc --noEmit
+
+mobile/src/api/__tests__/client.test.ts(7,39): error TS2345: Argument of type '{ status: number; }' is not assignable to parameter of type 'ApiError'.
+  Type '{ status: number; }' is missing the following properties from type 'ApiError': code, body, name, message
+mobile/src/api/__tests__/client.test.ts(10,39): error TS2345: Argument of type '{ status: number; }' is not assignable to parameter of type 'ApiError'.
+  Type '{ status: number; }' is missing the following properties from type 'ApiError': code, body, name, message
+src/app/api/evidence/route.ts(20,21): error TS2339: Property 'get' does not exist on type 'FormData'.
+src/app/api/evidence/route.ts(21,29): error TS2339: Property 'get' does not exist on type 'FormData'.
+src/app/api/evidence/route.ts(22,27): error TS2339: Property 'get' does not exist on type 'FormData'.
+src/app/api/evidence/route.ts(23,32): error TS2339: Property 'get' does not exist on type 'FormData'.
+src/app/api/evidence/route.ts(24,30): error TS2339: Property 'get' does not exist on type 'FormData'.
+src/app/api/evidence/route.ts(25,31): error TS2339: Property 'get' does not exist on type 'FormData'.

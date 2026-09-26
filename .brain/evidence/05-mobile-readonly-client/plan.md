@@ -1,185 +1,112 @@
-# Plan Check — `05-mobile-readonly-client` (chỉ plan, chưa code/test/chạy/commit)
+# Plan Check — 05-mobile-readonly-client
 
-## 0. Tóm tắt rủi ro / scope
+## 0. Phạm vi và hiện trạng đã đối chiếu
 
-| Hạng mục | Nội dung chốt trong plan này |
-|---|---|
-| Scope cho phép | Chỉ `mobile/**`, `src/modules/**/contracts.ts` khi thật sự cần công bố HTTP contract, `tests/**` cho API contract. Không chạm `.env`, secrets, CI/CD, `.scratch`, source repo ngoài. Không xóa/reset/format toàn repo (working tree đang bẩn từ ticket khác). |
-| Điểm xuất phát | `mobile/` chưa tồn tại (glob rỗng). Root đã có `maplibre-gl@^6.11.1`. Backend có sẵn các endpoint thật ở mục 5, KHÔNG có `/api/related-info/*`, `/api/map/layers`, alarm/dispatch/task endpoints (glob `src/app/api/**/route.ts` đã xác nhận). |
-| Dependency đã duyệt (ticket 00) | `@maplibre/maplibre-react-native@11.4.0` MIT, command `npm --prefix mobile install @maplibre/maplibre-react-native@11.4.0`; JDK 17 / SDK 12.0 / ADB 37 / emulator `Pixel_7` PASS; Gradle wrapper + Android project là deliverable của ticket này (không phải blocker preflight). |
-| Rủi ro chính 1 | Ticket yêu cầu `GET /api/related-info/*`, `GET /api/map/layers`, alarm/dispatch/task endpoints nhưng repo chưa có → xử lý bằng adapter client-side trên endpoint thật (mục 5), KHÔNG bịa backend mới (backend route mới nằm ngoài whitelist). |
-| Rủi ro chính 2 | Hotspot/Violation không có endpoint riêng → suy ra từ projection/markers + inspections/findings ở client, gắn nhãn rõ là derived view, không tạo store nghiệp vụ mới. |
-| Rủi ro chính 3 | React Native core (`react`, `react-native`, TS, jest) chưa có approval/version chốt trong ticket 00 → scaffold phải xin approval version trước khi cài; chỉ mỗi MapLibre RN là đã APPROVED. |
-| Rủi ro chính 4 | iOS toolchain không có trên Windows → chỉ cam kết Android/JS contract + ghi rõ giới hạn, theo đúng bước thực hiện cuối của ticket. |
-| Kết luận sơ bộ | Xem cuối file. |
+- Căn cứ: ticket hiện tại, `CONTEXT.md`, `spec.md`, screen-11/12/13; không có `.scratch/feature-map.md` và không có ADR trong `docs/adr/`.
+- Mục tiêu: app React Native độc lập trong `mobile/` dùng backend/API chung, chỉ read-only cho auth/main/map, RelatedInfo và alarm/dispatch/task cùng Incident context.
+- Whitelist ticket: `mobile/**`; `src/modules/**/contracts.ts` chỉ khi bắt buộc công bố HTTP contract tương thích; `tests/**` cho API contract; evidence thuộc `.brain/evidence/05-mobile-readonly-client/**`.
+- Hiện workspace đã có scaffold, source mobile, test skeleton/HTTP contract và Android artifacts; checklist triển khai đã `[x]` nhưng toàn bộ AC/Rubric vẫn chưa được coi là PASS vì evidence cuối thiếu khớp cây hiện tại và có các lần verification FAIL.
+- Không sửa ticket/AC, `.env`/secret, `src/app/**`, root config, server-only implementation hoặc `.brain` ngoài evidence của ticket; không chạy test/lint/typecheck/format/build trong Plan Check.
 
-## 1. File dự định sửa / tạo (chính xác, không placeholder)
+## 1. File dự định sửa/tạo
 
-### 1a. Implementation — `mobile/` (tạo mới toàn bộ, React Native CLI hướng Android)
+### 1.1. Mobile implementation
 
-- `mobile/package.json` — package độc lập, scripts `typecheck/test/build/android`.
-- `mobile/package-lock.json` — sinh bởi lệnh cài đã duyệt (`npm --prefix mobile install ...`), commit kèm.
-- `mobile/tsconfig.json` — strict, `noEmit`, tách khỏi root Next.js.
-- `mobile/babel.config.js` — preset React Native.
-- `mobile/metro.config.js` — cấu hình Metro mặc định.
-- `mobile/index.js` — entry đăng ký App.
-- `mobile/app.json` — tên app/displayName.
-- `mobile/.env.example` — chỉ tên biến `CIVICOS_API_BASE_URL` + ghi chú emulator `10.0.2.2`, không giá trị thật, không file secret.
-- `mobile/src/config.ts` — đọc API base URL runtime (env + override màn hình settings), default emulator `http://10.0.2.2:3000`, không hard-code production.
-- `mobile/src/api/client.ts` — fetch wrapper: cookie/session header, parse lỗi `UNAUTHENTICATED/FORBIDDEN`, mã lỗi map.
-- `mobile/src/api/session.ts` — `GET/POST/DELETE /api/auth/session` adapter.
-- `mobile/src/api/mapApi.ts` — `GET /api/map/config` + `GET /api/map/markers` adapter.
-- `mobile/src/api/relatedInfo.ts` — RelatedInfo adapter client-side (mục 5), gom Resident/Business/Hotspot/Violation từ endpoint thật.
-- `mobile/src/api/incidents.ts` — `GET /api/incidents`, `GET /api/incidents/:incidentId` adapter read-only.
-- `mobile/src/api/notifications.ts` — `GET /api/notifications` read-only (dùng cho alarm surface nếu có resource).
-- `mobile/src/auth/SessionContext.tsx` — login/session state, logout, session-expiry handler toàn app.
-- `mobile/src/auth/LoginScreen.tsx` — màn đăng nhập.
-- `mobile/src/navigation/AppNavigator.tsx` — main tabs: Map / RelatedInfo / Alarm / Dispatch / Task / Settings.
-- `mobile/src/features/map/MapScreen.tsx` — MapLibre RN view, point/polygon, layer toggle, OSM attribution, offline indicator.
-- `mobile/src/features/map/ProviderAdapter.ts` — adapter styleUrl/tileBaseUrl từ `/api/map/config`, ép OSM attribution.
-- `mobile/src/features/related-info/RelatedInfoScreen.tsx` — search debounce + layer tabs + filter sheet + bottom sheet list.
-- `mobile/src/features/related-info/RelatedInfoDetail.tsx` — detail sheet read-only + mask + link map.
-- `mobile/src/features/related-info/types.ts` — entityType/id/title/status/address/lat/lng/geometry/updatedAt + masked flags.
-- `mobile/src/features/alarm/AlarmScreen.tsx` — surface alarm read-only, link map/RelatedInfo.
-- `mobile/src/features/dispatch/DispatchScreen.tsx` — surface dispatch read-only, link map/RelatedInfo.
-- `mobile/src/features/task/TaskScreen.tsx` — surface task read-only (Assignment context), link map/RelatedInfo.
-- `mobile/src/components/States.tsx` — Loading/Empty/ErrorRetry/PermissionDenied/Masked/OfflineBanner dùng chung mọi màn.
-- `mobile/src/components/WriteGuard.tsx` — guard chặn write command read-only (`MAP_OFFLINE_WRITE_BLOCKED` + `READ_ONLY_MVP`).
-- `mobile/src/fixtures/synthetic.ts` — fixtures synthetic cho dev/test, không PII thật.
-- `mobile/android/settings.gradle`, `mobile/android/build.gradle`, `mobile/android/app/build.gradle`, `mobile/android/app/src/main/AndroidManifest.xml`, `mobile/android/app/src/main/java/.../MainActivity.*` — Android native project tối thiểu (Gradle wrapper sinh bởi `gradle wrapper` sau approval; file `mobile/gradlew`, `mobile/gradle/wrapper/*` liệt kê khi sinh, không tự cài Gradle hệ thống).
+- Package/toolchain: `mobile/package.json`, `mobile/package-lock.json`, `mobile/tsconfig.json`, `mobile/babel.config.js`, `mobile/metro.config.js`, `mobile/jest.config.js`, `mobile/index.js`, `mobile/app.json`.
+- Android/native build boundary: `mobile/android/settings.gradle`, `mobile/android/build.gradle`, `mobile/android/gradle.properties`, `mobile/android/app/build.gradle`, `mobile/android/app/proguard-rules.pro`, `mobile/android/app/src/main/AndroidManifest.xml`, `mobile/android/app/src/main/java/com/civicosmobile/{MainActivity.kt,MainApplication.kt,ApiConfigModule.kt,ApiConfigPackage.kt}`, `mobile/android/gradle/wrapper/{gradle-wrapper.jar,gradle-wrapper.properties}`, `mobile/android/{gradlew,gradlew.bat}`. Generated `mobile/android/.gradle/**`, `mobile/android/app/build/**`, `mobile/android/app/.cxx/**` không phải file source dự định sửa/tạo.
+- Entry/config/API: `mobile/src/App.tsx`, `mobile/src/config.ts`, `mobile/src/api/{client.ts,session.ts,map.ts,relatedInfo.ts,forces.ts}`.
+- Auth/navigation: `mobile/src/auth/{SessionContext.tsx,LoginScreen.tsx}`, `mobile/src/navigation/{AppNavigator.tsx,deepLinks.ts}`.
+- Shared UI guard/state: `mobile/src/components/{States.tsx,WriteGuard.ts}`.
+- Features: `mobile/src/features/map/{MapScreen.tsx,ProviderAdapter.ts}`, `mobile/src/features/related-info/{types.ts,RelatedInfoScreen.tsx,RelatedInfoDetail.tsx}`, `mobile/src/features/alarm/AlarmScreen.tsx`, `mobile/src/features/dispatch/DispatchScreen.tsx`, `mobile/src/features/task/TaskScreen.tsx`, `mobile/src/features/incident/IncidentScreen.tsx`, `mobile/src/features/settings/SettingsScreen.tsx`.
+- Không tạo `mobile/src/api/incidents.ts`, Incident wire type mới, Incident test riêng hoặc client business store/fixture.
 
-### 1b. Contract chia sẻ (chỉ khi thật sự cần, thuần type)
+### 1.2. Tests/contract evidence thuộc implementation scope
 
-- `src/modules/platform/map/contracts.ts` — KHÔNG tạo mới nếu `src/modules/platform/map/index.ts` hiện hữu đã đủ (`MapProviderConfig`, `MapMarker`, `MAP_ERRORS`, `maskMapMarker`, `resolveMapProvider`); chỉ thêm khi mobile cần type import mà không được import server-only. Mặc định: mobile tự định nghĩa type tương thích, không sửa file này.
-- Không sửa `src/modules/identity/contracts.ts`, `src/modules/residents/contracts.ts`, `src/modules/incidents/contracts.ts`, `src/modules/inspections/contracts.ts` trừ khi Reviewer yêu cầu công bố contract; mặc định giữ nguyên.
+- Mobile tests: `mobile/src/config.test.ts`, `mobile/src/api/__tests__/{client.test.ts,session.test.ts,map.test.ts,relatedInfo.test.ts,forces.test.ts}`, `mobile/src/components/__tests__/{states.test.tsx,writeGuard.test.ts}`, `mobile/src/features/__tests__/{deepLinks.test.ts,navigation-readonly.test.tsx}`, `mobile/src/test-globals.d.ts` khi cần cho package test/type boundary.
+- Root consumer contract: `tests/mobile/readonly-http.contract.test.ts`, chỉ gọi HTTP backend thật; không tạo fixture để giả response.
+- `deepLinks.test.ts` chỉ kiểm tra route và field reference của deep-link theo contract ticket 06 cùng Incident envelope hiện có; không tạo Incident contract, wire type hoặc test contract Incident riêng.
+- Không sửa `src/modules/**/contracts.ts` trong baseline này; nếu phát sinh nhu cầu bắt buộc thì dừng và xin Planner duyệt lại plan.
 
-### 1c. Test — trong phạm vi ticket
+## 2. Hàm/interface/module sẽ đổi
 
-- `mobile/src/api/__tests__/session.test.ts` — contract session/login/logout/expiry.
-- `mobile/src/api/__tests__/relatedInfo.test.ts` — mapping entityType/search/counts/detail/masking-passthrough.
-- `mobile/src/api/__tests__/mapApi.test.ts` — provider adapter + markers parse + OSM attribution bắt buộc.
-- `mobile/src/components/__tests__/writeGuard.test.ts` — mọi write E1-004/E1-007 bị chặn.
-- `tests/mobile/related-info.contract.test.ts` — API contract root: residents/establishments/inspections/incidents/markers phục vụ adapter (không assert endpoint chưa tồn tại).
-
-### 1d. Config / lockfile
-
-- `mobile/package.json` + `mobile/package-lock.json` (mục 1a). Không sửa root `package.json`, `docker-compose.yml`, CI config.
-
-### 1e. Package cần cài (liệt kê rõ)
-
-- ĐÃ DUYỆT: `@maplibre/maplibre-react-native@11.4.0` (MIT) — command `npm --prefix mobile install @maplibre/maplibre-react-native@11.4.0`.
-- CHƯA DUYỆT (phải xin approval version + license trước khi cài, không tự `npm install`): `react`, `react-native`, `typescript`, `@types/react`, `@types/react-native`, `jest`/`react-test-renderer` (hoặc vitest cho mobile nếu bám root toolchain). Không đề xuất thêm native dep (ví dụ `react-native-config`, async-storage, geolocation): config đọc env runtime + in-app override, location dùng API chuẩn của RN/MapLibre đã có trong package duyệt.
-
-## 2. Hàm / interface / contract sẽ đổi hoặc tạo
-
-- Tạo `SessionState { user, status: 'loading'|'authed'|'guest'|'expired', login(), logout(), refresh() }` trong `SessionContext.tsx`; 1 dòng đầu hàm/method/class/interface duy nhất, không comment rời.
-- Tạo `ApiError { code, status }`, `requestJson(path, options)` trong `api/client.ts`; 401 → `status 'expired'`, 403 → permission-denied/masked.
-- Tạo `MapProviderView { styleUrl, tileBaseUrl, attribution, bounds, official: false }` trong `ProviderAdapter.ts`; ép `attribution` chứa `OpenStreetMap`, ném `MAP_PROVIDER_UNAVAILABLE` nếu thiếu.
-- Tạo `RelatedInfoItem { entityType: 'resident'|'business'|'hotspot'|'violation', id, title, status, address?, lat?, lng?, geometry?, updatedAt, masked: boolean }`, `searchRelatedInfo(query, layer, filters)`, `getRelatedInfoDetail(entityType, id)`, `countRelatedInfo(layer)` trong `api/relatedInfo.ts` + `types.ts`.
-- Tạo `IncidentSummary/IncidentDetail` read-only + `listIncidents/getIncident` trong `api/incidents.ts`; alarm/dispatch/task screens chỉ render + link, không mutation.
-- Tạo `ReadOnlyGuard.assertReadable()` / `WriteGuard` chặn mọi CTA tạo/cập nhật E1-004/E1-007 và mọi POST/PATCH/PUT/DELETE từ mobile (ngoại trừ `POST/DELETE /api/auth/session` cho login/logout và `PATCH /api/notifications` chỉ nếu ticket diễn giải alarm cần mark-read — mặc định KHÔNG gọi, giữ read-only tuyệt đối; nếu cần thì xin Planner trước).
-- Không đổi hàm backend hiện có; không tạo store nghiệp vụ mới trên mobile (fixtures + cache basemap/markers chỉ là view cache).
+- `resolveApiBaseUrl`, `apiBaseUrl` (`mobile/src/config.ts`): runtime injection ưu tiên build-time/native injection, chỉ nhận `http/https`, bỏ slash cuối, thiếu/invalid thì lỗi; không hard-code production URL.
+- `ApiError`, `parseResponse`, `requestJson`, `onSessionExpired` (`mobile/src/api/client.ts`): nối base URL, credentials, giữ nguyên HTTP `401/403`, phát tín hiệu expiry tập trung cho `401`, map lỗi mạng thật thành `OFFLINE`, gọi `WriteGuard` trước mọi write.
+- `sessionStateFromResponse`, `getSession`, `login`, `logout` (`mobile/src/api/session.ts`) và `SessionProvider/useSession` (`SessionContext.tsx`): loading/authenticated/unauthenticated/expired và re-login.
+- `getMapLayers`, `getMapItems`, `getMapProvider` (`api/map.ts`) và `ProviderAdapter`: consume map contract, point/polygon từ HTTP RelatedInfo, luôn giữ OSM attribution.
+- `RelatedInfoEntityType`, `RelatedInfoItem`, `RelatedInfoQuery`, các response type search/count/detail (`features/related-info/types.ts`), cùng `buildRelatedInfoPath`, `searchRelatedInfo`, `countRelatedInfo`, `getRelatedInfoDetail` (`api/relatedInfo.ts`): giữ shape ticket 06, query phẳng, pagination, debounce và detail HTTP thật.
+- `ForceLink`, `ForceItem`, list/detail envelopes, `forcePaths`, `getAlarms`, `listDispatches/getDispatch`, `listTasks/getTask/listTasksByDispatch` (`api/forces.ts`): GET-only, giữ deep-link fields `incidentId`, `resourceId`, `coordinates`, `relatedInfo`, `assignmentSummary` và alias task.
+- `deepLinkFor`, `AppNavigator`: route source-compatible tới Map/RelatedInfo/Incident, chỉ truyền id/reference/coordinates/assignment summary; không có route write/citizen.
+- `States`, `StateMessage`, `OfflineBanner`, `MaskedValue`, `WriteGuard.assertReadOnly`: state matrix và chặn POST/PUT/PATCH/DELETE ngoài auth.
+- `MapScreen`, `RelatedInfoScreen`, `RelatedInfoDetail`, `AlarmScreen`, `DispatchScreen`, `TaskScreen`, `IncidentScreen`, `SettingsScreen`: render dữ liệu HTTP, retry/loading/empty/error/403/masked/offline, tap target mobile và không thêm write CTA.
+- Incident seam bắt buộc tái sử dụng: `requestJson<{ incidents: [...] }>('/api/incidents')` và `requestJson<{ incident: { incident, events, approvals, informant } }>(`/api/incidents/${incidentId}`)`; không tạo contract/type/test Incident mới, không đổi hai envelope này.
 
 ## 3. Luồng xử lý chi tiết
 
-1. Session/login: mở app → `SessionContext` gọi `GET /api/auth/session` (loading) → 200 có user → vào main tabs; 401 → `LoginScreen`; `POST /api/auth/session` sai credential → error + retry, không lưu secret; logout gọi `DELETE /api/auth/session` → về guest. Mọi API 401 giữa chừng → `status 'expired'` + banner + điều về login, giữ lại route để quay lại sau login.
-2. Main navigation: tabs Map / RelatedInfo / Alarm / Dispatch / Task / Settings (giữ route/flow source PS-E3, không thêm tab citizen intake, không thêm tab tạo E1-004/E1-007). `CIVICOS_API_BASE_URL` đổi trong Settings chỉ áp dụng runtime, không commit.
-3. Map (screen-11): lấy `GET /api/map/config` → dựng provider adapter OSS (styleUrl/tileBaseUrl/bounds/Official false + OSM attribution) → `GET /api/map/markers` (lọc sẵn OrganizationUnit + mask server-side) → render point/polygon + layer toggle + tap marker mở RelatedInfo detail sheet. Location permission: granted → hiện vị trí; denied → banner permission-denied + vẫn xem basemap/markers. Error → retry; empty → empty-state; offline → basemap/cache + banner offline, mọi write bị `WriteGuard` chặn (`MAP_OFFLINE_WRITE_BLOCKED`).
-4. RelatedInfo (screen-12): search debounce 300ms + layer tabs (Resident/Business/Hotspot/Violation) + filter sheet → gọi adapter (mục 5) → bottom sheet list → tap mở detail sheet read-only. Masking: server đã mask, client chỉ render `masked=true` thành text che + không có nút reveal; 403 → permission-denied/masked state. Không có CTA tạo/cập nhật.
-5. Alarm/dispatch/task (screen-13): list read-only từ incidents/notifications context → detail read-only → deep-link tới map (tọa độ) / RelatedInfo (entity liên quan) khi có resource; task hiển thị Assignment context (ai được phân công) nhưng không mutation. Không có dispatch/assign/verify/approve CTA.
-6. Trạng thái bắt buộc mọi màn động: loading skeleton, empty, error/retry, permission-denied/masked, offline banner, session-expiry redirect. Tap target tối thiểu 44px, retry rõ ràng.
-7. Read-only write guard: mọi nút/command ghi E1-004/E1-007 và public citizen intake không được render; nếu code path nào lọt (defensive) thì `WriteGuard` chặn + thông báo read-only MVP; offline thì mọi write đều chặn.
+1. `App` mount `SessionProvider`; gọi `GET /api/auth/session`. Loading hiển thị loading; user hợp lệ vào main; không có user vào auth; `401`/expiry chuyển `expired` về auth và cho re-login; logout dùng endpoint auth đã có.
+2. Main map gọi layers/provider và RelatedInfo items từ HTTP. Server tự resolve session `OrganizationUnit`; client chỉ toggle visibility local. Point/polygon lấy từ response, location denied vẫn cho xem map nhưng hiển thị permission-denied; attribution OSM luôn hiện.
+3. Khi offline, giữ basemap/offline pack và last-known view cache. Read vẫn render cache; write command bị chặn trước `fetch` với lý do rõ ràng. `403` là permission-denied, không biến thành empty/offline.
+4. RelatedInfo search debounce 300ms; tab/filter tạo query phẳng gửi server; counts dùng cùng boundary; list giữ `data/total/page/pageSize`; marker/polygon mở map sheet; detail fetch `/api/related-info/:entityType/:id`, render masked/omitted nguyên trạng, không unmask.
+5. Alarm gọi `GET /api/forces/alarms`; dispatch/task gọi list/detail và task alias theo contract ticket 06. List/detail enforce boundary ở server; client chỉ hiển thị fields và trạng thái read-only.
+6. Item có `relatedInfo` mở RelatedInfo detail bằng reference rồi fetch server; có `resourceId/coordinates` mở map; có `incidentId` mở `IncidentScreen` và fetch `GET /api/incidents/:incidentId` với envelope detail hiện có. Khi cần danh sách Incident, fetch `GET /api/incidents` với envelope list hiện có. Không chuyển Incident context thành contract mới.
+7. Mọi surface dữ liệu dùng state loading/empty/error+retry/403/masked/offline; không thêm create/update/assign/verify/approve/public citizen intake.
+8. Base URL đọc tại thời điểm request từ injection; kiểm thử sau đó phải dùng ít nhất hai giá trị runtime/build-time khác nhau, không commit secret.
 
-## 4. Map thay đổi → AC / Rubric / Các bước thực hiện
+### 3.1. Trình tự TDD bắt buộc
 
-### 4a. Map từng dòng Acceptance Criteria
+Thực hiện toàn bộ implementation/test plan theo đúng Red → Green → Refactor, theo từng contract, state hoặc boundary đã map vào AC:
 
-| AC | Thay đổi phục vụ (mục 1–3) | Ghi chú |
-|---|---|---|
-| `mobile/` độc lập, build được, không import server-only Next.js | `mobile/package.json`, `tsconfig.json`, `babel/metro/index/app.json`, toàn bộ `mobile/src/**` tự chứa; provider/contract type copy tương thích thay vì import `src/modules/**` server-only | Không sửa root package |
-| Login/session, main navigation, logout, session hết hạn | `SessionContext.tsx`, `LoginScreen.tsx`, `api/session.ts`, `api/client.ts`, `AppNavigator.tsx` + luồng §3.1–3.2 | — |
-| MapLibre RN: provider adapter OSS, point/polygon, layer toggle, location permission, OSM attribution | `ProviderAdapter.ts`, `MapScreen.tsx`, `api/mapApi.ts` + ép attribution chứa OpenStreetMap | Package đã duyệt 11.4.0 |
-| Offline chỉ xem basemap/cache; write ngoài read-only bị chặn rõ | `States.tsx` (OfflineBanner), `WriteGuard.tsx`, `assertMapWriteAllowed` tương thích + luồng §3.3 | — |
-| RelatedInfo search/list/detail Resident/Business/Hotspot/Violation + debounce/filter/layer/map sheet | `RelatedInfoScreen.tsx`, `RelatedInfoDetail.tsx`, `types.ts`, `api/relatedInfo.ts` + fixtures | Hotspot/Violation là derived view (mục 5) |
-| Field nhạy cảm mask cùng policy web; API là security boundary | Không tự mask thêm ở client ngoài render `masked`; dựa `maskMapMarker`/`maskDisplayName`/server mask; `writeGuard.test.ts` + contract test | Không tạo nút reveal |
-| Alarm/dispatch/task giữ route/flow source, link map/RelatedInfo khi có resource | `AlarmScreen.tsx`, `DispatchScreen.tsx`, `TaskScreen.tsx`, `api/incidents.ts`, `api/notifications.ts` | Chỉ read-only + link |
-| Loading/empty/error-retry/permission-denied-masked/offline mọi màn động | `States.tsx` dùng chung + áp trong Map/RelatedInfo/Alarm/Dispatch/Task | — |
-| Không CTA tạo/cập nhật E1-004/E1-007 hoặc citizen intake | Không tạo màn/form đó + `WriteGuard.tsx` + test chặn write | — |
-| Mobile/API contract tests + build check | 4 file test mobile + `tests/mobile/related-info.contract.test.ts` + build/typecheck ở mục 7 | Chỉ mô tả lệnh, không chạy |
-| API base URL inject runtime; không secret file | `.env.example` (tên biến only), `config.ts`, Settings override | Không commit secret |
-| Dependency RN/MapLibre + native SDK đã duyệt ở ticket 00, nếu chưa thì `needs-info` | MapLibre RN 11.4.0 + JDK/SDK/ADB/emulator PASS đã có evidence; RN core chưa duyệt → xin approval trước cài, không mock pass | Điều kiện `PLAN_READY` ở mục kết luận |
+1. **Red:** viết test trước implementation và chạy test đó để xác nhận test đỏ đúng hành vi còn thiếu; test phải bao phủ contract/state/boundary tương ứng, gồm cả deep-link route/field reference của AC-07 khi cần.
+2. **Green:** viết implementation tối thiểu để test đỏ chuyển xanh, không tạo abstraction hoặc contract ngoài whitelist.
+3. **Refactor:** chỉ refactor sau khi test đã xanh; giữ nguyên hành vi và chạy lại các test liên quan để xác nhận vẫn xanh.
 
-### 4b. Map từng dòng Rubric bắt buộc
+Ngoại lệ Incident của AC-07 chỉ là consumer/deep-link behavior: test route/field reference dùng `incidentId` từ contract ticket 06 và hai Incident envelope hiện có; không tạo Incident contract, wire type hoặc test contract Incident riêng.
 
-| Rubric | Thay đổi phục vụ |
-|---|---|
-| Dùng backend/API chung, không store nghiệp vụ tách khỏi CivicOS (`spec.md#27`) | Chỉ GET endpoint thật mục 5 + view cache; fixtures synthetic chỉ cho dev/test; không tạo DB/store mobile |
-| Tôn trọng `OrganizationUnit`, Assignment, masking (`spec.md#22`, `CONTEXT.md#43`) | Dựa lọc OrganizationUnit + mask server-side của `/api/map/markers`, residents, incidents; Assignment chỉ hiển thị context ở Task; `masked` render-only |
-| Không biến mobile PS-E3 thành phạm vi E1; chỉ surface E1 đã nêu (`spec.md#6`) | Chỉ alarm/dispatch/task surface phục vụ Incident context + link; không mobile write E1-004/E1-007, không citizen app |
+## 4. Map thay đổi với AC/Rubric theo đúng thứ tự ticket
 
-### 4c. Map Rubric khuyến nghị (ghi nhận, ngưỡng tối thiểu 1/2)
+| AC nội bộ | Checkbox ticket | File/hàm/thay đổi phục vụ | Map tới ticket/Rubric |
+|---|---|---|---|
+| AC-01 | 1 | Package/config/entry/Android; mobile source chỉ import RN/MapLibre/mobile code, không import Next.js/Prisma/server-only. | Ticket `05:23`; Platform `05:87-90`; Rubric bắt buộc `05:40`. Android artifacts là dependency scaffold/build, không phải business logic. |
+| AC-02 | 2 | `client.ts`, `session.ts`, `SessionContext`, `LoginScreen`, `AppNavigator`; session state và centralized `401` expiry. | Ticket `05:24`; screen-11 `:9-20`; không có AC Rubric riêng. |
+| AC-03 | 3 | `map.ts`, `ProviderAdapter`, `MapScreen`, `States`; OSS provider, point/polygon, toggle, permission và OSM attribution. | Ticket `05:25`; HTTP map contract `05:67,75`; screen-11 `:9-20`; Rubric UI `05:48`. |
+| AC-04 | 4 | `MapScreen` offline pack/cache, `client.ts`, `WriteGuard`, `States`; cache đọc được và mutation không phát request. | Ticket `05:26`; `spec.md:54-64`; screen-11 `:11-20`; không mở rộng thành write flow. |
+| AC-05 | 5 | RelatedInfo types/API/screens/detail; debounce, filter, counts, pagination, map/list/detail từ response thật cho Resident/Business/Hotspot/Violation. | Ticket `05:27,68,76-79`; screen-12 `:9-21`; Rubric `05:40-41,48`. |
+| AC-06 | 6 | `client.ts`, `States`, RelatedInfo detail và contract test; giữ masked/omitted, giữ `403`, không unmask; OU/Assignment là server boundary. | Ticket `05:28,78-79`; Rubric bắt buộc `05:41`; `CONTEXT.md:43-45`. |
+| AC-07 | 7 | `forces.ts`, alarm/dispatch/task screens, `deepLinks.ts`, `AppNavigator`, `IncidentScreen`; deep-link id/reference/coordinates và read-only. Incident dùng nguyên envelope list `{ incidents: [...] }`, detail `{ incident: { incident, events, approvals, informant } }`. | Ticket `05:29,69,80-83,125-127`; screen-13 `:9-20`; Rubric `05:42,48-50`. Không tạo Incident contract/type/test mới. |
+| AC-08 | 8 | `States` và mọi screen động; các nhánh loading/empty/error+retry/403/masked/offline. | Ticket `05:30`; screen-11 `:14-20`, screen-12 `:15-21`, screen-13 `:14-20`; Rubric thao tác `05:49`. |
+| AC-09 | 9 | `AppNavigator` routes, mọi screen, `WriteGuard`, readonly/navigation tests; không CTA/route create-update/citizen. | Ticket `05:31`; `spec.md:36-38,74-79,200-205`; Rubric bắt buộc `05:42`. |
+| AC-10 | 10 | Mobile scripts/tests và `tests/mobile/readonly-http.contract.test.ts`; assertion HTTP thật, masking/boundary/read-only. | Ticket `05:32`; platform `05:87-90`; không coi checklist `[x]` hoặc run lệch cây là PASS. |
+| AC-11 | 11 | `config.ts`, native `ApiConfigModule`, settings display, config/client tests; runtime/build-time injection hai giá trị, không env/secret. | Ticket `05:33` và các quyết định approval `05:94-113`; đối chiếu các source/config implementation và test hiện có khi phù hợp; không có fallback production. |
+| AC-12 | 12 | Package/lock exact approved batch; Android toolchain chỉ dùng dependency/toolchain đã được approval/availability xác nhận, không mock pass. | Ticket AC-12 `05:34`; approval batch React Native/MapLibre/toolchain `05:94-113`; nếu thiếu approval/SDK thì `needs-info`, không thêm package. |
 
-| Trục | Thay đổi phục vụ |
-|---|---|
-| Thiết kế/UI bám screen-11/12/13 (textual baseline, Stitch chưa có) | Map/RelatedInfo/Alarm-Dispatch-Task bám component + trạng thái của 3 screen spec |
-| Thao tác/UX bottom sheet, tap 44px, retry rõ | Bottom sheet list/detail, filter sheet, `States.tsx` retry, style tap target |
-| Quy trình source-compatible, không mở rộng ngoài E1 MVP | `AppNavigator` giữ navigation source, `WriteGuard` khóa mở rộng |
+### 4.1. Rubric độc lập
 
-### 4d. Map từng dòng Các bước thực hiện
+- Rubric bắt buộc `05:40`: toàn bộ business data đi qua HTTP backend/API chung; không tạo mobile business store. Map/API/RelatedInfo/forces/Incident chỉ là client transport/render.
+- Rubric bắt buộc `05:41`: client giữ `masked`, `403`, `OrganizationUnit`/Assignment không do client tự chọn; server ticket 06 là security boundary.
+- Rubric bắt buộc `05:42`: chỉ auth/map/RelatedInfo/forces/Incident context read-only trong E1; không public citizen app hay write surface.
+- Rubric khuyến nghị `05:48-50`: screen-11/12/13 là textual baseline vì Stitch chưa khả dụng; cần map/list/detail/bottom sheet, retry và navigation source-compatible, tối thiểu tap target 44px.
 
-| Bước ticket | Thực hiện trong plan |
-|---|---|
-| Scaffold `mobile/`, env/API base URL không secret | `mobile/package.json/lockfile/tsconfig/babel/metro/index/app.json`, `.env.example`, `config.ts` |
-| Auth/main/map theo screen-11 + MapLibre adapter | `SessionContext/LoginScreen/AppNavigator/MapScreen/ProviderAdapter/api(session/mapApi)` |
-| RelatedInfo read-only theo screen-12 | `RelatedInfoScreen/Detail/types/api-relatedInfo/fixtures` |
-| Alarm/dispatch/task tối thiểu theo screen-13 | `Alarm/Dispatch/TaskScreen + api(incidents/notifications)` |
-| Fixtures synthetic + contract tests Resident/Business/Hotspot/Violation/Incident | `fixtures/synthetic.ts` + 5 file test mục 1c |
-| Kiểm tra masking/offline/permission/session-expiry trên thiết bị/emulator | Kịch bản thủ công ở mục 7 (Tester thực hiện, Developer không chạy) |
-| `npm --prefix mobile ci` (lệnh đã duyệt) rồi typecheck/test/build mobile | Mô tả ở mục 7, đúng lệnh duyệt + lệnh mobile |
-| API contract tests từ root, ghi rõ chỉ Android/JS vì Windows thiếu iOS toolchain | `tests/mobile/related-info.contract.test.ts` + ghi giới hạn iOS trong kết luận/mục 7 |
+### 4.2. Thay đổi không map trực tiếp
 
-Thay đổi không map trực tiếp AC/Rubric: Android native files (`settings.gradle/build.gradle/AndroidManifest/MainActivity`, `gradlew` sinh sau) — lý do dependency kỹ thuật: React Native CLI yêu cầu để `build được` (AC dòng 1) và Definition of Done native của ticket; `metro/babel/index/app.json` tương tự là yêu cầu toolchain, không phải tính năng.
+- Android Gradle/wrapper, package configs và `App.tsx`: bắt buộc để tạo package/build boundary của AC-01/AC-10/AC-12, không chứa business behavior.
+- `test-globals.d.ts`, config/client unit tests: seam kỹ thuật cho AC-10/AC-11; không phải feature UI.
+- `IncidentScreen`: dependency để consume endpoint Incident đã tồn tại và thỏa AC-07; deep-link test chỉ kiểm tra route/field reference theo contract ticket 06 và Incident envelope hiện có, không tạo contract/type/test Incident mới.
+- Việc cần sửa ngoài các nhóm trên, hoặc cần đổi `src/modules/**/contracts.ts`, là dependency chưa được plan phê duyệt; phải dừng và xin Planner cập nhật plan.
 
-## 5. Endpoint có thật + contract adapter; endpoint ticket yêu cầu nhưng chưa có
+## 5. Dependency/toolchain được user approve
 
-Có thật (đã đọc source route, chỉ dùng GET read-only từ mobile):
+- Được phép đúng batch ticket `05:94-113`: `react@19.2.3`, `react-native@0.85.3`, `@maplibre/maplibre-react-native@11.4.0`, `@types/react@19.2.14`, `typescript@5.9.3`, RN TypeScript/Babel/Metro/Jest presets `0.85.3`, `jest@29.7.0`, `@types/jest@29.5.14`, `@react-native-community/cli@20.0.0`.
+- Không thêm npm package, native dependency, mock để thay availability, `.env.example`, `.env` hoặc secret file. API URL do người chạy inject runtime/build-time.
+- Các lệnh được ticket approve cho Tester gồm `npm --prefix mobile ci`, mobile typecheck/test, Android build tương đương; Plan Check không chạy các lệnh đó.
 
-| Endpoint thật | Dùng cho | Adapter |
-|---|---|---|
-| `GET/POST/DELETE /api/auth/session` | Login/session/logout | `api/session.ts`; POST chỉ login, DELETE chỉ logout |
-| `GET /api/map/config` | Provider adapter OSS | `ProviderAdapter.ts`: styleUrl/tileBaseUrl/bounds/attribution/healthUrl |
-| `GET /api/map/markers` | Point/polygon + Hotspot derived | `api/mapApi.ts`; đã lọc OrganizationUnit + mask server-side |
-| `GET /api/residents` + `GET /api/residents/:subjectId` (+ management-records/activities) | RelatedInfo Resident | `api/relatedInfo.ts` map sang `entityType 'resident'` |
-| `GET /api/establishments` (+ detail) | RelatedInfo Business | map sang `'business'` |
-| `GET /api/inspections` (+ detail, `stats`) | RelatedInfo Violation (finding/result `needs_action`) + Task context | map sang `'violation'`; không gọi POST schedule từ mobile |
-| `GET /api/incidents` + `GET /api/incidents/:incidentId` | Incident context + alarm/dispatch/task surface | `api/incidents.ts` read-only |
-| `GET /api/notifications` | Alarm surface (thông báo incident) | `api/notifications.ts` read-only; mặc định không PATCH |
-| `GET /api/map/health` | Kiểm tra tile health cho banner offline | Chỉ GET |
+## 6. Giới hạn môi trường và điều kiện native smoke
 
-Ticket yêu cầu nhưng repo CHƯA có (không bịa backend, vì route mới nằm ngoài whitelist):
+- Windows hiện không có iOS toolchain; không tuyên bố iOS build/smoke. Chỉ ghi nhận Android/JS nếu toolchain thực sự sẵn sàng.
+- Android debug build và emulator smoke chỉ được coi là điều kiện Definition of Done khi ticket 00 xác nhận JDK/Android SDK/ADB và hạ tầng backend/port/API base URL khả dụng (`05:87-90,111-113`).
+- Android emulator dùng API host phù hợp, thường `10.0.2.2:3000`; không hard-code production. Nếu JDK/SDK/ADB/emulator/backend thiếu, phải ghi `needs-info`/hạ scope theo Planner, không mock pass.
+- Evidence hiện có ghi mobile-only pass ở một số lần và root/full runs FAIL hoặc lệch tree; vì vậy checklist `[x]` không được dùng thay cho current-tree evidence. HTTP contract cần server thật và injection `CIVICOS_API_BASE_URL`; không có server thì chưa có evidence PASS.
 
-| Yêu cầu ticket | Cách xử lý trong phạm vi cho phép |
-|---|---|
-| `GET /api/map/layers` / tile provider contract ticket 01 | Dùng `GET /api/map/config` thật làm provider contract; layer toggle là client-side filter trên markers theo `aggregateType`; ghi rõ trong evidence là thay thế tương thích |
-| `GET /api/related-info/search`, `counts`, `:entityType/:id` | KHÔNG tạo route mới; `api/relatedInfo.ts` client-side tổng hợp search/counts/detail từ các endpoint thật trên + `markers`; response mobile nội bộ giữ shape ticket (`entityType/id/title/status/address/lat/lng/geometry/updatedAt`, sensitive đã mask) |
-| Alarm/dispatch/task endpoints "ticket 00 xác nhận tồn tại" | Glob xác nhận không tồn tại route riêng; surface dựng từ `incidents` + `notifications` thật, giữ route/flow source ở navigation, link map/RelatedInfo khi có resource; đánh dấu là giới hạn tương thích trong evidence |
-| Hotspot endpoint riêng | Không có; Hotspot là derived view từ cluster markers/polygon (`hasArea`) + incidents/inspections; gắn nhãn synthetic/derived, không khẳng định là Hotspot nghiệp vụ đầy đủ |
+## 7. Rủi ro và điểm còn thiếu quyết định
 
-## 6. Kế hoạch TDD red → green → refactor (chỉ trong phạm vi ticket)
-
-1. `session.test.ts`: red — login 200 lưu user, 401 invalid, 401 giữa chừng → expired, logout về guest; green — `SessionContext` + `client.ts` tối thiểu; refactor — tách parse lỗi dùng chung.
-2. `mapApi.test.ts`: red — config thiếu OSM attribution → `MAP_PROVIDER_UNAVAILABLE`, markers thiếu tọa độ bị bỏ, mask title khi thiếu quyền; green — `ProviderAdapter` + `mapApi.ts`; refactor — dùng chung `States.tsx`.
-3. `relatedInfo.test.ts`: red — search debounce + layer filter + detail map đúng `entityType`, masked passthrough, empty; green — adapter + screens tối thiểu; refactor — tách fixtures.
-4. `writeGuard.test.ts`: red — mọi write E1-004/E1-007/intake bị chặn cả online/offline; green — `WriteGuard`; refactor — thông điệp chung.
-5. `tests/mobile/related-info.contract.test.ts`: red — GET residents/establishments/inspections/incidents/markers trả shape mà adapter cần (có auth, mask không lộ PII thật); green — giữ nguyên backend, chỉ sửa adapter/mobile khi lệch; refactor — helper assert shape dùng chung.
-6. Fixtures synthetic phục vụ red trước khi backend seed sẵn; không dùng PII/credential thật.
-
-## 7. Lệnh verification dự kiến (mô tả only, KHÔNG chạy)
-
-- Mobile (thư mục `mobile/`, sau khi dependency RN core được approval + cài): `npm --prefix mobile ci` (lệnh đã duyệt ở ticket 00, áp cho cả MapLibre RN) → `npm --prefix mobile run typecheck` (`tsc --noEmit`) → `npm --prefix mobile test` (4 suite mục 1c) → Android debug build + emulator smoke (`Pixel_7`, API base `10.0.2.2:3000`) nếu JDK/SDK/ADB PASS (đã PASS) và Gradle wrapper đã sinh; thủ công: masking/offline/permission-denied/session-expiry theo §3.
-- Root API contract (thư mục root): `npm run prisma:generate` → `npm run typecheck` → `npm test tests/mobile/related-info.contract.test.ts` (chỉ file phạm vi ticket, DB Docker đã PASS ở ticket 00). Không ghi full root test/e2e (`npm test` toàn bộ, `test:e2e`, `lint`, `format:check`, `build`) vào phạm vi ticket này.
-- Ghi rõ trong evidence Tester: chỉ kiểm tra Android/JS vì Windows không có iOS toolchain; không mock pass iOS.
-
-## Kết luận
-
-`PLAN_READY` — plan bao phủ 100% AC/Rubric/steps bằng file mục 1, hàm mục 2, luồng mục 3, adapter mục 5 và TDD mục 6 trong đúng whitelist; dependency đã duyệt (MapLibre RN 11.4.0 MIT + JDK/SDK/ADB/emulator PASS) đủ để scaffold, phần RN core chưa duyệt được nêu rõ là phải xin approval trước khi cài chứ không tự cài; các endpoint ticket yêu cầu nhưng repo chưa có đều có cách xử lý tương thích không bịa backend; verification tách rõ mobile vs root contract và loại trừ full root test/e2e khỏi phạm vi ticket.
+- Rủi ro chính: full verification trước đây có lỗi root `FormData` ngoài whitelist và HTTP contract có lần thiếu/không kết nối API; đây là evidence/toolchain boundary, chưa phải kết luận AC PASS.
+- Gradle generated artifacts đang hiện trong workspace; chỉ source Android nằm trong plan, không đưa `.gradle/**`, `build/**`, `.cxx/**` vào thay đổi có chủ đích.
+- Không phát hiện thiếu quyết định nghiệp vụ mới trong các tài liệu đã được yêu cầu. Các điều kiện availability native/Android và server runtime là điều kiện môi trường đã nêu trong ticket, không tự bịa cách vượt qua.

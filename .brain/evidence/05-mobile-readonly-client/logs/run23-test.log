@@ -1,0 +1,25 @@
+
+> civic-os@0.1.0 test
+> vitest run
+
+
+ RUN  v3.2.7 D:/Project/CivicOS
+
+ ✓ tests/tooling/verify-tree-fingerprint.test.ts (5 tests) 3689ms
+   ✓ verify tree fingerprint > keeps Tree stable when generated artifacts appear and change  1519ms
+   ✓ verify tree fingerprint > changes Tree for untracked source outside build  966ms
+   ✓ verify tree fingerprint > changes Tree for tracked config edit  962ms
+ ✓ tests/mobile-readonly/contract-matrix.contract.test.ts (1 test) 1014ms
+   ✓ mobile contract matrix > checks layers, related-info, forces, boundaries, masking, and GET-only shape  694ms
+ ✓ tests/mobile/readonly-http.contract.test.ts (6 tests) 797ms
+   ✓ mobile read-only HTTP contract > reads counts, incidents, alarms, dispatches, tasks, and the task alias  378ms
+ ✓ tests/mobile-readonly/related-info-search.contract.test.ts (1 test) 485ms
+ ✓ tests/mobile-readonly/forces-read.contract.test.ts (1 test) 445ms
+ ✓ tests/mobile-readonly/related-info-detail.contract.test.ts (5 tests) 438ms
+ ✓ tests/tooling/mobile-build-boundary.test.ts (5 tests) 352ms
+   ✓ mobile build boundary > keeps the mobile verifier profile ordered and selectable  303ms
+ ✓ tests/mobile-readonly/tasks-by-dispatch.contract.test.ts (2 tests) 334ms
+ ✓ tests/mobile-readonly/related-info-counts.contract.test.ts (1 test) 294ms
+ ✓ tests/mobile-readonly/map-layers.contract.test.ts (1 test) 253ms
+ ✓ tests/mobile-readonly/boundary.regression.test.ts (2 tests) 251ms
+ ✓ tests/incidents/intake-report-lifecycle.test.ts (43 tests) 20ms

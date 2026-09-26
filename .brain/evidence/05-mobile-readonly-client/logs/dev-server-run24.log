@@ -1,0 +1,24 @@
+
+> civic-os@0.1.0 dev
+> next dev
+
+▲ Next.js 16.3.5 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.123.2:3000
+- Environments: .env
+✓ Ready in 687ms
+✓ Running next.config.ts took 52ms
+
+ GET / 200 in 1270ms (next.js: 1031ms, application-code: 240ms)
+ GET /api/map/layers 401 in 177ms (next.js: 93ms, application-code: 84ms)
+ GET /api/related-info/search?entityType=RESIDENT 401 in 81ms (next.js: 69ms, application-code: 13ms)
+ GET /api/related-info/search?entityType=BUSINESS 401 in 15ms (next.js: 4ms, application-code: 11ms)
+ GET /api/related-info/search?entityType=HOTSPOT 401 in 15ms (next.js: 5ms, application-code: 10ms)
+ GET /api/related-info/search?entityType=VIOLATION 401 in 16ms (next.js: 4ms, application-code: 11ms)
+ GET /api/related-info/counts 401 in 65ms (next.js: 50ms, application-code: 15ms)
+ GET /api/forces/tasks 401 in 175ms (next.js: 53ms, application-code: 122ms)
+ GET /api/forces/dispatches 401 in 176ms (next.js: 107ms, application-code: 69ms)
+ GET /api/forces/alarms 401 in 295ms (next.js: 162ms, application-code: 133ms)
+ GET /api/incidents 401 in 299ms (next.js: 226ms, application-code: 73ms)
+ GET /api/forces/tasksbydispatchid?dispatchId=contract-test 401 in 295ms (next.js: 280ms, application-code: 16ms)
+[?25h

@@ -1,0 +1,87 @@
+
+> civic-os@0.1.0 test
+> vitest run
+
+
+ RUN  v3.2.7 D:/Project/CivicOS
+
+ ✓ tests/tooling/verify-tree-fingerprint.test.ts (5 tests) 3490ms
+   ✓ verify tree fingerprint > keeps Tree stable when generated artifacts appear and change  1442ms
+   ✓ verify tree fingerprint > changes Tree for untracked source outside build  962ms
+   ✓ verify tree fingerprint > changes Tree for tracked config edit  849ms
+ ✓ tests/mobile/readonly-http.contract.test.ts (6 tests) 887ms
+   ✓ mobile read-only HTTP contract > reads counts, incidents, alarms, dispatches, tasks, and the task alias  444ms
+ ✓ tests/mobile-readonly/contract-matrix.contract.test.ts (1 test) 999ms
+   ✓ mobile contract matrix > checks layers, related-info, forces, boundaries, masking, and GET-only shape  744ms
+ ✓ tests/mobile-readonly/related-info-search.contract.test.ts (1 test) 487ms
+ ✓ tests/mobile-readonly/forces-read.contract.test.ts (1 test) 454ms
+ ✓ tests/mobile-readonly/related-info-detail.contract.test.ts (5 tests) 451ms
+ ✓ tests/tooling/mobile-build-boundary.test.ts (5 tests) 357ms
+   ✓ mobile build boundary > keeps the mobile verifier profile ordered and selectable  304ms
+ ✓ tests/mobile-readonly/tasks-by-dispatch.contract.test.ts (2 tests) 341ms
+ ✓ tests/mobile-readonly/related-info-counts.contract.test.ts (1 test) 289ms
+ ✓ tests/mobile-readonly/boundary.regression.test.ts (2 tests) 246ms
+ ✓ tests/mobile-readonly/map-layers.contract.test.ts (1 test) 265ms
+ ✓ tests/incidents/intake-report-lifecycle.test.ts (43 tests) 24ms
+ ✓ tests/incidents/incident-ticket04.postgres.test.ts (17 tests | 11 skipped) 29ms
+ ✓ tests/platform/shared-capabilities.test.ts (3 tests) 11ms
+ ✓ tests/vehicles/vehicle-watch-contract.test.ts (6 tests) 14ms
+ ✓ tests/eventing/event-catalog.test.ts (4 tests) 18ms
+ ✓ tests/integration/schema-and-migration.test.ts (7 tests | 2 skipped) 18ms
+ ✓ tests/inspections/inspection-contract.test.ts (6 tests) 9ms
+ ✓ tests/identity/capability-policy.test.ts (11 tests) 11ms
+ ✓ tests/map/map-provider.test.ts (6 tests) 7ms
+ ✓ tests/integration/parallel-wave.integration.test.ts (30 tests | 23 skipped) 8ms
+ ✓ tests/identity/role-migration.test.ts (15 tests | 9 skipped) 8ms
+ ✓ tests/inspections/inspection-slice-7-8.test.ts (5 tests) 13ms
+ ✓ tests/identity/encryption.integration.test.ts (5 tests | 1 skipped) 7ms
+ ✓ tests/map/map-geometry.test.ts (5 tests) 7ms
+ ✓ tests/inspections/inspection-ps007-regression.test.ts (6 tests) 8ms
+ ✓ tests/identity/sensitive-log-leak.test.ts (3 tests | 2 skipped) 6ms
+ ✓ tests/platform/geo.integration.test.ts (8 tests) 6ms
+ ✓ tests/residents/resident-regression.test.ts (3 tests) 6ms
+ ✓ tests/vehicles/vehicle-watch-slices-8-9.test.ts (5 tests) 7ms
+ ✓ tests/inspections/inspection-workflow.integration.test.ts (4 tests) 6ms
+ ✓ tests/platform/evidence.integration.test.ts (3 tests | 1 skipped) 6ms
+ ✓ tests/residents/resident-contracts.test.ts (11 tests) 8ms
+ ✓ tests/platform/sla.integration.test.ts (6 tests | 2 skipped) 6ms
+ ✓ tests/mobile-readonly/read-only-guard.regression.test.ts (1 test) 7ms
+ ✓ tests/incidents/incident-authorization.unit.test.ts (7 tests) 6ms
+ ✓ tests/map/map-smoke.test.ts (4 tests) 8ms
+ ✓ tests/vehicles/vehicle-watch.integration.test.ts (2 tests) 3ms
+ ✓ tests/demo/demo-bootstrap.test.ts (8 tests | 4 skipped) 6ms
+ ✓ tests/incidents/intake-report-notification.test.ts (1 test) 6ms
+ ✓ tests/map/map-polygon.test.ts (3 tests) 6ms
+ ✓ tests/eventing/event-kernel.integration.test.ts (2 tests) 5ms
+ ✓ tests/map/map-permission-offline.test.ts (5 tests) 5ms
+ ✓ tests/identity/audit.integration.test.ts (3 tests | 2 skipped) 7ms
+ ✓ tests/identity/identity-display.integration.test.ts (5 tests | 3 skipped) 4ms
+ ✓ tests/identity/authorization.integration.test.ts (7 tests | 6 skipped) 4ms
+ ✓ tests/identity/session-seed-boundary.postgres.test.ts (7 tests | 6 skipped) 4ms
+ ✓ tests/platform/offline-sync.integration.test.ts (5 tests | 3 skipped) 4ms
+ ✓ tests/incidents/incident-workflow.integration.test.ts (2 tests) 7ms
+ ✓ tests/integration/parallel-wave-replay.integration.test.ts (9 tests | 5 skipped) 4ms
+ ✓ tests/vehicles/vehicle-authorization.postgres.test.ts (10 tests | 9 skipped) 3ms
+ ↓ tests/incidents/incident-approval.postgres.test.ts (3 tests | 3 skipped)
+ ↓ tests/incidents/incident-authorization.postgres.test.ts (12 tests | 12 skipped)
+ ↓ tests/incidents/intake-report-separation.postgres.test.ts (16 tests | 16 skipped)
+ ↓ tests/identity/health-worker-access.integration.test.ts (5 tests | 5 skipped)
+ ↓ tests/identity/migration-rollback.integration.test.ts (2 tests | 2 skipped)
+ ↓ tests/identity/user-screen-access.integration.test.ts (3 tests | 3 skipped)
+ ↓ tests/eventing/event-durability.postgres.test.ts (11 tests | 11 skipped)
+ ↓ tests/eventing/event-kernel.postgres.test.ts (3 tests | 3 skipped)
+ ↓ tests/eventing/projection-replay.postgres.test.ts (1 test | 1 skipped)
+ ↓ tests/inspections/inspection-schedule.postgres.test.ts (2 tests | 2 skipped)
+ ↓ tests/inspections/inspection-slices-4-6.postgres.test.ts (10 tests | 10 skipped)
+ ↓ tests/inspections/inspection-stats.postgres.test.ts (2 tests | 2 skipped)
+ ↓ tests/integration/parallel-wave-authorization.integration.test.ts (4 tests | 4 skipped)
+ ↓ tests/integration/parallel-wave-resilience.integration.test.ts (4 tests | 4 skipped)
+ ↓ tests/residents/resident-scope-regression.postgres.test.ts (5 tests | 5 skipped)
+ ↓ tests/residents/resident-workflow.postgres.test.ts (8 tests | 8 skipped)
+ ↓ tests/vehicles/vehicle-watch-slices-4-7.postgres.test.ts (11 tests | 11 skipped)
+
+ Test Files  51 passed | 17 skipped (68)
+      Tests  234 passed | 191 skipped (425)
+   Start at  23:22:59
+   Duration  35.58s (transform 1.54s, setup 0ms, collect 8.60s, tests 8.60s, environment 17ms, prepare 7.09s)
+

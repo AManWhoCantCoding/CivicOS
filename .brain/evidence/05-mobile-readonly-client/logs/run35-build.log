@@ -1,0 +1,93 @@
+
+> civic-os@0.1.0 build
+> next build
+
+▲ Next.js 16.3.5 (Turbopack)
+- Environments: .env
+✓ Running next.config.ts took 34ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.9s
+  Running TypeScript ...
+  Finished TypeScript in 3.4s ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/44) ...
+  Generating static pages using 11 workers (11/44) 
+  Generating static pages using 11 workers (22/44) 
+  Generating static pages using 11 workers (33/44) 
+✓ Generating static pages using 11 workers (44/44) in 451ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/session
+├ ƒ /api/establishments
+├ ƒ /api/establishments/[establishmentId]
+├ ƒ /api/evidence
+├ ƒ /api/forces/alarms
+├ ƒ /api/forces/dispatches
+├ ƒ /api/forces/dispatches/[dispatchId]
+├ ƒ /api/forces/tasks
+├ ƒ /api/forces/tasks/[taskId]
+├ ƒ /api/forces/tasksbydispatchid
+├ ƒ /api/health/worker
+├ ƒ /api/identity/assignments
+├ ƒ /api/identity/organization-units
+├ ƒ /api/identity/users
+├ ƒ /api/incidents
+├ ƒ /api/incidents/[incidentId]
+├ ƒ /api/incidents/[incidentId]/commands
+├ ƒ /api/inspections
+├ ƒ /api/inspections/[inspectionId]
+├ ƒ /api/inspections/[inspectionId]/commands
+├ ƒ /api/inspections/stats
+├ ƒ /api/intake-reports
+├ ƒ /api/intake-reports/[reportId]
+├ ƒ /api/intake-reports/[reportId]/commands
+├ ƒ /api/map/config
+├ ƒ /api/map/health
+├ ƒ /api/map/layers
+├ ƒ /api/map/markers
+├ ƒ /api/notifications
+├ ƒ /api/related-info/[entityType]/[id]
+├ ƒ /api/related-info/counts
+├ ƒ /api/related-info/search
+├ ƒ /api/residents
+├ ƒ /api/residents/[subjectId]
+├ ƒ /api/residents/[subjectId]/management-records
+├ ƒ /api/residents/[subjectId]/management-records/[recordId]
+├ ƒ /api/residents/[subjectId]/management-records/[recordId]/activities
+├ ƒ /api/residents/reports/[reportId]/approve
+├ ƒ /api/residents/reports/[reportId]/send
+├ ƒ /api/residents/reports/monthly
+├ ƒ /api/sync
+├ ƒ /api/vehicles/observations
+├ ƒ /api/vehicles/observations/[observationId]
+├ ƒ /api/vehicles/registry
+├ ƒ /assignments
+├ ○ /field/offline
+├ ƒ /field/vehicles
+├ ƒ /field/vehicles/[observationId]
+├ ƒ /identity
+├ ƒ /incidents
+├ ƒ /incidents/[incidentId]
+├ ƒ /inspections/[inspectionId]
+├ ƒ /inspections/establishments
+├ ƒ /inspections/establishments/[establishmentId]
+├ ○ /intake
+├ ƒ /intake/[reportId]
+├ ○ /login
+├ ○ /manifest.webmanifest
+├ ƒ /map
+├ ƒ /residents
+├ ƒ /residents/[subjectId]
+├ ƒ /residents/[subjectId]/records/[recordId]
+├ ƒ /residents/reports
+├ ƒ /users
+└ ƒ /vehicles/registry
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

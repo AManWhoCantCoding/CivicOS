@@ -1,0 +1,26 @@
+
+> civic-os@0.1.0 mobile:test
+> npm --prefix mobile run test
+
+
+> civicos-mobile@0.1.0 test
+> jest
+
+
+--- stderr ---
+PASS src/features/__tests__/navigation-readonly.test.tsx (8.713 s)
+PASS src/components/__tests__/states.test.tsx
+PASS src/api/__tests__/session.test.ts
+PASS src/api/__tests__/client.test.ts
+PASS src/api/__tests__/map.test.ts
+PASS src/config.test.ts
+PASS src/components/__tests__/writeGuard.test.ts
+PASS src/api/__tests__/relatedInfo.test.ts
+PASS src/api/__tests__/forces.test.ts
+PASS src/features/__tests__/deepLinks.test.ts
+
+Test Suites: 10 passed, 10 total
+Tests:       19 passed, 19 total
+Snapshots:   0 total
+Time:        9.592 s
+Ran all test suites.

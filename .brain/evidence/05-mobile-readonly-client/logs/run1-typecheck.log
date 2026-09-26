@@ -1,0 +1,71 @@
+
+> civic-os@0.1.0 typecheck
+> tsc --noEmit
+
+mobile/src/api/__tests__/client.test.ts(3,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/api/__tests__/client.test.ts(4,3): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/api/__tests__/client.test.ts(5,11): error TS2304: Cannot find name 'expect'.
+mobile/src/api/__tests__/client.test.ts(8,11): error TS2304: Cannot find name 'expect'.
+mobile/src/api/__tests__/forces.test.ts(3,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/api/__tests__/forces.test.ts(4,3): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/api/__tests__/forces.test.ts(5,5): error TS2304: Cannot find name 'expect'.
+mobile/src/api/__tests__/forces.test.ts(6,5): error TS2304: Cannot find name 'expect'.
+mobile/src/api/__tests__/map.test.ts(3,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/api/__tests__/map.test.ts(4,3): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/api/__tests__/map.test.ts(11,5): error TS2304: Cannot find name 'expect'.
+mobile/src/api/__tests__/map.test.ts(12,5): error TS2304: Cannot find name 'expect'.
+mobile/src/api/__tests__/map.test.ts(13,5): error TS2304: Cannot find name 'expect'.
+mobile/src/api/__tests__/relatedInfo.test.ts(3,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/api/__tests__/relatedInfo.test.ts(4,3): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/api/__tests__/relatedInfo.test.ts(12,5): error TS2304: Cannot find name 'expect'.
+mobile/src/api/__tests__/relatedInfo.test.ts(13,5): error TS2304: Cannot find name 'expect'.
+mobile/src/api/__tests__/relatedInfo.test.ts(14,5): error TS2304: Cannot find name 'expect'.
+mobile/src/api/__tests__/session.test.ts(3,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/api/__tests__/session.test.ts(4,3): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/api/__tests__/session.test.ts(5,5): error TS2304: Cannot find name 'expect'.
+mobile/src/api/__tests__/session.test.ts(8,5): error TS2304: Cannot find name 'expect'.
+mobile/src/api/__tests__/session.test.ts(9,5): error TS2304: Cannot find name 'expect'.
+mobile/src/auth/LoginScreen.tsx(2,64): error TS2307: Cannot find module 'react-native' or its corresponding type declarations.
+mobile/src/components/__tests__/states.test.tsx(3,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/components/__tests__/states.test.tsx(4,3): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/components/__tests__/states.test.tsx(10,29): error TS7006: Parameter 'state' implicitly has an 'any' type.
+mobile/src/components/__tests__/states.test.tsx(10,36): error TS7006: Parameter 'label' implicitly has an 'any' type.
+mobile/src/components/__tests__/states.test.tsx(11,5): error TS2304: Cannot find name 'expect'.
+mobile/src/components/__tests__/writeGuard.test.ts(3,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/components/__tests__/writeGuard.test.ts(4,3): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/components/__tests__/writeGuard.test.ts(5,5): error TS2304: Cannot find name 'expect'.
+mobile/src/components/__tests__/writeGuard.test.ts(6,5): error TS2304: Cannot find name 'expect'.
+mobile/src/components/__tests__/writeGuard.test.ts(9,3): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/components/__tests__/writeGuard.test.ts(10,5): error TS2304: Cannot find name 'expect'.
+mobile/src/components/__tests__/writeGuard.test.ts(11,5): error TS2304: Cannot find name 'expect'.
+mobile/src/components/__tests__/writeGuard.test.ts(12,5): error TS2304: Cannot find name 'expect'.
+mobile/src/components/States.tsx(2,39): error TS2307: Cannot find module 'react-native' or its corresponding type declarations.
+mobile/src/config.test.ts(3,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/config.test.ts(4,3): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/config.test.ts(5,5): error TS2304: Cannot find name 'expect'.
+mobile/src/config.test.ts(13,3): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/config.test.ts(14,5): error TS2304: Cannot find name 'expect'.
+mobile/src/config.test.ts(19,3): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/config.test.ts(19,96): error TS7006: Parameter 'buildTimeBaseUrl' implicitly has an 'any' type.
+mobile/src/config.test.ts(20,5): error TS2304: Cannot find name 'expect'.
+mobile/src/config.ts(1,31): error TS2307: Cannot find module 'react-native' or its corresponding type declarations.
+mobile/src/features/__tests__/deepLinks.test.ts(1,29): error TS2307: Cannot find module '../navigation/deepLinks' or its corresponding type declarations.
+mobile/src/features/__tests__/deepLinks.test.ts(3,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/features/__tests__/deepLinks.test.ts(4,3): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/features/__tests__/deepLinks.test.ts(5,5): error TS2304: Cannot find name 'expect'.
+mobile/src/features/__tests__/deepLinks.test.ts(9,5): error TS2304: Cannot find name 'expect'.
+mobile/src/features/__tests__/navigation-readonly.test.tsx(3,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/features/__tests__/navigation-readonly.test.tsx(4,3): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+mobile/src/features/__tests__/navigation-readonly.test.tsx(5,5): error TS2304: Cannot find name 'expect'.
+mobile/src/features/__tests__/navigation-readonly.test.tsx(5,32): error TS2304: Cannot find name 'expect'.
+mobile/src/features/alarm/AlarmScreen.tsx(2,39): error TS2307: Cannot find module 'react-native' or its corresponding type declarations.
+mobile/src/features/dispatch/DispatchScreen.tsx(2,39): error TS2307: Cannot find module 'react-native' or its corresponding type declarations.
+mobile/src/features/map/MapScreen.tsx(2,69): error TS2307: Cannot find module 'react-native' or its corresponding type declarations.
+mobile/src/features/map/MapScreen.tsx(3,97): error TS2307: Cannot find module '@maplibre/maplibre-react-native' or its corresponding type declarations.
+mobile/src/features/map/MapScreen.tsx(43,155): error TS7006: Parameter 'result' implicitly has an 'any' type.
+mobile/src/features/map/MapScreen.tsx(47,556): error TS7006: Parameter 'event' implicitly has an 'any' type.
+mobile/src/features/related-info/RelatedInfoDetail.tsx(2,53): error TS2307: Cannot find module 'react-native' or its corresponding type declarations.
+mobile/src/features/related-info/RelatedInfoScreen.tsx(2,71): error TS2307: Cannot find module 'react-native' or its corresponding type declarations.
+mobile/src/features/settings/SettingsScreen.tsx(2,28): error TS2307: Cannot find module 'react-native' or its corresponding type declarations.
+mobile/src/features/task/TaskScreen.tsx(2,39): error TS2307: Cannot find module 'react-native' or its corresponding type declarations.
+mobile/src/navigation/AppNavigator.tsx(2,53): error TS2307: Cannot find module 'react-native' or its corresponding type declarations.

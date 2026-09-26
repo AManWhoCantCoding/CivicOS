@@ -1,98 +1,123 @@
-# Plan Check — `05-mobile-readonly-client`
+# Checkpoint cuối lần 2 — `05-mobile-readonly-client`
 
-## Phạm vi và tài liệu đã đối chiếu
+## Phạm vi và evidence được chọn
 
-- Đã đọc lại toàn bộ ticket từ đĩa, gồm AC, Rubric, Các bước thực hiện, scope, hợp đồng triển khai và trạng thái `pending`.
-- Đã đối chiếu `.brain/evidence/05-mobile-readonly-client/plan.md`, `spec.md`, `CONTEXT.md`, ba UI baseline screen-11/12/13, `.brain/PROTOCOL.md`, ticket `00` và evidence ticket `00`.
-- Đã kiểm tra route inventory hiện tại: có `src/app/api/map/config/route.ts`, `map/markers`, `map/health`, `auth/session`, `residents`, `establishments`, `inspections`, `incidents`, `notifications`; không có `map/layers`, `related-info/*` hoặc route alarm/dispatch/task riêng.
-- Không tìm thấy tài liệu ADR nào trong repo qua inventory `docs/**` và toàn repo. Không có ADR liên quan để đối chiếu; review dựa trên `spec.md`, `CONTEXT.md`, UI baseline và ticket.
-- Không chạy test, lint, typecheck, format-check, build, npm install/ci, emulator, Docker hay bất kỳ lệnh kiểm tra nào.
+- Đã đọc lại toàn bộ ticket và Rubric hiện tại tại `.scratch/civicos-e1-clone-mvp/issues/05-mobile-readonly-client.md`, cùng `CONTEXT.md`, `spec.md`, screen-11/12/13, diff và evidence ticket.
+- Không chạy test, lint, typecheck, format-check, build, emulator hoặc `verify`; Reviewer chỉ đánh giá code/diff và evidence đã có.
+- Evidence full duy nhất dùng cho điều kiện full PASS/Tree là run 46: `scope=full`, 7/7 PASS, `Tree: fe5c1195` trong `tests.md:2115-2128`. Standalone `verify --tree` ngay sau đó được Planner cung cấp cùng mã `fe5c1195`; Reviewer không tự chạy lại.
+- Mobile-specific dùng run 43, cùng cây `Tree: fe5c1195`, `scope=mobile`, cả `mobile:typecheck`, `mobile:test`, `mobile:build` PASS tại `tests.md:1940-1949`. `run43-mobile_test.log:11-25` ghi 10 suites/21 tests PASS; không có `filter=`.
+- Các run cũ FAIL/fast/filter không được dùng thay cho run 46 hoặc run 43.
 
-## Kết luận
+## Bảng 1 — Spec-to-Code Traceability Matrix: Acceptance Criteria
 
-**PLAN_FAIL**
+| ID yêu cầu (AC) | Mức độ đáp ứng | File & dòng Code xử lý | Test Case chứng minh |
+|---|---|---|---|
+| AC-01 | **PASS** | `mobile/package.json:1-26`; `mobile/src/App.tsx:1-9`; các client mobile đi qua `mobile/src/api/client.ts:1-68`, không import Next.js/Prisma/server-only. Android boundary nằm trong `mobile/android/**`. | Run 43 `mobile:build` PASS (`tests.md:1945-1949`); log `run43-mobile_build.log:6-7,152-153` ghi `assembleDebug` và `BUILD SUCCESSFUL`. Run 46 root build cũng PASS (`tests.md:2120-2128`). |
+| AC-02 | **PASS** | `mobile/src/api/session.ts:3-50` phân biệt authenticated/unauthenticated/expired và POST/DELETE session; `mobile/src/auth/SessionContext.tsx:18-43` refresh, expiry và sign-out; `mobile/src/navigation/AppNavigator.tsx:32-43,105-110` đưa user về auth hoặc main. | Run 43 mobile Jest PASS (`run43-mobile_test.log:13,22-25`); `session.test.ts:3-10` chứng minh authenticated, `401 → expired`, guest; `client.test.ts:22-45` chứng minh request `401` phát tín hiệu expiry. |
+| AC-03 | **PASS** | `mobile/src/features/map/MapScreen.tsx:116-170,197-255,300-312` lấy layer/item/provider từ HTTP, render Point/Polygon, toggle visibility và permission state; `ProviderAdapter.ts:2-9` luôn giữ OSM attribution. | Run 43 `map.test.ts` PASS trong `run43-mobile_test.log:19,22-25`; test kiểm tra provider/OSM/offline (`mobile/src/api/__tests__/map.test.ts:3-14`). `mobile:build` PASS chứng minh native MapLibre boundary (`run43-mobile_build.log:41-43,152-153`). |
+| AC-04 | **PASS** | `MapScreen.tsx:89-113,144-155,269-298` đọc OfflineManager pack/cache, dùng cached style, hiển thị offline và tạo basemap pack; `client.ts:50-68` gọi `assertReadOnly` trước `fetch`; `WriteGuard.ts:5-20` chặn write và trả lý do. | Run 43 mobile Jest PASS; `writeGuard.test.ts:3-21` chứng minh POST/PATCH bị chặn và không tạo request, `map.test.ts:3-14` chứng minh offline provider. Root full run 46 test PASS (`tests.md:2122-2127`) và map/offline/read-only contract nằm trong root suite (`run46-test.log:32-42,61,74-75`). |
+| AC-05 | **PASS** | `mobile/src/features/related-info/types.ts:1-52`; `api/relatedInfo.ts:11-39`; `RelatedInfoScreen.tsx:50-95,108-223` dùng HTTP search/count, flat filter, debounce 300ms, list/detail/map sheet; `RelatedInfoDetail.tsx:22-87` fetch detail thật. | Run 43 `relatedInfo.test.ts` PASS (`run43-mobile_test.log:14,22-25`), kiểm tra query/entity/filter (`relatedInfo.test.ts:3-16`). Run 46 root HTTP contract PASS: `run46-test.log:8-10,32-42`; source contract test `tests/mobile/readonly-http.contract.test.ts:23-67` phủ đủ Resident/Business/Hotspot/Violation và detail. |
+| AC-06 | **PASS** | Client giữ `403`/`401` trong `client.ts:31-68`; `States.tsx:4-14,45-52` chỉ render masked value; RelatedInfo/forces screens không unmask. Server OU/Assignment/masking được đối chiếu qua contract matrix. | Run 43 `client.test.ts:8-20,22-45` PASS cho 401/403; run 46 root contract matrix/detail/boundary PASS (`run46-test.log:32-42,61,78-82`), gồm no-raw-PII và active Assignment boundary. |
+| AC-07 | **PASS** | `mobile/src/api/forces.ts:4-51` giữ `incidentId`, `resourceId`, coordinates, RelatedInfo reference, assignment summary và GET-only; `deepLinks.ts:5-18` ưu tiên `incidentId`; `AppNavigator.tsx:34-44,78-88` route Incident; `IncidentScreen.tsx:18-43` gọi `/api/incidents/:incidentId` hiện có. | Run 43 `forces.test.ts` và `deepLinks.test.ts` PASS (`run43-mobile_test.log:15,20,22-25`; `deepLinks.test.ts:31-63` kiểm tra đồng thời `incidentId` + `relatedInfo` và fallback). Direction Gate sau REDO đã PASS theo evidence Planner cung cấp; `changes.md:6-20` ghi rõ precedence và không tạo Incident contract/type/test riêng. |
+| AC-08 | **PASS** | `States.tsx:4-35,38-52` có loading/empty/error/forbidden/masked/offline và retry; `MapScreen.tsx:172-179,269-298`, RelatedInfo/forces/Incident screens có các nhánh tương ứng. | Run 43 `states.test.tsx` PASS (`run43-mobile_test.log:17,22-25`; `states.test.tsx:3-12` kiểm tra loading/empty/error/forbidden/offline); cùng mobile Jest run PASS gồm các screen/state seams. Root run 46 test/e2e PASS (`tests.md:2126-2127`). |
+| AC-09 | **PASS** | `AppNavigator.tsx:15-23` chỉ có Map/RelatedInfo/Alarms/Dispatches/Tasks/Incident/Settings; `WriteGuard.ts:10-20` chỉ mở auth POST/DELETE, chặn write nghiệp vụ; không có public intake route. | Run 43 `navigation-readonly.test.tsx:7-12` và `writeGuard.test.ts:3-21` PASS (`run43-mobile_test.log:17,11,22-25`). Root `read-only-guard`/route contract PASS trong run 46 (`run46-test.log:32-42,61`). |
+| AC-10 | **PASS** | `mobile/package.json:5-10` có typecheck/test/build; root `tests/mobile/readonly-http.contract.test.ts:13-117` và `tests/mobile-readonly/contract-matrix.contract.test.ts:41-265` có assertion HTTP, masking, boundary, GET-only/read-only. | Run 46 full 7/7 PASS (`tests.md:2115-2128`); run 43 mobile typecheck/test/build đều PASS (`tests.md:1940-1949`). |
+| AC-11 | **PASS** | `mobile/src/config.ts:8-38` chỉ nhận runtime/build-time `http/https`, ưu tiên runtime, không hard-code production; native injection ở `ApiConfigModule.kt:8-14` và `app/build.gradle:5-8`. Không có mobile secret file trong changed-path/evidence map. | Run 43 `config.test.ts:3-24` PASS (`run43-mobile_test.log:16,22-25`), gồm hai injected URL và runtime-over-build-time precedence. |
+| AC-12 | **PASS** | `mobile/package.json:12-26` dùng đúng batch approved; Android wrapper/native project nằm trong `mobile/android/**`, không dùng mock thay native build. Approval được ghi trong ticket `:94-113`. | Run 43 Android build PASS (`run43-mobile_build.log:6-7,152-153`); run 46 full PASS (`tests.md:2122-2128`). |
 
-### Blocker bắt buộc
+**Kết luận Bảng AC:** 12/12 PASS; không có AC nào THIẾU EVIDENCE.
 
-1. **Chưa có approval đầy đủ cho React Native core.** Ticket yêu cầu nếu dependency chưa được ticket `00` approval thì phải dừng ở `needs-info` (`05-mobile-readonly-client.md:31-32`). Ticket `00` chỉ ghi approval cụ thể cho `@maplibre/maplibre-react-native@11.4.0` cùng license/command (`00-agent-preflight-permissions-infra.md:148-150` và `:175`); không có React Native core (`react`, `react-native`), version, license, command cài và test/toolchain package approval. Chính plan cũng thừa nhận “RN core chưa duyệt” (`plan.md:9-13`, `:68-71`) nhưng lại kết luận `PLAN_READY` (`plan.md:183-185`). Đây là mâu thuẫn trực tiếp với AC-12, không được scaffold/cài hoặc dùng mock pass trước khi Research/Planner chốt approval batch.
-2. **Plan đưa file ra ngoài whitelist.** `mobile/.env.example` được liệt kê tại `plan.md:27`, trong khi ticket cấm `.env.*` tại `05-mobile-readonly-client.md:9-12`; `.env.example` khớp glob cấm này. Cần loại file đó khỏi plan và giữ injection qua `mobile/src/config.ts`/runtime override mà không tạo file env.
-3. **HTTP contract bắt buộc chưa tồn tại và fallback hiện tại không đạt cùng AC.** Ticket yêu cầu `GET /api/map/layers`, ba `GET /api/related-info/*` và các endpoint alarm/dispatch/task đã được xác nhận (`05-mobile-readonly-client.md:65-69`). Route inventory không có các route này. Plan chọn tổng hợp client-side từ endpoint khác và derived Hotspot/Violation (`plan.md:159-166`), nhưng cách này chỉ tạo shape nội bộ của mobile, không cung cấp HTTP contract bắt buộc; `Hotspot` còn là domain object có lịch sử/thời hạn trong `CONTEXT.md:93-95`, không thể tự suy ra từ marker cluster rồi coi là tương đương. Vì whitelist chỉ cho `mobile/**`, `src/modules/**/contracts.ts` và `tests/**`, plan hiện không có đường thực thi để đạt AC-05/AC-07 theo hợp đồng. Cần Planner/Research chốt tối thiểu một trong các hướng: bổ sung owner/ticket hợp lệ cho backend contract, hoặc thay đổi AC/scope có quyết định được ghi nhận; không được coi adapter client-side là pass mặc định.
-4. **Boundary `OrganizationUnit`/`Assignment` chưa được bảo đảm cho toàn bộ read surface.** Plan chỉ nêu lọc `OrganizationUnit` và mask ở map/residents/incidents, còn `Assignment` chỉ “hiển thị context ở Task” (`plan.md:116-118`). Điều này không đủ với `CONTEXT.md:43-45`: Assignment cấp quyền cho nhiệm vụ cụ thể và không cấp quyền xem toàn bộ dữ liệu của đơn vị. Nếu adapter tổng hợp list/detail từ endpoint mà không nêu rõ server-side scope theo OU + Assignment cho từng resource, mobile có thể hiển thị bản ghi cùng OU nhưng ngoài Assignment. Cần bổ sung contract matrix và test/owner xác nhận scope cho residents, businesses, inspections/violations, incidents, detail và deep-link; nếu backend hiện tại không cung cấp thì phải chặn plan.
-5. **Verification đang trộn root-wide command vào ticket và TDD chưa phủ đủ các behavior mới.** Plan loại trừ full root test/e2e (`plan.md:179-181`) là đúng hướng, nhưng vẫn đưa `npm run prisma:generate` và `npm run typecheck` root-wide vào verification (`plan.md:180`), ngoài bước API contract test được ticket yêu cầu. Đồng thời TDD chỉ có red→green→refactor cho session/map/related-info/write guard/root adapter (`plan.md:168-175`), chưa có red test cho alarm/dispatch/task route-link flow, toàn bộ state matrix của các màn động, hoặc contract semantics Hotspot/Violation. Cần giới hạn verification vào ticket: mobile ci/typecheck/test/build/smoke và root API contract test phạm vi ticket; bỏ root-wide typecheck/generate hoặc chuyển sang gate sau toàn bộ ticket, và bổ sung test-first cases cho các AC còn lại.
+## Bảng 2 — Rubric bắt buộc, độc lập với AC
 
-## 1. Kiểm tra hướng thiết kế, CONTEXT/spec và whitelist
+| Trục Rubric | Mức độ đáp ứng | Đối chiếu với | Bằng chứng |
+|---|---|---|---|
+| Mobile dùng backend/API chung, không tạo business store riêng | **PASS** | Ticket `:40`; `spec.md` mục 2.2 và 2.7 | API mobile chỉ gọi `requestJson`/HTTP (`client.ts:46-68`, `map.ts:19-31`, `relatedInfo.ts:22-36`, `forces.ts:32-50`); không có business store/client fixture. Root HTTP contract thật PASS trong `run46-test.log:8-10,32-42`. |
+| Read-only tôn trọng OrganizationUnit, Assignment và masking | **PASS** | Ticket `:41`; `spec.md` mục 2.2; `CONTEXT.md:43-45` | Backend contract matrix kiểm tra OU, cross-scope, active Assignment và no raw PII (`contract-matrix.contract.test.ts:44-145,147-245`); boundary regression kiểm tra assignment-free/active/revoked (`boundary.regression.test.ts:7-28`); client giữ masked/403 (`States.tsx:45-52`). |
+| Không mở rộng PS-E3 thành phạm vi E1 | **PASS** | Ticket `:42`; `spec.md` mục 6 | Routes không có create/update/citizen intake (`AppNavigator.tsx:15-23`); `WriteGuard.ts:10-20`; `navigation-readonly.test.tsx:7-12`; mobile surfaces chỉ là auth/map/RelatedInfo/forces/Incident context. |
 
-| Tiêu chí | Kết quả | Bằng chứng và đánh giá |
+## Bảng 3 — Rubric khuyến nghị và ngưỡng tối thiểu
+
+| Trục Rubric | Điểm | Ngưỡng | Mức độ đáp ứng | Đối chiếu với | Bằng chứng |
+|---|---:|---:|---|---|---|
+| Thiết kế/UI | 1/2 | 1 | **PASS — đạt ngưỡng** | `screen-11`, `screen-12`, `screen-13` | Auth/main/map, layer toggle, Point/Polygon/OSM/offline (`MapScreen.tsx:197-317`); search/filter/list/detail/bottom sheet (`RelatedInfoScreen.tsx:108-223`); alarm/dispatch/task list/detail (`AlarmScreen.tsx:55-102`, `DispatchScreen.tsx:69-135`, `TaskScreen.tsx:69-134`). Stitch không khả dụng nên textual spec là baseline. |
+| Thao tác/UX | 1/2 | 1 | **PASS — đạt ngưỡng** | Ticket Rubric `:49`, screen-11/12/13 | Các Pressable chính có `minHeight: 44`; StateMessage có retry (`States.tsx:16-35`); RelatedInfo có modal map sheet (`RelatedInfoScreen.tsx:184-223`). |
+| Quy trình | 1/2 | 1 | **PASS — đạt ngưỡng** | Ticket Rubric `:50`, spec mục 5/6 | Navigation source-compatible, deep-link `incidentId` ưu tiên (`deepLinks.ts:5-18`), RelatedInfo chỉ fallback khi thiếu Incident reference; không có write/public route. Direction Gate sau REDO PASS. |
+
+**Kết luận Rubric:** 3/3 trục khuyến nghị đạt tối thiểu 1/2; 3/3 trục bắt buộc PASS.
+
+## Đối chiếu “Các bước thực hiện”
+
+| Bước | Kết quả | Evidence đối chiếu |
 |---|---|---|
-| Dùng backend/API chung, không tạo store nghiệp vụ mobile | **PASS về hướng, nhưng bị chặn bởi contract** | Plan chỉ định adapter GET, synthetic fixtures và view cache (`plan.md:145-166`, `:81`), không tạo DB/store nghiệp vụ. Phù hợp `spec.md:74-79`. Tuy nhiên adapter không thể thay thế các HTTP contract đang thiếu; xem blocker 3. |
-| Không import server-only Next.js | **PASS về hướng** | Plan yêu cầu mobile tự định nghĩa type tương thích, không import `src/modules/**` server-only (`plan.md:51-54`, `:99`). Cần giữ nguyên ràng buộc này khi sửa plan. |
-| Đúng file whitelist | **FAIL** | Phần lớn path nằm trong `mobile/**`, `tests/**` hoặc `src/modules/**/contracts.ts`, nhưng `mobile/.env.example` (`plan.md:27`) vi phạm `.env.*` bị cấm (`ticket:9-12`). |
-| Không bịa backend endpoint | **PASS về ý định, FAIL về khả năng đạt AC** | Plan không tạo route backend và ghi rõ route thiếu (`plan.md:159-166`). Nhưng plan lại kết luận sẵn sàng dù fallback client-side không thực hiện được HTTP contract mà ticket bắt buộc; phải chuyển thành blocker thay vì `PLAN_READY`. |
-| Không tạo store nghiệp vụ riêng | **PASS về hướng** | `plan.md:80-81` cấm store mới; fixtures/cache được giới hạn là view cache. |
-| Không tự mở rộng PS-E3 thành E1 | **PASS về hướng** | Plan giới hạn alarm/dispatch/task ở Incident context, bỏ write E1-004/E1-007 và citizen intake (`plan.md:85-91`, `:116-118`), phù hợp `spec.md:200-205`. |
+| Scaffold React Native, environment/API URL không secret | **PASS** | `mobile/package.json`, `mobile/config.ts`, native `ApiConfigModule.kt`; run 43 build PASS; không thấy `.env`/secret file trong changed-path map. |
+| Auth/main/map theo screen-11 và MapLibre adapter | **PASS** | `SessionContext.tsx`, `LoginScreen.tsx`, `MapScreen.tsx`, `ProviderAdapter.ts`; run 43 mobile Jest/build PASS. |
+| RelatedInfo search/filter/map/list/detail read-only theo screen-12 | **PASS** | `RelatedInfoScreen.tsx`, `RelatedInfoDetail.tsx`, `api/relatedInfo.ts`; run 43 relatedInfo suite PASS và run 46 HTTP contract PASS. |
+| Alarm/dispatch/task tối thiểu theo screen-13 | **PASS** | `AlarmScreen.tsx`, `DispatchScreen.tsx`, `TaskScreen.tsx`, `api/forces.ts`; run 43 forces/deep-link suites PASS, run 46 forces contract PASS. |
+| Synthetic data do backend/test sở hữu, HTTP contract thật; không client-derived fixture | **PASS** | Root contract test gọi `fetch(new URL(path, baseUrl))` (`tests/mobile/readonly-http.contract.test.ts:5-10`) và kiểm tra 4 entity types/detail (`:23-67`); Incident exception được giữ đúng direction gate: consume seam 03/06, không tạo Incident contract/type/test riêng (`changes.md:12-20`). |
+| Masking, offline basemap, permission-denied, session expiry | **PASS** | `MapScreen.tsx:89-170,269-298`, `States.tsx:4-14,45-52`, `SessionContext.tsx:27-38`; run 43 session/map/states/client suites PASS. |
+| Các command được duyệt: typecheck/test/build mobile và API contract từ root | **PASS** | Run 43 `scope=mobile` 3/3 PASS (`tests.md:1940-1949`); run 46 `scope=full` 7/7 PASS và Tree khớp (`tests.md:2115-2128`). Windows limitation: evidence là Android/JS, không tuyên bố iOS. |
 
-## 2. Ma trận map từng Acceptance Criteria trong plan
+## Đối chiếu changed paths, dependency, security và read-only boundary
 
-| AC | Kết quả Plan Check | Thay đổi plan đã map và vấn đề còn lại |
-|---|---|---|
-| AC-01 package/app RN độc lập, build, không server-only Next.js | **FAIL** | Có map tới package/config/native files và tự chứa (`plan.md:18-49`, `:99`), nhưng có file `.env.example` ngoài whitelist và RN core chưa approval; build path chưa đủ điều kiện. |
-| AC-02 login/session/navigation/logout/session expiry | **PASS về độ phủ plan** | `SessionContext`, `LoginScreen`, `api/session`, `api/client`, `AppNavigator` và flow expiry được map (`plan.md:35-37`, `:85-86`, `:100`). Cần test sau khi blocker dependency được giải quyết. |
-| AC-03 MapLibre RN/provider OSS/point-polygon/layer/location/OSM | **PASS về độ phủ plan, chưa đủ điều kiện triển khai** | `ProviderAdapter`, `MapScreen`, `mapApi`, OSM attribution, permission và point/polygon được map (`plan.md:38-39`, `:87`, `:101`). Bị chặn bởi approval RN core và native build boundary. |
-| AC-04 offline basemap/cache, write ngoài read-only bị chặn | **PASS về độ phủ plan** | `States`, `WriteGuard`, offline cache và write block được nêu (`plan.md:46-47`, `:87`, `:91`, `:102`). Cần giữ rõ cache chỉ là view/basemap cache, không trở thành business store. |
-| AC-05 RelatedInfo đủ 4 entity + search/list/detail/debounce/filter/layer/map sheet theo API contract | **FAIL — blocker** | UI/adapter đã được liệt kê (`plan.md:40-42`, `:103`), nhưng các HTTP route bắt buộc không tồn tại (`plan.md:159-166`) và derived Hotspot/Violation không tự chứng minh contract/domain semantics. Không thể pass trong whitelist hiện tại. |
-| AC-06 sensitive field mask cùng policy web, API là security boundary | **FAIL — thiếu boundary cụ thể trong plan** | Plan đúng khi không tự reveal và dựa server mask (`plan.md:104`, `:117`), nhưng chưa chỉ ra contract/security test cho từng endpoint list/detail/derived view; `Assignment` cũng chưa được chứng minh là scope đọc. Cần bổ sung matrix server-side mask + OU/Assignment trước implementation. |
-| AC-07 alarm/dispatch/task source-compatible, link map/RelatedInfo | **FAIL — blocker** | Ba screen và deep-link được map (`plan.md:43-45`, `:89`, `:105`), nhưng route/endpoint riêng không có và plan chỉ dựng từ incidents/notifications (`plan.md:159-165`). Chưa có contract/source mapping đủ để bảo đảm source-compatible. |
-| AC-08 loading/empty/error-retry/permission-denied/masked/offline mọi màn động | **PASS về độ phủ plan** | `States.tsx` dùng chung và được áp cho Map/RelatedInfo/Alarm/Dispatch/Task (`plan.md:46`, `:90`, `:106`); screen-11/12/13 đều yêu cầu cùng state matrix. Cần thêm test-first coverage còn thiếu trong mục TDD. |
-| AC-09 không CTA write E1-004/E1-007/citizen intake | **PASS về hướng** | Không tạo form, có `WriteGuard`, không có tab citizen/write (`plan.md:47`, `:86`, `:91`, `:107`). |
-| AC-10 mobile/API contract tests và build check | **FAIL — chưa khả thi theo plan hiện tại** | Có danh sách test (`plan.md:56-63`, `:108`), nhưng RN core chưa approval; root contract test không kiểm tra các endpoint ticket yêu cầu và plan còn root-wide commands ngoài scope (`plan.md:177-181`). |
-| AC-11 API base URL runtime/build, không secret file | **FAIL** | `config.ts` và runtime override đúng hướng (`plan.md:28-29`, `:109`), nhưng `mobile/.env.example` bị cấm. Loại file này khỏi plan. |
-| AC-12 dependency RN/MapLibre/native SDK được ticket 00 approval | **FAIL — blocker trực tiếp** | MapLibre RN và Android prerequisites có evidence ở ticket `00`, nhưng RN core/version/license/command không có. Plan tự ghi “RN core chưa duyệt” (`plan.md:110`) nên phải dừng `needs-info`, không `PLAN_READY`. |
+- **Implementation scope:** các file implementation/test mới thuộc `mobile/**` và `tests/**`, đúng whitelist ticket `:7-10`; không thấy thay đổi `src/modules/**/contracts.ts`, backend contract, `.env*` hoặc `**/secrets/**` trong `changes.md:22-34` và `files-changed.md:5-18`.
+- **Planner workflow artifact:** `.scratch/civicos-e1-clone-mvp/issues/05-mobile-readonly-client.md` có diff ở Status/Blocked by/checklist/comments/Research history. Đây là artifact workflow được Planner cho phép; không coi là Developer implementation scope violation. Đối chiếu diff cho thấy 12 dòng AC và nội dung Rubric không bị sửa để né yêu cầu.
+- **Evidence/workflow artifacts:** `.brain/evidence/05-mobile-readonly-client/**` được ticket cho phép theo role. `Lesson-learned.md` là artifact bài học workflow, không phải code implementation.
+- **Generated workspace artifacts:** `mobile/android/.gradle/**`, `app/build/**`, `app/.cxx/**` và các artifact verifier hiện diện do build/evidence; chúng không phải business source và không được coi là code thừa để map AC. Khi commit, Planner cần chỉ stage source/lockfile/evidence được chọn, không stage generated outputs hoặc `NUL`.
+- **Dependency:** `mobile/package.json:12-26` khớp batch approved; `run43-mobile_build.log:152-153` chứng minh Android build thật thành công.
+- **Security:** OU + Assignment + masking vẫn nằm ở server; client giữ `masked`, 403 và không tự chọn OU/không unmask. Contract matrix và boundary regression PASS.
+- **Read-only:** mobile API chỉ GET ngoài auth session; route contract và `WriteGuard` đều cấm POST/PUT/PATCH/DELETE nghiệp vụ; không có public citizen route.
 
-## 3. Kiểm tra độc lập Rubric bắt buộc
+## Kết luận checkpoint
 
-| Trục Rubric | Kết quả | Đối chiếu độc lập |
-|---|---|---|
-| Backend/API chung, không store nghiệp vụ tách khỏi CivicOS | **PASS về kiến trúc dự kiến** | `spec.md:74-79` yêu cầu mobile package riêng nhưng backend chung. Plan dùng GET adapter + view cache/fixtures, không DB/store (`plan.md:116`, `:80-81`). Việc thiếu endpoint vẫn là blocker AC riêng, không biến thành lý do tạo store mobile. |
-| Tôn trọng `OrganizationUnit`, `Assignment`, masking | **FAIL** | `CONTEXT.md:43-45` nói Assignment chỉ cấp quyền cho nhiệm vụ cụ thể, không xem toàn bộ dữ liệu đơn vị. Plan mới nêu OU/mask và chỉ hiển thị Assignment ở Task (`plan.md:117`), chưa có quy tắc scope cho mỗi list/detail/derived resource. Cơ chế rủi ro: adapter tổng hợp nhiều endpoint có thể trả dữ liệu ngoài Assignment nếu server contract không lọc; client render `masked` không sửa được việc đã nhận dữ liệu quá quyền. |
-| Không biến mobile PS-E3 thành phạm vi E1 ngoài spec | **PASS về hướng** | `spec.md:36-37`, `:74-79`, `:200-205` giới hạn mobile read-only, không citizen app/write mới. Plan chỉ giữ auth/map/RelatedInfo và Incident context, cấm CTA mutation (`plan.md:116-118`). Cần giữ nguyên khi sửa blocker endpoint. |
+**PASS — đủ điều kiện để Planner tick 12 AC, 3 Rubric bắt buộc và 3 Rubric khuyến nghị, sau đó commit.**
 
-## 4. Kiểm tra Rubric khuyến nghị độc lập với screen baseline
-
-| Trục | Kết quả dự kiến | Bằng chứng đối chiếu |
-|---|---|---|
-| Thiết kế/UI | **Đạt hướng tối thiểu 1/2, nhưng cần dependency/contract unblock** | Screen-11 yêu cầu auth, tabs, MapLibre, permission, layer, marker/polygon, offline và state matrix (`screen-11:9-20`); plan có các thành phần tương ứng (`plan.md:35-47`, `:87-90`). Screen-12 yêu cầu debounce, tabs/filter, map/list/detail sheet, mask, polygon/point, không write (`screen-12:9-21`); plan map đủ (`plan.md:40-42`, `:88`). Screen-13 yêu cầu alarm/dispatch/task, field/map context, masking/link RelatedInfo (`screen-13:9-20`); plan có screens/read-only/deep-link (`plan.md:43-46`, `:89`). |
-| Thao tác/UX | **Đạt hướng tối thiểu 1/2, chưa thể chốt** | Plan nêu bottom sheet/list/detail, filter sheet, retry và tap target 44px (`plan.md:120-126`, `:90`). Chưa có test-first cases cho toàn bộ state/deep-link; route contract thiếu làm UX flow chưa kiểm chứng được. |
-| Quy trình | **FAIL dưới ngưỡng hiện tại** | Plan tuyên bố giữ source-compatible (`plan.md:86`, `:126`) nhưng chưa có mapping route/endpoint cụ thể cho alarm/dispatch/task; route riêng không tồn tại (`plan.md:159-165`). Không được suy diễn source-compatible chỉ từ tên tab. |
-
-## 5. Đối chiếu từng dòng `Các bước thực hiện`
-
-| Bước ticket | Kết quả | Đối chiếu |
-|---|---|---|
-| Scaffold `mobile/`, env/API base URL không secret | **FAIL** | Có danh sách scaffold/config (`plan.md:18-30`, `:132`), nhưng `.env.example` vi phạm whitelist và dependency RN core chưa approval. |
-| Implement auth/main/map theo screen-11 + MapLibre adapter | **PASS về kế hoạch, bị chặn triển khai** | Thành phần/flow được map (`plan.md:35-39`, `:87`, `:133`); cần unblock dependency và native command. |
-| Implement RelatedInfo read-only theo screen-12 | **FAIL** | UI map đủ (`plan.md:40-42`, `:134`) nhưng API contract bắt buộc thiếu; fallback derived view chưa đạt AC-05. |
-| Implement alarm/dispatch/task tối thiểu theo screen-13 | **FAIL** | Screen files có trong whitelist, nhưng endpoint/route flow chưa được ticket `00` xác nhận và plan chưa chứng minh source-compatible (`plan.md:43-45`, `:89`, `:135`, `:159-165`). |
-| Synthetic fixtures + API contract tests Resident/Business/Hotspot/Violation/Incident | **FAIL** | Có fixtures/test files (`plan.md:56-63`, `:136`), nhưng root contract test chỉ kiểm tra residents/establishments/inspections/incidents/markers và còn ghi “không assert endpoint chưa tồn tại” (`plan.md:62`, `:159-166`); không phải contract test cho Hotspot/Violation HTTP surface bắt buộc. |
-| Kiểm tra masking/offline/permission/session expiry trên device/emulator | **FAIL — chưa đủ TDD/contract plan** | Có kịch bản manual (`plan.md:137`, `:179-181`) nhưng chưa có test-first cases cho toàn bộ state/security scope; Android prerequisites có evidence ticket `00`, còn native project/build chưa tạo. |
-| `npm --prefix mobile ci`/command được ticket 00 duyệt, rồi typecheck/test/build mobile | **FAIL** | Ticket `00` chỉ approval MapLibre install, không approval RN core/package batch. Plan còn giả định `gradle wrapper` (`plan.md:49`) trong khi evidence `00/tests.md:146-156`, `:339` ghi chưa có Gradle/Gradle wrapper; cần exact approved scaffold/build path. |
-| API contract tests từ root, ghi giới hạn Android/JS trên Windows | **FAIL — scope cần sửa** | Plan có targeted test và ghi Android/JS (`plan.md:180-181`), nhưng thêm `npm run prisma:generate` và root-wide `npm run typecheck` (`plan.md:180`) ngoài verification scope ticket. Giữ root targeted contract test; chuyển full/root-wide gate sau toàn bộ ticket theo yêu cầu Planner. |
-
-## 6. Kiểm tra TDD và verification boundary
-
-- **TDD red→green→refactor: FAIL một phần, cần sửa plan.** Plan có thứ tự này cho 5 nhóm test (`plan.md:168-175`), nhưng chưa có red test cho alarm/dispatch/task link flow, permission/masking theo OU+Assignment trên từng resource, state matrix của mọi màn động, và contract semantics của Hotspot/Violation. Không đủ để coi toàn bộ AC được test-first.
-- **Verification scope: FAIL một phần.** Việc loại `npm test` toàn bộ, `test:e2e`, `lint`, `format:check`, `build` root khỏi ticket là đúng (`plan.md:179-181`). Tuy nhiên `npm run prisma:generate` và `npm run typecheck` không được giới hạn theo ticket; cần bỏ/chuyển chúng. Root API contract test phạm vi ticket vẫn được giữ vì ticket yêu cầu.
-- **Native boundary: chưa đủ để PASS.** Ticket `00` có Android/JDK/SDK/ADB approval/evidence, nhưng chưa có RN core approval và plan chưa chỉ ra cách tạo Gradle wrapper mà không phụ thuộc `gradle` hệ thống chưa có.
-
-## 7. Hướng sửa plan tối thiểu
-
-1. Chuyển kết luận từ `PLAN_READY` sang `needs-info`/`PLAN_FAIL`; xin approval đầy đủ cho React Native core và các package/tool cần thiết: package, version, license, reason, exact install/CI/build/test command.
-2. Xóa `mobile/.env.example` khỏi file dự kiến; giữ API base URL qua runtime env/in-app override trong `mobile/src/config.ts`, không tạo bất kỳ `.env.*` nào.
-3. Dừng implementation cho đến khi có quyết định contract/owner cho các route đang thiếu. Nếu vẫn giữ whitelist hiện tại, ghi rõ AC-05/AC-07 không thể đạt và không dùng adapter client-side/derived view để giả pass. Nếu mở backend ticket/scope, cập nhật dependency graph và exact contract trước khi Developer làm.
-4. Bổ sung boundary matrix cho OrganizationUnit + Assignment + masking ở mọi list/detail/derived view, với test cases server-side; không chỉ hiển thị Assignment ở Task.
-5. Bổ sung red→green→refactor cho alarm/dispatch/task, deep-link, toàn bộ state matrix và Hotspot/Violation contract; giữ synthetic fixtures chỉ cho test/dev, không dùng thay backend contract.
-6. Giới hạn lệnh verification trong ticket: mobile dependency install đã approved, mobile typecheck/test/build/Android smoke và root API contract test phạm vi ticket; chuyển `prisma:generate`, root-wide typecheck và full root test/e2e sang gate sau khi toàn bộ ticket hoàn tất.
+- Reviewer không tự tick ticket, không tự đổi Status và không commit.
+- Direction Gate sau REDO đã PASS: `incidentId` ưu tiên; Incident dùng endpoint/envelope ticket 03/06 hiện có; RelatedInfo chỉ fallback khi thiếu Incident reference; không có Incident contract/type/test riêng.
+- Full evidence hiện tại là run 46, `Tree: fe5c1195`; mobile-specific evidence là run 43 trên cùng Tree.
 
 ## Trục trặc gặp phải
 
-- Không gặp trục trặc công cụ/hạ tầng cần tự xử lý trong vòng review này.
-- Không có cập nhật mới cho `Lesson-learned.md`.
+- Candidate ticket path đầu tiên bị thiếu thư mục `issues/`; sau đó đã enumerate `.scratch`, feature parent và `issues/`, rồi đọc exact path thành công. Đây là sự cố path/tooling, không phải lỗi repository.
+- Lệnh đọc diff bị giới hạn hiển thị và tool lưu phần output đầy đủ ra file tạm; đã không dùng phần output bị cắt làm evidence, chuyển sang read-back bounded của file hiện tại và status scoped. Đây là sự cố hiển thị đã được mục **Portable diff-output paging** trong `Lesson-learned.md` bao phủ.
+- Đã cập nhật biến thể reviewer checkpoint vào mục **Hidden-path candidate verification** trong `Lesson-learned.md`; không tạo mục trùng. Không chạy lại kiểm tra để xử lý sự cố này.
+
+Đường dẫn evidence: `.brain/evidence/05-mobile-readonly-client/review.md`
+
+## Round-trip check — Bước 1: phần suy ngược trước khi đọc ticket gốc
+
+Phần dưới đây chỉ được suy ngược từ implementation/test hiện tại thuộc ticket và các evidence PASS đã chỉ định; tại thời điểm ghi phần này, chưa mở ticket gốc, Acceptance Criteria hoặc Rubric:
+
+- Xây dựng một mobile React Native client Android/JS cho CivicOS, có đăng nhập/đăng xuất và khôi phục phiên qua HTTP backend thật; khi phiên hết hạn thì chuyển về trạng thái hết phiên, còn lỗi mạng/403 phải được biểu diễn thành state UI phù hợp.
+- Client là read-only cho nghiệp vụ: mọi dữ liệu business đi qua HTTP API chung, các request đọc dùng GET; chỉ cho phép POST/DELETE của auth session, chặn các write nghiệp vụ và không expose public citizen/intake/create/update route.
+- Main/map phải lấy layer, provider và các item từ backend, hiển thị dữ liệu Point/Polygon bằng MapLibre/OSS, giữ attribution OpenStreetMap, cho phép toggle layer cục bộ, xử lý permission bị từ chối và hỗ trợ basemap/cache/offline với trạng thái offline rõ ràng.
+- RelatedInfo phải hỗ trợ search, đếm theo entity type, filter, pagination/debounce, danh sách và detail; detail fetch theo entity type/id từ backend, hiển thị masking do server trả về, và có đường mở vị trí trên bản đồ/bottom sheet khi response có geometry hoặc tọa độ.
+- Alarm/dispatch/task phải có list/detail read-only từ backend, hiển thị loading/empty/error/403/masked/offline và retry; dữ liệu nhạy cảm/assignment summary phải giữ masking, không tự unmask hoặc tự suy diễn quyền ở client.
+- Các force item phải mang được các reference do backend cung cấp (`incidentId`, `resourceId`, coordinates, RelatedInfo reference, assignment summary) để deep-link. Thứ tự route phải là: có `incidentId` thì mở Incident và gọi detail endpoint Incident hiện có; chỉ khi không có `incidentId` mới mở RelatedInfo; nếu chỉ có resource/coordinates thì mở Map. Khi có Incident đồng thời với RelatedInfo thì không để RelatedInfo làm route active.
+- Incident context chỉ là consumer của endpoint/envelope Incident đã tồn tại, không tạo contract/wire type/backend business store riêng trong mobile ticket.
+- API/config phải nhận runtime hoặc build-time base URL hợp lệ qua native/build injection, không hard-code production URL và không chứa secret; Android native boundary/dependency phải build được trên Windows.
+- UI mobile cần có các trạng thái động (loading, empty, error, forbidden, masked, offline), retry và tap target tối thiểu; phạm vi hình ảnh gồm auth/main/map, RelatedInfo và alarm/dispatch/task, không mở rộng sang workflow write.
+
+## Round-trip check — Bước 3: đối chiếu với ticket gốc
+
+Ticket gốc được mở sau khi phần suy ngược ở trên đã được ghi. Kết quả đối chiếu từng ý:
+
+| Ý suy ngược | Đối chiếu ticket gốc | Kết quả |
+|---|---|---|
+| Mobile React Native Android/JS, auth/session, login/logout/expiry và auth/main route | Mô tả ticket yêu cầu app React Native với auth/main/map tại `:19`; AC-02 yêu cầu authenticated/main, unauthenticated/auth và re-login khi session hết hạn tại `:24`; HTTP surface có session tại `:66`. | **PASS** — khớp. Evidence implementation `mobile/src/api/session.ts:3-50`, `SessionContext.tsx:18-43`; run 43 có `session.test.ts` PASS (`run43-mobile_test.log:13,22-25`). |
+| Read-only, business data qua HTTP chung, GET-only, chặn write nghiệp vụ và không có public citizen/write route | Ticket nêu không thêm mobile write/public citizen app tại `:19`, AC-07 và AC-09 tại `:29-31`, cùng HTTP read-only surface tại `:64-70,83`. | **PASS** — khớp. `mobile/src/api/client.ts:46-68` gọi HTTP và `WriteGuard.ts:5-20` chặn write ngoài auth; `navigation-readonly.test.tsx:7-12` PASS trong run 43. |
+| Map lấy dữ liệu backend, MapLibre/OSS, point/polygon, toggle, permission denied, OSM attribution và offline cache | AC-03/04 tại `:25-26`, HTTP map tại `:67,75`, platform boundary tại `:85-90`. | **PASS** — khớp. `MapScreen.tsx:89-170,197-317`, `ProviderAdapter.ts:2-9`; mobile map test/build PASS trong run 43 (`tests.md:1940-1949`, `run43-mobile_test.log:19,22-25`). |
+| RelatedInfo search/filter/count/pagination/debounce/list/detail/map sheet từ HTTP response, không client fixture | Mô tả và AC-05 tại `:19,27`; endpoint/shape/boundary tại `:68,70,76-79`; bước thực hiện cấm client-derived adapter/fixture tại `:58`. | **PASS** — khớp. `api/relatedInfo.ts:11-37`, `RelatedInfoScreen.tsx:50-223`, `RelatedInfoDetail.tsx:22-87`; run 43 RelatedInfo PASS và run 46 HTTP contract PASS (`run43-mobile_test.log:14,22-25`, `run46-test.log:8-10,32-42`). |
+| Forces alarm/dispatch/task read-only, masked assignment summary, state/retry và deep-link fields | AC-07/08 tại `:29-30`; các endpoint và field bắt buộc tại `:69,80-83`. | **PASS** — khớp. `api/forces.ts:4-51`, `AlarmScreen.tsx:14-103`, `DispatchScreen.tsx:21-136`, `TaskScreen.tsx:21-135`; forces/deep-link suites PASS trong run 43 và HTTP contract PASS trong run 46. |
+| Deep-link giữ `incidentId`, `resourceId`, coordinates/reference; ưu tiên Incident khi có `incidentId`, RelatedInfo chỉ fallback khi thiếu, resource/coordinates mở Map | Ticket yêu cầu route source-compatible và links tại `:29`; backend fields/boundary tại `:80-83`; phần quyết định Incident xác nhận dùng `incidentId` của contract 03/06 và không tạo contract/type/test riêng tại `:127`. | **PASS** — khớp về nghiệp vụ và không mâu thuẫn với ticket. `deepLinks.ts:5-18` thực thi đúng thứ tự; `deepLinks.test.ts:31-63` có cả trường hợp đồng thời `incidentId` + `relatedInfo` và fallback, PASS trong run 43 (`run43-mobile_test.log:20,22-25`). |
+| Incident chỉ consume endpoint/envelope hiện có, không tạo Incident contract/wire type/test riêng trong ticket 05 | Ticket HTTP surface nêu endpoint hiện có tại `:69`; quyết định Research ghi rõ envelope 03/06 và cấm bổ sung contract/type/test riêng tại `:127`. | **PASS** — khớp. `IncidentScreen.tsx:18-43` gọi `/api/incidents/:incidentId`; `changes.md:12-20` ghi rõ không tạo contract/type/test Incident mới. |
+| Base URL runtime/build-time qua native/build injection, không hard-code production URL/secret; dùng batch dependency và Android build trên Windows | AC-11/12 tại `:33-34`; platform boundary tại `:85-90`; approval/toolchain tại `:94-113`. | **PASS** — khớp. `config.ts:8-38` và native config boundary; `config.test.ts` PASS, mobile build PASS trong run 43 (`tests.md:1940-1949`). |
+| UI động gồm loading/empty/error/403/masked/offline, retry, tap target tối thiểu và các surface auth/map/RelatedInfo/forces | AC-08 tại `:30`, các bước thực hiện tại `:54-60`, Rubric UI/UX tại `:48-50`. | **PASS** — khớp. `States.tsx:4-52` và các screen tương ứng có state/retry, Pressable chính có `minHeight: 44`; run 43 mobile suite PASS (`run43-mobile_test.log:11-23`). |
+
+### Kết luận round-trip
+
+**PASS.** Phần suy ngược khớp ticket gốc về phạm vi nghiệp vụ, read-only/security boundary, các surface mobile, deep-link Incident/RelatedInfo/Map, Incident seam hiện có và platform/build boundary. Không phát hiện điểm lệch cụ thể nào giữa yêu cầu gốc và điều mà implementation/test hiện tại đang cố đáp ứng.
+
+## Trục trặc gặp phải trong vòng round-trip này
+
+- Một số lần đọc đầu tiên dùng chuỗi đường dẫn Windows bị chèn ký tự `null byte`, khiến tool trả lỗi trước khi đọc file. Đã dừng dùng path lỗi, chuyển sang path slash-separated đã xác nhận và đọc lại thành công; không chạy kiểm tra để xử lý sự cố này.
+- Đã cập nhật biến thể **round-trip** trong mục **Verified-path reads** của `Lesson-learned.md`, không tạo mục trùng.

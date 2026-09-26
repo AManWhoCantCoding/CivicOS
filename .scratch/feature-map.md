@@ -1,6 +1,5 @@
 # Feature map
 
-## Inspection/Establishment (PS-E1-007)
-- Cách vào: Web → Phân hệ Inspection → Hàng đợi fieldwork hoặc danh mục cơ sở.
-- Cách điều khiển: Commander lập lịch/quản lý cơ sở; field officer thực hiện checklist, Evidence, finding và hoàn tất; Commander duyệt/chuyển recommendation.
-- Bẫy cần biết: cadence dưới 6 tháng cần capability riêng; complete cần checklist, Evidence và recommendation đạt yêu cầu; mobile chỉ read-only.
+## Mobile read-only MVP
+- Vào: mở app React Native `mobile/`, đăng nhập rồi dùng Map, RelatedInfo, Alarms, Dispatches, Tasks và Incident.
+- Điều khiển/bẫy: inject `CIVICOS_API_BASE_URL`, tìm/lọc/tap để xem dữ liệu; mọi quyền OU/Assignment/masking do server quyết định, mobile không có write flow/public intake.

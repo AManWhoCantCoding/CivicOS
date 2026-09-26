@@ -1,0 +1,41 @@
+
+> civic-os@0.1.0 test
+> vitest run
+
+
+ RUN  v3.2.7 D:/Project/CivicOS
+
+ ✓ tests/tooling/verify-tree-fingerprint.test.ts (5 tests) 3643ms
+   ✓ verify tree fingerprint > keeps Tree stable when generated artifacts appear and change  1562ms
+   ✓ verify tree fingerprint > changes Tree for untracked source outside build  974ms
+   ✓ verify tree fingerprint > changes Tree for tracked config edit  873ms
+ ✓ tests/mobile-readonly/contract-matrix.contract.test.ts (1 test) 1025ms
+   ✓ mobile contract matrix > checks layers, related-info, forces, boundaries, masking, and GET-only shape  735ms
+ ✓ tests/mobile/readonly-http.contract.test.ts (6 tests) 809ms
+   ✓ mobile read-only HTTP contract > reads counts, incidents, alarms, dispatches, tasks, and the task alias  379ms
+ ✓ tests/mobile-readonly/related-info-search.contract.test.ts (1 test) 473ms
+ ✓ tests/mobile-readonly/forces-read.contract.test.ts (1 test) 439ms
+ ✓ tests/mobile-readonly/related-info-detail.contract.test.ts (5 tests) 488ms
+ ✓ tests/tooling/mobile-build-boundary.test.ts (5 tests) 358ms
+   ✓ mobile build boundary > keeps the mobile verifier profile ordered and selectable  306ms
+ ✓ tests/mobile-readonly/tasks-by-dispatch.contract.test.ts (2 tests) 378ms
+ ✓ tests/mobile-readonly/related-info-counts.contract.test.ts (1 test) 294ms
+ ✓ tests/mobile-readonly/map-layers.contract.test.ts (1 test) 249ms
+ ✓ tests/mobile-readonly/boundary.regression.test.ts (2 tests) 246ms
+ ✓ tests/incidents/intake-report-lifecycle.test.ts (43 tests) 20ms
+ ✓ tests/incidents/incident-ticket04.postgres.test.ts (17 tests | 11 skipped) 22ms
+ ✓ tests/eventing/event-catalog.test.ts (4 tests) 15ms
+ ✓ tests/integration/schema-and-migration.test.ts (7 tests | 2 skipped) 15ms
+ ✓ tests/platform/shared-capabilities.test.ts (3 tests) 11ms
+ ✓ tests/vehicles/vehicle-watch-contract.test.ts (6 tests) 11ms
+ ✓ tests/identity/capability-policy.test.ts (11 tests) 12ms
+ ✓ tests/inspections/inspection-slice-7-8.test.ts (5 tests) 11ms
+ ✓ tests/inspections/inspection-contract.test.ts (6 tests) 11ms
+ ✓ tests/identity/role-migration.test.ts (15 tests | 9 skipped) 9ms
+ ✓ tests/inspections/inspection-ps007-regression.test.ts (6 tests) 8ms
+ ✓ tests/identity/encryption.integration.test.ts (5 tests | 1 skipped) 10ms
+ ✓ tests/integration/parallel-wave.integration.test.ts (30 tests | 23 skipped) 9ms
+ ✓ tests/identity/sensitive-log-leak.test.ts (3 tests | 2 skipped) 7ms
+ ✓ tests/vehicles/vehicle-watch-slices-8-9.test.ts (5 tests) 8ms
+ ✓ tests/map/map-provider.test.ts (6 tests) 7ms
+ ✓ tests/platform/evidence.integration.test.ts (3 tests | 1 skipped) 6ms

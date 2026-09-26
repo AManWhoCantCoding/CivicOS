@@ -1,7 +1,7 @@
 # Mobile clone — Auth, Map và RelatedInfo read-only
 
-- **Status:** ready-for-agent
-- **Blocked by:** 00, 01, 02, 03, 04, 06-mobile-readonly-backend-contract
+- **Status:** done
+- **Blocked by:** Không còn (00, 01, 02, 03, 04, 05a và 06-mobile-readonly-backend-contract đã done)
 - **Loại:** feature
 - **Gate hướng:** có
 - **File được phép sửa:**
@@ -20,26 +20,26 @@ Thêm app React Native trong `mobile/`, bám navigation/surface của source mob
 
 ## Acceptance Criteria (bắt buộc — chặn done, PASS 100%)
 
-- [ ] Given checkout có `mobile/`, When chạy mobile build mà không có server-only Next.js module, Then build thành công và dependency graph không import server-only code.
-- [ ] Given user credentials/session hợp lệ, When login, logout hoặc session hết hạn, Then state/route lần lượt là authenticated/main, unauthenticated/auth và re-login flow.
-- [ ] Given provider OSS, point, polygon và location permission granted/denied, When mở map hoặc toggle layer, Then point/polygon render, visibility đổi theo toggle, permission-denied state hiển thị khi bị từ chối và OSM attribution luôn có.
-- [ ] Given thiết bị offline có basemap/cache, When xem map hoặc thử write command ngoài read-only MVP, Then basemap/cache vẫn xem được và write command không gửi request, hiển thị lý do bị chặn.
-- [ ] Given backend contract ticket 06 trả Resident/Business/Hotspot/Violation, When người dùng search/filter/chọn layer/mở map sheet/list/detail, Then mobile hiển thị đúng item từ HTTP response với debounce và không dựng response bằng client fixture.
-- [ ] Given backend trả item masked hoặc HTTP `403`, When mobile render dữ liệu nhạy cảm, Then field chỉ ở dạng masked/omitted, client không tự unmask và API response là security boundary.
-- [ ] Given alarm/dispatch/task response có deep-link fields, When người dùng mở surface hoặc tap resource, Then route/flow source-compatible và link tới map/RelatedInfo bằng `incidentId`/`resourceId`/reference; không có write action.
-- [ ] Given màn dữ liệu động lần lượt ở loading, empty, HTTP error, retry, `403`, masked và offline, When state tương ứng xảy ra, Then UI hiển thị đúng loading/empty/error+retry/permission-denied/masked/offline state.
-- [ ] Given mobile MVP render các surface E1-004/E1-007/E1-005, When inspect actions/routes, Then không có CTA create/update E1-004/E1-007 và không có public citizen intake.
-- [ ] Given command test/build được ticket 00 duyệt, When chạy mobile/API contract tests và build check, Then tất cả command exit `0` và có assertion cho contract, masking, boundary và read-only flow.
-- [ ] Given API base URL được inject ở hai giá trị runtime/build-time khác nhau, When chạy app với từng giá trị, Then request dùng đúng URL được inject, không hard-code production URL và repo không có mobile secret file.
-- [ ] Given ticket 00 đã ghi approval/availability cho React Native/MapLibre/native SDK, When giao implementation ticket 05, Then dùng dependency/toolchain đã duyệt; nếu approval/availability thiếu, ticket ở `needs-info` và không đổi sang mock pass.
+- [x] Given checkout có `mobile/`, When chạy mobile build mà không có server-only Next.js module, Then build thành công và dependency graph không import server-only code.
+- [x] Given user credentials/session hợp lệ, When login, logout hoặc session hết hạn, Then state/route lần lượt là authenticated/main, unauthenticated/auth và re-login flow.
+- [x] Given provider OSS, point, polygon và location permission granted/denied, When mở map hoặc toggle layer, Then point/polygon render, visibility đổi theo toggle, permission-denied state hiển thị khi bị từ chối và OSM attribution luôn có.
+- [x] Given thiết bị offline có basemap/cache, When xem map hoặc thử write command ngoài read-only MVP, Then basemap/cache vẫn xem được và write command không gửi request, hiển thị lý do bị chặn.
+- [x] Given backend contract ticket 06 trả Resident/Business/Hotspot/Violation, When người dùng search/filter/chọn layer/mở map sheet/list/detail, Then mobile hiển thị đúng item từ HTTP response với debounce và không dựng response bằng client fixture.
+- [x] Given backend trả item masked hoặc HTTP `403`, When mobile render dữ liệu nhạy cảm, Then field chỉ ở dạng masked/omitted, client không tự unmask và API response là security boundary.
+- [x] Given alarm/dispatch/task response có deep-link fields, When người dùng mở surface hoặc tap resource, Then route/flow source-compatible và link tới map/RelatedInfo bằng `incidentId`/`resourceId`/reference; không có write action.
+- [x] Given màn dữ liệu động lần lượt ở loading, empty, HTTP error, retry, `403`, masked và offline, When state tương ứng xảy ra, Then UI hiển thị đúng loading/empty/error+retry/permission-denied/masked/offline state.
+- [x] Given mobile MVP render các surface E1-004/E1-007/E1-005, When inspect actions/routes, Then không có CTA create/update E1-004/E1-007 và không có public citizen intake.
+- [x] Given command test/build được ticket 00 duyệt, When chạy mobile/API contract tests và build check, Then tất cả command exit `0` và có assertion cho contract, masking, boundary và read-only flow.
+- [x] Given API base URL được inject ở hai giá trị runtime/build-time khác nhau, When chạy app với từng giá trị, Then request dùng đúng URL được inject, không hard-code production URL và repo không có mobile secret file.
+- [x] Given ticket 00 đã ghi approval/availability cho React Native/MapLibre/native SDK, When giao implementation ticket 05, Then dùng dependency/toolchain đã duyệt; nếu approval/availability thiếu, ticket ở `needs-info` và không đổi sang mock pass.
 
 ## Rubric (mức độ đạt)
 
 ### Bắt buộc (chặn done — phải PASS 100%, Reviewer chấm như Acceptance Criteria)
 
-- [ ] Mobile dùng backend/API chung, không tạo store dữ liệu nghiệp vụ tách khỏi CivicOS, nguồn: `spec.md#27-đích-triển-khai-mobile`.
-- [ ] Read-only mobile tôn trọng `OrganizationUnit`, Assignment và masking, nguồn: `spec.md#22-source-of-truth-và-allocation` và `CONTEXT.md#43-assignment`.
-- [ ] Không biến mobile source PS-E3 thành phạm vi E1; chỉ giữ surface liên quan E1 đã nêu trong spec, nguồn: `spec.md#6-ngoài-phạm-vi-tranche-này`.
+- [x] Mobile dùng backend/API chung, không tạo store dữ liệu nghiệp vụ tách khỏi CivicOS, nguồn: `spec.md#27-đích-triển-khai-mobile`.
+- [x] Read-only mobile tôn trọng `OrganizationUnit`, Assignment và masking, nguồn: `spec.md#22-source-of-truth-và-allocation` và `CONTEXT.md#43-assignment`.
+- [x] Không biến mobile source PS-E3 thành phạm vi E1; chỉ giữ surface liên quan E1 đã nêu trong spec, nguồn: `spec.md#6-ngoài-phạm-vi-tranche-này`.
 
 ### Khuyến nghị (không chặn done, chỉ ghi nhận — trừ khi dưới ngưỡng tối thiểu)
 
@@ -51,13 +51,13 @@ Thêm app React Native trong `mobile/`, bám navigation/surface của source mob
 
 ## Các bước thực hiện
 
-- [ ] Scaffold package React Native trong `mobile/`, cấu hình environment/API base URL không commit secret.
-- [ ] Implement auth/main/map theo screen-11 và MapLibre adapter.
-- [ ] Implement RelatedInfo search/filter/map/list/detail read-only theo screen-12.
-- [ ] Implement alarm/dispatch/task surfaces tối thiểu theo screen-13.
-- [ ] Dùng dữ liệu synthetic do backend/test sở hữu và API contract tests cho Resident/Business/Hotspot/Violation/Incident; không dùng client-derived adapter/fixtures để giả đạt HTTP contract.
-- [ ] Kiểm tra masking, offline basemap, permission-denied và session expiry trên thiết bị/emulator.
-- [ ] Chạy `npm --prefix mobile ci` hoặc command tương đương đã được ticket 00 duyệt, typecheck/test/build mobile và API contract tests từ root; ghi rõ nếu chỉ kiểm tra Android/JS vì môi trường Windows không có iOS toolchain.
+- [x] Scaffold package React Native trong `mobile/`, cấu hình environment/API base URL không commit secret.
+- [x] Implement auth/main/map theo screen-11 và MapLibre adapter.
+- [x] Implement RelatedInfo search/filter/map/list/detail read-only theo screen-12.
+- [x] Implement alarm/dispatch/task surfaces tối thiểu theo screen-13.
+- [x] Dùng dữ liệu synthetic do backend/test sở hữu và API contract tests cho Resident/Business/Hotspot/Violation/Incident; không dùng client-derived adapter/fixtures để giả đạt HTTP contract.
+- [x] Kiểm tra masking, offline basemap, permission-denied và session expiry trên thiết bị/emulator.
+- [x] Chạy `npm --prefix mobile ci` hoặc command tương đương đã được ticket 00 duyệt, typecheck/test/build mobile và API contract tests từ root; ghi rõ nếu chỉ kiểm tra Android/JS vì môi trường Windows không có iOS toolchain.
 
 ## Hợp đồng triển khai
 
@@ -122,8 +122,34 @@ Thêm app React Native trong `mobile/`, bám navigation/surface của source mob
 
 ## Đang chờ Research
 
-Không còn câu hỏi nghiệp vụ cho backend contract. Ticket 05 vẫn bị block bởi ticket `06-mobile-readonly-backend-contract` và không được giao Developer trước khi ticket đó pass.
+Đã có quyết định của user ngày 2026-09-26:
+
+- **Incident contract/client seam:** Ticket 05 được phép tiêu thụ response shape/type hiện có của ticket 03/06 cho `GET /api/incidents` và `GET /api/incidents/:incidentId`; **không** bổ sung contract/type/test riêng trong ticket 05. Plan phải nêu rõ client gọi hai endpoint hiện có và giữ nguyên envelope hiện tại: list `{ incidents: [...] }`, detail `{ incident: { incident, events, approvals, informant } }`. Incident context của alarm/dispatch/task dùng `incidentId` trong contract ticket 06 để deep-link/fetch, không tạo response shape mới.
+- **Mapping AC:** Planner/Developer được phép map đúng thứ tự 12 checkbox nghiệp vụ hiện tại thành AC-01..AC-12 trong plan/evidence nội bộ; không sửa hoặc diễn giải lại Acceptance Criteria trong ticket. Test skeleton hiện tại đã là nguồn assertion tương ứng theo thứ tự này.
+
+Không còn câu hỏi nghiệp vụ chờ user. Planner cập nhật plan theo hai quyết định trên trước khi tiếp tục Plan Check/triage; Research không ghi `.brain/**` evidence.
+
+### Đã giải quyết — 2026-09-26
+
+- README và ticket 00 xác nhận Next.js dùng port `3000`; Tester khởi động `npm run dev` và xác nhận `GET /api/auth/session` trả `200` với `{"user":null}`.
+- Root verification đã chạy với injection tạm thời `CIVICOS_API_BASE_URL=http://localhost:3000`; không sửa `.env` hay commit URL.
+- Không còn câu hỏi nghiệp vụ/hạ tầng về base URL; evidence runtime nằm trong `tests.md` lần chạy đầy đủ gần nhất.
+
+## Lý do wontfix (lịch sử trước khi reopen)
+
+- `node scripts/verify.mjs 05-mobile-readonly-client --scope=fast` vẫn FAIL ở lần chạy 6 (`Tree ae5fc214`), chỉ còn lỗi typecheck ngoài phạm vi mobile: `src/app/api/evidence/route.ts(20-25): error TS2339: Property 'get' does not exist on type 'FormData'`.
+- Nguyên nhân là dependency React Native đã được ticket 00 phê duyệt nhưng kéo global `FormData`/web declarations vào root compiler; route Next.js và các DOM consumer thuộc ticket khác bị xung đột. Ticket 05 cấm sửa `src/app/**`, root config và file ngoài whitelist, nên không có chủ sở hữu hợp lệ trong ticket này để sửa lỗi cuối mà không làm sai phạm vi.
+- Đã thử 4 vòng sửa cùng lỗi trong `mobile/**`: explicit nested Jest/Node references; global `FormData` augmentation theo `undici-types`; chuyển về DOM `FormDataEntryValue` và giữ `export {}` cho `declare global`; mỗi vòng đều giữ nguyên route root, không dùng `any`/`@ts-ignore`. Lỗi cuối vẫn tái hiện ở lần chạy 6.
+- Các lỗi MapLibre API drift, Jest globals và partial matcher trong mobile đã được sửa trong các vòng trước; tuy nhiên chưa thể chạy lint, format, test, e2e hoặc build vì typecheck là bước chặn.
+- Tiến độ dở dang: toàn bộ Acceptance Criteria và toàn bộ “Các bước thực hiện” vẫn chưa tick; `mobile/**` và `tests/mobile/**` đã có thay đổi nhưng chưa có verification PASS, chưa final review và chưa commit.
+- Evidence cuối: `.brain/evidence/05-mobile-readonly-client/tests.md`, `.brain/evidence/05-mobile-readonly-client/logs/run6-typecheck.log`, `.brain/evidence/05-mobile-readonly-client/files-changed.md`.
 
 ## Trạng thái cuối
 
-pending
+done
+
+## Comments
+
+- 2026-09-26 — Research: User đã phê duyệt kế hoạch cô lập root/mobile TypeScript và mở rộng verifier. Tạo ticket prerequisite `05a-mobile-build-boundary-fix` cho `tsconfig.json`, `package.json`, `scripts/verify.mjs` và regression test; toàn bộ AC nghiệp vụ mobile của ticket này giữ nguyên. Ticket 05 chưa được Research tự chuyển trạng thái; Planner cần triage ticket 05a trước, sau đó quyết định mở lại ticket 05 để giao implementation.
+- 2026-09-26 — Planner: Reopen ticket sau khi toàn bộ dependency `00`–`06` và `05a` đã done; giữ nguyên Acceptance Criteria, Rubric và phạm vi mobile read-only.
+- 2026-09-26 — Research: User xác nhận ticket 05 dùng response shape/type incident hiện có của ticket 03/06 cho `GET /api/incidents` và `GET /api/incidents/:incidentId`, không tạo contract/type/test riêng; Plan phải ghi rõ client seam/envelope hiện có và liên kết `incidentId` từ contract ticket 06. User cũng xác nhận map 12 checkbox theo thứ tự thành AC-01..AC-12 trong plan/evidence nội bộ, không sửa Acceptance Criteria.

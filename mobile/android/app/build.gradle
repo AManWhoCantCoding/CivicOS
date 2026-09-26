@@ -1,0 +1,10 @@
+plugins { id 'com.android.application'; id 'com.facebook.react'; id 'org.jetbrains.kotlin.android' }
+
+react { autolinkLibrariesWithApp() }
+
+android { namespace 'com.civicosmobile'; compileSdk 35
+    defaultConfig { applicationId 'com.civicosmobile'; minSdk 24; targetSdk 35; versionCode 1; versionName '0.1.0'; buildConfigField 'String', 'CIVICOS_API_BASE_URL', '"' + (project.findProperty('CIVICOS_API_BASE_URL') ?: '') + '"' }
+    buildFeatures { buildConfig true }
+}
+
+dependencies { implementation 'com.facebook.react:react-android'; implementation 'org.jetbrains.kotlin:kotlin-stdlib:2.0.21' }

@@ -1,0 +1,150 @@
+
+> civic-os@0.1.0 lint
+> eslint .
+
+
+D:\Project\CivicOS\mobile\metro.config.js
+  1:43  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+D:\Project\CivicOS\mobile\src\auth\SessionContext.tsx
+  7:306  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Project\CivicOS\mobile\src\auth\SessionContext.tsx:7:306
+  5 | type SessionContextValue = { session: SessionState; refresh: () => Promise<void>; signOut: () => Promise<void> };
+  6 | const SessionContext = createContext<SessionContextValue | null>(null);
+> 7 | export function SessionProvider({ children }: { children: React.ReactNode }) { const [session, setSession] = useState<SessionState>({ status: 'loading' }); const refresh = async () => { try { setSession(await getSession()); } catch { setSession({ status: 'unauthenticated' }); } }; useEffect(() => { void refresh(); }, []); const signOut = async () => { await logout(); setSession({ status: 'unauthenticated' }); }; return <SessionContext.Provider value={{ session, refresh, signOut }}>{children}</SessionContext.Provider>; }
+    |                                                                                                                                                                                                                                                                                                                  ^^^^^^^ Avoid calling setState() directly within an effect
+  8 | export function useSession() { const value = useContext(SessionContext); if (!value) throw new Error('SESSION_PROVIDER_REQUIRED'); return value; }
+  9 |  react-hooks/set-state-in-effect
+
+D:\Project\CivicOS\mobile\src\features\alarm\AlarmScreen.tsx
+  12:26  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Project\CivicOS\mobile\src\features\alarm\AlarmScreen.tsx:12:26
+  10 |   const [alarms, setAlarms] = useState<ForceItem[]>([]); const [selected, setSelected] = useState<ForceItem | null>(null); const [state, setState] = useState<SurfaceState>('loading');
+  11 |   const load = async () => { try { setState('loading'); const response = await getAlarms(); setAlarms(response.alarms); setState(response.alarms.length ? response.alarms.some(item => !item.assignmentSummary) ? 'masked' : 'ready' : 'empty'); } catch (reason: unknown) { setState(reason instanceof ApiError && reason.status === 403 ? 'forbidden' : reason instanceof ApiError && reason.code === 'OFFLINE' ? 'offline' : 'error'); } };
+> 12 |   useEffect(() => { void load(); }, []);
+     |                          ^^^^ Avoid calling setState() directly within an effect
+  13 |   if (state !== 'ready' && state !== 'masked' && !selected) return <View style={{ padding: 16 }}>{state === 'offline' && <OfflineBanner />}<StateMessage state={state} retry={() => void load()} /></View>;
+  14 |   return <View style={{ padding: 16 }}>{selected ? <View><Pressable onPress={() => setSelected(null)} style={{ minHeight: 44 }}><Text>‹ Quay lại</Text></Pressable><Text>{selected.title}</Text><Text>{selected.status} · {selected.createdAt}</Text>{selected.assignmentSummary ? <MaskedValue value={selected.assignmentSummary.task} /> : <StateMessage state="masked" />}<Pressable onPress={() => { const link = deepLinkFor(selected); if (link) onNavigate?.(link); }} style={{ minHeight: 44, padding: 8 }}><Text>Mở liên kết tài nguyên</Text></Pressable></View> : <>{state === 'masked' && <StateMessage state="masked" />}{alarms.map(alarm => <Pressable key={alarm.id} onPress={() => setSelected(alarm)} style={{ minHeight: 44, padding: 8 }}><Text>{alarm.title}</Text><Text>{alarm.status} · {alarm.createdAt}</Text></Pressable>)}</>}</View>;
+  15 | }  react-hooks/set-state-in-effect
+
+D:\Project\CivicOS\mobile\src\features\dispatch\DispatchScreen.tsx
+  14:26  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Project\CivicOS\mobile\src\features\dispatch\DispatchScreen.tsx:14:26
+  12 |   const load = async () => { try { setState('loading'); const response = await listDispatches(); setItems(response.data); setState(response.data.length ? response.data.some(item => !item.assignmentSummary) ? 'masked' : 'ready' : 'empty'); } catch (reason: unknown) { setState(stateFor(reason)); } };
+  13 |   const select = async (item: ForceItem) => { setDetailTarget(item); setDetailState('loading'); setSelected(null); try { setSelected(await getDispatch(item.id)); setDetailState(null); } catch (reason: unknown) { setDetailState(stateFor(reason)); } };
+> 14 |   useEffect(() => { void load(); }, []);
+     |                          ^^^^ Avoid calling setState() directly within an effect
+  15 |   if (state !== 'ready' && state !== 'masked' && !detailState) return <View style={{ padding: 16 }}>{state === 'offline' && <OfflineBanner />}<StateMessage state={state} retry={() => void load()} /></View>;
+  16 |   return <View style={{ padding: 16 }}>{detailState === 'loading' && <StateMessage state="loading" />}{detailState === 'error' && <StateMessage state="error" retry={() => detailTarget && void select(detailTarget)} />}{detailState === 'forbidden' && <StateMessage state="forbidden" />}{detailState === 'offline' && <><OfflineBanner /><StateMessage state="offline" retry={() => detailTarget && void select(detailTarget)} /></>}{detailState === 'masked' && <StateMessage state="masked" />}{selected ? <View><Pressable onPress={() => setSelected(null)} style={{ minHeight: 44 }}><Text>‹ Quay lại</Text></Pressable><Text>{selected.title}</Text><Text>{selected.status} · {selected.createdAt}</Text>{selected.assignmentSummary ? <MaskedValue value={selected.assignmentSummary.task} /> : <StateMessage state="masked" />}<Pressable onPress={() => { const link = deepLinkFor(selected); if (link) onNavigate?.(link); }} style={{ minHeight: 44, padding: 8 }}><Text>Mở bản đồ/RelatedInfo</Text></Pressable></View> : <>{state === 'masked' && <StateMessage state="masked" />}{items.map(item => <Pressable key={item.id} onPress={() => void select(item)} style={{ minHeight: 44, padding: 8 }}><Text>{item.title}</Text><Text>{item.status} · {item.assignmentSummary?.task ?? 'Không có chi tiết nhạy cảm'}</Text></Pressable>)}</>}</View>;
+  17 | }  react-hooks/set-state-in-effect
+
+D:\Project\CivicOS\mobile\src\features\incident\IncidentScreen.tsx
+  25:26  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Project\CivicOS\mobile\src\features\incident\IncidentScreen.tsx:25:26
+  23 |     }
+  24 |   };
+> 25 |   useEffect(() => { void load(); }, [incidentId]);
+     |                          ^^^^ Avoid calling setState() directly within an effect
+  26 |   return <View style={{ padding: 16, gap: 12 }}>
+  27 |     <Text>Incident · chỉ đọc</Text>
+  28 |     {state === 'loading' && <StateMessage state="loading" />}  react-hooks/set-state-in-effect
+  25:37  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         react-hooks/exhaustive-deps
+
+D:\Project\CivicOS\mobile\src\features\map\MapScreen.tsx
+   30:5   error    'viewCache' is never reassigned. Use 'const' instead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        prefer-const
+  130:10  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Project\CivicOS\mobile\src\features\map\MapScreen.tsx:130:10
+  128 |
+  129 |   useEffect(() => {
+> 130 |     void load();
+      |          ^^^^ Avoid calling setState() directly within an effect
+  131 |     if (Platform.OS === 'android') {
+  132 |       void PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION).then(
+  133 |         (result) =>  react-hooks/set-state-in-effect
+  139:6   warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     react-hooks/exhaustive-deps
+
+D:\Project\CivicOS\mobile\src\features\related-info\RelatedInfoDetail.tsx
+  23:26  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Project\CivicOS\mobile\src\features\related-info\RelatedInfoDetail.tsx:23:26
+  21 |     }
+  22 |   };
+> 23 |   useEffect(() => { void load(); }, [item.entityType, item.id]);
+     |                          ^^^^ Avoid calling setState() directly within an effect
+  24 |   return <SafeAreaView><View style={{ padding: 16, gap: 12 }}><Pressable onPress={onBack} style={{ minHeight: 44 }}><Text>‹ Quay lại</Text></Pressable>{state === 'loading' && <StateMessage state="loading" />}{state === 'empty' && !detail && <StateMessage state="empty" />}{state === 'error' && <StateMessage state="error" retry={() => void load()} />}{state === 'forbidden' && <StateMessage state="forbidden" />}{state === 'offline' && <StateMessage state="offline" retry={() => void load()} />}{state === 'masked' && <StateMessage state="masked" />}{detail && <><Text>{detail.title}</Text><Text>{detail.status}</Text><MaskedValue value={detail.address} masked={detail.masked} /><Text>{detail.updatedAt}</Text>{(detail.geometry || detail.lat !== undefined) && <Pressable onPress={() => onOpenMap?.(detail)} style={{ minHeight: 44, padding: 8 }}><Text>Mở trên bản đồ</Text></Pressable>}{detail.geometry && <Text>Polygon/geometry từ response server</Text>}{detail.lat !== undefined && <Text>Vị trí: {detail.lat}, {detail.lng}</Text>}</>}</View></SafeAreaView>;
+  25 | }
+  26 |  react-hooks/set-state-in-effect
+  23:37  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react-hooks/exhaustive-deps
+
+D:\Project\CivicOS\mobile\src\features\related-info\RelatedInfoScreen.tsx
+  38:108  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Project\CivicOS\mobile\src\features\task\TaskScreen.tsx
+  14:26  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Project\CivicOS\mobile\src\features\task\TaskScreen.tsx:14:26
+  12 |   const load = async () => { try { setState('loading'); const response = await listTasks(); setItems(response.data); setState(response.data.length ? response.data.some(item => !item.assignmentSummary) ? 'masked' : 'ready' : 'empty'); } catch (reason: unknown) { setState(stateFor(reason)); } };
+  13 |   const select = async (item: ForceItem) => { setDetailTarget(item); setDetailState('loading'); setSelected(null); try { setSelected(await getTask(item.id)); setDetailState(null); } catch (reason: unknown) { setDetailState(stateFor(reason)); } };
+> 14 |   useEffect(() => { void load(); }, []);
+     |                          ^^^^ Avoid calling setState() directly within an effect
+  15 |   if (state !== 'ready' && state !== 'masked' && !detailState) return <View style={{ padding: 16 }}>{state === 'offline' && <OfflineBanner />}<StateMessage state={state} retry={() => void load()} /></View>;
+  16 |   return <View style={{ padding: 16 }}>{detailState === 'loading' && <StateMessage state="loading" />}{detailState === 'error' && <StateMessage state="error" retry={() => detailTarget && void select(detailTarget)} />}{detailState === 'forbidden' && <StateMessage state="forbidden" />}{detailState === 'offline' && <><OfflineBanner /><StateMessage state="offline" retry={() => detailTarget && void select(detailTarget)} /></>}{detailState === 'masked' && <StateMessage state="masked" />}{selected ? <View><Pressable onPress={() => setSelected(null)} style={{ minHeight: 44 }}><Text>‹ Quay lại</Text></Pressable><Text>{selected.title}</Text><Text>{selected.status} · {selected.createdAt}</Text>{selected.assignmentSummary ? <MaskedValue value={selected.assignmentSummary.task} /> : <StateMessage state="masked" />}<Pressable onPress={() => { const link = deepLinkFor(selected); if (link) onNavigate?.(link); }} style={{ minHeight: 44, padding: 8 }}><Text>Mở bản đồ/RelatedInfo</Text></Pressable></View> : <>{state === 'masked' && <StateMessage state="masked" />}{items.map(item => <Pressable key={item.id} onPress={() => void select(item)} style={{ minHeight: 44, padding: 8 }}><Text>{item.title}</Text><Text>{item.status} · {item.dispatchId ?? 'Không có dispatch'}</Text></Pressable>)}</>}</View>;
+  17 | }  react-hooks/set-state-in-effect
+
+D:\Project\CivicOS\mobile\src\test-globals.d.ts
+  1:1  error  Do not use a triple slash reference for ../node_modules/@types/jest/index.d.ts, use `import` style instead              @typescript-eslint/triple-slash-reference
+  2:1  error  Do not use a triple slash reference for ../node_modules/@types/node/web-globals/fetch.d.ts, use `import` style instead  @typescript-eslint/triple-slash-reference
+
+D:\Project\CivicOS\src\modules\incidents\commands.ts
+  1830:9  warning  'resource' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 16 problems (11 errors, 5 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
