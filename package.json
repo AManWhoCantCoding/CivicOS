@@ -11,6 +11,9 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "mobile:typecheck": "npm --prefix mobile run typecheck",
+    "mobile:test": "npm --prefix mobile run test",
+    "mobile:build": "npm --prefix mobile run build",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "worker": "tsx src/worker.ts",
@@ -20,6 +23,13 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy"
+  },
+  "verify": {
+    "mobile": [
+      "mobile:typecheck",
+      "mobile:test",
+      "mobile:build"
+    ]
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",

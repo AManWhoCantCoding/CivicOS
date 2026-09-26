@@ -1,0 +1,10 @@
+{
+  "extends": "@react-native/typescript-config",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "types": ["jest"],
+    "lib": ["esnext", "dom"]
+  },
+  "include": ["src", "index.js"]
+}
