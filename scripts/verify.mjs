@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Chạy chuỗi kiểm tra của một ticket, ghi evidence, in tóm tắt ngắn (~40 dòng) cho agent.
-// Usage: node scripts/verify.mjs <ticket-id> [--scope=fast|full] [--only=a,b] [--filter=<pattern>] [--keep-going] [--tail=60] [--timeout=600000]
+// Usage: node scripts/verify.mjs <ticket-id> [--scope=fast|full|mobile] [--only=a,b] [--filter=<pattern>] [--keep-going] [--tail=60] [--timeout=600000]
 //        node scripts/verify.mjs --tree [--exclude=a,b]   # chỉ in dấu vân tay mã nguồn, không chạy kiểm tra
 //        node scripts/verify.mjs --check [--scope=..]     # chỉ liệt kê bước nào có/thiếu trong package.json, không chạy gì
 // --filter=<pattern>: CHỈ dùng cùng --only=<đúng 1 step> (thường là test/test:e2e) — nối thêm pattern vào
@@ -54,6 +54,7 @@ const pkg = existsSync('package.json')
 const scripts = pkg.scripts ?? {};
 const FULL = Array.isArray(pkg.verify?.full) ? pkg.verify.full : DEFAULT_FULL;
 const FAST = Array.isArray(pkg.verify?.fast) ? pkg.verify.fast : DEFAULT_FAST;
+const MOBILE = Array.isArray(pkg.verify?.mobile) ? pkg.verify.mobile : [];
 const steps = only
   ? only
       .split(',')
@@ -61,13 +62,15 @@ const steps = only
       .filter(Boolean)
   : scope === 'fast'
     ? FAST
-    : FULL;
+    : scope === 'mobile'
+      ? MOBILE
+      : FULL;
 
 if (
   !treeOnly &&
   (!(ticket || checkOnly) ||
     (ticket && !NAME_OK.test(ticket)) ||
-    !['fast', 'full'].includes(scope) ||
+    !['fast', 'full', 'mobile'].includes(scope) ||
     !steps.length ||
     !steps.every((s) => NAME_OK.test(s)) ||
     !(tail > 0) ||
@@ -76,7 +79,7 @@ if (
     (filter && !FILTER_OK.test(filter)))
 ) {
   console.error(
-    'Usage: node scripts/verify.mjs <ticket-id> [--scope=fast|full] [--only=a,b] [--filter=<pattern>] [--keep-going] [--tail=60] [--timeout=600000]',
+    'Usage: node scripts/verify.mjs <ticket-id> [--scope=fast|full|mobile] [--only=a,b] [--filter=<pattern>] [--keep-going] [--tail=60] [--timeout=600000]',
   );
   console.error(
     '       --filter chỉ hợp lệ khi --only chỉ định đúng 1 step, và pattern chỉ gồm chữ/số/khoảng trắng/@:./*-',
@@ -148,13 +151,34 @@ const EXCLUDE = [
     .filter(Boolean),
 ];
 const isExcluded = (f) => EXCLUDE.some((p) => f === p || f.startsWith(`${p}/`));
+function isGeneratedArtifact(f) {
+// Loại generated Android build, Gradle và CMake output khỏi fingerprint Tree.
+  const normalized = f.replace(/\\/g, '/');
+  return (
+    normalized.startsWith('mobile/android/') &&
+    normalized.split('/').some(
+      (s) => s === 'build' || s === '.gradle' || s === '.cxx',
+    )
+  );
+}
 function treeFingerprint() {
   const h = createHash('sha1');
-  h.update(git(['diff', 'HEAD', '--', '.', ...EXCLUDE.map((p) => `:!${p}`)]));
+  h.update(
+    git([
+      'diff',
+      'HEAD',
+      '--',
+      '.',
+      ...EXCLUDE.map((p) => `:!${p}`),
+      ':!mobile/android/**/build/**',
+      ':!mobile/android/**/.gradle/**',
+      ':!mobile/android/**/.cxx/**',
+    ]),
+  );
   for (const f of git(['ls-files', '-o', '--exclude-standard'])
     .split('\n')
     .filter(Boolean)) {
-    if (isExcluded(f)) continue;
+    if (isExcluded(f) || isGeneratedArtifact(f)) continue;
     try {
       const s = statSync(f);
       h.update(`${f}:${s.size}:${s.mtimeMs}`);
