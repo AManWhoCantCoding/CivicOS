@@ -12,4 +12,4 @@
   - `.brain/evidence/00-clear-demo-db/review.md`
   - `.brain/evidence/00-clear-demo-db/files-changed.md`
 - **Verification:** unit run20 PASS; integration run21 PASS; Reviewer PASS; Tree `6ffd8357`.
-- **Commit hash:** pending Reviewer commit.
+- **Commit hash:** `6a2c3a943dc033e3d8962b1ee7c28a9805591c66`.
