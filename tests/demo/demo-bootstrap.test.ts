@@ -4,6 +4,7 @@ import {
   DEMO_LABELS,
   applyDemoTargetToEnv,
   assertDemoTarget,
+  resolveDemoTarget,
 } from '../../scripts/demo/demo-db';
 import { resolveSeedTarget, seedDemo } from '../../scripts/demo/seed';
 import {
@@ -61,6 +62,33 @@ describe('demo target binding', () => {
     expect(() =>
       requireResetConfirm({ DEMO_RESET_CONFIRM: '1' }),
     ).not.toThrow();
+  });
+
+  it('uu tien DEMO_DATABASE_URL raw va khong rewrite database name', () => {
+    const target = resolveDemoTarget(
+      'postgresql://civicos:civicos@localhost:5432/civicos?schema=public',
+      'postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public',
+    );
+    expect(target.url).toBe(
+      'postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public',
+    );
+  });
+
+  it('tu choi raw DEMO_DATABASE_URL sai du DATABASE_URL dung', () => {
+    expect(() =>
+      resolveDemoTarget(
+        DEMO_URL,
+        'postgresql://civicos:civicos@localhost:5432/civicos?schema=public',
+      ),
+    ).toThrow('DEMO_RESET_REFUSED');
+  });
+
+  it('tu choi database name gan giong civicos_demo', () => {
+    expect(() =>
+      assertDemoTarget(
+        'postgresql://civicos:civicos@localhost:5432/civicos_demo_shadow',
+      ),
+    ).toThrow('DEMO_RESET_REFUSED');
   });
 });
 

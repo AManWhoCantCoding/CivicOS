@@ -18,6 +18,26 @@ export interface EvidenceStorageAdapter {
   read(storageKey: string): Promise<Uint8Array>;
 }
 
+export async function cleanupDemoEvidenceFiles(
+  storage: Pick<EvidenceStorageAdapter, 'remove'>,
+  storageKeys: readonly string[],
+): Promise<void> {
+  const root = path.resolve(process.cwd(), 'storage', 'evidence');
+  for (const storageKey of storageKeys) {
+    if (
+      path.isAbsolute(storageKey) ||
+      storageKey.split(/[\\/]+/).some((part) => part === '..')
+    ) {
+      continue;
+    }
+    const candidate = path.resolve(root, storageKey);
+    if (candidate !== root && !candidate.startsWith(`${root}${path.sep}`)) {
+      continue;
+    }
+    await storage.remove(storageKey);
+  }
+}
+
 export class LocalEvidenceStorage implements EvidenceStorageAdapter {
   constructor(
     private readonly root = path.join(process.cwd(), 'storage', 'evidence'),

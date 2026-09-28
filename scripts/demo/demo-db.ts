@@ -39,13 +39,12 @@ export function resolveDemoTarget(
   fallbackDatabaseUrl: string | undefined,
   demoDatabaseUrl: string | undefined,
 ): DemoTarget {
-  const raw =
-    demoDatabaseUrl ??
-    fallbackDatabaseUrl?.replace(/\/[^/?]+(\?|$)/, '/civicos_demo$1');
+  const raw = demoDatabaseUrl ?? fallbackDatabaseUrl;
   if (!raw) throw new Error('DEMO_DATABASE_URL_REQUIRED');
+  const dbName = assertDemoTarget(raw);
   return {
     url: raw,
-    dbName: dbNameFromUrl(raw),
+    dbName,
     displayUrl: sanitizeUrl(raw),
   };
 }
