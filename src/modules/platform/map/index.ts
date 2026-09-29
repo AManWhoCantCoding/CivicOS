@@ -88,7 +88,9 @@ export function resolveMapProvider(
   const overrideStyle = overrides.styleUrl;
   const envStyle = process.env.MAP_TILE_STYLE_URL;
   const styleUrl =
-    overrideStyle ?? envStyle ?? `${tileBaseUrl}/styles/basic/style.json`;
+    overrideStyle ??
+    envStyle ??
+    `${tileBaseUrl}/styles/basic-preview/style.json`;
   const overrideAttribution = overrides.attribution;
   const envAttribution = process.env.MAP_TILE_ATTRIBUTION;
   const attribution = overrideAttribution ?? envAttribution ?? OSM_ATTRIBUTION;
