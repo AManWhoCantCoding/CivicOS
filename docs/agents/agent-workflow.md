@@ -54,15 +54,15 @@ Planner cập nhật ticket + files-changed.md và báo cáo người dùng
 
 ## 3. Các agent hiện tại
 
-| Agent | Team / model | Được gọi bởi | Quyền và trách nhiệm chính |
-|---|---|---|---|
-| `research` | Thiết kế / `openai/gpt-5.6-luna` | Mặc định; người dùng | Làm rõ nghiệp vụ, đọc context/source, tạo spec/ticket; ghi `docs/**`, `research/**`, `.scratch/**`, `README.md`; không sửa code/evidence. |
-| `ui-ux` | Thiết kế / `openai/gpt-5.6-luna` | Research | Dùng Google Stitch để tạo design-only artifact trong `.scratch/<feature>/ui/`; không đọc/sửa source và không lấy screen code. |
-| `planner` | Dev / `openai/gpt-5.6-luna` | Người dùng sau handoff | Đọc ticket, kiểm soát dependency, điều phối mọi bước, cập nhật trạng thái `.scratch/**` và evidence tổng kết; không sửa source và không tự chạy kiểm tra. |
-| `developer` | Dev / `opencode/muse-spark-1.3-contributor-free` | Planner | Viết implementation/test theo ticket; không tự chạy test/lint/typecheck/build, không commit, không sửa `.scratch`. |
-| `developer-fallback` | Dev / `openai/gpt-5.6-luna` | Planner | Thực hiện cùng vai trò Developer khi model chính gặp rate-limit/quota/overload/timeout từ provider. |
-| `tester` | Dev / `openai/gpt-5.6-luna` | Planner | Agent duy nhất chạy test, lint, typecheck, format-check, E2E và build theo phạm vi được giao; ghi evidence kiểm tra; không sửa product code. |
-| `reviewer` | Dev / `openai/gpt-5.6-luna` | Planner | Đọc diff/ticket/evidence, chấm `PASS`/`FAIL`/`THIẾU EVIDENCE`; không tự chạy kiểm tra; chỉ commit khi Planner ra lệnh chính xác. |
+| Agent                | Team / model                                     | Được gọi bởi           | Quyền và trách nhiệm chính                                                                                                                                |
+| -------------------- | ------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `research`           | Thiết kế / `openai/gpt-5.6-luna`                 | Mặc định; người dùng   | Làm rõ nghiệp vụ, đọc context/source, tạo spec/ticket; ghi `docs/**`, `research/**`, `.scratch/**`, `README.md`; không sửa code/evidence.                 |
+| `ui-ux`              | Thiết kế / `openai/gpt-5.6-luna`                 | Research               | Dùng Google Stitch để tạo design-only artifact trong `.scratch/<feature>/ui/`; không đọc/sửa source và không lấy screen code.                             |
+| `planner`            | Dev / `openai/gpt-5.6-luna`                      | Người dùng sau handoff | Đọc ticket, kiểm soát dependency, điều phối mọi bước, cập nhật trạng thái `.scratch/**` và evidence tổng kết; không sửa source và không tự chạy kiểm tra. |
+| `developer`          | Dev / `opencode/muse-spark-1.3-contributor-free` | Planner                | Viết implementation/test theo ticket; không tự chạy test/lint/typecheck/build, không commit, không sửa `.scratch`.                                        |
+| `developer-fallback` | Dev / `openai/gpt-5.6-luna`                      | Planner                | Thực hiện cùng vai trò Developer khi model chính gặp rate-limit/quota/overload/timeout từ provider.                                                       |
+| `tester`             | Dev / `openai/gpt-5.6-luna`                      | Planner                | Agent duy nhất chạy test, lint, typecheck, format-check, E2E và build theo phạm vi được giao; ghi evidence kiểm tra; không sửa product code.              |
+| `reviewer`           | Dev / `openai/gpt-5.6-luna`                      | Planner                | Đọc diff/ticket/evidence, chấm `PASS`/`FAIL`/`THIẾU EVIDENCE`; không tự chạy kiểm tra; chỉ commit khi Planner ra lệnh chính xác.                          |
 
 `opencode.jsonc` đặt `default_agent` là `research`; `planner` là agent `primary` của Team Dev. Permission của harness là lớp chặn kỹ thuật; ticket và prompt agent là lớp giới hạn nghiệp vụ/phạm vi hẹp hơn.
 
@@ -283,14 +283,14 @@ Tên file đang được prompt agent, ticket PS-E1 và evidence hiện hành s�
 
 ## 9. Quyền ghi thực tế
 
-| Khu vực | Research | Planner | Developer / fallback | Tester | Reviewer | ui-ux |
-|---|---:|---:|---:|---:|---:|---:|
-| `docs/**`, `research/**` | ghi | không | không theo prompt | không | không | không |
-| `.scratch/**` | tạo/cập nhật nội dung | cập nhật trạng thái/evidence điều phối | cấm | cấm | cấm | chỉ `.scratch/**/ui/**` |
-| Source implementation | cấm | cấm | chỉ file ticket cho phép | cấm | cấm | cấm |
-| `tests/**`, `playwright/**` | cấm | cấm | chỉ khi ticket giao viết test | được tạo/sửa trong phạm vi test | cấm | cấm |
-| `.brain/evidence/**` | cấm | tổng kết | `changes.md` | `tests.md` | `review.md` | cấm |
-| `git commit` | cấm | cấm | cấm | cấm | chỉ khi Planner ra lệnh | cấm |
+| Khu vực                     |              Research |                                Planner |          Developer / fallback |                          Tester |                Reviewer |                   ui-ux |
+| --------------------------- | --------------------: | -------------------------------------: | ----------------------------: | ------------------------------: | ----------------------: | ----------------------: |
+| `docs/**`, `research/**`    |                   ghi |                                  không |             không theo prompt |                           không |                   không |                   không |
+| `.scratch/**`               | tạo/cập nhật nội dung | cập nhật trạng thái/evidence điều phối |                           cấm |                             cấm |                     cấm | chỉ `.scratch/**/ui/**` |
+| Source implementation       |                   cấm |                                    cấm |      chỉ file ticket cho phép |                             cấm |                     cấm |                     cấm |
+| `tests/**`, `playwright/**` |                   cấm |                                    cấm | chỉ khi ticket giao viết test | được tạo/sửa trong phạm vi test |                     cấm |                     cấm |
+| `.brain/evidence/**`        |                   cấm |                               tổng kết |                  `changes.md` |                      `tests.md` |             `review.md` |                     cấm |
+| `git commit`                |                   cấm |                                    cấm |                           cấm |                             cấm | chỉ khi Planner ra lệnh |                     cấm |
 
 Permission trong `opencode.jsonc` còn khóa `.env`, secrets, workflow và các lệnh nguy hiểm ở lớp harness. Bảng trên mô tả **quy trình được phép**, không phải lời mời mở rộng phạm vi ticket.
 
