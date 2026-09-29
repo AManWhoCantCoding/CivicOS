@@ -25,6 +25,8 @@
     "prisma:migrate:deploy": "prisma migrate deploy"
   },
   "verify": {
+    "fast": ["typecheck", "lint", "format:check", "test"],
+    "full": ["prisma:generate", "typecheck", "lint", "format:check", "test", "test:e2e", "build"],
     "mobile": [
       "mobile:typecheck",
       "mobile:test",

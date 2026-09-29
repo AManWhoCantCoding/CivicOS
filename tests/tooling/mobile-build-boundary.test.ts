@@ -12,16 +12,16 @@ const readJson = (file: string) =>
   >;
 
 function sourceFiles(directory: string): string[] {
-  return readdirSync(path.join(root, directory), { withFileTypes: true }).flatMap(
-    (entry) => {
-      const relative = path.join(directory, entry.name);
-      return entry.isDirectory() && entry.name !== 'node_modules'
-        ? sourceFiles(relative)
-        : /\.(js|jsx|ts|tsx)$/.test(entry.name)
-          ? [relative]
-          : [];
-    },
-  );
+  return readdirSync(path.join(root, directory), {
+    withFileTypes: true,
+  }).flatMap((entry) => {
+    const relative = path.join(directory, entry.name);
+    return entry.isDirectory() && entry.name !== 'node_modules'
+      ? sourceFiles(relative)
+      : /\.(js|jsx|ts|tsx)$/.test(entry.name)
+        ? [relative]
+        : [];
+  });
 }
 
 describe('mobile build boundary', () => {
