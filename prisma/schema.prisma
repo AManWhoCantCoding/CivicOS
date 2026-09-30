@@ -527,3 +527,154 @@ model ResidentMonthlyReport {
   @@unique([organizationId, period])
   @@index([organizationId, status])
 }
+
+model LandParty {
+  id                       String                 @id @default(cuid())
+  referenceCode            String                 @unique
+  partyType                String
+  displayNameCiphertext    String
+  identityNumberCiphertext String?
+  identityNumberIndex      String?                @unique
+  status                   String                 @default("active")
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  rights                   LandRight[]
+  encumbrances             LandEncumbrance[]
+  applicationParties       LandApplicationParty[]
+
+  @@index([partyType, status])
+}
+
+model LandParcel {
+  id               String   @id @default(cuid())
+  parcelCode       String   @unique
+  mapSheetNumber   String
+  parcelNumber     String
+  areaSqm          Decimal
+  landUseType      String
+  address          String
+  communeCode      String
+  organizationId   String
+  geometry         Unsupported("geometry(Polygon,4326)")
+  nationalRecordRef String?
+  status           String   @default("active")
+  version          Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  rights           LandRight[]
+  encumbrances     LandEncumbrance[]
+  applicationParcels LandApplicationParcel[]
+
+  @@unique([organizationId, mapSheetNumber, parcelNumber])
+  @@index([mapSheetNumber, parcelNumber, organizationId])
+  @@index([organizationId, status])
+  @@index([communeCode, status])
+}
+
+model LandChangeApplication {
+  id              String    @id @default(cuid())
+  applicationCode String    @unique
+  organizationId  String
+  changeType      String
+  status          String    @default("submitted")
+  changePayload   Json
+  createdById     String
+  idempotencyKey  String?   @unique
+  version         Int       @default(1)
+  submittedAt     DateTime  @default(now())
+  completedAt     DateTime?
+  rejectionReason String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  applicationParties LandApplicationParty[]
+  applicationParcels LandApplicationParcel[]
+  nationalSyncs      LandNationalSync[]
+
+  @@index([organizationId, status, updatedAt])
+  @@index([changeType, status])
+  @@index([createdById, createdAt])
+}
+
+model LandRight {
+  id                  String     @id @default(cuid())
+  parcelId            String
+  partyId             String
+  rightType           String     @default("land_use_right")
+  sharePercent        Decimal    @default(100)
+  status              String     @default("active")
+  validFrom           DateTime
+  validTo             DateTime?
+  sourceApplicationId String?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  parcel              LandParcel @relation(fields: [parcelId], references: [id], onDelete: Restrict)
+  party               LandParty  @relation(fields: [partyId], references: [id], onDelete: Restrict)
+
+  @@index([parcelId, status])
+  @@index([partyId, status])
+}
+
+model LandEncumbrance {
+  id                  String     @id @default(cuid())
+  parcelId            String
+  securedPartyId      String?
+  encumbranceType     String     @default("mortgage")
+  status              String     @default("active")
+  externalReference   String?
+  registeredAt        DateTime
+  releasedAt          DateTime?
+  sourceApplicationId String
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  parcel              LandParcel @relation(fields: [parcelId], references: [id], onDelete: Restrict)
+  securedParty        LandParty? @relation(fields: [securedPartyId], references: [id], onDelete: Restrict)
+
+  @@index([parcelId, status])
+}
+
+model LandApplicationParty {
+  applicationId String
+  partyId       String
+  partyRole     String
+  sharePercent  Decimal?
+  createdAt     DateTime               @default(now())
+  application   LandChangeApplication  @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  party         LandParty              @relation(fields: [partyId], references: [id], onDelete: Restrict)
+
+  @@id([applicationId, partyId, partyRole])
+  @@index([partyId, partyRole])
+}
+
+model LandApplicationParcel {
+  applicationId String
+  parcelId      String
+  parcelRole    String
+  createdAt     DateTime              @default(now())
+  application   LandChangeApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  parcel        LandParcel @relation(fields: [parcelId], references: [id], onDelete: Restrict)
+
+  @@id([applicationId, parcelId, parcelRole])
+  @@index([parcelId, parcelRole])
+}
+
+model LandNationalSync {
+  id               String                @id @default(cuid())
+  applicationId    String
+  operation        String                @default("register_change")
+  requestKey       String                @unique
+  status           String                @default("pending")
+  remoteReference  String?
+  requestPayload   Json
+  responsePayload  Json?
+  failureCode      String?
+  attempts         Int                   @default(0)
+  requestedAt      DateTime              @default(now())
+  completedAt      DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  application      LandChangeApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+
+  @@unique([applicationId, operation])
+  @@index([applicationId, status])
+  @@index([status, updatedAt])
+}

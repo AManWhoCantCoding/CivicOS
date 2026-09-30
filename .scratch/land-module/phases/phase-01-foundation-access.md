@@ -30,7 +30,7 @@ Tạo nền database/PostGIS, party/parcel nội bộ, seed giả lập và auth
 
 ### LND-01 — Migration tám bảng land + PostGIS + role seed
 
-- **Status:** needs-triage
+- **Status:** done
 - **Blocked by:** không
 - **Loại:** feature
 - **Lane:** full
@@ -39,15 +39,15 @@ Tạo nền database/PostGIS, party/parcel nội bộ, seed giả lập và auth
 - **File cấm sửa:** `.env`, `.brain/**`, `docs/design/**`, `docs/research/**`
 - **Demo path:** Database test có PostGIS, tám bảng land, role land và seed tối thiểu.
 - **Các bước thực hiện:**
-  1. Bổ sung schema tám bảng đúng `data-model.md`.
-  2. Cập nhật PostgreSQL image/extension PostGIS.
-  3. Tạo migration additive với FK/CHECK/unique/index/GiST.
-  4. Upsert ba role land và seed dữ liệu demo không PII.
-  5. Chạy migration/schema tests.
+  1. [x] Bổ sung schema tám bảng đúng `data-model.md`.
+  2. [x] Cập nhật PostgreSQL image/extension PostGIS.
+  3. [x] Tạo migration additive với FK/CHECK/unique/index/GiST.
+  4. [x] Upsert ba role land và seed dữ liệu demo không PII.
+  5. [x] Chạy migration/schema tests.
 - **Acceptance Criteria:**
-  - [ ] Given PostgreSQL có PostGIS, When chạy migration, Then tám bảng land và geometry `Polygon,4326` tồn tại.
-  - [ ] Given migration đã chạy, When kiểm tra schema, Then FK nghiệp vụ là `RESTRICT`, unique/index/CHECK theo `data-model.md`.
-  - [ ] Given database chưa có role land, When chạy seed, Then có `land_officer`, `commune_leader`, `citizen` và không xóa role hiện có.
+  - [x] Given PostgreSQL có PostGIS, When chạy migration, Then tám bảng land và geometry `Polygon,4326` tồn tại.
+  - [x] Given migration đã chạy, When kiểm tra schema, Then FK nghiệp vụ là `RESTRICT`, unique/index/CHECK theo `data-model.md`.
+  - [x] Given database chưa có role land, When chạy seed, Then có `land_officer`, `commune_leader`, `citizen` và không xóa role hiện có.
 - **Test-skeleton:**
   - AC-01: database test + migration → tám bảng, PostGIS và GiST index tồn tại.
   - AC-02: insert parent delete có child → bị `RESTRICT`; share/area invalid → bị CHECK.

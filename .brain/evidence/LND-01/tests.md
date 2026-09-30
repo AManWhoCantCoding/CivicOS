@@ -63,6 +63,17 @@ D:\Project\CivicOS\tests\integration\demo-seed-reset.integration.test.ts
 ✖ 6 problems (2 errors, 4 warnings)
 ````
 
+## Kiểm tra targeted do Mentor tự chạy — 2026-09-30T16:13Z
+
+- `npx prisma validate`: PASS; schema hợp lệ sau khi sửa relation `securedParty`.
+- `npx prisma migrate deploy`: PASS; migration `20260930000000_lnd01_land_foundation` đã áp dụng.
+- DB preflight: PASS; PostGIS `3.4`, đủ 8 bảng `Land*`, port `5432` accepting connections.
+- DB test command với `RUN_DB_TESTS=1`: PASS — `tests/land/lnd01-land-foundation.test.ts` 13/13 và `tests/integration/schema-and-migration.test.ts` 7/7; tổng 20/20.
+- Seed command gọi trực tiếp `upsertLandRoles` + `seedLandDemo` chạy hai lần: PASS; truy vấn sau đó cho mỗi role count `1`, party `1`, parcel `1`, right `1`.
+- `npm run typecheck`: PASS; `npm run lint`: PASS (0 errors, 4 warnings).
+- Prettier trên các file LND được phép: PASS.
+- Đây là evidence targeted bổ sung; lần chạy `scope=full` gần nhất vẫn FAIL ở format baseline ngoài ticket, nên chưa được dùng để đóng ticket.
+
 ### Lỗi: format:check
 
 Log đầy đủ: `.brain/evidence/LND-01/logs/run3-format_check.log`. 60 dòng cuối (đã bỏ mã màu ANSI, đã che giá trị bí mật):
@@ -564,3 +575,129 @@ AssertionError: promise resolved "{ …(8) }" instead of rejecting
 | Bước | Lệnh | Kết quả | Thời gian |
 |---|---|---|---|
 | test | `npm run test` | PASS | 8.4s |
+
+## Lần chạy 8 — 2026-09-30T09:01:14.429Z (scope=full)
+
+- HEAD: ffc1b9e | file chưa commit: 6 | Tree: 84852274
+- Kết quả: **FAIL**
+
+| Bước | Lệnh | Kết quả | Thời gian |
+|---|---|---|---|
+| prisma:generate | `npm run prisma:generate` | PASS | 2.4s |
+| typecheck | `npm run typecheck` | PASS | 8.6s |
+| lint | `npm run lint` | FAIL | 15.9s |
+| format:check | `npm run format:check` | NOT_RUN | - |
+| test | `npm run test` | NOT_RUN | - |
+| test:e2e | `npm run test:e2e` | NOT_RUN | - |
+| build | `npm run build` | NOT_RUN | - |
+
+### Lỗi: lint
+
+Log đầy đủ: `.brain/evidence/LND-01/logs/run8-lint.log`. 60 dòng cuối (đã bỏ mã màu ANSI, đã che giá trị bí mật):
+
+````text
+
+> civic-os@0.1.0 lint
+> eslint .
+
+
+D:\Project\CivicOS\.scratch\_workflow-adoption\check-opencode.cjs
+  3:12  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  4:14  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+D:\Project\CivicOS\mobile\src\auth\SessionContext.tsx
+  33:5  warning  React Hook useEffect has an unnecessary dependency: 'onSessionExpired'. Either exclude it or remove the dependency array. Outer scope values like 'onSessionExpired' aren't valid dependencies because mutating them doesn't re-render the component  react-hooks/exhaustive-deps
+
+D:\Project\CivicOS\mobile\src\features\related-info\RelatedInfoScreen.tsx
+  95:6  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Project\CivicOS\src\modules\incidents\commands.ts
+  1830:9  warning  'resource' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Project\CivicOS\tests\integration\demo-seed-reset.integration.test.ts
+  8:3  warning  'LocalEvidenceStorage' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 6 problems (2 errors, 4 warnings)
+````
+
+## Lần chạy 9 — 2026-09-30T09:14:18.188Z (scope=full)
+
+- HEAD: aa78c44 | file chưa commit: 28 | Tree: 84852274
+- Kết quả: **FAIL**
+
+| Bước | Lệnh | Kết quả | Thời gian |
+|---|---|---|---|
+| prisma:generate | `npm run prisma:generate` | SKIPPED | - |
+| typecheck | `npm run typecheck` | PASS | 3.5s |
+| lint | `npm run lint` | PASS | 16.9s |
+| format:check | `npm run format:check` | FAIL | 22.9s |
+| test | `npm run test` | NOT_RUN | - |
+| test:e2e | `npm run test:e2e` | NOT_RUN | - |
+| build | `npm run build` | NOT_RUN | - |
+
+### Lỗi: format:check
+
+Log đầy đủ: `.brain/evidence/LND-01/logs/run9-format_check.log`. 60 dòng cuối (đã bỏ mã màu ANSI, đã che giá trị bí mật):
+
+````text
+> prettier --check .
+
+Checking formatting...
+
+--- stderr ---
+[warn] docs/design/civicos-e1-clone-mvp/api-contract.md
+[warn] docs/design/civicos-e1-clone-mvp/data-model.md
+[warn] docs/design/civicos-e1-clone-mvp/domain-rules.md
+[warn] docs/design/civicos-e1-clone-mvp/edge-cases.md
+[warn] docs/design/civicos-e1-clone-mvp/glossary.md
+[warn] docs/design/civicos-e1-clone-mvp/overview.md
+[warn] docs/design/demo-seed-complete/api-contract.md
+[warn] docs/design/demo-seed-complete/data-model.md
+[warn] docs/design/demo-seed-complete/LOCK.json
+[warn] docs/design/demo-seed-complete/overview.md
+[warn] docs/design/land-module/api-contract.md
+[warn] docs/design/land-module/data-model.md
+[warn] docs/design/land-module/domain-rules.md
+[warn] docs/design/land-module/edge-cases.md
+[warn] docs/design/land-module/glossary.md
+[warn] docs/design/land-module/integration-contracts.md
+[warn] docs/design/land-module/LOCK.json
+[warn] docs/design/land-module/overview.md
+[warn] Lesson-learned.md
+[warn] package.json
+[warn] package.json.bak-workflow-cu.md
+[warn] scripts/check-scope.mjs.bak-workflow-cu.md
+[warn] scripts/demo/demo-db.ts
+[warn] scripts/demo/reset.ts
+[warn] scripts/demo/seed.ts
+[warn] scripts/oc.mjs.bak-workflow-cu.md
+[warn] scripts/verify.mjs.bak-workflow-cu.md
+[warn] src/modules/eventing/event-store.ts
+[warn] src/modules/eventing/outbox.ts
+[warn] src/modules/eventing/read-model.ts
+[warn] src/modules/eventing/worker.ts
+[warn] src/modules/incidents/commands.ts
+[warn] src/modules/incidents/contracts.ts
+[warn] src/modules/incidents/index.ts
+[warn] src/modules/incidents/projection.ts
+[warn] src/modules/inspections/commands.ts
+[warn] src/modules/inspections/projection.ts
+[warn] src/modules/inspections/schemas.ts
+[warn] src/modules/platform/evidence/evidence-service.ts
+[warn] src/modules/platform/index.ts
+[warn] src/modules/platform/notifications/index.ts
+[warn] src/modules/platform/sla/index.ts
+[warn] src/modules/residents/commands.ts
+[warn] src/modules/residents/contracts.ts
+[warn] src/modules/residents/index.ts
+[warn] src/modules/residents/projection.ts
+[warn] src/modules/residents/seed.ts
+[warn] src/modules/vehicles/commands.ts
+[warn] tests/integration/demo-seed-reset.integration.test.ts
+[warn] workflow-roles/developer.md
+[warn] workflow-roles/mentor.md
+[warn] workflow-roles/research.md
+[warn] workflow-roles/ui-ux.md
+[warn] workflow.md
+[warn] Code style issues found in 54 files. Run Prettier with --write to fix.
+````

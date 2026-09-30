@@ -46,6 +46,7 @@ const expectedMigrationChain = [
   '20260924090000_ps_e1005_intake_report',
   '20260924100000_ps_e1005_canonical_channel',
   '20260925000000_ps_e1007_completion',
+  '20260930000000_lnd01_land_foundation',
 ];
 
 const expectedModels = [
@@ -75,6 +76,14 @@ const expectedModels = [
   'SuspiciousVehicleEntry',
   'VehicleObservation',
   'VehicleVerification',
+  'LandParty',
+  'LandParcel',
+  'LandChangeApplication',
+  'LandRight',
+  'LandEncumbrance',
+  'LandApplicationParty',
+  'LandApplicationParcel',
+  'LandNationalSync',
 ];
 
 describe('database migration contract', () => {
