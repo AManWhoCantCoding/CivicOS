@@ -1133,3 +1133,66 @@ D:\Project\CivicOS\src\modules\incidents\commands.ts
 | Bước | Lệnh | Kết quả | Thời gian |
 |---|---|---|---|
 | typecheck | `npm run typecheck` | PASS | 0.7s |
+
+## Lần chạy 52 — 2026-09-30T08:26:57.349Z (only=typecheck filter="--definitely-invalid")
+
+- HEAD: 1a825b9 | file chưa commit: 55 | Tree: 39ed6bdd
+- Kết quả: **FAIL**
+
+| Bước | Lệnh | Kết quả | Thời gian |
+|---|---|---|---|
+| typecheck | `npm run typecheck` | FAIL | 0.6s |
+
+### Lỗi: typecheck
+
+Log đầy đủ: `.brain/evidence/05a-mobile-build-boundary-fix/logs/run52-typecheck.log`. 60 dòng cuối (đã bỏ mã màu ANSI, đã che giá trị bí mật):
+
+````text
+
+> civic-os@0.1.0 typecheck
+> tsc --noEmit --definitely-invalid
+
+error TS5023: Unknown compiler option '--definitely-invalid'.
+````
+
+## Lần chạy 53 — 2026-09-30T08:33:30.599Z (only=typecheck filter="--definitely-invalid")
+
+- HEAD: 1a825b9 | file chưa commit: 56 | Tree: 39ed6bdd
+- Kết quả: **FAIL**
+
+| Bước | Lệnh | Kết quả | Thời gian |
+|---|---|---|---|
+| typecheck | `npm run typecheck` | FAIL | 0.6s |
+
+### Lỗi: typecheck
+
+Log đầy đủ: `.brain/evidence/05a-mobile-build-boundary-fix/logs/run53-typecheck.log`. 60 dòng cuối (đã bỏ mã màu ANSI, đã che giá trị bí mật):
+
+````text
+
+> civic-os@0.1.0 typecheck
+> tsc --noEmit --definitely-invalid
+
+error TS5023: Unknown compiler option '--definitely-invalid'.
+````
+
+## Lần chạy 54 — 2026-09-30T08:55:21.608Z (only=typecheck filter="--definitely-invalid")
+
+- HEAD: 1a825b9 | file chưa commit: 56 | Tree: e42b03d0
+- Kết quả: **FAIL**
+
+| Bước | Lệnh | Kết quả | Thời gian |
+|---|---|---|---|
+| typecheck | `npm run typecheck` | FAIL | 1.6s |
+
+### Lỗi: typecheck
+
+Log đầy đủ: `.brain/evidence/05a-mobile-build-boundary-fix/logs/run54-typecheck.log`. 60 dòng cuối (đã bỏ mã màu ANSI, đã che giá trị bí mật):
+
+````text
+
+> civic-os@0.1.0 typecheck
+> tsc --noEmit --definitely-invalid
+
+error TS5023: Unknown compiler option '--definitely-invalid'.
+````

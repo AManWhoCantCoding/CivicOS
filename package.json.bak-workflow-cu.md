@@ -1,0 +1,73 @@
+{
+  "name": "civic-os",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "mobile:typecheck": "npm --prefix mobile run typecheck",
+    "mobile:test": "npm --prefix mobile run test",
+    "mobile:build": "npm --prefix mobile run build",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "worker": "tsx src/worker.ts",
+    "demo:seed": "tsx scripts/demo/seed.ts",
+    "demo:reset": "tsx scripts/demo/reset.ts",
+    "demo:bootstrap": "prisma migrate deploy && tsx scripts/demo/seed.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy"
+  },
+  "verify": {
+    "fast": [
+      "typecheck",
+      "lint",
+      "format:check",
+      "test"
+    ],
+    "full": [
+      "prisma:generate",
+      "typecheck",
+      "lint",
+      "format:check",
+      "test",
+      "test:e2e",
+      "build"
+    ],
+    "mobile": [
+      "mobile:typecheck",
+      "mobile:test",
+      "mobile:build"
+    ]
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "maplibre-gl": "^6.11.1",
+    "next": "16.3.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.14",
+    "prisma": "^6.19.0",
+    "tailwindcss": "^4",
+    "tsx": "^4.19.2",
+    "typescript": "^5",
+    "vitest": "^3.2.4"
+  }
+}

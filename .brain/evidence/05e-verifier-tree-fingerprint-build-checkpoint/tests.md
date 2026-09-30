@@ -860,3 +860,30 @@ Serialized Error: { errors: [ { stack: 'Error: connect ECONNREFUSED 127.0.0.1:30
 - Lệnh: `node scripts/verify.mjs --tree`
 - Output nguyên văn: `Tree: f9348dc3`
 - Đây là standalone invocation ngay sau full run 16 để Reviewer đối chiếu với Tree `f9348dc3` của lần full PASS.
+
+## Lần chạy 17 — 2026-09-30T08:26:48.040Z (only=mobile:build)
+
+- HEAD: 1a825b9 | file chưa commit: 55 | Tree: f049db09
+- Kết quả: **PASS**
+
+| Bước | Lệnh | Kết quả | Thời gian |
+|---|---|---|---|
+| mobile:build | `npm run mobile:build` | PASS | 6.1s |
+
+## Lần chạy 18 — 2026-09-30T08:33:21.442Z (only=mobile:build)
+
+- HEAD: 1a825b9 | file chưa commit: 57 | Tree: f049db09
+- Kết quả: **PASS**
+
+| Bước | Lệnh | Kết quả | Thời gian |
+|---|---|---|---|
+| mobile:build | `npm run mobile:build` | PASS | 5.8s |
+
+## Lần chạy 19 — 2026-09-30T08:55:09.470Z (only=mobile:build)
+
+- HEAD: 1a825b9 | file chưa commit: 57 | Tree: ba8b8dd2
+- Kết quả: **PASS**
+
+| Bước | Lệnh | Kết quả | Thời gian |
+|---|---|---|---|
+| mobile:build | `npm run mobile:build` | PASS | 7.1s |
