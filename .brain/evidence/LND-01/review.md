@@ -46,3 +46,7 @@ Ticket LND-01 yêu cầu đúng migration tám bảng + PostGIS + role seed, cá
 ### Kết luận
 
 PASS theo gate ticket-scope đã được người dùng điều chỉnh.
+
+## Commit
+
+- `ea72f7f` — `feat(land): add LND-01 foundation migration`

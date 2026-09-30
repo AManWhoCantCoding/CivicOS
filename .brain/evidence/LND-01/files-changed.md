@@ -3,7 +3,7 @@
 - **Lane:** full (ticket); verification gate thực thi theo ticket-scope đã được người dùng chốt.
 - **Agent code:** Developer; **evidence/review:** Mentor.
 - **Kết quả:** targeted format, Prisma validate, migration/schema/DB tests và scope check đều PASS; không có file ngoài scope LND-01 trong diff code.
-- **Commit hash:** pending final commit.
+- **Commit hash:** `ea72f7f` (`feat(land): add LND-01 foundation migration`).
 
 ## Code trong phạm vi ticket
 
