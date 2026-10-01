@@ -27,7 +27,7 @@
 |---|---|---|
 | Phase 01 — Foundation & access | done | LND-01–LND-05 reconciled; no standalone Phase 01 gate artifact |
 | Phase 02 — Intake & review | done | `PHASE-PASS`; LND-06–LND-09 |
-| Phase 03 — Mock sync & approval | pending-gate | LND-10–LND-13 accepted; Phase 03 gate pending |
+| Phase 03 — Mock sync & approval | blocked-infra | LND-10–LND-13 accepted; full gate blocked by missing `CIVICOS_API_BASE_URL` |
 | Phase 04 — Public lookup & read-only clients | pending/blocked | blocked by Phase 03/LND-11/LND-12 |
 | Phase 05 — Evidence & hardening | pending/blocked | blocked by Phase 01–04 and EvidenceStorageAdapter flow |
 
@@ -44,6 +44,7 @@
 - LND-11: implementation/verification commit `58e887e`; tests are in `tests/land/lnd11-sync-retry.test.ts` and contract traceability is in `T-LND-11-sync-retry-command-persistence.md`.
 - LND-12: implementation/verification commit `862de7a`; tests are in `tests/land/lnd12-approval-completion.test.ts` and contract traceability is in `T-LND-12-approval-completion-transaction.md`.
 - LND-13: implementation/verification commit `8ec844a`; tests are in `tests/land-ui/lnd13-application-processing-actions.test.ts` and contract traceability is in `T-LND-13-web-application-processing-actions.md`.
+- Phase 03 gate: `BLOCKED-INFRA`; land scope `154 passed`, E2E `91 passed`, build/typecheck/lint/format passed; full suite requires external `CIVICOS_API_BASE_URL`.
 - `.brain/evidence/LND-10/files-changed.md:16-17` still says no commit was created; this conflicts with git history (`e81c252` contains the three LND-10 source/test files) and is preserved as an evidence discrepancy, not silently edited.
 - LND-03/LND-04/LND-05: disposition explicitly recorded in their V6 ticket files; no standalone evidence directory was invented.
 - Phase 02: `.brain/evidence/phase-02/gate.md` records `PHASE-PASS`.
