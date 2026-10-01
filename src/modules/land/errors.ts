@@ -26,6 +26,11 @@ const LAND_ERRORS: Record<string, LandApiError> = {
     code: 'LAND_INVALID_REQUEST',
     error: 'Dữ liệu yêu cầu không hợp lệ.',
   },
+  LOOKUP_QUERY_INVALID: {
+    status: 400,
+    code: 'LAND_LOOKUP_QUERY_INVALID',
+    error: 'Cần cung cấp chính xác một mã hồ sơ hoặc mã thửa.',
+  },
   GEOMETRY_INVALID: {
     status: 400,
     code: 'LAND_GEOMETRY_INVALID',
@@ -45,6 +50,11 @@ const LAND_ERRORS: Record<string, LandApiError> = {
     status: 404,
     code: 'LAND_APPLICATION_NOT_FOUND',
     error: 'Không tìm thấy hồ sơ biến động.',
+  },
+  LOOKUP_NOT_FOUND: {
+    status: 404,
+    code: 'LAND_LOOKUP_NOT_FOUND',
+    error: 'Không tìm thấy kết quả tra cứu.',
   },
   PARTY_NOT_FOUND: {
     status: 404,
@@ -70,6 +80,11 @@ const LAND_ERRORS: Record<string, LandApiError> = {
     status: 502,
     code: 'LAND_SYNC_FAILED',
     error: 'Đồng bộ mô phỏng Cơ sở dữ liệu quốc gia thất bại.',
+  },
+  RATE_LIMITED: {
+    status: 429,
+    code: 'LAND_RATE_LIMITED',
+    error: 'Bạn đã vượt quá số lần tra cứu cho phép; hãy thử lại sau.',
   },
 };
 

@@ -30,6 +30,9 @@ export type LandListQuery = {
   cursor?: string;
 };
 
+export type PublicLandLookupQuery =
+  { applicationCode: string } | { parcelCode: string };
+
 function asRecord(value: unknown): Record<string, unknown> {
   if (typeof value !== 'object' || value === null)
     throw new Error('INVALID_REQUEST');
@@ -129,6 +132,28 @@ export function parseLandListQuery(value: unknown): LandListQuery {
     limit,
     ...(cursor ? { cursor } : {}),
   };
+}
+
+// Parse the public lookup query before any resource lookup is attempted.
+export function parsePublicLandLookupQuery(
+  value: URLSearchParams | Record<string, unknown>,
+): PublicLandLookupQuery {
+  const entries =
+    value instanceof URLSearchParams
+      ? [...value.entries()]
+      : Object.entries(asRecord(value));
+  if (entries.length !== 1) throw new Error('LOOKUP_QUERY_INVALID');
+  const [key, rawValue] = entries[0] ?? [];
+  if (
+    (key !== 'applicationCode' && key !== 'parcelCode') ||
+    typeof rawValue !== 'string' ||
+    !rawValue.trim()
+  ) {
+    throw new Error('LOOKUP_QUERY_INVALID');
+  }
+  return key === 'applicationCode'
+    ? { applicationCode: rawValue.trim() }
+    : { parcelCode: rawValue.trim() };
 }
 
 // Encode a row id as an opaque list cursor.

@@ -28,6 +28,11 @@ export type {
 } from './application-service';
 export { toLandApiError } from './errors';
 export type { LandApiError } from './errors';
+export { lookupPublicLand } from './public-lookup-service';
+export type {
+  PublicLandLookupProjection,
+  PublicLandLookupResponse,
+} from './public-lookup-service';
 export {
   buildSyncRequestKey,
   retryApplicationSync,
@@ -70,4 +75,5 @@ export type {
   LandListQuery,
   ParcelInput,
   PartyInput,
+  PublicLandLookupQuery,
 } from './schemas';
