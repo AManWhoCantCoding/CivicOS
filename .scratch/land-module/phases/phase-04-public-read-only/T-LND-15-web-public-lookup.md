@@ -2,7 +2,7 @@
 
 - **Ticket ID:** LND-15
 - **Status:** needs-triage
-- **V6 effective status:** blocked
+- **V6 effective status:** done
 - **V3 status:** needs-triage
 - **Blocked by:** LND-14
 - **Loại:** feature
@@ -11,7 +11,7 @@
 - **File được phép sửa:** `src/app/public/land/lookup/**`, `src/components/land/**`, `tests/land-ui/**`
 - **File cấm sửa:** `.env`, `.brain/**`, `docs/design/**`, `.scratch/land-module/ui/**`
 - **Demo path:** Public user mở `/public/land/lookup`, nhập một mã và xem trạng thái mô phỏng.
-- **Evidence/commit:** chưa có.
+- **Evidence/commit:** `c661456` (`feat: add public lookup screen`); focused and land-ui regression tests passed.
 
 ## Mô tả
 
@@ -19,17 +19,17 @@ Triển khai screen-05 public lookup với mode selector, result projection tám
 
 ## Các bước thực hiện
 
-- [ ] Dựng mode selector và input code.
-- [ ] Kết nối public lookup GET.
-- [ ] Render result 8 fields và simulated label.
-- [ ] Implement invalid/not-found/rate-limit/offline states.
-- [ ] Viết redaction/accessibility tests.
+- [x] Dựng mode selector và input code.
+- [x] Kết nối public lookup GET.
+- [x] Render result 8 fields và simulated label.
+- [x] Implement invalid/not-found/rate-limit/offline states.
+- [x] Viết redaction/accessibility tests.
 
 ## Acceptance Criteria
 
-- [ ] Given code hợp lệ, When submit screen-05, Then result card hiển thị 8 fields và `simulated: true`.
-- [ ] Given cả hai mode hoặc code rỗng, When submit, Then UI hiển thị message `LAND_LOOKUP_QUERY_INVALID` bằng tiếng Việt.
-- [ ] Given not-found/rate-limited/offline, When API lỗi, Then input được giữ và retry không tự lặp vô hạn.
+- [x] Given code hợp lệ, When submit screen-05, Then result card hiển thị 8 fields và `simulated: true`.
+- [x] Given cả hai mode hoặc code rỗng, When submit, Then UI hiển thị message `LAND_LOOKUP_QUERY_INVALID` bằng tiếng Việt.
+- [x] Given not-found/rate-limited/offline, When API lỗi, Then input được giữ và retry không tự lặp vô hạn.
 
 ## Test-skeleton
 
@@ -39,7 +39,7 @@ Triển khai screen-05 public lookup với mode selector, result projection tám
 
 ## Rubric bắt buộc
 
-- [ ] Bám screen-05; không render official/certified wording, polygon hoặc PII.
+- [x] Bám screen-05; không render official/certified wording, polygon hoặc PII.
 
 ## Traceability
 
@@ -48,4 +48,4 @@ Triển khai screen-05 public lookup với mode selector, result projection tám
 
 ## V6 reconciliation
 
-- Effective status `blocked`; no implementation/evidence/commit exists.
+- Effective status `done` after `c661456`; public screen-05 is standalone, projection-only and covered by UI contract tests.
