@@ -2,9 +2,15 @@ import { ApiError, requestJson } from './client';
 
 export type SessionStatus =
   'loading' | 'authenticated' | 'unauthenticated' | 'expired';
+export type SessionUser = {
+  id: string;
+  name?: string;
+  roles: string[];
+  organizationUnitId?: string;
+};
 export type SessionState = {
   status: SessionStatus;
-  user?: { id: string; name?: string };
+  user?: SessionUser;
 };
 
 export function sessionStateFromResponse(
@@ -13,13 +19,27 @@ export function sessionStateFromResponse(
 ): SessionState {
   if (status === 401) return { status: 'expired' };
   if (typeof body === 'object' && body && 'user' in body && body.user) {
-    const user = body.user as { id?: unknown; name?: unknown };
+    const user = body.user as {
+      id?: unknown;
+      name?: unknown;
+      roles?: unknown;
+      organizationUnitId?: unknown;
+    };
     if (typeof user.id === 'string')
       return {
         status: 'authenticated',
         user: {
           id: user.id,
           name: typeof user.name === 'string' ? user.name : undefined,
+          roles: Array.isArray(user.roles)
+            ? user.roles.filter(
+                (role): role is string => typeof role === 'string',
+              )
+            : [],
+          organizationUnitId:
+            typeof user.organizationUnitId === 'string'
+              ? user.organizationUnitId
+              : undefined,
         },
       };
   }

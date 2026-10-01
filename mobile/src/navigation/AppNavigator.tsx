@@ -10,6 +10,7 @@ import { DispatchScreen } from '../features/dispatch/DispatchScreen';
 import { TaskScreen } from '../features/task/TaskScreen';
 import { IncidentScreen } from '../features/incident/IncidentScreen';
 import { SettingsScreen } from '../features/settings/SettingsScreen';
+import { LandScreen } from '../features/land/LandScreen';
 import { deepLinkFor, type NavigationContext } from './deepLinks';
 
 export const routes = [
@@ -19,6 +20,7 @@ export const routes = [
   'Dispatches',
   'Tasks',
   'Incident',
+  'Land',
   'Settings',
 ] as const;
 
@@ -86,6 +88,8 @@ export function AppNavigator() {
         incidentId={context.incidentId}
         onOpenMap={() => openMap(undefined, context)}
       />
+    ) : route === 'Land' ? (
+      <LandScreen session={session} />
     ) : (
       <SettingsScreen />
     );
@@ -99,7 +103,7 @@ export function AppNavigator() {
             onPress={() => setRoute(item)}
             style={{ minHeight: 44, padding: 8 }}
           >
-            <Text>{item}</Text>
+            <Text>{item === 'Land' ? 'Đất đai' : item}</Text>
           </Pressable>
         ))}
         <Pressable
