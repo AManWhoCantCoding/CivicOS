@@ -16,7 +16,6 @@ import {
   appendEvent,
   getOutboxHealth,
   processOneOutboxMessage,
-  processOutboxUntilIdle,
   registerEventConsumer,
 } from '@/modules/eventing';
 
@@ -86,7 +85,11 @@ describe('continuous SLA clock', () => {
       expect(persisted.overdueEventId).toBeTruthy();
       expect(await prisma.notification.count({ where: { userId } })).toBe(0);
 
-      await processOutboxUntilIdle();
+      expect(
+        await processOneOutboxMessage({
+          eventId: persisted.overdueEventId ?? '',
+        }),
+      ).toBe(true);
       const notifications = await listNotifications(userId);
       expect(notifications).toHaveLength(1);
       expect(
@@ -103,7 +106,11 @@ describe('continuous SLA clock', () => {
       ).toMatchObject({
         count: 1,
       });
-      await processOutboxUntilIdle();
+      expect(
+        await processOneOutboxMessage({
+          eventId: persisted.overdueEventId ?? '',
+        }),
+      ).toBe(false);
       expect(await prisma.notification.count({ where: { userId } })).toBe(1);
     },
   );
@@ -141,7 +148,7 @@ describe('continuous SLA clock', () => {
           payload: { nonce },
           metadata: {},
         });
-        expect(await processOneOutboxMessage()).toBe(true);
+        expect(await processOneOutboxMessage({ eventId })).toBe(true);
         const failed = await prisma.outboxMessage.findUniqueOrThrow({
           where: { eventId },
         });
@@ -154,7 +161,7 @@ describe('continuous SLA clock', () => {
           where: { eventId },
           data: { availableAt: new Date() },
         });
-        expect(await processOneOutboxMessage()).toBe(true);
+        expect(await processOneOutboxMessage({ eventId })).toBe(true);
         const retried = await prisma.outboxMessage.findUniqueOrThrow({
           where: { eventId },
         });
@@ -162,7 +169,7 @@ describe('continuous SLA clock', () => {
         expect(retried.processedAt).toBeInstanceOf(Date);
         expect(successes).toBe(1);
 
-        await processOutboxUntilIdle();
+        expect(await processOneOutboxMessage({ eventId })).toBe(false);
         expect(successes).toBe(1);
         const checkpoint = await prisma.projectionCheckpoint.findUniqueOrThrow({
           where: { name: `${eventType}:probe-${nonce}` },

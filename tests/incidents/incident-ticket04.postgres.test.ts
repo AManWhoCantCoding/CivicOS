@@ -48,6 +48,7 @@ function userRef(
 }
 
 const commander = userRef(`t04-commander-${stamp}`, ['commander'], ORG);
+const approver = userRef(`t04-approver-${stamp}`, ['commander'], ORG);
 const duty = userRef(`t04-duty-${stamp}`, ['duty_officer'], ORG);
 const fieldOfficer = userRef(`t04-field-${stamp}`, ['field_officer'], ORG);
 const unassigned = userRef(`t04-unassigned-${stamp}`, ['field_officer'], ORG);
@@ -225,6 +226,7 @@ const tracked: Array<{ incidentId: string; reportId: string }> = [];
 const trackedAssignmentIds: string[] = [];
 const fixtureIds = [
   commander.id,
+  approver.id,
   duty.id,
   fieldOfficer.id,
   unassigned.id,
@@ -373,6 +375,7 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
     }
     const seeds = [
       { user: commander, role: 'commander' },
+      { user: approver, role: 'commander' },
       { user: duty, role: 'duty_officer' },
       { user: fieldOfficer, role: 'field_officer' },
       { user: unassigned, role: 'field_officer' },
@@ -405,6 +408,7 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
         id: {
           in: [
             commander.id,
+            approver.id,
             duty.id,
             fieldOfficer.id,
             unassigned.id,
@@ -510,6 +514,7 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
       classification: 'sufficient',
       verificationNote: 'T04 rollback verification.',
     });
+    await confirmIntakeReport(created.reportId, commander);
     await prisma.$executeRawUnsafe(
       "CREATE OR REPLACE FUNCTION t04_abort_sentinel() RETURNS trigger AS $$ BEGIN IF NEW.description = '" +
         sentinel +
@@ -678,12 +683,15 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
     expect(duplicate.approval.id).toBe(transfer.approval.id);
 
     await expect(
-      rejectIncidentApproval(incidentId, transfer.approval.id, commander, '  '),
+      approveIncident(incidentId, transfer.approval.id, commander),
+    ).rejects.toThrow('SELF_APPROVAL_FORBIDDEN');
+    await expect(
+      rejectIncidentApproval(incidentId, transfer.approval.id, approver, '  '),
     ).rejects.toThrow('REJECTION_REASON_REQUIRED');
     const rejected = await rejectIncidentApproval(
       incidentId,
       transfer.approval.id,
-      commander,
+      approver,
       'Chua du can cu chuyen cap.',
     );
     expect(rejected.approval.status).toBe('rejected');
@@ -692,7 +700,7 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
     });
     expect(afterReject.status).toBe('verifying');
     await expect(
-      approveIncident(incidentId, transfer.approval.id, commander),
+      approveIncident(incidentId, transfer.approval.id, approver),
     ).rejects.toThrow('APPROVAL_ALREADY_DECIDED');
 
     const retry = await transferIncident(incidentId, commander, UPPER);
@@ -700,7 +708,7 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
     const approved = await approveIncident(
       incidentId,
       retry.approval.id,
-      commander,
+      approver,
     );
     expect(approved.incident.status).toBe('transferred');
     expect(approved.approval.status).toBe('approved');
@@ -710,12 +718,12 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
       commander,
       'Da hoan tat xac minh.',
     );
-    await approveIncident(incidentId, resolution.approval.id, commander);
+    await approveIncident(incidentId, resolution.approval.id, approver);
     const closure = await closeIncident(incidentId, commander);
     const closed = await approveIncident(
       incidentId,
       closure.approval.id,
-      commander,
+      approver,
     );
     expect(closed.incident.status).toBe('closed');
 
@@ -888,7 +896,7 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
     await startVerification(incidentId, seededAssignee);
     expect((await activeKind())?.kind).toBe('incident_transfer_24h');
     const transfer = await transferIncident(incidentId, commander, UPPER);
-    await approveIncident(incidentId, transfer.approval.id, commander);
+    await approveIncident(incidentId, transfer.approval.id, approver);
     expect((await activeKind())?.kind).toBe('incident_resolution_7d');
 
     const active = await prisma.slaInstance.findFirstOrThrow({
@@ -926,7 +934,7 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
       commander,
       'Da xu ly xong.',
     );
-    await approveIncident(incidentId, resolution.approval.id, commander);
+    await approveIncident(incidentId, resolution.approval.id, approver);
     const remaining = await prisma.slaInstance.count({
       where: {
         resourceType: 'Incident',

@@ -23,6 +23,20 @@ vi.mock('next/headers', () => ({ cookies: vi.fn() }));
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
 const stamp = randomUUID().slice(0, 8);
 
+const DEVELOPMENT_SEED_EMAILS = [
+  'truong@civicos.local',
+  'trucban@civicos.local',
+  'hientruong@civicos.local',
+  'vanphong@civicos.local',
+  'khongduocphancong@civicos.local',
+  'captren@civicos.local',
+  'captren-chihuy@civicos.local',
+  'system-operator@civicos.local',
+  'thon@civicos.local',
+  'commander@civicos.local',
+  'field@civicos.local',
+];
+
 function mockSessionCookie(token?: string) {
   const deleted: string[] = [];
   vi.mocked(cookies).mockResolvedValue({
@@ -123,11 +137,15 @@ describe.skipIf(!postgresEnabled)(
     });
 
     it('keeps development credentials out of plaintext without real secrets', async () => {
+      await ensureDevelopmentUsers();
+
       const users = await prisma.user.findMany({
-        where: { email: { endsWith: '@civicos.local' } },
+        where: { email: { in: DEVELOPMENT_SEED_EMAILS } },
         select: { email: true, passwordHash: true },
       });
-      expect(users.length).toBeGreaterThan(0);
+      expect(users.map(({ email }) => email).sort()).toEqual(
+        [...DEVELOPMENT_SEED_EMAILS].sort(),
+      );
       for (const user of users) {
         expect(user.passwordHash).not.toBeNull();
         expect(user.passwordHash).not.toContain('civicos-dev');

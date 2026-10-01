@@ -607,7 +607,7 @@ test('[Web] converted intake exposes incident commands', async ({ page }) => {
 test('[Web] approving a missing approval reports not found', async ({
   page,
 }) => {
-  await loginAs(page, DUTY);
+  await loginAs(page, COMMANDER);
   const incidentId = await createIncidentViaApi(
     page,
     `PS005 approval ${Date.now()}`,

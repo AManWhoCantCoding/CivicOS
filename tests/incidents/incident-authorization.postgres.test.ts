@@ -200,7 +200,9 @@ describe.skipIf(!postgresEnabled)(
         await prisma.auditEvent.deleteMany({ where: { id: { in: auditIds } } });
       }
       await prisma.assignment.deleteMany({
-        where: { resourceId: { in: trackedIncidents } },
+        where: {
+          resourceId: { in: [...trackedIncidents, ...trackedReports] },
+        },
       });
       await prisma.approval.deleteMany({
         where: { resourceId: { in: trackedIncidents } },
@@ -452,6 +454,7 @@ describe.skipIf(!postgresEnabled)(
         classification: 'sufficient',
         verificationNote: 'T03 informant verification.',
       });
+      await confirmIntakeReport(created.reportId, duty);
       const registered = {
         ...created,
         incidentId: (await convertIntakeToIncident(created.reportId, duty))
@@ -460,11 +463,24 @@ describe.skipIf(!postgresEnabled)(
       trackedIncidents.push(registered.incidentId);
       trackedReports.push(registered.reportId);
       await assignTask(registered.incidentId, field);
-      const detail = await getIncident(registered.incidentId, field);
+      await createAssignments(
+        {
+          resourceType: 'IntakeReport',
+          resourceId: registered.reportId,
+          task: 'incident_verification',
+          assigneeUserIds: [commander.id],
+          organizationId: ORG,
+        },
+        commander,
+      );
+      const detail = await getIncident(registered.incidentId, commander);
       expect(detail.informant).toMatchObject({
         name: 'Nguyen Van Mat T03',
         contact: '0900000001',
       });
+      await expect(
+        getIncident(registered.incidentId, field),
+      ).resolves.toMatchObject({ informant: null });
       await expect(
         getIncident(registered.incidentId, unassigned),
       ).rejects.toThrow('FORBIDDEN');

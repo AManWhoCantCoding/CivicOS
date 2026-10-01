@@ -11,6 +11,7 @@ import {
 } from '@/modules/identity';
 import type { IdentityUser } from '@/modules/identity';
 import {
+  confirmIntakeReport,
   convertIntakeToIncident,
   getIncident,
   registerIntakeReport,
@@ -308,6 +309,7 @@ describe.skipIf(!postgresEnabled)(
         classification: 'sufficient',
         verificationNote: 'T02 boundary verification.',
       });
+      await confirmIntakeReport(created.reportId, duty);
       const converted = await convertIntakeToIncident(created.reportId, duty);
       if (!converted.incidentId) throw new Error('T02_CONVERT_FAILED');
       intakeReportId = created.reportId;

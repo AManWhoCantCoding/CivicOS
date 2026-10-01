@@ -162,12 +162,15 @@ async function dispatchConsumer(
   });
 }
 
-export async function processOneOutboxMessage(): Promise<boolean> {
+export async function processOneOutboxMessage(filter?: {
+  eventId?: string;
+}): Promise<boolean> {
   await releaseStaleClaims();
   const message = await prisma.outboxMessage.findFirst({
     where: {
       status: 'pending',
       availableAt: { lte: new Date() },
+      ...(filter?.eventId ? { eventId: filter.eventId } : {}),
     },
     orderBy: {
       createdAt: process.env.CIVICOS_E2E_RUN === '1' ? 'desc' : 'asc',
@@ -326,9 +329,11 @@ export async function getOutboxHealth() {
   };
 }
 
-export async function processOutboxUntilIdle(): Promise<number> {
+export async function processOutboxUntilIdle(filter?: {
+  eventId?: string;
+}): Promise<number> {
   let processed = 0;
-  while (await processOneOutboxMessage()) processed += 1;
+  while (await processOneOutboxMessage(filter)) processed += 1;
   return processed;
 }
 

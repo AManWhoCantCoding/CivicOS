@@ -28,6 +28,7 @@ import {
   assertIncidentTransition,
   classifyIncident,
   closeIncident,
+  confirmIntakeReport,
   convertIntakeToIncident,
   getIncident,
   getIncidentReadModel,
@@ -210,6 +211,7 @@ function psUser(
 }
 
 const psCommander = psUser(`ps005-commander-${psStamp}`, ['commander'], PS_ORG);
+const psApprover = psUser(`ps005-approver-${psStamp}`, ['commander'], PS_ORG);
 const psUnassigned = psUser(
   `ps005-unassigned-${psStamp}`,
   ['field_officer'],
@@ -220,7 +222,12 @@ const psCrossCommander = psUser(
   ['commander'],
   PS_UPPER,
 );
-const psScopeActorIds = [psCommander.id, psUnassigned.id, psCrossCommander.id];
+const psScopeActorIds = [
+  psCommander.id,
+  psApprover.id,
+  psUnassigned.id,
+  psCrossCommander.id,
+];
 let psAssignee: IdentityUser = psUser('dev-field', ['field_officer'], PS_ORG);
 const psTracked: Array<{ incidentId: string; reportId: string }> = [];
 const psAssignmentIds: string[] = [];
@@ -383,6 +390,7 @@ describe.skipIf(!psE1005Enabled)(
       }
       const seeds = [
         { user: psCommander, role: 'commander' },
+        { user: psApprover, role: 'commander' },
         { user: psUnassigned, role: 'field_officer' },
         { user: psCrossCommander, role: 'commander' },
       ] as const;
@@ -435,6 +443,7 @@ describe.skipIf(!psE1005Enabled)(
           classification: 'sufficient',
           verificationNote: 'PS-E1-005 parallel verification.',
         });
+        await confirmIntakeReport(created.reportId, psCommander);
         const converted = await convertIntakeToIncident(
           created.reportId,
           psCommander,
@@ -632,7 +641,7 @@ describe.skipIf(!psE1005Enabled)(
         const transferred = await approveIncident(
           psMain.incidentId,
           transfer.approval.id,
-          psCommander,
+          psApprover,
         );
         expect(transferred.incident.status).toBe('transferred');
         await expect(
@@ -654,7 +663,7 @@ describe.skipIf(!psE1005Enabled)(
         await approveIncident(
           psMain.incidentId,
           resolution.approval.id,
-          psCommander,
+          psApprover,
         );
         await expect(
           prisma.slaInstance.count({
@@ -670,7 +679,7 @@ describe.skipIf(!psE1005Enabled)(
         const closed = await approveIncident(
           psMain.incidentId,
           closure.approval.id,
-          psCommander,
+          psApprover,
         );
         expect(closed.incident.status).toBe('closed');
 
@@ -771,6 +780,7 @@ describe.skipIf(!psE1005Enabled)(
           classification: 'sufficient',
           verificationNote: 'PS-E1-005 SLA verification.',
         });
+        await confirmIntakeReport(created.reportId, psCommander);
         const converted = await convertIntakeToIncident(
           created.reportId,
           psCommander,
@@ -801,7 +811,13 @@ describe.skipIf(!psE1005Enabled)(
         expect(overdue.status).toBe('overdue');
         expect(overdue.overdueEventId).toEqual(expect.any(String));
         await expect(
-          prisma.notification.count({ where: { userId: psCommander.id } }),
+          prisma.notification.count({
+            where: {
+              userId: psCommander.id,
+              resourceId: registered.incidentId,
+              type: 'sla_overdue',
+            },
+          }),
         ).resolves.toBe(0);
 
         await processOutboxUntilIdle();
@@ -1154,6 +1170,23 @@ describe.skipIf(!psE1007Enabled)(
   'PS-E1-007 Establishment and Inspection integration',
   () => {
     beforeAll(async () => {
+      for (const [id, name, parentId] of [
+        [PS_UPPER, 'Cap tren', null],
+        [PS_ORG, 'Nghia Tru', PS_UPPER],
+      ] as const) {
+        await prisma.organizationUnit.upsert({
+          where: { id },
+          update: { active: true },
+          create: { id, name, level: 'unit', parentId },
+        });
+      }
+      for (const roleName of ['commander', 'field_officer'] as const) {
+        await prisma.role.upsert({
+          where: { name: roleName },
+          update: {},
+          create: { name: roleName },
+        });
+      }
       for (const user of ps007DbUsers) {
         await prisma.user.create({
           data: {
@@ -1164,6 +1197,16 @@ describe.skipIf(!psE1007Enabled)(
             organizationUnitId: user.organizationUnitId,
           },
         });
+        for (const roleName of user.roles) {
+          const roleRow = await prisma.role.findUniqueOrThrow({
+            where: { name: roleName },
+          });
+          await prisma.userRole.upsert({
+            where: { userId_roleId: { userId: user.id, roleId: roleRow.id } },
+            update: {},
+            create: { userId: user.id, roleId: roleRow.id },
+          });
+        }
       }
       ps007IncidentVehicleCounts = await ps007IncidentVehicleTableCounts();
     });
@@ -1197,6 +1240,7 @@ describe.skipIf(!psE1007Enabled)(
         const inspection = await scheduleInspection(
           {
             establishmentId,
+            assignedUserId: ps007Field.id,
             scheduledAt: '2026-10-01T08:00:00.000Z',
           },
           ps007Commander,
@@ -1212,7 +1256,10 @@ describe.skipIf(!psE1007Enabled)(
         ]);
         expect(inspectionEvents[0].eventVersion).toBe(1);
 
-        await startInspection(inspection.id, ps007Commander);
+        await expect(
+          startInspection(inspection.id, ps007Commander),
+        ).rejects.toThrow('FORBIDDEN');
+        await startInspection(inspection.id, ps007Field);
         await saveChecklistResponses(
           {
             inspectionId: inspection.id,
@@ -1221,11 +1268,11 @@ describe.skipIf(!psE1007Enabled)(
               { key: 'security', value: 'valid' },
             ],
           },
-          ps007Commander,
+          ps007Field,
         );
         const completed = await completeInspection(
           { inspectionId: inspection.id, result: 'pass' },
-          ps007Commander,
+          ps007Field,
         );
         expect(completed).toMatchObject({
           status: 'completed',
@@ -1620,11 +1667,15 @@ describe.skipIf(!psE1007Enabled)(
         const inspection = await scheduleInspection(
           {
             establishmentId,
+            assignedUserId: ps007Field.id,
             scheduledAt: '2026-11-13T08:00:00.000Z',
           },
           ps007Commander,
         );
-        await startInspection(inspection.id, ps007Commander);
+        await expect(
+          startInspection(inspection.id, ps007Commander),
+        ).rejects.toThrow('FORBIDDEN');
+        await startInspection(inspection.id, ps007Field);
         await processOutboxUntilIdle();
 
         const history = await readAggregateEvents(
@@ -2745,7 +2796,7 @@ describe.skipIf(!psE1009Enabled)(
           },
         );
 
-        const assignment = await prisma.assignment.findFirstOrThrow({
+        const assignmentRows = await prisma.assignment.findMany({
           where: {
             resourceType: 'VehicleObservation',
             resourceId: ids[0],
@@ -2753,16 +2804,20 @@ describe.skipIf(!psE1009Enabled)(
             status: 'active',
           },
         });
-        await revokeAssignment(
-          assignment.id,
-          ps009Commander,
-          'Nhiem vu ket thuc.',
-        );
+        expect(assignmentRows.length).toBeGreaterThan(0);
+        for (const row of assignmentRows) {
+          await revokeAssignment(row.id, ps009Commander, 'Nhiem vu ket thuc.');
+        }
         await expect(
-          prisma.assignment.findUniqueOrThrow({
-            where: { id: assignment.id },
+          prisma.assignment.count({
+            where: {
+              resourceType: 'VehicleObservation',
+              resourceId: ids[0],
+              assigneeUserId: ps009Field.id,
+              status: 'active',
+            },
           }),
-        ).resolves.toMatchObject({ status: 'revoked' });
+        ).resolves.toBe(0);
         await expect(getObservation(ids[0], ps009Field)).rejects.toThrow(
           'FORBIDDEN',
         );

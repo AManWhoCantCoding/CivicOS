@@ -364,7 +364,16 @@ export async function approveIncident(
     const approval = await tx.approval.findUnique({
       where: { id: approvalId },
     });
-    if (!approval) throw new Error('APPROVAL_NOT_FOUND');
+    if (!approval) {
+      const allowed = await canAccess(
+        actor,
+        { resourceType: 'Incident', resourceId: incidentId },
+        'approve',
+        tx,
+      ).catch(() => false);
+      if (!allowed) throw new Error('FORBIDDEN');
+      throw new Error('APPROVAL_NOT_FOUND');
+    }
     if (approval.status !== 'pending')
       throw new Error('APPROVAL_ALREADY_DECIDED');
     if (approval.resourceType !== 'Incident')
@@ -405,7 +414,16 @@ export async function rejectIncidentApproval(
     const approval = await tx.approval.findUnique({
       where: { id: approvalId },
     });
-    if (!approval) throw new Error('APPROVAL_NOT_FOUND');
+    if (!approval) {
+      const allowed = await canAccess(
+        actor,
+        { resourceType: 'Incident', resourceId: incidentId },
+        'approve',
+        tx,
+      ).catch(() => false);
+      if (!allowed) throw new Error('FORBIDDEN');
+      throw new Error('APPROVAL_NOT_FOUND');
+    }
     if (approval.status !== 'pending')
       throw new Error('APPROVAL_ALREADY_DECIDED');
     if (approval.resourceType !== 'Incident')

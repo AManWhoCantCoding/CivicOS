@@ -13,6 +13,7 @@ import type { IdentityUser } from '@/modules/identity';
 import {
   assignIncident,
   classifyIncident,
+  confirmIntakeReport,
   convertIntakeToIncident,
   getIncident,
   getIncidentReadModel,
@@ -543,6 +544,7 @@ describe.skipIf(!replayEnabled)(
           classification: 'sufficient',
           verificationNote: 'Replay verification.',
         });
+        await confirmIntakeReport(created.reportId, replayCommander);
         const converted = await convertIntakeToIncident(
           created.reportId,
           replayCommander,

@@ -14,6 +14,7 @@ import {
 } from '@/modules/eventing';
 import type { IdentityUser } from '@/modules/identity';
 import {
+  confirmIntakeReport,
   convertIntakeToIncident,
   registerIntakeReport,
   rebuildIncidentProjection,
@@ -56,7 +57,8 @@ const commander = resilienceUser(
   ['commander'],
   ORG,
 );
-const scopeActorIds = [commander.id];
+const field = resilienceUser(`resil-field-${stamp}`, ['field_officer'], ORG);
+const scopeActorIds = [commander.id, field.id];
 
 const incidentIds: string[] = [];
 const reportIds: string[] = [];
@@ -347,6 +349,13 @@ describe.skipIf(!enabled)(
           create: { id, name, level: 'unit', parentId },
         });
       }
+      for (const roleName of ['commander', 'field_officer'] as const) {
+        await prisma.role.upsert({
+          where: { name: roleName },
+          update: {},
+          create: { name: roleName },
+        });
+      }
       await prisma.user.create({
         data: {
           id: commander.id,
@@ -356,6 +365,27 @@ describe.skipIf(!enabled)(
           organizationUnitId: commander.organizationUnitId,
         },
       });
+      await prisma.user.create({
+        data: {
+          id: field.id,
+          email: field.email,
+          name: field.name,
+          passwordHash: `resil-hash-${stamp}`,
+          organizationUnitId: field.organizationUnitId,
+        },
+      });
+      for (const user of [commander, field]) {
+        for (const roleName of user.roles) {
+          const roleRow = await prisma.role.findUniqueOrThrow({
+            where: { name: roleName },
+          });
+          await prisma.userRole.upsert({
+            where: { userId_roleId: { userId: user.id, roleId: roleRow.id } },
+            update: {},
+            create: { userId: user.id, roleId: roleRow.id },
+          });
+        }
+      }
     });
 
     afterAll(async () => {
@@ -607,6 +637,7 @@ describe.skipIf(!enabled)(
           classification: 'sufficient',
           verificationNote: 'Resilience replay verification.',
         });
+        await confirmIntakeReport(created.reportId, commander);
         const converted = await convertIntakeToIncident(
           created.reportId,
           commander,
@@ -631,6 +662,19 @@ describe.skipIf(!enabled)(
         const plate = normalizePlate(
           `89R${stamp.slice(0, 4).toUpperCase()}901`,
         );
+        await expect(
+          recordVehicleObservation(
+            {
+              plate,
+              observedAt: new Date().toISOString(),
+              latitude: 20.96,
+              longitude: 105.93,
+              description: `Quan sat resil replay ${stamp}`,
+              clientCommandId: `resil-replay-commander-${stamp}`,
+            },
+            commander,
+          ),
+        ).rejects.toThrow('FORBIDDEN');
         const { observation } = await recordVehicleObservation(
           {
             plate,
@@ -640,7 +684,7 @@ describe.skipIf(!enabled)(
             description: `Quan sat resil replay ${stamp}`,
             clientCommandId: `resil-replay-${stamp}`,
           },
-          commander,
+          field,
         );
         observationIds.push(observation.id);
         await processOutboxUntilIdle();
@@ -769,6 +813,7 @@ describe.skipIf(!enabled)(
               classification: 'sufficient',
               verificationNote: 'Resilience freshness verification.',
             });
+            await confirmIntakeReport(created.reportId, commander);
             const converted = await convertIntakeToIncident(
               created.reportId,
               commander,
@@ -815,6 +860,21 @@ describe.skipIf(!enabled)(
             const plate = normalizePlate(
               `89R${stamp.slice(0, 4).toUpperCase()}${index}11`,
             );
+            if (index === 0) {
+              await expect(
+                recordVehicleObservation(
+                  {
+                    plate,
+                    observedAt: new Date().toISOString(),
+                    latitude: 20.96,
+                    longitude: 105.93,
+                    description: `Quan sat resil fresh ${stamp} ${index}`,
+                    clientCommandId: `resil-fresh-commander-${stamp}-${index}`,
+                  },
+                  commander,
+                ),
+              ).rejects.toThrow('FORBIDDEN');
+            }
             const { observation } = await recordVehicleObservation(
               {
                 plate,
@@ -824,7 +884,7 @@ describe.skipIf(!enabled)(
                 description: `Quan sat resil fresh ${stamp} ${index}`,
                 clientCommandId: `resil-fresh-${stamp}-${index}`,
               },
-              commander,
+              field,
             );
             observationIds.push(observation.id);
             samples.push({

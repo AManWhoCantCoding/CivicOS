@@ -16,6 +16,7 @@ import {
   approveIncident,
   assignIncident,
   classifyIncident,
+  confirmIntakeReport,
   convertIntakeToIncident,
   getIncident,
   listIncidents,
@@ -509,6 +510,7 @@ describe.skipIf(!enabled)(
           classification: 'sufficient',
           verificationNote: 'Auth matrix verification.',
         });
+        await confirmIntakeReport(created.reportId, duty);
         const converted = await convertIntakeToIncident(created.reportId, duty);
         if (!converted.incidentId) throw new Error('AUTHMATRIX_CONVERT_FAILED');
         incidentId = converted.incidentId;

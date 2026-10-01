@@ -9,6 +9,7 @@ import {
   assertDemoTarget,
   resolveDemoTarget,
 } from './demo-db';
+import { parseDemoNow } from '@/modules/platform/clock';
 
 export function resolveSeedTarget(env: DemoEnv = process.env): DemoTarget {
   const target = resolveDemoTarget(env.DATABASE_URL, env.DEMO_DATABASE_URL);
@@ -17,6 +18,7 @@ export function resolveSeedTarget(env: DemoEnv = process.env): DemoTarget {
 }
 
 export async function seedDemo(env: DemoEnv = process.env) {
+  parseDemoNow(env.DEMO_NOW);
   const target = resolveSeedTarget(env);
   console.log(
     `Demo target database: ${target.displayUrl} (name=${target.dbName})`,

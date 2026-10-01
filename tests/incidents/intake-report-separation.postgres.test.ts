@@ -42,6 +42,7 @@ function userRef(
 
 const duty = userRef(`intake-duty-${stamp}`, ['duty_officer'], ORG);
 const commander = userRef(`intake-commander-${stamp}`, ['commander'], ORG);
+const approver = userRef(`intake-approver-${stamp}`, ['commander'], ORG);
 const fieldOfficer = userRef(`intake-field-${stamp}`, ['field_officer'], ORG);
 const crossCommander = userRef(`intake-cross-${stamp}`, ['commander'], UPPER);
 
@@ -248,6 +249,7 @@ describe.skipIf(!postgresEnabled)(
       const seeds = [
         { user: duty, role: 'duty_officer' },
         { user: commander, role: 'commander' },
+        { user: approver, role: 'commander' },
         { user: fieldOfficer, role: 'field_officer' },
         { user: crossCommander, role: 'commander' },
       ] as const;
@@ -275,7 +277,13 @@ describe.skipIf(!postgresEnabled)(
       await prisma.user.deleteMany({
         where: {
           id: {
-            in: [duty.id, commander.id, fieldOfficer.id, crossCommander.id],
+            in: [
+              duty.id,
+              commander.id,
+              approver.id,
+              fieldOfficer.id,
+              crossCommander.id,
+            ],
           },
         },
       });
@@ -795,7 +803,7 @@ describe.skipIf(!postgresEnabled)(
       const transferred = await approveIntakeTransfer(
         reportId,
         requested.approval.id,
-        duty,
+        approver,
       );
       expect(transferred.approval.status).toBe('approved');
       const stored = await prisma.intakeReport.findUniqueOrThrow({

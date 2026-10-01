@@ -4,6 +4,7 @@ import { rm } from 'node:fs/promises';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { prisma } from '@/lib/prisma';
+import { processOutboxUntilIdle } from '@/modules/eventing';
 import {
   assertAccess,
   createAssignments,
@@ -607,7 +608,7 @@ describe.skipIf(!enabled)('ticket 05 vehicle authorization matrix', () => {
       const { observation } = await recordVehicleObservation(
         {
           plate,
-          observedAt: '2026-09-19T01:00:00.000Z',
+          observedAt: '2026-12-01T01:00:00.000Z',
           latitude: 20.96,
           longitude: 105.93,
           description: `Commander scope ${stamp}`,
@@ -661,6 +662,7 @@ describe.skipIf(!enabled)('ticket 05 vehicle authorization matrix', () => {
       await expect(listRegistry(commander)).resolves.toEqual(
         expect.arrayContaining([expect.objectContaining({ id: entry.id })]),
       );
+      await processOutboxUntilIdle();
       const listed = await listObservations(commander);
       expect(
         listed.map((item) => String((item as { id: string }).id)),
