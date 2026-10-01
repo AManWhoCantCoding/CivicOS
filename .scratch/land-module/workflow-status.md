@@ -37,6 +37,12 @@
 - **pending/frontier:** none.
 - **blocked:** none.
 
+### V6 workflow frontier
+
+- **B11:** done — toàn bộ LND-01–LND-19 đã commit và Phase 01–05 đạt gate.
+- **B12:** pending human review — packet tại `.scratch/land-module/review.md`.
+- **B13:** chưa mở; chỉ bắt đầu sau khi người dùng đánh dấu `APPROVED` trong review packet.
+
 ### Traceability notes
 
 - LND-01: implementation commit `ea72f7f`; review/evidence under `.brain/evidence/LND-01/`.
