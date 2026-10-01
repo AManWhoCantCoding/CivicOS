@@ -2,7 +2,7 @@
 
 CivicOS là nền tảng điều hành nghiệp vụ hướng sự kiện cho **Công an xã Nghĩa Trụ**. Repo hiện là một **modular monolith**: Next.js xử lý web/API, PostgreSQL lưu dữ liệu và một process worker xử lý outbox, projection, SLA và notification.
 
-> **Trạng thái:** MVP đang mở rộng theo tranche thiết kế PS-E1. Repo có các module `identity`, `incidents`, `inspections`, `vehicles`, `residents`, `map` và mobile read-only; chưa phải bản triển khai đầy đủ PS-E1-001 đến PS-E1-010.
+> **Trạng thái:** MVP đang mở rộng theo các tranche thiết kế PS-E1 và LND. Repo có các module `identity`, `incidents`, `inspections`, `vehicles`, `residents`, `land`, `map` và mobile read-only; chưa phải bản triển khai đầy đủ mọi yêu cầu production.
 
 ## Mục lục
 
@@ -10,14 +10,18 @@ CivicOS là nền tảng điều hành nghiệp vụ hướng sự kiện cho **
 - [Thuật ngữ domain](#thuật-ngữ-domain)
 - [Kiến trúc](#kiến-trúc)
 - [Công nghệ và yêu cầu môi trường](#công-nghệ-và-yêu-cầu-môi-trường)
+- [Quick Start](#quick-start)
 - [Chạy web local](#chạy-web-local)
+- [Chạy bản build production local](#chạy-bản-build-production-local)
 - [Cấu hình môi trường](#cấu-hình-môi-trường)
+- [PostgreSQL, TileServer và Docker](#postgresql-tileserver-và-docker)
 - [Bản đồ local](#bản-đồ-local)
 - [Demo database và dữ liệu hiện có](#demo-database-và-dữ-liệu-hiện-có)
 - [Mock/seed data theo tài liệu thiết kế](#mockseed-data-theo-tài-liệu-thiết-kế)
-- [Ứng dụng mobile](#ứng-dụng-mobile)
+- [Ứng dụng mobile](#ứng-dụng-mobile-android)
 - [Routes chính](#routes-chính)
 - [Kiểm thử](#kiểm-thử)
+- [Troubleshooting](#troubleshooting)
 - [Cấu trúc repo](#cấu-trúc-repo)
 - [Tài liệu liên quan](#tài-liệu-liên-quan)
 
@@ -32,6 +36,7 @@ CivicOS là nền tảng điều hành nghiệp vụ hướng sự kiện cho **
 | `inspections`         | `Establishment`, lịch `Inspection`, checklist, `InspectionFinding`, `Evidence` và `EnforcementRecommendation`.          |
 | `vehicles`            | `SuspiciousVehicleRegistry`, `VehicleObservation`, match, verification và escalation.                                   |
 | `residents`           | `Subject`, `SubjectManagementRecord`, activity theo dõi và `ResidentMonthlyReport`.                                     |
+| `land`                | Parcel/party, hồ sơ biến động, review/approval, sync adapter và public lookup projection.                               |
 | `map`                 | MapLibre/TileServer GL OSS, projection marker từ `Incident`/`Inspection`, masking và giới hạn ghi khi offline.          |
 | `platform`/`eventing` | `Evidence`, `SlaInstance`, `Notification`, `OfflineCommand`, `DomainEvent`, transactional outbox, projection và worker. |
 | `mobile-readonly`     | API read-only cho `RelatedInfo`, alarm, dispatch và task; quyền đọc dựa trên `Assignment`.                              |
@@ -100,6 +105,7 @@ Domain modules
   ├─ inspections
   ├─ vehicles
   ├─ residents
+  ├─ land
   ├─ platform / mobile-readonly
   └─ eventing
         │
@@ -123,33 +129,82 @@ Mutation nghiệp vụ quan trọng phải đi qua domain command để transact
 | Web/full-stack     | Next.js `16.3.5`, React `19.2.8`, TypeScript `5`         |
 | UI                 | Tailwind CSS `4`, MapLibre GL JS                         |
 | Backend            | Node.js, `tsx`, Prisma `6.19`                            |
-| Database           | PostgreSQL `16-alpine`                                   |
+| Database           | PostgreSQL/PostGIS `16` qua `postgis/postgis:16-3.4`     |
 | Web tests          | Vitest, `@playwright/test`                               |
 | Browser acceptance | Python `3.13+`, `pytest`, `pytest-playwright`, `psycopg` |
 | Mobile             | React Native `0.85.3`, MapLibre React Native `11.4.0`    |
 
 Cần có:
 
-- Node.js/npm tương thích với Next.js `16.3.5`.
-- Docker Desktop hoặc Docker Engine có Docker Compose.
-- Python `3.13+` nếu chạy bộ test trong `playwright/`.
-- Android SDK/Java phù hợp nếu build mobile Android.
+- Node.js và npm tương thích với Next.js `16.3.5`; kiểm tra bằng `node --version` và `npm --version`.
+- Docker Desktop hoặc Docker Engine có Docker Compose; host cần mở được PostgreSQL ở port `5432`.
+- Python `3.13+` và CPython native trên Windows nếu chạy bộ test trong `playwright/`. Bộ này không có đường chạy chuẩn từ WSL/Linux.
+- Android SDK có platform/Build Tools API `35`, `adb`, một emulator hoặc thiết bị Android (min SDK `24`), và JDK khả dụng qua `JAVA_HOME` hoặc `PATH` nếu build mobile. Repo dùng React Native `0.85.3`, Android Gradle Plugin `8.7.3` và Gradle wrapper `8.13`.
+- Tile asset local tại `storage/tiles/cadn/` nếu cần xem basemap; thư mục này bị gitignore và không được repo cung cấp.
+
+## Quick Start
+
+Các lệnh dưới đây chạy từ thư mục gốc repository. Giữ Next.js và worker ở hai terminal riêng; worker là process bắt buộc nếu muốn outbox, projection, SLA và notification được xử lý liên tục.
+
+### Linux/macOS/Git Bash
+
+```bash
+test -f .env || cp .env.example .env
+npm install
+docker compose up -d postgres
+npm run prisma:generate
+npm run prisma:migrate
+
+# Tuỳ chọn nếu cần bản đồ local
+docker compose up -d tileserver
+
+# Terminal 1
+npm run dev
+
+# Terminal 2
+npm run worker
+```
+
+Mở <http://localhost:3000>. Đọc [Cấu hình môi trường](#cấu-hình-môi-trường) và [Demo database](#demo-database-và-dữ-liệu-hiện-có) trước khi chạy seed/reset.
+
+### Windows PowerShell
+
+```powershell
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+npm install
+docker compose up -d postgres
+npm run prisma:generate
+npm run prisma:migrate
+
+# Tuỳ chọn nếu cần bản đồ local
+docker compose up -d tileserver
+
+# Terminal 1
+npm run dev
+
+# Terminal 2
+npm run worker
+```
+
+Mở <http://localhost:3000>. Docker Desktop phải đang chạy và PowerShell phải nhìn thấy lệnh `docker compose`.
 
 ## Chạy web local
 
-### 1. Tạo `.env`
+### 1. Tạo và kiểm tra `.env`
 
 Linux/macOS/Git Bash:
 
 ```bash
-cp .env.example .env
+test -f .env || cp .env.example .env
 ```
 
 PowerShell:
 
 ```powershell
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
+
+Sau đó mở `.env` và kiểm tra `DATABASE_URL` đang trỏ tới database development `civicos`, không phải `civicos_demo` nếu đang chạy web local thông thường. Không dán password, token, `SESSION_SECRET` thật hoặc PII vào README hay commit chúng.
 
 ### 2. Khởi động PostgreSQL
 
@@ -159,6 +214,13 @@ docker compose up -d postgres
 
 Nếu đang dùng WSL và `docker` không khả dụng, dùng `docker.exe compose ...` hoặc bật WSL integration trong Docker Desktop.
 
+Kiểm tra service đã sẵn sàng:
+
+```bash
+docker compose ps postgres
+docker compose exec postgres pg_isready -U civicos -d civicos
+```
+
 ### 3. Cài dependency, Prisma Client và migration
 
 ```bash
@@ -167,7 +229,7 @@ npm run prisma:generate
 npm run prisma:migrate
 ```
 
-`prisma:migrate` dành cho development. Khi triển khai theo migration đã commit, dùng `npm run prisma:migrate:deploy`.
+`npm run prisma:generate` sinh Prisma Client từ `prisma/schema.prisma`. `npm run prisma:migrate` gọi `prisma migrate dev`, dành cho development và có thể yêu cầu đặt tên migration khi schema thay đổi. Khi chỉ muốn áp dụng các migration đã commit (staging/production hoặc một database đã có migration), dùng `npm run prisma:migrate:deploy`; lệnh này không tạo migration mới.
 
 ### 4. Chạy Next.js và worker
 
@@ -181,24 +243,88 @@ npm run dev
 npm run worker
 ```
 
-Mở <http://localhost:3000>. Trong development, luồng auth có thể tạo các tài khoản local mẫu; mật khẩu mặc định là `civicos-dev`.
+Mở <http://localhost:3000>. Trong development, luồng auth có thể tạo các tài khoản local mẫu; đây là fixture synthetic và mật khẩu mặc định là `civicos-dev`. Xem [Tài khoản development](#tài-khoản-development-synthetic) để biết boundary của các tài khoản này.
+
+## Chạy bản build production local
+
+Đây chỉ là cách kiểm tra bản build production trên máy local, không phải hướng dẫn triển khai hạ tầng. Dùng `SESSION_SECRET` đủ mạnh và không dùng tài khoản/secret development khi chạy với `NODE_ENV=production`.
+
+Linux/macOS/Git Bash:
+
+```bash
+export NODE_ENV=production
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run build
+
+# Terminal 1
+npm run start
+
+# Terminal 2
+npm run worker
+```
+
+PowerShell:
+
+```powershell
+$env:NODE_ENV = "production"
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run build
+
+# Terminal 1
+npm run start
+
+# Terminal 2
+npm run worker
+```
+
+`npm run start` dùng port `3000` mặc định. Có thể truyền port cho Next bằng `npm run start -- --port 3000`; worker không mở HTTP port riêng và phải dùng cùng `DATABASE_URL`, `SESSION_SECRET` và worker settings với web process.
 
 ## Cấu hình môi trường
 
-Các biến chuẩn nằm trong `.env.example`:
+`.env.example` cung cấp các giá trị local không nhạy cảm cho database/worker. `DEMO_NOW` và các map override có thể được thêm vào `.env` local hoặc truyền theo từng process; không commit `.env` (file này và `.env*.local` đã bị gitignore).
 
-| Biến                       | Ý nghĩa                                    | Giá trị mẫu                                                              |
-| -------------------------- | ------------------------------------------ | ------------------------------------------------------------------------ |
-| `DATABASE_URL`             | PostgreSQL database development            | `postgresql://civicos:civicos@localhost:5432/civicos?schema=public`      |
-| `EVENT_WORKER_INTERVAL_MS` | Chu kỳ worker                              | `1000`                                                                   |
-| `EVENT_MAX_ATTEMPTS`       | Số lần retry outbox tối đa                 | `5`                                                                      |
-| `SESSION_SECRET`           | Secret cho session và dữ liệu nhạy cảm     | `replace-in-development`                                                 |
-| `DEMO_DATABASE_URL`        | Database riêng cho demo                    | `postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public` |
-| `DEMO_RESET_CONFIRM`       | Cho phép reset demo phá hủy (`1` mới chạy) | `0`                                                                      |
+| Biến                       | Ý nghĩa                                                                                   | Giá trị local minh hoạ                                                   |
+| -------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `DATABASE_URL`             | Database mà Prisma/web/worker đang dùng.                                                  | `postgresql://civicos:civicos@localhost:5432/civicos?schema=public`      |
+| `DEMO_DATABASE_URL`        | Target ưu tiên cho `demo:seed` và `demo:reset`; database name phải là `civicos_demo`.     | `postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public` |
+| `DEMO_NOW`                 | Canonical timestamp bắt buộc cho demo seed/bootstrap; phải là ISO-8601 có timezone.       | `2026-09-28T08:00:00.000Z`                                               |
+| `EVENT_WORKER_INTERVAL_MS` | Khoảng thời gian giữa các tick worker, tính bằng milliseconds.                            | `1000`                                                                   |
+| `EVENT_MAX_ATTEMPTS`       | Số lần retry tối đa cho outbox message trước khi dead-letter.                             | `5`                                                                      |
+| `SESSION_SECRET`           | Key dẫn xuất cho session và mã hoá dữ liệu nhạy cảm. Production bắt buộc phải có giá trị. | `<secret-ngau-nhien-chi-dung-local>`                                     |
+| `DEMO_RESET_CONFIRM`       | Cho phép thao tác reset demo phá huỷ; chỉ giá trị đúng `1` mới được tính là xác nhận.     | `0`                                                                      |
+| `MAP_TILE_BASE_URL`        | Base URL của TileServer/provider bản đồ.                                                  | `http://localhost:8080`                                                  |
+| `MAP_TILE_STYLE_URL`       | URL style JSON; mặc định ghép từ tile base URL.                                           | `http://localhost:8080/styles/basic-preview/style.json`                  |
+| `MAP_TILE_ATTRIBUTION`     | Attribution hiển thị cho bản đồ; phải chứa chuỗi `OpenStreetMap`.                         | `© OpenStreetMap contributors`                                           |
 
-Có thể override map provider bằng `MAP_TILE_BASE_URL`, `MAP_TILE_STYLE_URL` và `MAP_TILE_ATTRIBUTION`. Attribution phải chứa `OpenStreetMap`; provider mặc định là TileServer GL OSS local.
+`DEMO_NOW` không được bỏ trống khi chạy `npm run demo:seed` hoặc `npm run demo:bootstrap`. Parser chấp nhận timestamp có dạng ISO-8601 với `Z` hoặc offset timezone, ví dụ `2026-09-28T08:00:00.000Z`; giá trị thiếu, sai format hoặc không có timezone trả `DEMO_NOW_INVALID` trước khi seed làm thay đổi dữ liệu. Runtime thông thường không bị ép dùng demo clock.
 
-Không commit `.env`, credential, token hoặc PII thật.
+Trong demo command, `DEMO_DATABASE_URL` được ưu tiên hơn `DATABASE_URL` và không tự sửa database name. Vì `demo:bootstrap` chạy `prisma migrate deploy` trước khi gọi seed, hãy đặt `DATABASE_URL` và `DEMO_DATABASE_URL` cùng trỏ tới `civicos_demo` trong chính process bootstrap. `SESSION_SECRET` trong ví dụ chỉ là placeholder; không dùng giá trị placeholder hoặc secret development khi triển khai production.
+
+## PostgreSQL, TileServer và Docker
+
+`docker-compose.yml` có hai service:
+
+- `postgres`: image `postgis/postgis:16-3.4`, host port `5432`, named volume `civicos-postgres`.
+- `tileserver`: image `maptiler/tileserver-gl:v5.6.0`, host port `8080`, đọc `storage/tiles/cadn/` ở chế độ read-only.
+
+Lệnh thường dùng:
+
+```bash
+docker compose up -d postgres
+docker compose up -d postgres tileserver
+docker compose ps
+docker compose logs -f postgres
+docker compose logs -f tileserver
+docker compose exec postgres pg_isready -U civicos -d civicos
+docker compose stop
+docker compose down
+```
+
+`docker compose stop` dừng service nhưng giữ container/volume; `docker compose down` xoá container và network nhưng giữ named volume. Không dùng `docker compose down -v` như cách reset thông thường: `-v` xoá volume `civicos-postgres`, có thể làm mất cả `civicos` và `civicos_demo`. Reset demo an toàn hơn phải đi qua `npm run demo:reset` với guard ở phần dưới.
+
+Khi kết thúc local run, nhấn `Ctrl+C` trong terminal của Next.js và worker, sau đó dùng `docker compose stop` nếu muốn dừng PostgreSQL/TileServer mà vẫn giữ dữ liệu.
 
 ## Bản đồ local
 
@@ -210,10 +336,24 @@ docker compose up -d postgres tileserver
 
 Tile data được mount read-only từ `storage/tiles/cadn/`. Thư mục `storage/` bị ignore trong git, vì vậy tile asset phải được cung cấp riêng trên máy chạy app. Nếu chỉ cần chạy domain/API, có thể khởi động riêng `postgres` và bỏ qua `tileserver`.
 
+Kiểm tra TileServer trước khi mở map:
+
+```bash
+curl http://localhost:8080/health
+```
+
+PowerShell:
+
+```powershell
+Invoke-WebRequest http://localhost:8080/health
+```
+
 Runtime map hiện dùng:
 
 - Tile base URL mặc định: `http://localhost:8080`.
+- Style mặc định: `${MAP_TILE_BASE_URL}/styles/basic-preview/style.json`.
 - Attribution: `© OpenStreetMap contributors`.
+- `MAP_TILE_ATTRIBUTION` phải có `OpenStreetMap`, nếu không provider bị từ chối.
 - CADN bounds: longitude `105.93..106.03`, latitude `20.91..20.99`.
 - Projection marker hiện đọc aggregate `Incident` và `Inspection`; không tự suy diễn polygon từ một point.
 - Basemap có thể xem offline; mutation nghiệp vụ yêu cầu online trong MVP.
@@ -229,6 +369,7 @@ Bash/Git Bash:
 ```bash
 export DEMO_DATABASE_URL="postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public"
 export DATABASE_URL="$DEMO_DATABASE_URL"
+export DEMO_NOW="2026-09-28T08:00:00.000Z"
 npm run demo:bootstrap
 ```
 
@@ -237,26 +378,47 @@ PowerShell:
 ```powershell
 $env:DEMO_DATABASE_URL = "postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public"
 $env:DATABASE_URL = $env:DEMO_DATABASE_URL
+$env:DEMO_NOW = "2026-09-28T08:00:00.000Z"
 npm run demo:bootstrap
 ```
 
-`demo:bootstrap` chạy migration rồi `scripts/demo/seed.ts`. Seed idempotent, nhưng vẫn cần chạy worker nếu muốn xem projection/SLA/notification cập nhật đầy đủ.
+`demo:bootstrap` chạy `prisma migrate deploy` trên `DATABASE_URL`, sau đó chạy `scripts/demo/seed.ts`. Seed validate `DEMO_NOW` trước target/mutation; các fixture hiện tại vẫn khai báo timestamp canonical trong seed và có thể chạy lại; cuối seed đã drain outbox hiện có, nhưng vẫn có thể chạy `npm run worker` để xử lý event mới.
 
-Guard demo chỉ chấp nhận database có tên `civicos_demo`. Reset là thao tác phá hủy:
+Sau khi bootstrap trong một shell, hãy mở shell mới hoặc trả `DATABASE_URL` về database development `civicos` trước khi chạy web local thông thường; tránh vô tình cho web/worker dùng `civicos_demo`.
+
+Guard demo chỉ chấp nhận database có tên **chính xác** `civicos_demo`. `DEMO_DATABASE_URL` được ưu tiên trước `DATABASE_URL`, không tự đổi tên URL. Reset là thao tác phá hủy:
 
 ```bash
-DEMO_RESET_CONFIRM=1 npm run demo:reset
-# hoặc PowerShell:
-$env:DEMO_RESET_CONFIRM = "1"; npm run demo:reset
+export DEMO_DATABASE_URL="postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public"
+export DATABASE_URL="$DEMO_DATABASE_URL"
+export DEMO_RESET_CONFIRM=1
+npm run demo:reset
+
+# Hoặc xác nhận bằng flag, không cần DEMO_RESET_CONFIRM=1
+unset DEMO_RESET_CONFIRM
+npm run demo:reset -- --confirm
 ```
 
-Reset chỉ chạy khi URL đã chọn có database name chính xác là `civicos_demo`; `DEMO_DATABASE_URL` được ưu tiên trước `DATABASE_URL`, không tự đổi tên database. Lệnh yêu cầu `DEMO_RESET_CONFIRM=1` hoặc `--confirm`, và trả `DEMO_RESET_REFUSED`/`DEMO_RESET_CONFIRM_REQUIRED` trước khi mở Prisma khi guard thất bại.
+PowerShell:
 
-Reset truncate toàn bộ 31 model application trong `scripts/demo/reset.ts` bằng `RESTART IDENTITY CASCADE`, giữ `_prisma_migrations`, schema và mọi dữ liệu trong database `civicos`. Chỉ Evidence có `metadata.demoNamespace="civicos-demo"` được dọn file vật lý trước khi xóa row; Evidence ngoài namespace và toàn bộ `storage/tiles/**` được giữ nguyên.
+```powershell
+$env:DEMO_DATABASE_URL = "postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public"
+$env:DATABASE_URL = $env:DEMO_DATABASE_URL
+$env:DEMO_RESET_CONFIRM = "1"
+npm run demo:reset
 
-### Tài khoản demo
+# Hoặc xác nhận bằng flag, không cần DEMO_RESET_CONFIRM=1
+Remove-Item Env:DEMO_RESET_CONFIRM -ErrorAction SilentlyContinue
+npm run demo:reset -- --confirm
+```
 
-Mật khẩu của toàn bộ tài khoản dưới đây là `civicos-dev`.
+Lệnh reset chỉ chạy khi đồng thời thỏa hai điều kiện: URL đã chọn có database name chính xác là `civicos_demo`, và có `DEMO_RESET_CONFIRM=1` hoặc `--confirm`. Guard chạy trước khi import Prisma/ mở connection. Target sai trả `DEMO_RESET_REFUSED`; thiếu xác nhận trả `DEMO_RESET_CONFIRM_REQUIRED`; cả hai trường hợp đều không truncate database nào. Nếu không có URL, command trả `DEMO_DATABASE_URL_REQUIRED`.
+
+Reset truncate toàn bộ application model được liệt kê trong `scripts/demo/reset.ts` bằng `RESTART IDENTITY CASCADE`, giữ `_prisma_migrations`, schema và mọi dữ liệu trong database `civicos`. Chỉ Evidence có `metadata.demoNamespace="civicos-demo"` được dọn file vật lý trước khi xoá row; Evidence ngoài namespace và toàn bộ `storage/tiles/**` được giữ nguyên. Đây vẫn là thao tác destructive trên `civicos_demo`, nên kiểm tra URL đã sanitize và database đích trước khi xác nhận.
+
+### Tài khoản development (synthetic)
+
+Các tài khoản dưới đây chỉ là fixture development synthetic do `ensureDevelopmentUsers()`/demo seed tạo trong môi trường không phải production. Email dùng miền `.local`, không phải danh tính thật; không dùng các tài khoản này cho production. Mật khẩu development mặc định của toàn bộ tài khoản là `civicos-dev`.
 
 | Email                             | Role                 | OrganizationUnit     |
 | --------------------------------- | -------------------- | -------------------- |
@@ -319,20 +481,47 @@ Phần này là checklist dữ liệu cần có để demo các màn hình trong
 5. Tạo report/notification qua command; không đưa dữ liệu nhạy cảm plaintext vào fixture.
 6. Chạy worker hoặc `processOutboxUntilIdle`, sau đó kiểm tra `/api/health/worker`.
 
-## Ứng dụng mobile
+## Ứng dụng mobile (Android)
 
-Mobile nằm trong `mobile/`, dùng backend/API của CivicOS và giữ boundary read-only cho E1-004/E1-007.
+Mobile nằm trong `mobile/`, dùng backend/API của CivicOS và giữ boundary read-only cho E1-004/E1-007. Repo hiện có Android project; không có hướng dẫn iOS trong phạm vi này.
+
+Cài dependency, chạy Metro, typecheck, test và build debug:
 
 ```bash
 npm --prefix mobile install
+
+# Terminal 1: Metro
+npm --prefix mobile start
+
+# Terminal 2: checks/build
 npm run mobile:typecheck
 npm run mobile:test
 npm run mobile:build
 ```
 
-Mobile yêu cầu API base URL hợp lệ. Android nhận build property `CIVICOS_API_BASE_URL` trong `mobile/android/app/build.gradle`; emulator Android thường truy cập host machine qua `http://10.0.2.2:3000`. Nếu không có runtime/build-time URL, app báo `CIVICOS_API_BASE_URL_REQUIRED`.
+`npm --prefix mobile start` giữ Metro ở một terminal. Trên Windows, `npm run mobile:build` gọi `mobile/android/gradlew.bat assembleDebug`. Trên Linux/macOS, dùng wrapper tương ứng nếu cần build trực tiếp:
 
-Các surface mobile hiện có gồm auth/main/map, `RelatedInfo` read-only, alarms, dispatches, tasks và settings. `WriteGuard` chặn HTTP write; không thêm CTA tạo/cập nhật cư dân hoặc cơ sở từ mobile trong tranche này.
+```bash
+./mobile/android/gradlew -p mobile/android assembleDebug
+```
+
+### API base URL cho Android
+
+Mobile chỉ nhận base URL `http://` hoặc `https://` qua runtime/build-time injection. Android đọc Gradle property `CIVICOS_API_BASE_URL` trong `mobile/android/app/build.gradle`; không hard-code URL production vào source. Với Android Emulator, host machine được map qua `http://10.0.2.2:3000` (không dùng `localhost` trong app emulator).
+
+Windows PowerShell, cài APK debug và inject URL:
+
+```powershell
+.\mobile\android\gradlew.bat -p .\mobile\android installDebug -PCIVICOS_API_BASE_URL=http://10.0.2.2:3000
+```
+
+Linux/macOS:
+
+```bash
+./mobile/android/gradlew -p mobile/android installDebug -PCIVICOS_API_BASE_URL=http://10.0.2.2:3000
+```
+
+Nếu URL không có hoặc không hợp lệ, app báo `CIVICOS_API_BASE_URL_REQUIRED`; sau khi đổi URL cần build/install lại APK. Các surface mobile hiện có gồm auth/main/map, `RelatedInfo` read-only, alarms, dispatches, tasks và settings. `WriteGuard` chặn HTTP write; không thêm CTA tạo/cập nhật cư dân hoặc cơ sở từ mobile trong tranche này.
 
 ## Routes chính
 
@@ -348,6 +537,12 @@ Các surface mobile hiện có gồm auth/main/map, `RelatedInfo` read-only, ala
 | `/residents`, `/residents/:subjectId`               | Danh sách/chi tiết Subject              |
 | `/residents/:subjectId/records/:recordId`           | Hồ sơ quản lý và activity               |
 | `/residents/reports`                                | Preview/approval/send báo cáo tháng     |
+| `/land`, `/land/parcels`                            | Workspace land và danh sách thửa        |
+| `/land/parcels/:parcelId`                           | Chi tiết thửa                           |
+| `/land/applications`                                | Queue hồ sơ biến động                   |
+| `/land/applications/new`                            | Tạo hồ sơ biến động                     |
+| `/land/applications/:applicationId`                 | Chi tiết, review, sync và approval      |
+| `/public/land/lookup`                               | Public lookup projection                |
 | `/inspections/establishments`                       | Danh sách cơ sở                         |
 | `/inspections/establishments/:establishmentId`      | Chi tiết cơ sở                          |
 | `/inspections/:inspectionId`                        | Checklist, finding, recommendation      |
@@ -364,6 +559,8 @@ Các surface mobile hiện có gồm auth/main/map, `RelatedInfo` read-only, ala
 - `/api/establishments`, `/api/inspections`, `/api/inspections/:inspectionId/commands`
 - `/api/vehicles/registry`, `/api/vehicles/observations`
 - `/api/residents`, `/api/residents/:subjectId/management-records`, `/api/residents/reports`
+- `/api/land/parcels`, `/api/land/parties`, `/api/land/applications`
+- `/api/public/land/lookup`
 - `/api/related-info/*`, `/api/forces/*`
 - `/api/map/config`, `/api/map/health`, `/api/map/layers`, `/api/map/markers`
 - `/api/evidence`, `/api/notifications`, `/api/sync`
@@ -374,6 +571,8 @@ Các surface mobile hiện có gồm auth/main/map, `RelatedInfo` read-only, ala
 
 ### Web/unit/integration
 
+Kiểm tra thông thường không cần PostgreSQL cho các test thuần unit/contract, nhưng Prisma Client vẫn nên được sinh trước. Bộ kiểm tra nhanh tương ứng với cấu hình `package.json`:
+
 ```bash
 npm run prisma:generate
 npm run typecheck
@@ -383,17 +582,28 @@ npm test
 npm run build
 ```
 
-Các test cần PostgreSQL:
+`npm test` chạy Vitest một lần; dùng `npm run test:watch` khi phát triển. Các file có hậu tố/logic PostgreSQL được gate bằng `RUN_DB_TESTS=1`, nên nếu không bật biến này chúng sẽ bị skip chứ không chứng minh database path đã pass.
+
+Các test cần PostgreSQL phải có Docker service `postgres` đang ready, `DATABASE_URL` trỏ tới một database disposable đã chạy migration, và Prisma Client đã được generate:
 
 ```bash
+docker compose up -d postgres
+npm run prisma:generate
+npm run prisma:migrate:deploy
 RUN_DB_TESTS=1 npm test
 ```
 
 PowerShell:
 
 ```powershell
-$env:RUN_DB_TESTS = "1"; npm test
+docker compose up -d postgres
+npm run prisma:generate
+npm run prisma:migrate:deploy
+$env:RUN_DB_TESTS = "1"
+npm test
 ```
+
+Không chạy DB test trên database production hoặc database có dữ liệu cần giữ. Integration `tests/integration/demo-seed-reset.integration.test.ts` có thêm các biến tùy chọn theo đúng code hiện tại: `DEMO_DATABASE_URL` hoặc `DATABASE_URL` cho target demo, `CIVICOS_TEST_DATABASE_URL` hoặc `CIVICOS_E2E_DATABASE_URL` cho một database test không phải `civicos_demo`, và `CIVICOS_DATABASE_URL` cho database non-demo dùng làm snapshot đối chiếu. Test này có destructive reset fixture, chỉ dùng với database disposable.
 
 ### TypeScript Playwright E2E
 
@@ -401,21 +611,21 @@ $env:RUN_DB_TESTS = "1"; npm test
 npm run test:e2e
 ```
 
-Bộ này dùng `playwright.config.ts`, test trong `tests/e2e/` và service script riêng. Nó khác với browser acceptance suite Python.
+Bộ này dùng `playwright.config.ts`, test trong `tests/e2e/` và `scripts/e2e/playwright-services.mjs`. Service script deploy migration trên `DATABASE_URL`, build app, khởi động Next production ở port `3001` cùng worker rồi mới chạy Chromium E2E; không cần tự mở `npm run dev`/`npm run worker` trước khi gọi lệnh này. Dùng một database test/disposable và để port `3001` trống. Nó khác với browser acceptance suite Python.
 
 ### Python browser acceptance suite
 
-Suite chuẩn được hỗ trợ trên Windows native PowerShell; không chạy từ WSL. Xem [`playwright/README.md`](playwright/README.md) để biết đầy đủ setup. Lệnh cơ bản:
+Suite chuẩn được hỗ trợ trên **Windows native PowerShell** với CPython `3.13+`; không chạy từ WSL/Linux path và không phải mobile native/iOS test. Xem [`playwright/README.md`](playwright/README.md) để biết canonical setup, fixture và lifecycle. Lệnh cơ bản:
 
 ```powershell
-cd playwright
-python -m venv .venv
+Set-Location playwright
+py -3.13 -m venv .venv
 .venv\Scripts\python.exe -m pip install -e .
 .venv\Scripts\python.exe -m playwright install chromium
 .venv\Scripts\python.exe -m pytest --browser chromium
 ```
 
-Harness dùng database cô lập `civicos_e2e`, migrate và seed reference identity/configuration; business records được tạo qua UI trong test.
+Harness dùng database riêng `civicos_e2e`, tự generate/migrate và seed reference identity/configuration; business records được tạo qua UI trong test. Mặc định chạy Chromium desktop và touch viewport; `CIVICOS_E2E_DATABASE_URL` chọn host/credential nhưng path được đổi thành `civicos_e2e`, `CIVICOS_E2E_APP_PORT` mặc định `4317`, `CIVICOS_E2E_TIMEOUT` mặc định `90`, và `CIVICOS_E2E_PROJECT=desktop|mobile|all` chọn viewport. Harness hỗ trợ `--recreate-e2e-db` để drop/recreate trước run, `--drop-e2e-db` để xoá sau run và `--keep-e2e-db` để giữ database khi debug. Không nhầm viewport `mobile` của Chromium với ứng dụng React Native.
 
 ## Các lệnh thường dùng
 
@@ -424,6 +634,11 @@ Harness dùng database cô lập `civicos_e2e`, migrate và seed reference ident
 | `npm run dev`                        | Next.js development server     |
 | `npm run build` / `npm run start`    | Build/chạy production server   |
 | `npm run worker`                     | Event/SLA worker               |
+| `docker compose up -d postgres`      | Khởi động PostgreSQL           |
+| `docker compose up -d tileserver`    | Khởi động TileServer GL        |
+| `docker compose ps`                  | Xem trạng thái service         |
+| `docker compose logs -f postgres`    | Theo dõi log PostgreSQL        |
+| `docker compose stop`                | Dừng service, giữ volume       |
 | `npm run prisma:generate`            | Sinh Prisma Client             |
 | `npm run prisma:migrate`             | Migration development          |
 | `npm run prisma:migrate:deploy`      | Apply migration deployment     |
@@ -449,6 +664,7 @@ src/
 │  ├─ inspections/      # Establishment, Inspection, checklist, finding
 │  ├─ vehicles/         # Registry, observation, verification
 │  ├─ residents/        # Subject, management record, report
+│  ├─ land/             # Parcel, party, application và public lookup
 │  ├─ platform/         # GeoPoint, Evidence, SLA, notification, map
 │  ├─ mobile-readonly/  # RelatedInfo, alarm, dispatch, task read models
 │  └─ eventing/         # Event store, outbox, projection, worker
@@ -465,6 +681,70 @@ scripts/demo/           # Demo seed/reset/database guard
 storage/                # Local tile data, bị gitignore
 .scratch/               # Spec/UI design artifacts local
 ```
+
+## Troubleshooting
+
+### Port 3000 hoặc 3001 đã được sử dụng
+
+- `3000` là port mặc định của `npm run dev`/`npm run start` và cũng là URL thường dùng của Android Emulator qua `10.0.2.2`.
+- `3001` là port do TypeScript Playwright service dùng; không chạy một server khác ở đó khi chạy `npm run test:e2e`.
+- `4317` là port mặc định của Python Playwright harness; có thể đổi bằng `CIVICOS_E2E_APP_PORT`.
+
+Kiểm tra process đang giữ port rồi dừng đúng process trước khi chạy lại. Bash/Git Bash:
+
+```bash
+lsof -i :3000
+lsof -i :3001
+```
+
+PowerShell:
+
+```powershell
+Get-NetTCPConnection -LocalPort 3000,3001 -ErrorAction SilentlyContinue
+```
+
+Nếu cần chạy web ở port khác, truyền `npm run dev -- --port 3010` hoặc `npm run start -- --port 3010`, rồi đổi `CIVICOS_API_BASE_URL` tương ứng cho mobile (`http://10.0.2.2:3010` trên emulator).
+
+### Port 5432 hoặc PostgreSQL chưa sẵn sàng
+
+```bash
+docker compose ps postgres
+docker compose logs --tail=100 postgres
+docker compose up -d postgres
+docker compose exec postgres pg_isready -U civicos -d civicos
+```
+
+PowerShell dùng cùng lệnh `docker compose`. Nếu `pg_isready` chưa báo accepting connections, không chạy migration/DB test vội; kiểm tra Docker Desktop, port host và `DATABASE_URL` đang trỏ đúng host/port.
+
+### Prisma Client hoặc migration lỗi
+
+1. Chạy `npm install` và `npm run prisma:generate` từ repository root.
+2. Xác nhận PostgreSQL ready và `DATABASE_URL` có database/schema đúng.
+3. Development dùng `npm run prisma:migrate`; database đã có migration dùng `npm run prisma:migrate:deploy`.
+4. Nếu `.next` chứa build cũ, dừng Next/worker rồi xoá riêng `.next` trước khi build lại; không xoá `prisma/migrations/`.
+
+Không dùng `docker compose down -v` để chữa lỗi Prisma trừ khi đã chấp nhận xoá toàn bộ dữ liệu trong named volume. `DATABASE_URL` của `civicos` và `DEMO_DATABASE_URL` của `civicos_demo` là hai target khác nhau.
+
+### `DEMO_NOW_INVALID`
+
+`demo:seed`/`demo:bootstrap` yêu cầu `DEMO_NOW` là ISO-8601 có timezone, ví dụ `2026-09-28T08:00:00.000Z` hoặc timestamp có offset. Set lại trong process hiện tại rồi chạy lại; đừng dùng ngày giờ dạng local không có timezone. Parser fail trước khi seed/mutation.
+
+### `DEMO_RESET_REFUSED` hoặc `DEMO_RESET_CONFIRM_REQUIRED`
+
+`DEMO_RESET_REFUSED` nghĩa là URL được chọn không có database name chính xác `civicos_demo`; `DEMO_DATABASE_URL` có ưu tiên nên một giá trị sai ở biến này vẫn bị từ chối dù `DATABASE_URL` đúng. `DEMO_RESET_CONFIRM_REQUIRED` nghĩa là chưa có `DEMO_RESET_CONFIRM=1` hoặc `--confirm`. Không đổi tên database bằng cách đoán; sửa đúng URL, xem lại target đã sanitize, rồi xác nhận destructive reset theo [phần demo](#demo-database-và-dữ-liệu-hiện-có).
+
+### `CIVICOS_API_BASE_URL_REQUIRED`
+
+App mobile không tìm thấy base URL `http/https` hợp lệ. Với Android Emulator, build lại bằng `-PCIVICOS_API_BASE_URL=http://10.0.2.2:3000`; với server chạy port khác, thay port tương ứng. Không dùng `localhost` để trỏ về máy host từ emulator.
+
+### Map không có tile hoặc provider bị từ chối
+
+1. Cung cấp asset dưới `storage/tiles/cadn/` (thư mục bị gitignore).
+2. Chạy `docker compose up -d tileserver` và kiểm tra `http://localhost:8080/health`.
+3. Kiểm tra `MAP_TILE_BASE_URL`, `MAP_TILE_STYLE_URL`; style URL phải là `http/https`.
+4. Kiểm tra `MAP_TILE_ATTRIBUTION` có chứa `OpenStreetMap`.
+
+Nếu chỉ cần chạy API/domain, có thể bỏ qua TileServer; lỗi tile không phải lỗi PostgreSQL. Khi đổi map provider, vẫn phải giữ attribution hợp lệ theo guard hiện tại.
 
 ## Tài liệu liên quan
 
