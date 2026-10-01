@@ -35,6 +35,31 @@ export type EvaluatePolicyInput = {
 
 const COMMAND_ROLES: readonly RoleName[] = ['commander', 'superior_commander'];
 
+const LAND_RESOURCE_TYPES: readonly string[] = ['LandChangeApplication'];
+const LAND_COMMAND_ROLES: readonly RoleName[] = ['commune_leader'];
+
+const LAND_PARTY_RESOURCE_TYPE = 'LandParty';
+const LAND_PARTY_SENSITIVE_ROLES: readonly RoleName[] = [
+  'land_officer',
+  'commune_leader',
+];
+
+function isLandResource(resourceType: string): boolean {
+  return (LAND_RESOURCE_TYPES as readonly string[]).includes(resourceType);
+}
+
+function holdsLandCommandRole(roles: readonly RoleName[]): boolean {
+  return roles.some((role) =>
+    (LAND_COMMAND_ROLES as readonly string[]).includes(role),
+  );
+}
+
+function holdsLandPartySensitiveRole(roles: readonly RoleName[]): boolean {
+  return roles.some((role) =>
+    (LAND_PARTY_SENSITIVE_ROLES as readonly string[]).includes(role),
+  );
+}
+
 function unionBaseCapabilities(roles: readonly RoleName[]): Set<Capability> {
   const merged = new Set<Capability>();
   for (const role of roles) {
@@ -112,9 +137,34 @@ export function evaluatePolicy(input: EvaluatePolicyInput): PolicyEvaluation {
     return { allowed: false, reason: 'ROLE_CAPABILITY_DENIED' };
   }
   if (input.action === 'assign' || input.action === 'approve') {
-    if (!holdsCommandRole(input.user.roles)) {
-      return { allowed: false, reason: 'ROLE_CAPABILITY_DENIED' };
+    if (holdsCommandRole(input.user.roles)) {
+      if (
+        !sameOrganizationUnit(
+          input.user.organizationUnitId,
+          input.resource.organizationId,
+        )
+      ) {
+        return { allowed: false, reason: 'ORGANIZATION_SCOPE_DENIED' };
+      }
+      return { allowed: true, reason: 'ALLOWED' };
     }
+    if (
+      holdsLandCommandRole(input.user.roles) &&
+      isLandResource(input.resource.resourceType)
+    ) {
+      if (
+        !sameOrganizationUnit(
+          input.user.organizationUnitId,
+          input.resource.organizationId,
+        )
+      ) {
+        return { allowed: false, reason: 'ORGANIZATION_SCOPE_DENIED' };
+      }
+      return { allowed: true, reason: 'ALLOWED' };
+    }
+    return { allowed: false, reason: 'ROLE_CAPABILITY_DENIED' };
+  }
+  if (input.action === 'read' && holdsCommandRole(input.user.roles)) {
     if (
       !sameOrganizationUnit(
         input.user.organizationUnitId,
@@ -125,12 +175,30 @@ export function evaluatePolicy(input: EvaluatePolicyInput): PolicyEvaluation {
     }
     return { allowed: true, reason: 'ALLOWED' };
   }
-  if (input.action === 'read' && holdsCommandRole(input.user.roles)) {
+  if (
+    input.action === 'read' &&
+    holdsLandCommandRole(input.user.roles) &&
+    isLandResource(input.resource.resourceType)
+  ) {
     if (
       !sameOrganizationUnit(
         input.user.organizationUnitId,
         input.resource.organizationId,
       )
+    ) {
+      return { allowed: false, reason: 'ORGANIZATION_SCOPE_DENIED' };
+    }
+    return { allowed: true, reason: 'ALLOWED' };
+  }
+  if (
+    input.action === 'read_sensitive' &&
+    input.resource.resourceType === LAND_PARTY_RESOURCE_TYPE &&
+    holdsLandPartySensitiveRole(input.user.roles)
+  ) {
+    if (
+      !input.user.organizationUnitId ||
+      !input.resource.organizationId ||
+      input.user.organizationUnitId !== input.resource.organizationId
     ) {
       return { allowed: false, reason: 'ORGANIZATION_SCOPE_DENIED' };
     }
@@ -185,6 +253,20 @@ async function resourceOrganizationId(
   resource: ResourceRef,
 ): Promise<string | undefined> {
   if (resource.organizationId) return resource.organizationId;
+  if (resource.resourceType === 'LandChangeApplication') {
+    const application = await client.landChangeApplication.findUnique({
+      where: { id: resource.resourceId },
+      select: { organizationId: true },
+    });
+    return application?.organizationId ?? undefined;
+  }
+  if (resource.resourceType === 'LandParcel') {
+    const parcel = await client.landParcel.findUnique({
+      where: { id: resource.resourceId },
+      select: { organizationId: true },
+    });
+    return parcel?.organizationId ?? undefined;
+  }
   const aggregateType = resourceAggregateTypes[resource.resourceType];
   if (!aggregateType) return undefined;
   const event = await client.eventRecord.findFirst({

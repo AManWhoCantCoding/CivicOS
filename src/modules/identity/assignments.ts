@@ -19,13 +19,23 @@ function actorSnapshot(actor: IdentityUser) {
   };
 }
 
+function isLandReviewAssignment(input: AssignmentInput): boolean {
+  return (
+    input.task === 'land_review' &&
+    input.resourceType === 'LandChangeApplication'
+  );
+}
+
 export async function grantAssignments(
   tx: Prisma.TransactionClient,
   input: AssignmentInput,
   actor: IdentityUser,
   allowedRoles: string[] = ['commander', 'superior_commander'],
 ) {
-  requireRole(actor, ...allowedRoles);
+  const effectiveRoles = isLandReviewAssignment(input)
+    ? [...new Set([...allowedRoles, 'commune_leader'])]
+    : allowedRoles;
+  requireRole(actor, ...effectiveRoles);
   if (!input.assigneeUserIds.length) throw new Error('ASSIGNEE_REQUIRED');
   if (!input.task.trim()) throw new Error('TASK_REQUIRED');
   if (
@@ -182,7 +192,7 @@ export async function revokeAssignment(
   actor: IdentityUser,
   reason: string,
 ) {
-  requireRole(actor, 'commander', 'superior_commander');
+  requireRole(actor, 'commander', 'superior_commander', 'commune_leader');
   if (!reason.trim()) throw new Error('REVOKE_REASON_REQUIRED');
 
   return prisma.$transaction(async (tx) => {
@@ -190,6 +200,12 @@ export async function revokeAssignment(
       where: { id: assignmentId },
     });
     if (!existing) throw new Error('ASSIGNMENT_NOT_FOUND');
+    const isLandReview =
+      existing.resourceType === 'LandChangeApplication' &&
+      existing.task === 'land_review';
+    if (!isLandReview) {
+      requireRole(actor, 'commander', 'superior_commander');
+    }
     if (
       actor.organizationUnitId &&
       existing.organizationId &&

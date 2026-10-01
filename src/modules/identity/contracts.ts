@@ -7,7 +7,10 @@ export type RoleName =
   | 'supervisor'
   | 'superior_officer'
   | 'superior_commander'
-  | 'system_operator';
+  | 'system_operator'
+  | 'land_officer'
+  | 'commune_leader'
+  | 'citizen';
 
 export type Capability =
   'read' | 'mutate' | 'assign' | 'approve' | 'read_sensitive';
@@ -62,6 +65,9 @@ export const ROLE_CATALOG: readonly RoleName[] = [
   'superior_officer',
   'superior_commander',
   'system_operator',
+  'land_officer',
+  'commune_leader',
+  'citizen',
 ];
 
 export const ROLE_BASE_CAPABILITIES: Record<RoleName, readonly Capability[]> = {
@@ -74,6 +80,9 @@ export const ROLE_BASE_CAPABILITIES: Record<RoleName, readonly Capability[]> = {
   superior_officer: ['read', 'mutate', 'read_sensitive'],
   supervisor: [],
   system_operator: [],
+  land_officer: ['read', 'mutate', 'read_sensitive'],
+  commune_leader: ['read', 'read_sensitive', 'assign', 'approve'],
+  citizen: [],
 };
 
 export const ASSIGNMENT_TASKS: readonly string[] = [
@@ -82,6 +91,7 @@ export const ASSIGNMENT_TASKS: readonly string[] = [
   'vehicle_verification',
   'resident_followup',
   'mobile_read',
+  'land_review',
 ];
 
 const BUSINESS_ROLES: readonly RoleName[] = [
@@ -100,6 +110,7 @@ export const TASK_CAPABILITIES: Record<string, readonly Capability[]> = {
   vehicle_verification: ['read', 'mutate', 'read_sensitive'],
   resident_followup: ['read', 'mutate', 'read_sensitive'],
   mobile_read: ['read'],
+  land_review: ['read', 'mutate', 'read_sensitive'],
 };
 
 export const TASK_ALLOWED_ROLES: Record<string, readonly RoleName[]> = {
@@ -108,6 +119,7 @@ export const TASK_ALLOWED_ROLES: Record<string, readonly RoleName[]> = {
   vehicle_verification: BUSINESS_ROLES,
   resident_followup: BUSINESS_ROLES,
   mobile_read: BUSINESS_ROLES,
+  land_review: ['land_officer'],
 };
 
 export function isTaskCompatibleWithRoles(

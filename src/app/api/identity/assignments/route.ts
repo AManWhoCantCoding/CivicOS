@@ -30,7 +30,6 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!current)
     return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
   try {
-    requireRole(current, 'commander', 'superior_commander');
     const body = (await request.json()) as {
       resourceType?: string;
       resourceId?: string;
@@ -38,6 +37,14 @@ export async function POST(request: Request): Promise<NextResponse> {
       assigneeUserIds?: string[];
       organizationId?: string;
     };
+    const isLandReview =
+      body.resourceType === 'LandChangeApplication' &&
+      body.task === 'land_review';
+    if (isLandReview) {
+      requireRole(current, 'commander', 'superior_commander', 'commune_leader');
+    } else {
+      requireRole(current, 'commander', 'superior_commander');
+    }
     if (
       !body.resourceType ||
       !body.resourceId ||

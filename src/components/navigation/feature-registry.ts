@@ -1,7 +1,13 @@
 import { ROLE_BASE_CAPABILITIES } from '@/modules/identity/contracts';
 
 export type ModuleId =
-  'incidents' | 'inspections' | 'vehicles' | 'identity' | 'map' | 'residents';
+  | 'incidents'
+  | 'inspections'
+  | 'vehicles'
+  | 'identity'
+  | 'map'
+  | 'residents'
+  | 'land';
 
 export type ModuleDef = {
   id: ModuleId;
@@ -73,6 +79,12 @@ export const MODULES: Record<ModuleId, ModuleDef> = {
     label: 'Cư dân đặc biệt',
     homeHref: '/residents',
     description: 'Theo dõi tạm trú, người nước ngoài và tái hòa nhập.',
+  },
+  land: {
+    id: 'land',
+    label: 'Đất đai',
+    homeHref: '/land/parcels',
+    description: 'Không gian thửa đất và chủ thể nội bộ theo phạm vi đơn vị.',
   },
 };
 
@@ -238,6 +250,36 @@ export const FEATURES: readonly FeatureDef[] = [
     ],
     activeExact: '/map',
     activePrefixes: ['/map/'],
+  },
+  {
+    id: 'land-parcel-workspace',
+    moduleId: 'land',
+    label: 'Thửa đất · Chủ thể',
+    href: '/land/parcels',
+    visibleRoles: ['land_officer', 'commune_leader'],
+    requiresTask: 'land_review',
+    bypassTaskRoles: ['commune_leader'],
+    activeExact: '/land/parcels',
+    activePrefixes: ['/land/parcels/'],
+  },
+  {
+    id: 'land-application-queue',
+    moduleId: 'land',
+    label: 'Hồ sơ biến động',
+    href: '/land/applications',
+    visibleRoles: ['land_officer', 'commune_leader'],
+    requiresTask: 'land_review',
+    bypassTaskRoles: ['commune_leader'],
+    activeExact: '/land/applications',
+    activePrefixes: ['/land/applications/', '/land'],
+  },
+  {
+    id: 'land-application-create',
+    moduleId: 'land',
+    label: 'Tạo hồ sơ biến động',
+    href: '/land/applications/new',
+    visibleRoles: ['land_officer'],
+    activeExact: '/land/applications/new',
   },
 ];
 
