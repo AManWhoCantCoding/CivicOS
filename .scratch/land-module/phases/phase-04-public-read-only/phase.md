@@ -1,10 +1,10 @@
 # Phase 04 — Public lookup & read-only clients
 
 - **Workflow version:** V6
-- **Effective status:** pending-gate
+- **Effective status:** done
 - **V3 source:** `phase-04-public-read-only.md` (migrated; ticket contracts split below)
 - **Current frontier:** none; LND-14–LND-16 accepted
-- **Gate:** pending; ticket-level verification exists for LND-14–LND-16
+- **Gate:** `PHASE-PASS`; full verification completed after LND-14–LND-16
 - **Blocked by:** none; Phase 04 gate is next.
 
 ## Phạm vi phase
@@ -71,5 +71,7 @@ Triển khai public lookup projection/rate limit và các UI read-only web/mobil
 
 - LND-14 được accept sau `e331951`; LND-15 được accept sau `c661456`.
 - LND-16 được accept sau `af2132e`.
-- Phase 04 đủ điều kiện chạy phase gate; chưa dispatch Phase 05 trước khi gate hoàn tất.
-- LND-17/LND-18/LND-19 vẫn blocked bởi LND-15/LND-16 và Phase 04 completion.
+- Phase 04 gate đạt `PHASE-PASS` sau khi toàn bộ ticket-level verification và full verification hoàn tất.
+- Full verification: `CIVICOS_API_BASE_URL=http://localhost:3001 npx vitest run` — `440 passed`, `270 skipped`; `npm run test:e2e` — `91 passed`, `1 skipped`; `npm run build` — pass; `npm run typecheck` — pass; `npm run lint` — pass with 4 pre-existing warnings; `npm run format:check` — pass; `npx prisma generate` và SQL smoke test — pass; mobile tests `11 suites/26 tests`, typecheck và Android build `BUILD SUCCESSFUL`.
+- Không có `BLOCKED-CONTRACT`; `docs/design/land-module/LOCK.json` ở `stage: full`.
+- Phase 05 được mở khóa sau phase gate; LND-17/LND-18/LND-19 không còn bị block bởi Phase 04 completion.
