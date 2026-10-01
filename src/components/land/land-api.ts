@@ -1,7 +1,7 @@
 // LND-05 client seam cho screen-04 + LND-09 cho screen-01/02: chỉ gọi các
 // endpoint nội bộ đã lock trong api-contract (GET parties, GET parcels,
-// GET parcels/{parcelId}, GET/POST applications).
-// Không thêm endpoint/field; authorization do server policy quyết định.
+// GET parcels/{parcelId}, GET/POST applications) và public lookup projection.
+// Authorization do server policy quyết định; public lookup không yêu cầu session.
 
 import type {
   EncumbranceView,
@@ -18,6 +18,7 @@ import type {
 export const LAND_PARCELS_URL = '/api/land/parcels';
 export const LAND_PARTIES_URL = '/api/land/parties';
 export const LAND_APPLICATIONS_URL = '/api/land/applications';
+export const LAND_PUBLIC_LOOKUP_URL = '/api/public/land/lookup';
 
 export function parcelDetailUrl(parcelId: string): string {
   return `/api/land/parcels/${encodeURIComponent(parcelId)}`;
@@ -44,6 +45,107 @@ async function readJson(response: Response): Promise<{
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+export type PublicLandLookupMode = 'applicationCode' | 'parcelCode';
+
+export type PublicLandLookup = {
+  applicationCode: string;
+  parcelCode: string;
+  mapSheetNumber: string;
+  parcelNumber: string;
+  status: string;
+  submittedAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+};
+
+export function buildPublicLandLookupQuery(
+  mode: PublicLandLookupMode,
+  code: string,
+): string | null {
+  const trimmed = code.trim();
+  if (!trimmed || (mode !== 'applicationCode' && mode !== 'parcelCode')) {
+    return null;
+  }
+  const params = new URLSearchParams();
+  params.set(mode, trimmed);
+  return `${LAND_PUBLIC_LOOKUP_URL}?${params.toString()}`;
+}
+
+function readPublicLandLookup(value: unknown): PublicLandLookup | null {
+  if (!isRecord(value)) return null;
+  if (
+    typeof value.applicationCode !== 'string' ||
+    typeof value.parcelCode !== 'string' ||
+    typeof value.mapSheetNumber !== 'string' ||
+    typeof value.parcelNumber !== 'string' ||
+    typeof value.status !== 'string' ||
+    typeof value.submittedAt !== 'string' ||
+    typeof value.updatedAt !== 'string' ||
+    (value.completedAt !== null && typeof value.completedAt !== 'string')
+  ) {
+    return null;
+  }
+  return {
+    applicationCode: value.applicationCode,
+    parcelCode: value.parcelCode,
+    mapSheetNumber: value.mapSheetNumber,
+    parcelNumber: value.parcelNumber,
+    status: value.status,
+    submittedAt: value.submittedAt,
+    updatedAt: value.updatedAt,
+    completedAt: value.completedAt,
+  };
+}
+
+export async function fetchPublicLandLookup(
+  mode: PublicLandLookupMode,
+  code: string,
+): Promise<{
+  status: number;
+  lookup: PublicLandLookup | null;
+  simulated: boolean;
+  error: LandApiError | null;
+}> {
+  const url = buildPublicLandLookupQuery(mode, code);
+  if (!url) {
+    return {
+      status: 400,
+      lookup: null,
+      simulated: false,
+      error: { status: 400, code: 'LAND_LOOKUP_QUERY_INVALID' },
+    };
+  }
+  try {
+    const response = await fetch(url, { cache: 'no-store' });
+    const { status, body } = await readJson(response);
+    if (!response.ok || !isRecord(body)) {
+      return {
+        status,
+        lookup: null,
+        simulated: false,
+        error: { status, code: readErrorCode(body) },
+      };
+    }
+    const lookup = readPublicLandLookup(body.lookup);
+    if (body.simulated !== true || !lookup) {
+      return {
+        status,
+        lookup: null,
+        simulated: false,
+        error: { status, code: readErrorCode(body) },
+      };
+    }
+    return { status, lookup, simulated: true, error: null };
+  } catch {
+    return {
+      status: 0,
+      lookup: null,
+      simulated: false,
+      error: { status: null, code: null },
+    };
+  }
 }
 
 export async function fetchParcelList(query: string): Promise<{
