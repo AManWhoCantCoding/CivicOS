@@ -298,6 +298,142 @@ export function mapCreateErrorToMessage(
   return 'Không gửi được hồ sơ. Thử lại; nội dung đã nhập được giữ nguyên.';
 }
 
+// LND-13 screen-03 processing detail projection (theo screen-03.md handoff).
+// Detail mở rộng Summary với changePayload an toàn và links; timeline giữ
+// nguyên shape đã lock ở GET timeline (eventType/aggregateVersion/occurredAt).
+export type ApplicationDetailView = ApplicationSummaryView & {
+  changePayload: Record<string, unknown>;
+  parties: Array<{
+    partyId: string;
+    partyRole: string;
+    sharePercent: string | null;
+  }>;
+  parcels: Array<{ parcelId: string; parcelRole: string }>;
+};
+
+export type TimelineEventView = {
+  eventId: string;
+  eventType: string;
+  aggregateType: string;
+  aggregateId: string;
+  aggregateVersion: number;
+  actor: {
+    id: string;
+    name: string;
+    role: string | null;
+    organizationId: string | null;
+  } | null;
+  payload: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  occurredAt: string;
+};
+
+// Terminal states chỉ đọc theo screen-03: completed/rejected.
+export function isTerminalApplicationStatus(status: string): boolean {
+  return status === 'completed' || status === 'rejected';
+}
+
+export type ProcessingVisibility = {
+  showSync: boolean;
+  showRetry: boolean;
+  showApprove: boolean;
+  showReject: boolean;
+  readOnly: boolean;
+  needsAssignment: boolean;
+};
+
+// Phản ánh action matrix screen-03, không tự quyết định quyền:
+// - assigned officer (land_review) + in_review → Đồng bộ mô phỏng;
+// - assigned officer + sync_failed → Thử lại;
+// - leader cùng OU + pending_approval → Duyệt/Từ chối;
+// - completed/rejected → read-only; officer không bao giờ thấy Duyệt/Từ chối.
+// API vẫn là boundary thực thi; helper chỉ quyết định hiển thị.
+export function resolveProcessingActions(input: {
+  roles: readonly string[];
+  hasAssignment: boolean;
+  sameOrganizationUnit: boolean;
+  status: string;
+}): ProcessingVisibility {
+  const readOnly = isTerminalApplicationStatus(input.status);
+  if (readOnly) {
+    return {
+      showSync: false,
+      showRetry: false,
+      showApprove: false,
+      showReject: false,
+      readOnly: true,
+      needsAssignment: false,
+    };
+  }
+  const isOfficer = input.roles.includes('land_officer');
+  const isLeader = input.roles.includes('commune_leader');
+  const showSync =
+    isOfficer &&
+    input.hasAssignment &&
+    input.sameOrganizationUnit &&
+    input.status === 'in_review';
+  const showRetry =
+    isOfficer &&
+    input.hasAssignment &&
+    input.sameOrganizationUnit &&
+    input.status === 'sync_failed';
+  const showApprove =
+    isLeader &&
+    input.sameOrganizationUnit &&
+    input.status === 'pending_approval';
+  const showReject =
+    isLeader &&
+    input.sameOrganizationUnit &&
+    input.status === 'pending_approval';
+  const needsAssignment =
+    isOfficer &&
+    !isLeader &&
+    !input.hasAssignment &&
+    (input.status === 'submitted' ||
+      input.status === 'in_review' ||
+      input.status === 'sync_failed');
+  return {
+    showSync,
+    showRetry,
+    showApprove,
+    showReject,
+    readOnly: false,
+    needsAssignment,
+  };
+}
+
+// Reject bắt buộc reason không trắng theo screen-03 modal behavior.
+export function isRejectReasonValid(reason: string): boolean {
+  return reason.trim().length > 0;
+}
+
+// Thông điệp tiếng Việt cho sync/retry/approve/reject; offline ưu tiên trước
+// error để giữ input và chặn mutation. Không bao giờ báo success giả.
+export function mapProcessingErrorToMessage(
+  code: string | null,
+  status: number | null,
+): string {
+  if (status === null || status === 0)
+    return 'Đang ngoại tuyến. Thao tác chưa được gửi; dữ liệu đã tải được giữ nguyên, cần kết nối để thử lại.';
+  if (code === 'LAND_VERSION_CONFLICT')
+    return 'Phiên bản hồ sơ đã thay đổi, vui lòng tải lại rồi thử lại.';
+  if (code === 'LAND_SYNC_FAILED')
+    return 'Đồng bộ mô phỏng Cơ sở dữ liệu quốc gia thất bại. Hồ sơ giữ nguyên trạng thái lỗi đồng bộ; kiểm tra mã lỗi rồi thử lại.';
+  if (code === 'LAND_INVALID_TRANSITION')
+    return 'Trạng thái hồ sơ không cho phép thực hiện thao tác này. Tải lại để xem trạng thái mới nhất.';
+  if (code === 'LAND_ASSIGNMENT_REQUIRED')
+    return 'Bạn chưa được phân công xử lý hồ sơ này. Cần Assignment land_review còn hiệu lực trong phạm vi đơn vị.';
+  if (code === 'LAND_FORBIDDEN')
+    return 'Tài khoản không có quyền thực hiện thao tác này trong phạm vi đơn vị hiện tại.';
+  if (code === 'LAND_UNAUTHENTICATED')
+    return 'Bạn cần đăng nhập để xử lý hồ sơ.';
+  if (code === 'LAND_APPLICATION_NOT_FOUND')
+    return 'Không tìm thấy hồ sơ biến động yêu cầu.';
+  if (code === 'LAND_INVALID_REQUEST')
+    return 'Dữ liệu gửi lên chưa hợp lệ. Tải lại chi tiết rồi thử lại; nội dung đã nhập được giữ nguyên.';
+  return 'Không thực hiện được thao tác. Tải lại chi tiết rồi thử lại.';
+}
+
 // Khóa idempotency tạo một lần cho mỗi form, tái dùng khi retry.
 export function generateIdempotencyKey(): string {
   try {
