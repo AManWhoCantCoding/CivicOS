@@ -2,7 +2,7 @@
 
 - **Ticket ID:** LND-13
 - **Status:** needs-triage
-- **V6 effective status:** blocked
+- **V6 effective status:** pending/frontier
 - **V3 status:** needs-triage
 - **Blocked by:** LND-11, LND-12
 - **Loại:** feature
@@ -11,7 +11,7 @@
 - **File được phép sửa:** `src/app/land/applications/[applicationId]/**`, `src/components/land/**`, `tests/land-ui/**`
 - **File cấm sửa:** `.env`, `.brain/**`, `docs/design/**`, `.scratch/land-module/ui/**`
 - **Demo path:** Officer xử lý sync/retry; leader approve/reject; terminal detail chỉ read-only.
-- **Evidence/commit:** chưa có; blocked bởi LND-11/LND-12.
+- **Evidence/commit:** not started; dependencies LND-11/LND-12 completed in `58e887e`/`862de7a`.
 
 ## Mô tả
 
@@ -48,4 +48,4 @@ Hoàn thiện screen-03 application detail, timeline và role/state-gated sync/r
 
 ## V6 reconciliation
 
-- Effective status `blocked`; no implementation or evidence is attributed to LND-13.
+- LND-11 and LND-12 are complete; this ticket is the current frontier and may be dispatched after contract preflight.

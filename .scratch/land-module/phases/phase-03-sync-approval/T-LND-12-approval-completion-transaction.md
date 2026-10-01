@@ -2,7 +2,7 @@
 
 - **Ticket ID:** LND-12
 - **Status:** needs-triage
-- **V6 effective status:** pending/frontier
+- **V6 effective status:** done
 - **V3 status:** needs-triage
 - **Blocked by:** LND-11
 - **Loại:** feature
@@ -11,7 +11,7 @@
 - **File được phép sửa:** `src/modules/land/**`, `src/app/api/land/applications/[applicationId]/approve/**`, `src/app/api/land/applications/[applicationId]/reject/**`, `tests/land/**`
 - **File cấm sửa:** `.env`, `.brain/**`, `docs/design/**`, `prisma/schema.prisma`
 - **Demo path:** Leader approve hoàn tất hoặc reject có reason; tất cả mutation/event/audit atomic.
-- **Evidence/commit:** not started; dependency LND-11 completed in `58e887e`.
+- **Evidence/commit:** `862de7a` (`feat: add land approval decisions`); full land regression passed.
 
 ## Mô tả
 
@@ -48,4 +48,5 @@ Implement leader approve/reject và completed land mutation cho bốn change typ
 
 ## V6 reconciliation
 
-- LND-11 is complete; this ticket is the current frontier and may be dispatched after contract preflight.
+- User-authorized synchronous sync interpretation is applied: approval starts from `pending_approval`.
+- Accepted after `862de7a`; LND-13 is now the next eligible frontier ticket.
