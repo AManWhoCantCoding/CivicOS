@@ -1,10 +1,10 @@
 # Phase 03 — Mock sync & approval
 
 - **Workflow version:** V6
-- **Effective status:** blocked-infra
+- **Effective status:** done
 - **V3 source:** `phase-03-sync-approval.md` (migrated; ticket contracts split below)
 - **Current frontier:** none; LND-10–LND-13 accepted
-- **Gate:** `BLOCKED-INFRA`; ticket-level verification exists for LND-10–LND-13, but the repository-wide suite requires `CIVICOS_API_BASE_URL`.
+- **Gate:** `PHASE-PASS`; ticket-level verification and repository-wide verification passed for LND-10–LND-13.
 
 ## Phạm vi phase
 
@@ -45,6 +45,5 @@ Tích hợp `NationalLandAdapter` mock đồng bộ, success/failure/retry idemp
 - LND-10 được chấp nhận `done` theo `.brain/evidence/LND-10/review.md`, tests/digest và shared commit `e81c252`.
 - LND-11 được accept sau `58e887e`; quyết định synchronous mock được ghi trong workflow-status.
 - LND-12 được accept sau `862de7a`; LND-13 được accept sau `8ec844a`.
-- Phase 03 đủ điều kiện chạy phase gate; chưa dispatch Phase 04 trước khi gate hoàn tất.
-- Phase gate verification: land scope passed (`154 passed`, `75 skipped`), typecheck/lint/format/build passed, E2E passed (`91 passed`, `1 skipped`), but full `npm test` is `BLOCKED-INFRA` because `tests/mobile/readonly-http.contract.test.ts` requires the unavailable `CIVICOS_API_BASE_URL`.
-- `node scripts/verify.mjs 05-mobile-readonly-client --check --scope=mobile` passes independently; no code repair is indicated by the mobile verifier failure observed during the concurrent full run.
+- Phase 03 gate: `PHASE-PASS`; full `npm test` passed (`426 passed`, `270 skipped`), land scope passed (`154 passed`, `75 skipped`), typecheck/lint/format/build passed, E2E passed (`91 passed`, `1 skipped`). The HTTP contract tests ran against the local built server with `CIVICOS_API_BASE_URL=http://localhost:3001`.
+- Phase 04 is now unlocked; LND-14 is the next frontier after contract preflight.

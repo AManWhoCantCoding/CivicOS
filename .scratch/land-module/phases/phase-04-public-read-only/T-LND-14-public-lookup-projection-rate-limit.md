@@ -2,7 +2,7 @@
 
 - **Ticket ID:** LND-14
 - **Status:** needs-triage
-- **V6 effective status:** blocked
+- **V6 effective status:** pending/frontier
 - **V3 status:** needs-triage
 - **Blocked by:** LND-06, LND-08, LND-11, LND-12
 - **Loại:** feature
@@ -11,7 +11,7 @@
 - **File được phép sửa:** `src/modules/land/**`, `src/app/api/public/land/lookup/**`, `tests/land/**`, `tests/integration/**`
 - **File cấm sửa:** `.env`, `.brain/**`, `docs/design/**`, `docs/research/**`
 - **Demo path:** Anonymous user lookup bằng một application/parcel code nhận projection tối thiểu.
-- **Evidence/commit:** chưa có.
+- **Evidence/commit:** chưa có; Phase 03 completed with `PHASE-PASS`.
 
 ## Mô tả
 
@@ -48,4 +48,4 @@ Tạo public lookup read projection, mutual-exclusive query validation, rate lim
 
 ## V6 reconciliation
 
-- Effective status `blocked`; no implementation/evidence/commit exists.
+- Effective status `pending/frontier`; eligible after contract preflight, with no implementation/evidence/commit yet.
