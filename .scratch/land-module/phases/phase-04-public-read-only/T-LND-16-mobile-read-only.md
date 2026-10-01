@@ -2,7 +2,7 @@
 
 - **Ticket ID:** LND-16
 - **Status:** needs-triage
-- **V6 effective status:** blocked
+- **V6 effective status:** done
 - **V3 status:** needs-triage
 - **Blocked by:** LND-08, LND-14
 - **Loại:** feature
@@ -11,7 +11,7 @@
 - **File được phép sửa:** `mobile/src/features/land/**`, `mobile/src/navigation/AppNavigator.tsx`, `mobile/src/api/**`, `mobile/src/features/**/__tests__/**`
 - **File cấm sửa:** `.env`, `.brain/**`, `docs/design/**`, `src/**`, `.scratch/land-module/ui/**`
 - **Demo path:** Mobile đọc lookup/application/parcel summary/timeline; không có bất kỳ write action nào.
-- **Evidence/commit:** chưa có.
+- **Evidence/commit:** `af2132e` (`feat: add mobile land read-only flow`); focused/full mobile tests, typecheck and Android build passed.
 
 ## Mô tả
 
@@ -19,17 +19,17 @@ Thêm mobile land read-only lookup/summary/timeline theo policy, masked/offline 
 
 ## Các bước thực hiện
 
-- [ ] Thêm navigation entry và typed API client read methods.
-- [ ] Dựng lookup/summary/timeline read-only views.
-- [ ] Dùng `StateMessage`, `OfflineBanner`, `MaskedValue`.
-- [ ] Ẩn/bỏ mọi create/review/sync/approve/reject/upload controls.
-- [ ] Viết state/role/read-only tests.
+- [x] Thêm navigation entry và typed API client read methods.
+- [x] Dựng lookup/summary/timeline read-only views.
+- [x] Dùng `StateMessage`, `OfflineBanner`, `MaskedValue`.
+- [x] Ẩn/bỏ mọi create/review/sync/approve/reject/upload controls.
+- [x] Viết state/role/read-only tests.
 
 ## Acceptance Criteria
 
-- [ ] Given mobile API trả lookup/summary hợp lệ, When mở screen-06, Then application/parcel/timeline render read-only và field nhạy cảm masked.
-- [ ] Given forbidden/offline/error/empty, When state xảy ra, Then đúng state surface hiển thị và không lộ resource.
-- [ ] Given bất kỳ role nào, When screen-06 render, Then không có control create/review/sync/retry/approve/reject/upload.
+- [x] Given mobile API trả lookup/summary hợp lệ, When mở screen-06, Then application/parcel/timeline render read-only và field nhạy cảm masked.
+- [x] Given forbidden/offline/error/empty, When state xảy ra, Then đúng state surface hiển thị và không lộ resource.
+- [x] Given bất kỳ role nào, When screen-06 render, Then không có control create/review/sync/retry/approve/reject/upload.
 
 ## Test-skeleton
 
@@ -39,7 +39,7 @@ Thêm mobile land read-only lookup/summary/timeline theo policy, masked/offline 
 
 ## Rubric bắt buộc
 
-- [ ] Bám screen-06 handoff và existing mobile read-only/write guard; không thêm write queue.
+- [x] Bám screen-06 handoff và existing mobile read-only/write guard; không thêm write queue.
 
 ## Traceability
 
@@ -48,4 +48,4 @@ Thêm mobile land read-only lookup/summary/timeline theo policy, masked/offline 
 
 ## V6 reconciliation
 
-- Effective status `blocked`; no implementation/evidence/commit exists.
+- Effective status `done` after `af2132e`; mobile lookup/summary/timeline is read-only with policy, masking and state guards.
