@@ -3,9 +3,9 @@
 - **Workflow version:** V6
 - **Effective status:** in-progress
 - **V3 source:** `phase-04-public-read-only.md` (migrated; ticket contracts split below)
-- **Current frontier:** LND-14
-- **Gate:** not run; contract preflight required for LND-14
-- **Blocked by:** none after Phase 03 `PHASE-PASS`.
+- **Current frontier:** LND-15 and LND-16
+- **Gate:** not run; both tickets are eligible after LND-14
+- **Blocked by:** none for LND-15/LND-16 after LND-14 completion.
 
 ## Phạm vi phase
 
@@ -57,9 +57,9 @@ Triển khai public lookup projection/rate limit và các UI read-only web/mobil
 
 | ID | File V6 | Effective status | V3 status | Blocked by |
 |---|---|---|---|---|
-| LND-14 | `T-LND-14-public-lookup-projection-rate-limit.md` | pending/frontier | needs-triage | LND-06, LND-08, LND-11, LND-12 |
-| LND-15 | `T-LND-15-web-public-lookup.md` | blocked | needs-triage | LND-14 |
-| LND-16 | `T-LND-16-mobile-read-only.md` | blocked | needs-triage | LND-08, LND-14 |
+| LND-14 | `T-LND-14-public-lookup-projection-rate-limit.md` | done | needs-triage | LND-06, LND-08, LND-11, LND-12 |
+| LND-15 | `T-LND-15-web-public-lookup.md` | pending/frontier | needs-triage | LND-14 |
+| LND-16 | `T-LND-16-mobile-read-only.md` | pending/frontier | needs-triage | LND-08, LND-14 |
 
 ## Phụ thuộc giữa phase
 
@@ -69,5 +69,5 @@ Triển khai public lookup projection/rate limit và các UI read-only web/mobil
 
 ## V6 reconciliation
 
-- LND-14 là ticket frontier sau Phase 03 `PHASE-PASS`; chưa có source/evidence/commit và cần contract preflight.
-- LND-15/LND-16 vẫn blocked bởi LND-14.
+- LND-14 được accept sau `e331951`; LND-15 và LND-16 là hai ticket frontier có thể triển khai sau contract preflight.
+- LND-17/LND-18/LND-19 vẫn blocked bởi LND-15/LND-16 và Phase 04 completion.

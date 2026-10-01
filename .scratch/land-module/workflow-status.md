@@ -28,14 +28,14 @@
 | Phase 01 — Foundation & access | done | LND-01–LND-05 reconciled; no standalone Phase 01 gate artifact |
 | Phase 02 — Intake & review | done | `PHASE-PASS`; LND-06–LND-09 |
 | Phase 03 — Mock sync & approval | done | `PHASE-PASS`; LND-10–LND-13 |
-| Phase 04 — Public lookup & read-only clients | in-progress | current frontier: LND-14; contract preflight required |
+| Phase 04 — Public lookup & read-only clients | in-progress | current frontier: LND-15/LND-16; contract preflight required |
 | Phase 05 — Evidence & hardening | pending/blocked | blocked by Phase 01–04 and EvidenceStorageAdapter flow |
 
 ### Effective ticket status
 
-- **done:** LND-01, LND-02, LND-03, LND-04, LND-05, LND-06, LND-07, LND-08, LND-09, LND-10, LND-11, LND-12, LND-13.
-- **pending/frontier:** LND-14; contract preflight required.
-- **blocked:** LND-15, LND-16, LND-17, LND-18, LND-19.
+- **done:** LND-01, LND-02, LND-03, LND-04, LND-05, LND-06, LND-07, LND-08, LND-09, LND-10, LND-11, LND-12, LND-13, LND-14.
+- **pending/frontier:** LND-15, LND-16; contract preflight required.
+- **blocked:** LND-17, LND-18, LND-19.
 
 ### Traceability notes
 
@@ -44,6 +44,7 @@
 - LND-11: implementation/verification commit `58e887e`; tests are in `tests/land/lnd11-sync-retry.test.ts` and contract traceability is in `T-LND-11-sync-retry-command-persistence.md`.
 - LND-12: implementation/verification commit `862de7a`; tests are in `tests/land/lnd12-approval-completion.test.ts` and contract traceability is in `T-LND-12-approval-completion-transaction.md`.
 - LND-13: implementation/verification commit `8ec844a`; tests are in `tests/land-ui/lnd13-application-processing-actions.test.ts` and contract traceability is in `T-LND-13-web-application-processing-actions.md`.
+- LND-14: implementation/verification commit `e331951`; tests are in `tests/land/lnd14-public-lookup.test.ts` and contract traceability is in `T-LND-14-public-lookup-projection-rate-limit.md`.
 - Phase 03 gate: `PHASE-PASS`; full suite `426 passed`, land scope `154 passed`, E2E `91 passed`, build/typecheck/lint/format passed using a local backend at `http://localhost:3001`.
 - `.brain/evidence/LND-10/files-changed.md:16-17` still says no commit was created; this conflicts with git history (`e81c252` contains the three LND-10 source/test files) and is preserved as an evidence discrepancy, not silently edited.
 - LND-03/LND-04/LND-05: disposition explicitly recorded in their V6 ticket files; no standalone evidence directory was invented.

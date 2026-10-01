@@ -2,7 +2,7 @@
 
 - **Ticket ID:** LND-14
 - **Status:** needs-triage
-- **V6 effective status:** pending/frontier
+- **V6 effective status:** done
 - **V3 status:** needs-triage
 - **Blocked by:** LND-06, LND-08, LND-11, LND-12
 - **Loại:** feature
@@ -11,7 +11,7 @@
 - **File được phép sửa:** `src/modules/land/**`, `src/app/api/public/land/lookup/**`, `tests/land/**`, `tests/integration/**`
 - **File cấm sửa:** `.env`, `.brain/**`, `docs/design/**`, `docs/research/**`
 - **Demo path:** Anonymous user lookup bằng một application/parcel code nhận projection tối thiểu.
-- **Evidence/commit:** chưa có; Phase 03 completed with `PHASE-PASS`.
+- **Evidence/commit:** `e331951` (`feat: add public land lookup`); 5 focused tests and land/integration regression passed.
 
 ## Mô tả
 
@@ -19,17 +19,17 @@ Tạo public lookup read projection, mutual-exclusive query validation, rate lim
 
 ## Các bước thực hiện
 
-- [ ] Tạo read query projection không join field nhạy cảm.
-- [ ] Validate mutual-exclusive query params.
-- [ ] Thêm rate limit `60 requests/minute/IP`.
-- [ ] Map not-found/invalid/rate-limit message tiếng Việt.
-- [ ] Viết redaction/rate-limit contract tests.
+- [x] Tạo read query projection không join field nhạy cảm.
+- [x] Validate mutual-exclusive query params.
+- [x] Thêm rate limit `60 requests/minute/IP`.
+- [x] Map not-found/invalid/rate-limit message tiếng Việt.
+- [x] Viết redaction/rate-limit contract tests.
 
 ## Acceptance Criteria
 
-- [ ] Given đúng một code tồn tại, When GET public lookup, Then HTTP `200`, đúng 8 field và `simulated=true`.
-- [ ] Given không có hoặc có cả hai code, When lookup, Then `400 LAND_LOOKUP_QUERY_INVALID` và không query detail.
-- [ ] Given unknown code/IP vượt quota, When lookup, Then `404 LAND_LOOKUP_NOT_FOUND` hoặc `429 LAND_RATE_LIMITED`, không lộ nội bộ.
+- [x] Given đúng một code tồn tại, When GET public lookup, Then HTTP `200`, đúng 8 field và `simulated=true`.
+- [x] Given không có hoặc có cả hai code, When lookup, Then `400 LAND_LOOKUP_QUERY_INVALID` và không query detail.
+- [x] Given unknown code/IP vượt quota, When lookup, Then `404 LAND_LOOKUP_NOT_FOUND` hoặc `429 LAND_RATE_LIMITED`, không lộ nội bộ.
 
 ## Test-skeleton
 
@@ -39,7 +39,7 @@ Tạo public lookup read projection, mutual-exclusive query validation, rate lim
 
 ## Rubric bắt buộc
 
-- [ ] Projection bám API contract/DR-20; rate limit không tạo auth/session requirement.
+- [x] Projection bám API contract/DR-20; rate limit không tạo auth/session requirement.
 
 ## Traceability
 
@@ -48,4 +48,4 @@ Tạo public lookup read projection, mutual-exclusive query validation, rate lim
 
 ## V6 reconciliation
 
-- Effective status `pending/frontier`; eligible after contract preflight, with no implementation/evidence/commit yet.
+- Effective status `done` after `e331951`; projection, query validation, rate limit and redacted errors are covered by the LND-14 tests.
