@@ -36,6 +36,12 @@ export {
 } from './sync-service';
 export type { SyncResponse } from './sync-service';
 export {
+  approveApplication,
+  rejectApplication,
+  toApprovalResponse,
+} from './approval-service';
+export type { ApprovalDeps, ApprovalResponse } from './approval-service';
+export {
   createSync,
   findSyncByApplication,
   findSyncByRequestKey,

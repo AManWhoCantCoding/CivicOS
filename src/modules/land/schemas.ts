@@ -290,6 +290,41 @@ export function parseReviewBody(value: unknown): void {
     throw new Error('INVALID_REQUEST');
 }
 
+// Parse/validate POST approve body (LND-12, api-contract F-04).
+// Body is {} or { reason: string | null }; extra keys are 400. A blank
+// string normalizes to null so approve never fails on an empty reason.
+export function parseApproveBody(value: unknown): { reason: string | null } {
+  if (typeof value !== 'object' || value === null || Array.isArray(value))
+    throw new Error('INVALID_REQUEST');
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record);
+  if (keys.length > 1 || (keys.length === 1 && keys[0] !== 'reason'))
+    throw new Error('INVALID_REQUEST');
+  if (!('reason' in record) || record['reason'] === undefined)
+    return { reason: null };
+  const reason = record['reason'];
+  if (reason === null) return { reason: null };
+  if (typeof reason !== 'string') throw new Error('INVALID_REQUEST');
+  const trimmed = reason.trim();
+  return { reason: trimmed ? trimmed : null };
+}
+
+// Parse/validate POST reject body (LND-12, api-contract F-04).
+// Body is exactly { reason: string } with trimmed non-empty text; anything
+// else is 400 LAND_INVALID_REQUEST with no state change.
+export function parseRejectBody(value: unknown): { reason: string } {
+  if (typeof value !== 'object' || value === null || Array.isArray(value))
+    throw new Error('INVALID_REQUEST');
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).length !== 1 ||
+    typeof record['reason'] !== 'string' ||
+    !record['reason'].trim()
+  )
+    throw new Error('INVALID_REQUEST');
+  return { reason: (record['reason'] as string).trim() };
+}
+
 // Parse/validate GET /api/land/applications query (LND-06).
 export type ApplicationListQuery = {
   status?: string;
