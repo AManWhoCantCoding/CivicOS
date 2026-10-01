@@ -1,10 +1,10 @@
 # Phase 03 — Mock sync & approval
 
 - **Workflow version:** V6
-- **Effective status:** in-progress
+- **Effective status:** pending-gate
 - **V3 source:** `phase-03-sync-approval.md` (migrated; ticket contracts split below)
-- **Current frontier:** LND-13
-- **Gate:** not run; ticket-level verification exists for LND-10, LND-11 and LND-12.
+- **Current frontier:** none; LND-10–LND-13 accepted
+- **Gate:** pending; ticket-level verification exists for LND-10–LND-13.
 
 ## Phạm vi phase
 
@@ -38,10 +38,11 @@ Tích hợp `NationalLandAdapter` mock đồng bộ, success/failure/retry idemp
 | LND-10 | `T-LND-10-national-land-adapter-mock.md` | done | needs-triage | LND-06, LND-08 |
 | LND-11 | `T-LND-11-sync-retry-command-persistence.md` | done | needs-triage | LND-10 |
 | LND-12 | `T-LND-12-approval-completion-transaction.md` | done | needs-triage | LND-11 |
-| LND-13 | `T-LND-13-web-application-processing-actions.md` | pending/frontier | needs-triage | LND-11, LND-12 |
+| LND-13 | `T-LND-13-web-application-processing-actions.md` | done | needs-triage | LND-11, LND-12 |
 
 ## V6 reconciliation
 
 - LND-10 được chấp nhận `done` theo `.brain/evidence/LND-10/review.md`, tests/digest và shared commit `e81c252`.
 - LND-11 được accept sau `58e887e`; quyết định synchronous mock được ghi trong workflow-status.
-- LND-12 được accept sau `862de7a`; LND-13 là ticket kế tiếp đủ dependency.
+- LND-12 được accept sau `862de7a`; LND-13 được accept sau `8ec844a`.
+- Phase 03 đủ điều kiện chạy phase gate; chưa dispatch Phase 04 trước khi gate hoàn tất.
