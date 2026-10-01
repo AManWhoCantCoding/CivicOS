@@ -2,7 +2,7 @@
 
 - **Ticket ID:** LND-12
 - **Status:** needs-triage
-- **V6 effective status:** blocked
+- **V6 effective status:** pending/frontier
 - **V3 status:** needs-triage
 - **Blocked by:** LND-11
 - **Loại:** feature
@@ -11,7 +11,7 @@
 - **File được phép sửa:** `src/modules/land/**`, `src/app/api/land/applications/[applicationId]/approve/**`, `src/app/api/land/applications/[applicationId]/reject/**`, `tests/land/**`
 - **File cấm sửa:** `.env`, `.brain/**`, `docs/design/**`, `prisma/schema.prisma`
 - **Demo path:** Leader approve hoàn tất hoặc reject có reason; tất cả mutation/event/audit atomic.
-- **Evidence/commit:** chưa có; blocked bởi LND-11.
+- **Evidence/commit:** not started; dependency LND-11 completed in `58e887e`.
 
 ## Mô tả
 
@@ -48,4 +48,4 @@ Implement leader approve/reject và completed land mutation cho bốn change typ
 
 ## V6 reconciliation
 
-- Effective status `blocked`; no implementation or evidence is attributed to LND-12.
+- LND-11 is complete; this ticket is the current frontier and may be dispatched after contract preflight.

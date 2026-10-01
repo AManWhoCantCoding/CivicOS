@@ -2,7 +2,7 @@
 
 - **Ticket ID:** LND-11
 - **Status:** needs-triage
-- **V6 effective status:** pending/frontier
+- **V6 effective status:** done
 - **V3 status:** needs-triage
 - **Blocked by:** LND-10
 - **Loại:** feature
@@ -11,7 +11,7 @@
 - **File được phép sửa:** `src/modules/land/**`, `src/app/api/land/applications/[applicationId]/sync/**`, `tests/land/**`
 - **File cấm sửa:** `.env`, `.brain/**`, `docs/design/**`, `prisma/schema.prisma`
 - **Demo path:** Officer sync application và retry failure bằng cùng request key.
-- **Evidence/commit:** chưa có; chưa dispatch.
+- **Evidence/commit:** `58e887e` (`feat: add land sync retry workflow`); targeted/full land verification passed.
 
 ## Mô tả
 
@@ -48,5 +48,5 @@ Persist `LandNationalSync`, implement sync/retry state transitions, stable reque
 
 ## V6 reconciliation
 
-- Đây là current frontier sau khi LND-10 được reconcile `done`.
-- Không có source/evidence/commit được gán cho ticket này.
+- User-authorized interpretation: synchronous mock sync; application success transitions directly to `pending_approval`.
+- Accepted after `58e887e`; LND-12 is now the next eligible frontier ticket.
