@@ -45,4 +45,12 @@
 - LND-03/LND-04/LND-05: disposition explicitly recorded in their V6 ticket files; no standalone evidence directory was invented.
 - Phase 02: `.brain/evidence/phase-02/gate.md` records `PHASE-PASS`.
 - Known design text discrepancy (`data-model.md` says proposal while `LOCK.json` says full) is preserved and not modified.
-- Migration changed workflow artifacts only; no source, database, design, research or evidence files were changed by migration. No commit was created.
+- Migration changed workflow artifacts only; no source, database, design, research or evidence files were changed by migration. Migration commit: `e2cc9f7`.
+
+### LND-11 contract interpretation
+
+- **Decision date:** 2026-10-01.
+- **Decision owner:** người dùng ủy quyền Techlead tự quyết.
+- **Authoritative behavior for LND-11:** synchronous mock sync; `LandChangeApplication` chuyển trực tiếp `in_review → pending_approval` khi adapter success, hoặc `in_review → sync_failed` khi adapter failure. Retry success chuyển `sync_failed → pending_approval`.
+- `sync_pending`/`sync_succeeded` trong `LandNationalSync` vẫn ghi nhận kết quả operation; không expose các trạng thái trung gian này trên `LandChangeApplication` trong ticket LND-11.
+- API contract và LND-11 ticket acceptance được dùng làm authority cho endpoint; wording state-machine trung gian trong `data-model.md`/`domain-rules.md` được ghi nhận là follow-up contract normalization, không sửa trong implementation.

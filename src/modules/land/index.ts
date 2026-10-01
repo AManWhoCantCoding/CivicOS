@@ -29,6 +29,20 @@ export type {
 export { toLandApiError } from './errors';
 export type { LandApiError } from './errors';
 export {
+  buildSyncRequestKey,
+  retryApplicationSync,
+  SYNC_OPERATION,
+  syncApplication,
+} from './sync-service';
+export type { SyncResponse } from './sync-service';
+export {
+  createSync,
+  findSyncByApplication,
+  findSyncByRequestKey,
+  toSyncResponse,
+} from './sync-repository';
+export type { CreateSyncInput, SyncRow } from './sync-repository';
+export {
   MOCK_NATIONAL_LAND_FAILURE_CODE,
   MOCK_NATIONAL_LAND_REMOTE_REFERENCE,
   MockNationalLandAdapter,

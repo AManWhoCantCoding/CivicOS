@@ -66,6 +66,11 @@ const LAND_ERRORS: Record<string, LandApiError> = {
     code: 'LAND_INVALID_TRANSITION',
     error: 'Trạng thái hồ sơ không cho phép thực hiện thao tác này.',
   },
+  SYNC_FAILED: {
+    status: 502,
+    code: 'LAND_SYNC_FAILED',
+    error: 'Đồng bộ mô phỏng Cơ sở dữ liệu quốc gia thất bại.',
+  },
 };
 
 function internalCode(error: unknown): string {
