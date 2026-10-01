@@ -80,22 +80,25 @@ export async function createEvidenceRecord(
     });
     return { evidence, stored: true };
   } catch (error) {
-    await storage.remove(stored.storageKey);
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     ) {
-      if (client === prisma) {
-        const duplicate = await prisma.evidence.findFirst({
-          where: {
-            resourceType: input.resourceType,
-            resourceId: input.resourceId,
-            originalHash: hash,
-          },
-        });
-        if (duplicate) return { evidence: duplicate, stored: false };
+      const duplicate = await prisma.evidence.findFirst({
+        where: {
+          resourceType: input.resourceType,
+          resourceId: input.resourceId,
+          originalHash: hash,
+        },
+      });
+      if (duplicate) {
+        if (stored.storageKey !== duplicate.storageKey) {
+          await storage.remove(stored.storageKey);
+        }
+        return { evidence: duplicate, stored: false };
       }
     }
+    await storage.remove(stored.storageKey);
     throw error;
   }
 }

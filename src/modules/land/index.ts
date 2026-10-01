@@ -26,6 +26,16 @@ export type {
   ApplicationSummary,
   TimelineEvent,
 } from './application-service';
+export {
+  listEvidence,
+  MAX_EVIDENCE_SIZE_BYTES,
+  uploadEvidence,
+} from './evidence-service';
+export type {
+  LandEvidence,
+  LandEvidenceResourceType,
+  UploadEvidenceInput,
+} from './evidence-service';
 export { toLandApiError } from './errors';
 export type { LandApiError } from './errors';
 export { lookupPublicLand } from './public-lookup-service';

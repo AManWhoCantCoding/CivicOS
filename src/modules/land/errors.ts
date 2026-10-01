@@ -86,6 +86,16 @@ const LAND_ERRORS: Record<string, LandApiError> = {
     code: 'LAND_RATE_LIMITED',
     error: 'Bạn đã vượt quá số lần tra cứu cho phép; hãy thử lại sau.',
   },
+  EVIDENCE_TOO_LARGE: {
+    status: 400,
+    code: 'LAND_EVIDENCE_TOO_LARGE',
+    error: 'Tệp Evidence vượt quá dung lượng cho phép.',
+  },
+  EVIDENCE_TYPE_UNSUPPORTED: {
+    status: 400,
+    code: 'LAND_EVIDENCE_TYPE_UNSUPPORTED',
+    error: 'Định dạng tệp Evidence không được hỗ trợ.',
+  },
 };
 
 function internalCode(error: unknown): string {
