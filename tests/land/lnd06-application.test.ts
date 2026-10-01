@@ -693,6 +693,55 @@ describe.skipIf(!postgresEnabled)('LND-06 application database slice', () => {
     expect(after).toBe(before);
   });
 
+  it('LND-19 coalesces concurrent same-key retries into one audited application', async () => {
+    const key = nextKey('concurrent');
+
+    try {
+      const results = await Promise.all(
+        Array.from({ length: 8 }, () =>
+          createApplication(validInput(), officerA(), key),
+        ),
+      );
+      const created = results.find(({ replayed }) => !replayed);
+
+      expect(created).toBeDefined();
+      expect(new Set(results.map(({ application }) => application.id))).toEqual(
+        new Set([created!.application.id]),
+      );
+      expect(results.filter(({ replayed }) => !replayed)).toHaveLength(1);
+      expect(results.filter(({ replayed }) => replayed)).toHaveLength(7);
+
+      expect(
+        await prisma.landChangeApplication.count({
+          where: { idempotencyKey: key },
+        }),
+      ).toBe(1);
+      expect(
+        await prisma.eventRecord.count({
+          where: {
+            aggregateType: 'LandChangeApplication',
+            aggregateId: created!.application.id,
+          },
+        }),
+      ).toBe(1);
+      expect(
+        await prisma.auditEvent.count({
+          where: {
+            resourceType: 'LandChangeApplication',
+            resourceId: created!.application.id,
+            operation: 'land.application.created',
+          },
+        }),
+      ).toBe(1);
+    } finally {
+      const row = await prisma.landChangeApplication.findUnique({
+        where: { idempotencyKey: key },
+        select: { id: true },
+      });
+      if (row) createdAppIds.push(row.id);
+    }
+  });
+
   it('rejects the same key with a different payload and keeps the original', async () => {
     const key = nextKey('conflict');
     const first = await createApplication(validInput(), officerA(), key);
