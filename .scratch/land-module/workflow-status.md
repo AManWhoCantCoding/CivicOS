@@ -29,13 +29,13 @@
 | Phase 02 — Intake & review | done | `PHASE-PASS`; LND-06–LND-09 |
 | Phase 03 — Mock sync & approval | done | `PHASE-PASS`; LND-10–LND-13 |
 | Phase 04 — Public lookup & read-only clients | done | `PHASE-PASS`; LND-14–LND-16 |
-| Phase 05 — Evidence & hardening | in-progress | LND-17–LND-19 accepted; phase gate pending |
+| Phase 05 — Evidence & hardening | done | `PHASE-PASS`; LND-17–LND-19 |
 
 ### Effective ticket status
 
 - **done:** LND-01, LND-02, LND-03, LND-04, LND-05, LND-06, LND-07, LND-08, LND-09, LND-10, LND-11, LND-12, LND-13, LND-14, LND-15, LND-16, LND-17, LND-18, LND-19.
-- **pending/frontier:** Phase 05 gate.
-- **blocked:** none; Phase 05 gate remains after LND-19.
+- **pending/frontier:** none.
+- **blocked:** none.
 
 ### Traceability notes
 
@@ -51,7 +51,8 @@
 - Phase 04 gate: `PHASE-PASS`; full suite `440 passed`, `270 skipped`, E2E `91 passed`, build/typecheck/lint/format and Prisma generation passed; mobile tests/typecheck/Android build passed using a local backend at `http://localhost:3001`.
 - LND-17: implementation/verification commit `19cc0cc`; tests are in `tests/land/lnd17-evidence.test.ts`, `tests/land/lnd17-evidence-api.test.ts`, and `tests/platform/evidence-duplicate-cleanup.test.ts`; six nested Evidence routes enforce scoped access, immutable projection, audit and storage cleanup.
 - LND-18: implementation/verification commit `8ba8e0a`; test is `tests/land-ui/lnd18-web-evidence-integration.test.ts`; screen-03 upload/list and screen-04 list use the internal Evidence projection without public/mobile exposure.
-- LND-19: implementation/verification commit `1cde325`; test-only hardening is in `tests/land/lnd06-application.test.ts:696-742`; LND-06 `31 passed`, parallel-wave `30 passed`, land/integration/land-ui matrix `321 passed, 5 skipped`; phase gate pending.
+- LND-19: implementation/verification commit `1cde325`; test-only hardening is in `tests/land/lnd06-application.test.ts:696-742`; LND-06 `31 passed`, parallel-wave `30 passed`, land/integration/land-ui matrix `321 passed, 5 skipped`.
+- Phase 05 gate: `PHASE-PASS`; full Vitest serial `94 files passed`, `730 passed`, `5 skipped`; E2E `91 passed`, `1 skipped`; typecheck, lint, format, Prisma generate/migrate, production build and mobile verification passed.
 - `.brain/evidence/LND-10/files-changed.md:16-17` still says no commit was created; this conflicts with git history (`e81c252` contains the three LND-10 source/test files) and is preserved as an evidence discrepancy, not silently edited.
 - LND-03/LND-04/LND-05: disposition explicitly recorded in their V6 ticket files; no standalone evidence directory was invented.
 - Phase 02: `.brain/evidence/phase-02/gate.md` records `PHASE-PASS`.

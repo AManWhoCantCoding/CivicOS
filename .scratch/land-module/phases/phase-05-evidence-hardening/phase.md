@@ -1,10 +1,10 @@
 # Phase 05 — Evidence & hardening
 
 - **Workflow version:** V6
-- **Effective status:** in-progress
+- **Effective status:** done
 - **V3 source:** `phase-05-evidence-hardening.md` (migrated; ticket contracts split below)
-- **Current frontier:** phase gate; LND-17–LND-19 accepted
-- **Gate:** not run
+- **Current frontier:** complete; LND-17–LND-19 accepted
+- **Gate:** `PHASE-PASS`
 - **Blocked by:** none; existing `EvidenceStorageAdapter` is available.
 
 ## Phạm vi phase
@@ -71,5 +71,5 @@ Triển khai Evidence upload/list cho application/parcel/party qua nested API v�
 
 - LND-17 được accept sau `19cc0cc`; nested upload/list API, authorization/scope, MIME/size, hash/immutable projection, duplicate cleanup và audit được kiểm thử.
 - LND-18 được accept sau `8ba8e0a`; screen-03 upload/list, screen-04 metadata list, privacy projection và MIME/size/error states được kiểm thử.
-- LND-19 đã hoàn tất ticket-level review/verification sau `1cde325` và chờ phase gate cuối.
-- Phase 05 gate chưa chạy; không mở rộng Evidence hoặc hardening ngoài các ticket đã khóa.
+- LND-19 đã hoàn tất ticket-level review/verification sau `1cde325`.
+- Phase 05 gate: `PHASE-PASS`; full Vitest serial `94 files passed`, `730 passed`, `5 skipped`; land/integration/land-ui matrix `25 files passed`, `321 passed`, `5 skipped`; E2E `91 passed`, `1 skipped`; typecheck, lint (0 errors), format, Prisma generate/migrate, production build và mobile typecheck/Jest `11 suites/26 tests`/Android build đều pass.
