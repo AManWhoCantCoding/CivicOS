@@ -29,13 +29,13 @@
 | Phase 02 — Intake & review | done | `PHASE-PASS`; LND-06–LND-09 |
 | Phase 03 — Mock sync & approval | done | `PHASE-PASS`; LND-10–LND-13 |
 | Phase 04 — Public lookup & read-only clients | done | `PHASE-PASS`; LND-14–LND-16 |
-| Phase 05 — Evidence & hardening | pending | frontier selection pending; EvidenceStorageAdapter flow remains a dependency |
+| Phase 05 — Evidence & hardening | in-progress | LND-17 done; LND-18 frontier; LND-19 blocked by LND-18 |
 
 ### Effective ticket status
 
-- **done:** LND-01, LND-02, LND-03, LND-04, LND-05, LND-06, LND-07, LND-08, LND-09, LND-10, LND-11, LND-12, LND-13, LND-14, LND-15, LND-16.
-- **pending/frontier:** Phase 05 ticket selection pending.
-- **blocked:** none by completed Phase 04; Phase 05 tickets still require their declared dependencies.
+- **done:** LND-01, LND-02, LND-03, LND-04, LND-05, LND-06, LND-07, LND-08, LND-09, LND-10, LND-11, LND-12, LND-13, LND-14, LND-15, LND-16, LND-17.
+- **pending/frontier:** LND-18.
+- **blocked:** LND-19 by LND-18.
 
 ### Traceability notes
 
@@ -49,6 +49,7 @@
 - LND-16: implementation/verification commit `af2132e`; tests are in `mobile/src/features/__tests__/land.test.ts` and contract traceability is in `T-LND-16-mobile-read-only.md`.
 - Phase 03 gate: `PHASE-PASS`; full suite `426 passed`, land scope `154 passed`, E2E `91 passed`, build/typecheck/lint/format passed using a local backend at `http://localhost:3001`.
 - Phase 04 gate: `PHASE-PASS`; full suite `440 passed`, `270 skipped`, E2E `91 passed`, build/typecheck/lint/format and Prisma generation passed; mobile tests/typecheck/Android build passed using a local backend at `http://localhost:3001`.
+- LND-17: implementation/verification commit `19cc0cc`; tests are in `tests/land/lnd17-evidence.test.ts`, `tests/land/lnd17-evidence-api.test.ts`, and `tests/platform/evidence-duplicate-cleanup.test.ts`; six nested Evidence routes enforce scoped access, immutable projection, audit and storage cleanup.
 - `.brain/evidence/LND-10/files-changed.md:16-17` still says no commit was created; this conflicts with git history (`e81c252` contains the three LND-10 source/test files) and is preserved as an evidence discrepancy, not silently edited.
 - LND-03/LND-04/LND-05: disposition explicitly recorded in their V6 ticket files; no standalone evidence directory was invented.
 - Phase 02: `.brain/evidence/phase-02/gate.md` records `PHASE-PASS`.

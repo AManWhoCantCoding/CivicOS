@@ -1,10 +1,11 @@
 # Phase 05 — Evidence & hardening
 
 - **Workflow version:** V6
-- **Effective status:** pending/blocked
+- **Effective status:** in-progress
 - **V3 source:** `phase-05-evidence-hardening.md` (migrated; ticket contracts split below)
+- **Current frontier:** LND-18; LND-17 accepted
 - **Gate:** not run
-- **Blocked by:** Phase 01–04 completion and existing `EvidenceStorageAdapter`.
+- **Blocked by:** none; existing `EvidenceStorageAdapter` is available.
 
 ## Phạm vi phase
 
@@ -57,8 +58,8 @@ Triển khai Evidence upload/list cho application/parcel/party qua nested API v�
 
 | ID | File V6 | Effective status | V3 status | Blocked by |
 |---|---|---|---|---|
-| LND-17 | `T-LND-17-evidence-service-api.md` | blocked | needs-triage | LND-02, LND-06, LND-08 |
-| LND-18 | `T-LND-18-web-evidence-integration.md` | blocked | needs-triage | LND-13, LND-17 |
+| LND-17 | `T-LND-17-evidence-service-api.md` | done | needs-triage | LND-02, LND-06, LND-08 |
+| LND-18 | `T-LND-18-web-evidence-integration.md` | pending | needs-triage | LND-13, LND-17 |
 | LND-19 | `T-LND-19-land-regression-security-hardening.md` | blocked | needs-triage | LND-01–LND-18 |
 
 ## Phụ thuộc giữa phase
@@ -68,5 +69,6 @@ Triển khai Evidence upload/list cho application/parcel/party qua nested API v�
 
 ## V6 reconciliation
 
-- Không có source/evidence/commit cho LND-17–LND-19.
-- Giữ nguyên blockers; không mở rộng Evidence hoặc hardening trong migration.
+- LND-17 được accept sau `19cc0cc`; nested upload/list API, authorization/scope, MIME/size, hash/immutable projection, duplicate cleanup và audit được kiểm thử.
+- LND-18 là frontier kế tiếp; LND-19 vẫn chờ LND-18 và toàn bộ regression hardening.
+- Phase 05 gate chưa chạy; không mở rộng Evidence hoặc hardening ngoài các ticket đã khóa.
