@@ -19,6 +19,44 @@ export const LAND_PARCELS_URL = '/api/land/parcels';
 export const LAND_PARTIES_URL = '/api/land/parties';
 export const LAND_APPLICATIONS_URL = '/api/land/applications';
 export const LAND_PUBLIC_LOOKUP_URL = '/api/public/land/lookup';
+export const MAX_EVIDENCE_SIZE_BYTES = 10 * 1024 * 1024;
+export const EVIDENCE_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+] as const;
+
+export type EvidenceResourceType = 'application' | 'parcel' | 'party';
+
+export type EvidenceView = {
+  id: string;
+  resourceType: string;
+  resourceId: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  originalHash: string;
+  immutable: boolean;
+  description: string | null;
+  createdAt: string;
+};
+
+const EVIDENCE_COLLECTIONS: Record<EvidenceResourceType, string> = {
+  application: 'applications',
+  parcel: 'parcels',
+  party: 'parties',
+};
+
+export function evidenceUrl(
+  resourceType: EvidenceResourceType,
+  resourceId: string,
+): string {
+  return `/api/land/${EVIDENCE_COLLECTIONS[resourceType]}/${encodeURIComponent(resourceId)}/evidence`;
+}
+
+export function isSupportedEvidenceMime(mimeType: string): boolean {
+  return (EVIDENCE_MIME_TYPES as readonly string[]).includes(mimeType);
+}
 
 export function parcelDetailUrl(parcelId: string): string {
   return `/api/land/parcels/${encodeURIComponent(parcelId)}`;
@@ -45,6 +83,41 @@ async function readJson(response: Response): Promise<{
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+function readEvidence(value: unknown): EvidenceView | null {
+  if (!isRecord(value)) return null;
+  if (
+    typeof value.id !== 'string' ||
+    typeof value.resourceType !== 'string' ||
+    typeof value.resourceId !== 'string' ||
+    typeof value.fileName !== 'string' ||
+    typeof value.mimeType !== 'string' ||
+    typeof value.sizeBytes !== 'number' ||
+    !Number.isInteger(value.sizeBytes) ||
+    value.sizeBytes < 0 ||
+    typeof value.originalHash !== 'string' ||
+    typeof value.immutable !== 'boolean' ||
+    (value.description !== null &&
+      value.description !== undefined &&
+      typeof value.description !== 'string') ||
+    typeof value.createdAt !== 'string'
+  ) {
+    return null;
+  }
+  return {
+    id: value.id,
+    resourceType: value.resourceType,
+    resourceId: value.resourceId,
+    fileName: value.fileName,
+    mimeType: value.mimeType,
+    sizeBytes: value.sizeBytes,
+    originalHash: value.originalHash,
+    immutable: value.immutable,
+    description:
+      typeof value.description === 'string' ? value.description : null,
+    createdAt: value.createdAt,
+  };
 }
 
 export type PublicLandLookupMode = 'applicationCode' | 'parcelCode';
@@ -252,6 +325,72 @@ export async function fetchParcelDetail(parcelId: string): Promise<{
     };
   } catch {
     return { status: 0, detail: null, error: { status: null, code: null } };
+  }
+}
+
+export async function fetchEvidence(
+  resourceType: EvidenceResourceType,
+  resourceId: string,
+): Promise<{
+  status: number;
+  evidence: EvidenceView[];
+  error: LandApiError | null;
+}> {
+  try {
+    const response = await fetch(evidenceUrl(resourceType, resourceId), {
+      cache: 'no-store',
+    });
+    const { status, body } = await readJson(response);
+    if (!response.ok || !isRecord(body) || !Array.isArray(body.evidence)) {
+      return {
+        status,
+        evidence: [],
+        error: { status, code: readErrorCode(body) },
+      };
+    }
+    return {
+      status,
+      evidence: body.evidence.flatMap((item) => {
+        const projection = readEvidence(item);
+        return projection ? [projection] : [];
+      }),
+      error: null,
+    };
+  } catch {
+    return { status: 0, evidence: [], error: { status: null, code: null } };
+  }
+}
+
+export async function postEvidence(
+  resourceType: EvidenceResourceType,
+  resourceId: string,
+  file: File,
+  description?: string | null,
+): Promise<{
+  status: number;
+  evidence: EvidenceView | null;
+  error: LandApiError | null;
+}> {
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    if (description?.trim()) form.append('description', description.trim());
+    const response = await fetch(evidenceUrl(resourceType, resourceId), {
+      method: 'POST',
+      body: form,
+    });
+    const { status, body } = await readJson(response);
+    const evidence = isRecord(body) ? readEvidence(body.evidence) : null;
+    if (!response.ok || !evidence) {
+      return {
+        status,
+        evidence: null,
+        error: { status, code: readErrorCode(body) },
+      };
+    }
+    return { status, evidence, error: null };
+  } catch {
+    return { status: 0, evidence: null, error: { status: null, code: null } };
   }
 }
 

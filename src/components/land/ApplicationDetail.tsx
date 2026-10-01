@@ -14,6 +14,7 @@ import {
 import {
   applicationChangeTypeText,
   applicationStatusText,
+  canAccessScopedEvidence,
   isRejectReasonValid,
   isTerminalApplicationStatus,
   mapProcessingErrorToMessage,
@@ -280,6 +281,11 @@ export function ApplicationDetail({
   const offlineLock = !online;
   const mutationBusy = mutation !== null;
   const controlsLocked = offlineLock || conflict || mutationBusy;
+  const canAccessEvidence = canAccessScopedEvidence({
+    roles: sessionLoaded && session ? session.roles : [],
+    hasAssignment,
+    sameOrganizationUnit,
+  });
 
   function handleConflict() {
     setConflict(true);
@@ -640,7 +646,13 @@ export function ApplicationDetail({
         )}
       </section>
 
-      <EvidencePanel />
+      <EvidencePanel
+        resourceType="application"
+        resourceId={applicationId}
+        canList={canAccessEvidence}
+        canUpload={canAccessEvidence && !readOnly && !conflict && !mutationBusy}
+        readOnly={readOnly}
+      />
 
       <section
         aria-labelledby="land-application-actions-heading"

@@ -400,7 +400,7 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
         )}
       </section>
 
-      <EvidencePanel />
+      <EvidencePanel resourceType="parcel" resourceId={parcelId} canList />
     </div>
   );
 }

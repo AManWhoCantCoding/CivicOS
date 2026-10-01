@@ -402,6 +402,18 @@ export function resolveProcessingActions(input: {
   };
 }
 
+// Evidence dùng cùng scope với detail: leader cùng đơn vị hoặc officer có
+// Assignment land_review còn hiệu lực. API vẫn là boundary authorization.
+export function canAccessScopedEvidence(input: {
+  roles: readonly string[];
+  hasAssignment: boolean;
+  sameOrganizationUnit: boolean;
+}): boolean {
+  if (!input.sameOrganizationUnit) return false;
+  if (input.roles.includes('commune_leader')) return true;
+  return input.roles.includes('land_officer') && input.hasAssignment;
+}
+
 // Reject bắt buộc reason không trắng theo screen-03 modal behavior.
 export function isRejectReasonValid(reason: string): boolean {
   return reason.trim().length > 0;
