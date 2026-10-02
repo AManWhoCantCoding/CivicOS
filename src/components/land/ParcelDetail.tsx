@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { EvidencePanel } from '@/components/land/EvidencePanel';
 import { fetchParcelDetail, fetchPartyList } from '@/components/land/land-api';
+import { focusMapUrl } from '@/components/map/land-parcel-focus';
 import {
   encumbranceStatusText,
   geometryPreviewText,
@@ -200,6 +201,13 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
             <dd className="font-mono text-slate-200">v{parcel.version}</dd>
           </div>
         </dl>
+        <Link
+          href={focusMapUrl(parcel.id)}
+          aria-label="Xem thửa đất trên bản đồ"
+          className="mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+        >
+          Xem trên bản đồ
+        </Link>
         {readOnly ? (
           <p role="status" className="mt-3 text-sm text-slate-400">
             Thửa đất ở trạng thái chỉ đọc; màn hình này không cung cấp thao tác

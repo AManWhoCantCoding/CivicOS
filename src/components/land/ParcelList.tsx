@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
 import { fetchParcelList } from '@/components/land/land-api';
+import { focusMapUrl } from '@/components/map/land-parcel-focus';
 import {
   mapLandApiStatus,
   parcelStatusText,
@@ -202,6 +203,9 @@ export function ParcelList() {
               <th scope="col" className="border-b border-slate-700 px-3 py-2">
                 Trạng thái
               </th>
+              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+                Bản đồ
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -226,6 +230,15 @@ export function ParcelList() {
                     <span aria-hidden="true">●</span>
                     {parcelStatusText(item.status)}
                   </span>
+                </td>
+                <td className="px-3 py-2">
+                  <Link
+                    href={focusMapUrl(item.id)}
+                    aria-label={`Xem ${item.parcelCode} trên bản đồ`}
+                    className="underline-offset-4 hover:underline"
+                  >
+                    Xem trên bản đồ
+                  </Link>
                 </td>
               </tr>
             ))}
