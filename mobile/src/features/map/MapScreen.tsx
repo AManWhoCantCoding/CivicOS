@@ -104,6 +104,7 @@ export function MapScreen({
     'idle' | 'loading' | 'ready' | LandParcelMapErrorState
   >('idle');
   const [landReload, setLandReload] = useState(0);
+  const [landDismissed, setLandDismissed] = useState(false);
 
   // Focused LandParcel projection (P0): exactly one online Polygon, kept
   // separate from the generic RelatedInfo layers/items. Offline never calls
@@ -113,6 +114,9 @@ export function MapScreen({
   const loadLandParcel = useCallback(async () => {
     const requestId = landRequestRef.current + 1;
     landRequestRef.current = requestId;
+    // Re-arm the focus on every (re)load: a parcelId change or an explicit
+    // retry clears a previous local dismiss before the offline guard runs.
+    setLandDismissed(false);
     if (!focusParcelId) {
       setLandParcel(null);
       setLandState('idle');
@@ -148,10 +152,45 @@ export function MapScreen({
     };
   }, [loadLandParcel, landReload]);
 
-  const reloadLandParcel = useCallback(
-    () => setLandReload((count) => count + 1),
-    [],
-  );
+  const reloadLandParcel = useCallback(() => {
+    // Explicit retry only: clear the local dismiss flag and request a fresh
+    // online projection via loadLandParcel (which still guards offline first,
+    // so retry while offline never calls the route).
+    setLandDismissed(false);
+    setLandReload((count) => count + 1);
+  }, []);
+
+  // Local-only dismiss: hides the focused polygon/panel without any server
+  // mutation. A focus change or explicit retry re-arms the focus.
+  const dismissLandFocus = useCallback(() => {
+    landRequestRef.current += 1;
+    setLandParcel(null);
+    setLandDismissed(true);
+    setLandState('idle');
+  }, []);
+
+  // T-006 offline transition: when the device goes offline after a focused
+  // projection is ready (or while it is in flight), immediately retire the
+  // request, drop the polygon and move to the offline state so the LandParcel
+  // GeoJSON source/layers disappear. Coming back online never restores
+  // geometry silently; retry requests a fresh online projection instead.
+  useEffect(() => {
+    if (!focusParcelId) return;
+    if (
+      typeof window === 'undefined' ||
+      typeof window.addEventListener !== 'function'
+    )
+      return;
+    const handleOffline = () => {
+      landRequestRef.current += 1;
+      setLandParcel(null);
+      setLandState((current) =>
+        current === 'loading' || current === 'ready' ? 'offline' : current,
+      );
+    };
+    window.addEventListener('offline', handleOffline);
+    return () => window.removeEventListener('offline', handleOffline);
+  }, [focusParcelId]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -261,8 +300,9 @@ export function MapScreen({
       ? { lat: focusItem.lat, lng: focusItem.lng }
       : undefined);
   // Single focused parcel feature only; never merged into the generic items.
+  // Dismissed focus renders no geometry even if a late response slipped past.
   const landFeature: GeoJSON.Feature<GeoJSON.Polygon, { id: string }> | null =
-    landParcel && landState === 'ready'
+    landParcel && landState === 'ready' && !landDismissed
       ? {
           type: 'Feature',
           properties: { id: landParcel.parcel.id },
@@ -422,7 +462,7 @@ export function MapScreen({
           </Pressable>
         ))}
       </View>
-      {focusParcelId && landState !== 'idle' ? (
+      {focusParcelId && landState !== 'idle' && !landDismissed ? (
         <View
           testID="land-parcel-focus-panel"
           style={{
@@ -515,6 +555,14 @@ export function MapScreen({
           {landState === 'error' && (
             <StateMessage state="error" retry={reloadLandParcel} />
           )}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Quay lại bản đồ"
+            onPress={dismissLandFocus}
+            style={{ minHeight: 44 }}
+          >
+            <Text>Quay lại bản đồ</Text>
+          </Pressable>
         </View>
       ) : null}
     </View>
