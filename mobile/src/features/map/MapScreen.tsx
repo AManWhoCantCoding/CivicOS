@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   PermissionsAndroid,
   Platform,
@@ -16,6 +16,14 @@ import {
   type PressEventWithFeatures,
 } from '@maplibre/maplibre-react-native';
 import { ApiError } from '../../api/client';
+import {
+  getLandParcelMapProjection,
+  isLandParcelFocusOffline,
+  landParcelBoundsCenter,
+  landParcelMapStateForError,
+  type LandParcelMapErrorState,
+  type LandParcelMapProjection,
+} from '../../api/land-map';
 import {
   getMapItems,
   getMapLayers,
@@ -64,12 +72,16 @@ export function MapScreen({
   focusItem,
   focusResourceId,
   focusCoordinates,
+  focusParcelId,
   onOpenRelatedInfo,
+  onOpenLandDetail,
 }: {
   focusItem?: RelatedInfoItem;
   focusResourceId?: string;
   focusCoordinates?: { lat: number; lng: number };
+  focusParcelId?: string;
   onOpenRelatedInfo?: (item: RelatedInfoItem) => void;
+  onOpenLandDetail?: (parcelCode: string) => void;
 }) {
   const [layers, setLayers] = useState(viewCache.layers);
   const [provider, setProvider] = useState<MapProvider | null>(
@@ -85,6 +97,61 @@ export function MapScreen({
   >('unknown');
   const [visible, setVisible] = useState<Record<string, boolean>>({});
   const [cacheReady, setCacheReady] = useState(false);
+  const [landParcel, setLandParcel] = useState<LandParcelMapProjection | null>(
+    null,
+  );
+  const [landState, setLandState] = useState<
+    'idle' | 'loading' | 'ready' | LandParcelMapErrorState
+  >('idle');
+  const [landReload, setLandReload] = useState(0);
+
+  // Focused LandParcel projection (P0): exactly one online Polygon, kept
+  // separate from the generic RelatedInfo layers/items. Offline never calls
+  // or renders the land polygon, even when a basemap pack exists. Stale
+  // responses for a previous parcelId are dropped via the request ref.
+  const landRequestRef = useRef(0);
+  const loadLandParcel = useCallback(async () => {
+    const requestId = landRequestRef.current + 1;
+    landRequestRef.current = requestId;
+    if (!focusParcelId) {
+      setLandParcel(null);
+      setLandState('idle');
+      return;
+    }
+    if (isLandParcelFocusOffline()) {
+      setLandParcel(null);
+      setLandState('offline');
+      return;
+    }
+    setLandState('loading');
+    setLandParcel(null);
+    try {
+      const projection = await getLandParcelMapProjection(focusParcelId);
+      if (landRequestRef.current !== requestId) return;
+      setLandParcel(projection);
+      setLandState('ready');
+    } catch (error: unknown) {
+      if (landRequestRef.current !== requestId) return;
+      setLandParcel(null);
+      setLandState(landParcelMapStateForError(error));
+    }
+  }, [focusParcelId]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => void loadLandParcel(), 0);
+    return () => {
+      clearTimeout(timer);
+      // EC-LPM-11: synchronously retire the previous focus request so a late
+      // in-flight response can never commit parcel A under parcel B context
+      // (or after unmount), even if it resolves before the next timer starts.
+      landRequestRef.current += 1;
+    };
+  }, [loadLandParcel, landReload]);
+
+  const reloadLandParcel = useCallback(
+    () => setLandReload((count) => count + 1),
+    [],
+  );
 
   const load = useCallback(async () => {
     setError(null);
@@ -193,6 +260,26 @@ export function MapScreen({
     (focusItem?.lat !== undefined && focusItem.lng !== undefined
       ? { lat: focusItem.lat, lng: focusItem.lng }
       : undefined);
+  // Single focused parcel feature only; never merged into the generic items.
+  const landFeature: GeoJSON.Feature<GeoJSON.Polygon, { id: string }> | null =
+    landParcel && landState === 'ready'
+      ? {
+          type: 'Feature',
+          properties: { id: landParcel.parcel.id },
+          geometry: landParcel.parcel.geometry,
+        }
+      : null;
+  // While a land parcel focus is active the camera follows the focused
+  // Polygon bbox and ignores stale generic coordinates.
+  const landCenter =
+    landParcel && landState === 'ready'
+      ? landParcelBoundsCenter(landParcel.parcel.geometry)
+      : null;
+  const cameraCenter = focusParcelId
+    ? landCenter
+      ? { lat: landCenter.latitude, lng: landCenter.longitude }
+      : undefined
+    : focusCenter;
 
   return (
     <View style={{ flex: 1 }}>
@@ -202,10 +289,10 @@ export function MapScreen({
         attribution
         onPress={() => undefined}
       >
-        {focusCenter ? (
+        {cameraCenter ? (
           <Camera
             initialViewState={{
-              center: [focusCenter.lng, focusCenter.lat],
+              center: [cameraCenter.lng, cameraCenter.lat],
               zoom: 14,
             }}
           />
@@ -254,6 +341,29 @@ export function MapScreen({
             </GeoJSONSource>
           );
         })}
+        {landFeature ? (
+          <GeoJSONSource
+            id="land-parcel-focus-source"
+            data={{ type: 'FeatureCollection', features: [landFeature] }}
+          >
+            <Layer
+              id="land-parcel-focus-fill"
+              type="fill"
+              source="land-parcel-focus-source"
+              paint={{
+                'fill-color': '#7c3aed',
+                'fill-opacity': 0.3,
+                'fill-outline-color': '#5b21b6',
+              }}
+            />
+            <Layer
+              id="land-parcel-focus-line"
+              type="line"
+              source="land-parcel-focus-source"
+              paint={{ 'line-color': '#5b21b6', 'line-width': 2 }}
+            />
+          </GeoJSONSource>
+        ) : null}
       </MapLibreMap>
       <View
         style={{
@@ -312,6 +422,101 @@ export function MapScreen({
           </Pressable>
         ))}
       </View>
+      {focusParcelId && landState !== 'idle' ? (
+        <View
+          testID="land-parcel-focus-panel"
+          style={{
+            position: 'absolute',
+            bottom: 12,
+            left: 12,
+            right: 12,
+            gap: 8,
+            backgroundColor: '#fff',
+            padding: 12,
+          }}
+        >
+          {landState === 'loading' && <Text>Đang tải dữ liệu thửa đất…</Text>}
+          {landState === 'ready' && landParcel ? (
+            <View style={{ gap: 8 }}>
+              <Text>internal / simulated</Text>
+              <Text>Mã thửa: {landParcel.parcel.parcelCode}</Text>
+              <Text>
+                Tờ/thửa: {landParcel.parcel.mapSheetNumber}/
+                {landParcel.parcel.parcelNumber}
+              </Text>
+              <Text>Trạng thái: {landParcel.parcel.status}</Text>
+              <Text>Cập nhật: {landParcel.parcel.updatedAt}</Text>
+              <Text>
+                Dữ liệu mô phỏng nội bộ; không phải ranh giới pháp lý chính
+                thức.
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Mở chi tiết thửa đất"
+                onPress={() => onOpenLandDetail?.(landParcel.parcel.parcelCode)}
+                style={{ minHeight: 44 }}
+              >
+                <Text>Mở chi tiết thửa</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={reloadLandParcel}
+                style={{ minHeight: 44 }}
+              >
+                <Text>Tải lại dữ liệu</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          {landState === 'forbidden' && (
+            <View style={{ gap: 8 }}>
+              <Text>Không được phép xem thửa đất này</Text>
+              <StateMessage state="forbidden" />
+            </View>
+          )}
+          {landState === 'not-found' && (
+            <View style={{ gap: 8 }}>
+              <Text>Không tìm thấy thửa đất</Text>
+              <Text>
+                Thửa đất không tồn tại hoặc không nằm trong phạm vi truy cập.
+              </Text>
+            </View>
+          )}
+          {landState === 'geometry' && (
+            <View style={{ gap: 8 }}>
+              <Text>Không thể hiển thị hình học thửa đất</Text>
+              <Text>Dữ liệu hình học hiện không sẵn sàng để hiển thị.</Text>
+            </View>
+          )}
+          {landState === 'provider' && (
+            <View style={{ gap: 8 }}>
+              <Text>Bản đồ nền hiện không khả dụng</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={reloadLandParcel}
+                style={{ minHeight: 44 }}
+              >
+                <Text>Thử lại</Text>
+              </Pressable>
+            </View>
+          )}
+          {landState === 'offline' && (
+            <View style={{ gap: 8 }}>
+              <OfflineBanner />
+              <Text>Polygon thửa đất không được lưu trong bộ nhớ offline.</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={reloadLandParcel}
+                style={{ minHeight: 44 }}
+              >
+                <Text>Thử lại khi có kết nối</Text>
+              </Pressable>
+            </View>
+          )}
+          {landState === 'error' && (
+            <StateMessage state="error" retry={reloadLandParcel} />
+          )}
+        </View>
+      ) : null}
     </View>
   );
 }

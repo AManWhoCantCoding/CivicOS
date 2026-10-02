@@ -28,6 +28,8 @@ export function AppNavigator() {
   const { session, signOut } = useSession();
   const [route, setRoute] = useState<(typeof routes)[number]>('Map');
   const [mapItem, setMapItem] = useState<RelatedInfoItem>();
+  const [landParcelId, setLandParcelId] = useState<string | undefined>();
+  const [landParcelCode, setLandParcelCode] = useState<string | undefined>();
   const [context, setContext] = useState<NavigationContext>({});
   const [relatedReference, setRelatedReference] =
     useState<NavigationContext['relatedInfo']>();
@@ -49,6 +51,7 @@ export function AppNavigator() {
     nextContext: NavigationContext = {},
   ) => {
     setMapItem(item);
+    setLandParcelId(undefined);
     setContext({
       ...nextContext,
       resourceId: nextContext.resourceId ?? item?.id,
@@ -60,16 +63,34 @@ export function AppNavigator() {
     });
     setRoute('Map');
   };
+  const openLandParcelOnMap = (parcelId: string) => {
+    setMapItem(undefined);
+    setLandParcelId(parcelId);
+    // Drop stale generic map context so the land focus owns the camera.
+    setContext({});
+    setRoute('Map');
+  };
+  const openLandParcelDetail = (parcelCode: string) => {
+    setLandParcelCode(parcelCode);
+    setRoute('Land');
+  };
+  const openTab = (item: (typeof routes)[number]) => {
+    // A manual tab entry starts a blank land form, not a stale auto-load.
+    if (item === 'Land') setLandParcelCode(undefined);
+    setRoute(item);
+  };
   const screen =
     route === 'Map' ? (
       <MapScreen
         focusItem={mapItem}
         focusResourceId={context.resourceId}
         focusCoordinates={context.coordinates}
+        focusParcelId={landParcelId}
         onOpenRelatedInfo={(item) => {
           setRelatedReference({ entityType: item.entityType, id: item.id });
           setRoute('RelatedInfo');
         }}
+        onOpenLandDetail={openLandParcelDetail}
       />
     ) : route === 'RelatedInfo' ? (
       <RelatedInfoScreen
@@ -89,7 +110,11 @@ export function AppNavigator() {
         onOpenMap={() => openMap(undefined, context)}
       />
     ) : route === 'Land' ? (
-      <LandScreen session={session} />
+      <LandScreen
+        session={session}
+        onOpenMap={openLandParcelOnMap}
+        initialParcelCode={landParcelCode}
+      />
     ) : (
       <SettingsScreen />
     );
@@ -100,7 +125,7 @@ export function AppNavigator() {
         {routes.map((item) => (
           <Pressable
             key={item}
-            onPress={() => setRoute(item)}
+            onPress={() => openTab(item)}
             style={{ minHeight: 44, padding: 8 }}
           >
             <Text>{item === 'Land' ? 'Đất đai' : item}</Text>

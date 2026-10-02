@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, SafeAreaView, Text, TextInput, View } from 'react-native';
 
 import { ApiError } from '../../api/client';
@@ -155,7 +155,15 @@ function initialOnlineState(): boolean {
   return typeof navigator === 'undefined' || navigator.onLine !== false;
 }
 
-export function LandScreen({ session }: { session?: SessionState }) {
+export function LandScreen({
+  session,
+  onOpenMap,
+  initialParcelCode,
+}: {
+  session?: SessionState;
+  onOpenMap?: (parcelId: string) => void;
+  initialParcelCode?: string;
+}) {
   const [mode, setMode] = useState<LandLookupMode>('applicationCode');
   const [query, setQuery] = useState('');
   const [lookup, setLookup] = useState<PublicLandLookup | null>(null);
@@ -174,8 +182,12 @@ export function LandScreen({ session }: { session?: SessionState }) {
   const [online, setOnline] = useState(initialOnlineState);
 
   const load = useCallback(
-    async (attempt: number) => {
-      const code = query.trim();
+    async (
+      attempt: number,
+      override?: { mode: LandLookupMode; code: string },
+    ) => {
+      const activeMode = override?.mode ?? mode;
+      const code = (override?.code ?? query).trim();
       const retrying = attempt > 1;
       setRetryAttempts(attempt);
       setErrorMessage(null);
@@ -195,7 +207,7 @@ export function LandScreen({ session }: { session?: SessionState }) {
       }
       setPublicState('loading');
       try {
-        const nextLookup = await getPublicLandLookup(mode, code);
+        const nextLookup = await getPublicLandLookup(activeMode, code);
         setLookup(nextLookup);
         setPublicState('ready');
         setOnline(true);
@@ -265,6 +277,23 @@ export function LandScreen({ session }: { session?: SessionState }) {
     retryAttempts < MAX_LAND_RETRY_ATTEMPTS
       ? () => void load(retryAttempts + 1)
       : undefined;
+
+  // Map detail entry: auto-open the existing scoped read-only parcel summary
+  // for the allowlisted parcelCode. Server authorization is preserved because
+  // this reuses the same public lookup plus internal scoped reads.
+  const consumedInitialParcelCode = useRef<string | null>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const code = initialParcelCode?.trim();
+      if (code && consumedInitialParcelCode.current !== code) {
+        consumedInitialParcelCode.current = code;
+        setMode('parcelCode');
+        setQuery(code);
+        void load(1, { mode: 'parcelCode', code });
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [initialParcelCode, load]);
   const snapshot = buildLandScreenSnapshot({
     lookup,
     application,
@@ -411,6 +440,16 @@ export function LandScreen({ session }: { session?: SessionState }) {
                 <Text>Cập nhật: {snapshot.parcel.updatedAt}</Text>
                 <Text>Thông tin chủ thể:</Text>
                 <MaskedValue {...snapshot.parcel.maskedSubject} />
+                {parcel && onOpenMap && (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Xem thửa đất trên bản đồ"
+                    onPress={() => onOpenMap(parcel.id)}
+                    style={{ minHeight: 44, padding: 8 }}
+                  >
+                    <Text>Xem trên bản đồ</Text>
+                  </Pressable>
+                )}
               </View>
             )}
 
