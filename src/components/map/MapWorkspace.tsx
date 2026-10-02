@@ -46,6 +46,9 @@ type MapProviderView = {
 
 type LoadState = 'loading' | 'ready' | 'error';
 
+const ACTION_FOCUS_CLASS =
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300';
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -85,6 +88,7 @@ export function MapWorkspace({
   );
   const [focusStale, setFocusStale] = useState(false);
   const [focusSelected, setFocusSelected] = useState(false);
+  const focusHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const focusSeq = useRef(0);
   const [online, setOnline] = useState(
     () => typeof window === 'undefined' || window.navigator.onLine,
@@ -107,6 +111,12 @@ export function MapWorkspace({
   }, []);
 
   const load = useCallback(async () => {
+    if (!window.navigator.onLine) {
+      setError(null);
+      setProviderFailed(false);
+      setState('ready');
+      return;
+    }
     try {
       setProviderFailed(false);
       const config = await readJson('/api/map/config');
@@ -154,6 +164,12 @@ export function MapWorkspace({
       setUpdatedAt(new Date().toLocaleString('vi-VN'));
       setState('ready');
     } catch (reason: unknown) {
+      if (!window.navigator.onLine) {
+        setError(null);
+        setProviderFailed(false);
+        setState('ready');
+        return;
+      }
       const providerDown =
         reason instanceof Error &&
         reason.message === 'MAP_PROVIDER_UNAVAILABLE';
@@ -205,8 +221,9 @@ export function MapWorkspace({
     }
   }, []);
 
-  // T-003: revalidate nền — response mới hơn chỉ dựng banner stale,
-  // không tự thay polygon đang hiển thị (EC-LPM-08).
+  // T-004: revalidate nền — response mới hơn thì clear polygon cũ và
+  // chuyển sang state stale yêu cầu reload (EC-LPM-08, DR-LPM-10).
+  // Không giữ polygon cũ làm current; giữ no-store và sequence guard.
   const revalidateFocusParcel = useCallback(async () => {
     if (!focusParcelId || !focusParcel || focusStatus !== 'ready') return;
     if (!window.navigator.onLine) return;
@@ -217,14 +234,35 @@ export function MapWorkspace({
       });
       const body = (await response.json().catch(() => null)) as unknown;
       if (focusSeq.current !== seq) return;
-      if (!response.ok) return;
+      if (!response.ok) {
+        const code =
+          isRecord(body) && typeof body.code === 'string' ? body.code : null;
+        setFocusParcel(null);
+        setFocusSelected(false);
+        setFocusStale(false);
+        setFocusStatus(mapFocusStatus(response.status, code));
+        return;
+      }
       const projection = readFocusProjection(body);
-      if (!projection) return;
+      if (!projection) {
+        setFocusParcel(null);
+        setFocusSelected(false);
+        setFocusStale(false);
+        setFocusStatus('geometry');
+        return;
+      }
       if (projection.parcel.updatedAt !== focusParcel.updatedAt) {
+        setFocusParcel(null);
+        setFocusSelected(false);
         setFocusStale(true);
+        setFocusStatus('stale');
       }
     } catch {
-      return;
+      if (focusSeq.current !== seq) return;
+      setFocusParcel(null);
+      setFocusSelected(false);
+      setFocusStale(false);
+      setFocusStatus(window.navigator.onLine ? 'error' : 'offline');
     }
   }, [focusParcelId, focusParcel, focusStatus]);
 
@@ -291,6 +329,11 @@ export function MapWorkspace({
     return () => window.clearInterval(timer);
   }, [load, online, revalidateFocusParcel]);
 
+  useEffect(() => {
+    if (!focusParcelId || focusStatus === 'ready') return;
+    focusHeadingRef.current?.focus();
+  }, [focusParcelId, focusStatus, state]);
+
   const visible = useMemo(
     () =>
       markers.filter((marker) => {
@@ -318,10 +361,15 @@ export function MapWorkspace({
         if (!active) return;
         mapRef.current?.remove();
         const bounds = providerConfig.bounds;
-        // T-003: focus đúng một parcel — zoom vào tâm bbox, giữ nguyên
+        // T-004: focus đúng một parcel — zoom vào tâm bbox, giữ nguyên
         // mọi ring của Polygon (không flatten holes/multiple rings).
+        // Không focus/zoom polygon khi loading/offline/error/stale.
         const focusCenter =
-          focusParcelId && focusParcel && focusStatus === 'ready' && online
+          focusParcelId &&
+          focusParcel &&
+          focusStatus === 'ready' &&
+          !focusStale &&
+          online
             ? focusBoundsCenter(focusParcel.geometry)
             : null;
         const map = new maplibregl.Map({
@@ -362,6 +410,7 @@ export function MapWorkspace({
           })),
         );
         map.on('load', () => {
+          if (!active) return;
           if (map.getSource('map-areas')) return;
           map.addSource('map-areas', { type: 'geojson', data: areas });
           map.addLayer({
@@ -382,11 +431,13 @@ export function MapWorkspace({
               'line-width': 2,
             },
           });
-          // T-003: LandParcel GeoJSON layer riêng, id không đụng Incident/Inspection.
+          // T-004: LandParcel GeoJSON layer riêng, id không đụng Incident/Inspection.
+          // Không render polygon khi loading/offline/error/stale.
           if (
             focusParcelId &&
             focusParcel &&
             focusStatus === 'ready' &&
+            !focusStale &&
             online
           ) {
             if (!map.getSource(LAND_PARCEL_FOCUS_SOURCE)) {
@@ -434,6 +485,8 @@ export function MapWorkspace({
     void render(activeProvider);
     return () => {
       active = false;
+      mapRef.current?.remove();
+      mapRef.current = null;
     };
   }, [
     state,
@@ -444,6 +497,7 @@ export function MapWorkspace({
     focusParcelId,
     focusParcel,
     focusStatus,
+    focusStale,
     focusSelected,
     online,
   ]);
@@ -457,29 +511,52 @@ export function MapWorkspace({
   if (state === 'loading') {
     if (focusParcelId) {
       return (
-        <div
-          className="space-y-4"
-          role="status"
-          aria-busy="true"
-          aria-label="Đang tải dữ liệu thửa đất"
-        >
-          <div className="h-64 rounded-xl bg-slate-900 motion-safe:animate-pulse" />
-          <p className="text-sm text-slate-400">Đang tải dữ liệu thửa đất…</p>
-        </div>
+        <section className="space-y-4" aria-labelledby="map-loading-heading">
+          <h2 id="map-loading-heading" className="sr-only">
+            Đang tải dữ liệu thửa đất
+          </h2>
+          <div
+            className="space-y-4"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+            aria-label="Đang tải dữ liệu thửa đất"
+          >
+            <div className="h-64 rounded-xl bg-slate-900 motion-safe:animate-pulse" />
+            <p className="text-sm text-slate-400">Đang tải dữ liệu thửa đất…</p>
+          </div>
+        </section>
       );
     }
     return (
-      <div
-        className="h-64 rounded-xl bg-slate-900 motion-safe:animate-pulse"
-        aria-label="Đang tải bản đồ nghiệp vụ"
-        role="status"
-      />
+      <section aria-labelledby="map-loading-heading">
+        <h2 id="map-loading-heading" className="sr-only">
+          Đang tải bản đồ nghiệp vụ
+        </h2>
+        <div
+          className="h-64 rounded-xl bg-slate-900 motion-safe:animate-pulse"
+          aria-label="Đang tải bản đồ nghiệp vụ"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        />
+      </section>
     );
   }
 
   if (denied) {
     return (
-      <AccessDenied message="Bản đồ nghiệp vụ không thuộc phạm vi của tài khoản hiện tại." />
+      <section
+        className="space-y-4"
+        aria-labelledby="map-denied-heading"
+        role="alert"
+        aria-live="assertive"
+      >
+        <h2 id="map-denied-heading" className="sr-only">
+          Không có quyền truy cập bản đồ
+        </h2>
+        <AccessDenied message="Bản đồ nghiệp vụ không thuộc phạm vi của tài khoản hiện tại." />
+      </section>
     );
   }
 
@@ -487,14 +564,18 @@ export function MapWorkspace({
     // T-003: provider lỗi trong focus flow — copy screen-05, không giả success.
     if (focusParcelId && providerFailed) {
       return (
-        <div className="space-y-4">
+        <section className="space-y-4" aria-labelledby="map-error-heading">
+          <h2 id="map-error-heading" className="sr-only">
+            Không thể tải bản đồ
+          </h2>
           <div
             className="rounded-xl border border-rose-900/60 bg-rose-950/30 p-5"
             role="alert"
+            aria-live="assertive"
           >
-            <h2 className="text-base font-semibold text-rose-100">
+            <h3 className="text-base font-semibold text-rose-100">
               Bản đồ nền hiện không khả dụng
-            </h2>
+            </h3>
             <p className="mt-2 text-sm text-rose-200">
               Không thể kết nối map provider. Dữ liệu thửa đất chưa được xác
               nhận là đã hiển thị.
@@ -504,45 +585,53 @@ export function MapWorkspace({
             <button
               type="button"
               onClick={refresh}
-              className="min-h-[44px] rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+              className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
             >
               Thử lại
             </button>
             <Link
               href="/land/parcels"
-              className="inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+              className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
             >
               Quay lại danh sách thửa
             </Link>
           </div>
-        </div>
+        </section>
       );
     }
     return (
-      <div className="space-y-4">
+      <section className="space-y-4" aria-labelledby="map-error-heading">
+        <h2 id="map-error-heading" className="sr-only">
+          Không thể tải bản đồ
+        </h2>
         <p
           className="rounded-xl border border-rose-900/60 bg-rose-950/30 p-5 text-sm text-rose-200"
           role="alert"
+          aria-live="assertive"
         >
           {error ?? 'Không thể tải bản đồ.'}
         </p>
         <button
           type="button"
           onClick={refresh}
-          className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+          className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
         >
           Thử tải lại
         </button>
-      </div>
+      </section>
     );
   }
 
   return (
-    <section className="space-y-4" aria-label="Workspace bản đồ">
+    <section className="space-y-4" aria-labelledby="map-workspace-heading">
+      <h2 id="map-workspace-heading" className="sr-only">
+        Workspace bản đồ
+      </h2>
       {!online ? (
         <p
           className="rounded-xl border border-amber-400/30 bg-amber-400/[0.06] p-4 text-sm text-amber-200"
           role="status"
+          aria-live="polite"
         >
           Đang ngoại tuyến. Chỉ xem basemap đã lưu; mọi ghi dữ liệu bị chặn
           (MAP_OFFLINE_WRITE_BLOCKED).
@@ -552,33 +641,37 @@ export function MapWorkspace({
         <p
           className="rounded-xl border border-slate-700 p-4 text-sm text-slate-400"
           role="status"
+          aria-live="polite"
         >
           Chưa đăng nhập nên lớp nghiệp vụ bị che; basemap vẫn xem được.
         </p>
       ) : null}
       <fieldset className="flex flex-wrap gap-4 rounded-xl border border-slate-800 p-4 text-sm text-slate-300">
         <legend className="px-2 text-xs text-slate-500">Lớp dữ liệu</legend>
-        <label className="flex items-center gap-2">
+        <label className="flex min-h-[44px] items-center gap-2">
           <input
             type="checkbox"
             checked={showIncidents}
             onChange={(event) => setShowIncidents(event.target.checked)}
+            className={ACTION_FOCUS_CLASS}
           />
           Vụ việc
         </label>
-        <label className="flex items-center gap-2">
+        <label className="flex min-h-[44px] items-center gap-2">
           <input
             type="checkbox"
             checked={showInspections}
             onChange={(event) => setShowInspections(event.target.checked)}
+            className={ACTION_FOCUS_CLASS}
           />
           Kiểm tra
         </label>
-        <label className="flex items-center gap-2">
+        <label className="flex min-h-[44px] items-center gap-2">
           <input
             type="checkbox"
             checked={showAreas}
             onChange={(event) => setShowAreas(event.target.checked)}
+            className={ACTION_FOCUS_CLASS}
           />
           Vùng polygon
         </label>
@@ -592,20 +685,27 @@ export function MapWorkspace({
           className="rounded-xl border border-slate-800 bg-slate-950 p-4"
         >
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+            <h2
+              id="land-parcel-focus-heading"
+              ref={focusHeadingRef}
+              tabIndex={-1}
+              className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase focus:outline-2 focus:outline-offset-2 focus:outline-cyan-300"
+            >
               Thửa đất trên bản đồ
-            </p>
+            </h2>
             <span className="rounded-full border border-slate-700 px-3 py-1 font-mono text-xs text-slate-300">
               internal / simulated
             </span>
           </div>
-          {focusStatus === 'loading' ? (
+          {focusStatus === 'loading' || focusStatus === 'empty' ? (
             <div
               className="mt-3 space-y-2"
               role="status"
+              aria-live="polite"
               aria-busy="true"
               aria-label="Đang tải dữ liệu thửa đất"
             >
+              <h3 className="sr-only">Đang tải dữ liệu thửa đất</h3>
               <div className="h-16 rounded-lg bg-slate-900 motion-safe:animate-pulse" />
               <p className="text-sm text-slate-400">
                 Đang tải dữ liệu thửa đất…
@@ -613,21 +713,32 @@ export function MapWorkspace({
             </div>
           ) : null}
           {focusStatus === 'offline' ? (
-            <div className="mt-3 space-y-3" role="status">
+            <div
+              className="mt-3 space-y-3"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              <h3 className="text-base font-semibold text-amber-100">
+                Đang ngoại tuyến
+              </h3>
               <p className="text-sm text-amber-200">
                 Đang ngoại tuyến. Không tải polygon thửa đất khi ngoại tuyến.
+              </p>
+              <p className="text-sm text-amber-200">
+                Polygon thửa đất không được lưu trong bộ nhớ offline.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={retryFocus}
-                  className="min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
                 >
-                  Thử lại
+                  Thử lại khi có kết nối
                 </button>
                 <Link
                   href="/land/parcels"
-                  className="inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
                 >
                   Quay lại danh sách thửa
                 </Link>
@@ -635,51 +746,42 @@ export function MapWorkspace({
             </div>
           ) : null}
           {focusStatus === 'forbidden' ? (
-            <div className="mt-3 space-y-3" role="alert">
-              <h2
-                id="land-parcel-focus-heading"
-                className="text-base font-semibold text-slate-100"
-              >
+            <div className="mt-3 space-y-3" role="alert" aria-live="assertive">
+              <h3 className="text-base font-semibold text-slate-100">
                 Không được phép xem thửa đất này
-              </h2>
+              </h3>
               <p className="text-sm text-slate-400">
                 Bạn không có quyền xem nội dung này trong phạm vi hiện tại.
               </p>
               <Link
                 href="/land/parcels"
-                className="inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+                className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
               >
                 Quay lại danh sách thửa
               </Link>
             </div>
           ) : null}
           {focusStatus === 'not-found' ? (
-            <div className="mt-3 space-y-3" role="alert">
-              <h2
-                id="land-parcel-focus-heading"
-                className="text-base font-semibold text-slate-100"
-              >
+            <div className="mt-3 space-y-3" role="alert" aria-live="assertive">
+              <h3 className="text-base font-semibold text-slate-100">
                 Không tìm thấy thửa đất
-              </h2>
+              </h3>
               <p className="text-sm text-slate-400">
                 Thửa đất không tồn tại hoặc không nằm trong phạm vi truy cập.
               </p>
               <Link
                 href="/land/parcels"
-                className="inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+                className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
               >
                 Quay lại danh sách thửa
               </Link>
             </div>
           ) : null}
           {focusStatus === 'geometry' ? (
-            <div className="mt-3 space-y-3" role="alert">
-              <h2
-                id="land-parcel-focus-heading"
-                className="text-base font-semibold text-slate-100"
-              >
+            <div className="mt-3 space-y-3" role="alert" aria-live="assertive">
+              <h3 className="text-base font-semibold text-slate-100">
                 Không thể hiển thị hình học thửa đất
-              </h2>
+              </h3>
               <p className="text-sm text-slate-400">
                 Dữ liệu hình học hiện không sẵn sàng để hiển thị.
               </p>
@@ -687,13 +789,13 @@ export function MapWorkspace({
                 <button
                   type="button"
                   onClick={retryFocus}
-                  className="min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
                 >
                   Thử lại
                 </button>
                 <Link
                   href="/land/parcels"
-                  className="inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
                 >
                   Quay lại danh sách thửa
                 </Link>
@@ -701,13 +803,10 @@ export function MapWorkspace({
             </div>
           ) : null}
           {focusStatus === 'provider' ? (
-            <div className="mt-3 space-y-3" role="alert">
-              <h2
-                id="land-parcel-focus-heading"
-                className="text-base font-semibold text-slate-100"
-              >
+            <div className="mt-3 space-y-3" role="alert" aria-live="assertive">
+              <h3 className="text-base font-semibold text-slate-100">
                 Bản đồ nền hiện không khả dụng
-              </h2>
+              </h3>
               <p className="text-sm text-slate-400">
                 Không thể kết nối map provider. Dữ liệu thửa đất chưa được xác
                 nhận là đã hiển thị.
@@ -716,13 +815,13 @@ export function MapWorkspace({
                 <button
                   type="button"
                   onClick={retryFocus}
-                  className="min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
                 >
                   Thử lại
                 </button>
                 <Link
                   href="/land/parcels"
-                  className="inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
                 >
                   Quay lại danh sách thửa
                 </Link>
@@ -730,13 +829,10 @@ export function MapWorkspace({
             </div>
           ) : null}
           {focusStatus === 'error' ? (
-            <div className="mt-3 space-y-3" role="alert">
-              <h2
-                id="land-parcel-focus-heading"
-                className="text-base font-semibold text-slate-100"
-              >
+            <div className="mt-3 space-y-3" role="alert" aria-live="assertive">
+              <h3 className="text-base font-semibold text-slate-100">
                 Không tải được dữ liệu thửa đất
-              </h2>
+              </h3>
               <p className="text-sm text-slate-400">
                 Không thể tải lớp thửa đất. Thử lại.
               </p>
@@ -744,13 +840,45 @@ export function MapWorkspace({
                 <button
                   type="button"
                   onClick={retryFocus}
-                  className="min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
                 >
                   Thử lại
                 </button>
                 <Link
                   href="/land/parcels"
-                  className="inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+                >
+                  Quay lại danh sách thửa
+                </Link>
+              </div>
+            </div>
+          ) : null}
+          {focusStatus === 'stale' ? (
+            <div
+              className="mt-3 space-y-3 rounded-xl border border-amber-400/30 bg-amber-400/[0.06] p-4"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              <h3 className="text-base font-semibold text-amber-100">
+                Dữ liệu bản đồ có thể đã cũ.
+              </h3>
+              <p className="text-sm text-amber-200">
+                Polygon cũ không được hiển thị cho đến khi dữ liệu thửa đất được
+                tải lại.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={retryFocus}
+                  aria-label="Tải lại dữ liệu thửa đất"
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-amber-300/40 px-3 py-2 text-sm text-amber-100 hover:border-amber-200`}
+                >
+                  Tải lại dữ liệu
+                </button>
+                <Link
+                  href="/land/parcels"
+                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
                 >
                   Quay lại danh sách thửa
                 </Link>
@@ -759,12 +887,9 @@ export function MapWorkspace({
           ) : null}
           {focusStatus === 'ready' && focusParcel ? (
             <div className="mt-3 space-y-3">
-              <h2
-                id="land-parcel-focus-heading"
-                className="font-mono text-2xl font-semibold text-slate-100"
-              >
+              <h3 className="font-mono text-2xl font-semibold text-slate-100">
                 {focusParcel.parcelCode}
-              </h2>
+              </h3>
               <dl className="grid gap-2 text-sm sm:grid-cols-2">
                 <div>
                   <dt className="text-slate-500">Tờ</dt>
@@ -793,32 +918,14 @@ export function MapWorkspace({
                 Dữ liệu mô phỏng nội bộ; không phải ranh giới pháp lý chính
                 thức.
               </p>
-              <span className="sr-only">
+              <span id="land-parcel-focus-description" className="sr-only">
                 {focusScreenReaderLabel(focusParcel)}
               </span>
-              {focusStale ? (
-                <div
-                  className="rounded-xl border border-amber-400/30 bg-amber-400/[0.06] p-4"
-                  role="status"
-                >
-                  <p className="text-sm text-amber-200">
-                    Dữ liệu bản đồ có thể đã cũ. Cập nhật:{' '}
-                    {focusParcel.updatedAt}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={retryFocus}
-                    aria-label="Tải lại dữ liệu thửa đất"
-                    className="mt-3 min-h-[44px] rounded-lg border border-amber-300/40 px-3 py-2 text-sm text-amber-100 hover:border-amber-200"
-                  >
-                    Tải lại dữ liệu
-                  </button>
-                </div>
-              ) : null}
               <div
                 className="flex flex-wrap gap-3"
                 role="status"
                 aria-live="polite"
+                aria-atomic="true"
               >
                 {focusSelected ? (
                   <>
@@ -828,14 +935,15 @@ export function MapWorkspace({
                     </p>
                     <Link
                       href={focusParcelDetailUrl(focusParcel.id)}
-                      className="inline-flex min-h-[44px] items-center rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200"
+                      className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200`}
+                      aria-describedby="land-parcel-focus-description"
                     >
                       Mở chi tiết thửa
                     </Link>
                     <button
                       type="button"
                       onClick={() => setFocusSelected(false)}
-                      className="min-h-[44px] rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+                      className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
                     >
                       Bỏ chọn
                     </button>
@@ -844,7 +952,9 @@ export function MapWorkspace({
                   <button
                     type="button"
                     onClick={() => setFocusSelected(true)}
-                    className="min-h-[44px] rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+                    aria-pressed={focusSelected}
+                    aria-describedby="land-parcel-focus-description"
+                    className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
                   >
                     Chọn thửa đất trên bản đồ
                   </button>
@@ -854,8 +964,16 @@ export function MapWorkspace({
           ) : null}
         </section>
       ) : (
-        <div className="rounded-xl border border-dashed border-slate-700 p-6 text-sm text-slate-400">
-          <h2 className="text-base font-semibold text-slate-200">
+        <section
+          className="rounded-xl border border-dashed border-slate-700 p-6 text-sm text-slate-400"
+          aria-labelledby="land-parcel-empty-heading"
+          role="status"
+          aria-live="polite"
+        >
+          <h2
+            id="land-parcel-empty-heading"
+            className="text-base font-semibold text-slate-200"
+          >
             Chưa chọn thửa đất
           </h2>
           <p className="mt-1">
@@ -863,23 +981,24 @@ export function MapWorkspace({
           </p>
           <Link
             href="/land/parcels"
-            className="mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+            className={`${ACTION_FOCUS_CLASS} mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
           >
             Quay lại danh sách thửa
           </Link>
-        </div>
+        </section>
       )}
       <div
         ref={mapNode}
         data-testid="map-canvas"
-        className="h-[420px] rounded-xl border border-slate-800 bg-slate-900"
+        className={`${ACTION_FOCUS_CLASS} h-[420px] rounded-xl border border-slate-800 bg-slate-900`}
         role="application"
         aria-label="Bản đồ nghiệp vụ"
+        tabIndex={0}
       />
       <p className="text-xs text-slate-500">
         Nguồn nền:{' '}
         <a
-          className="underline underline-offset-4 hover:text-white"
+          className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center underline underline-offset-4 hover:text-white`}
           href="https://www.openstreetmap.org/copyright"
         >
           {provider?.attribution || '© OpenStreetMap contributors'}
@@ -899,21 +1018,29 @@ export function MapWorkspace({
         <button
           type="button"
           onClick={refresh}
-          className="rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 hover:border-cyan-300 hover:text-white"
+          className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 hover:border-cyan-300 hover:text-white`}
         >
           Làm mới
         </button>
       </div>
       {!masked && !visible.length ? (
-        <div className="rounded-xl border border-dashed border-slate-700 p-8 text-sm text-slate-400">
-          Không có đối tượng nghiệp vụ trong viewport hiện tại.
-        </div>
+        <section
+          className="rounded-xl border border-dashed border-slate-700 p-8 text-sm text-slate-400"
+          aria-labelledby="map-markers-empty-heading"
+          role="status"
+          aria-live="polite"
+        >
+          <h2 id="map-markers-empty-heading" className="sr-only">
+            Không có đối tượng nghiệp vụ
+          </h2>
+          <p>Không có đối tượng nghiệp vụ trong viewport hiện tại.</p>
+        </section>
       ) : null}
       <div className="flex flex-wrap gap-3">
         {online && !masked ? (
           <Link
             href="/intake"
-            className="rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200"
+            className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200`}
           >
             Ghi nhận tin báo
           </Link>
@@ -927,13 +1054,13 @@ export function MapWorkspace({
         )}
         <Link
           href="/incidents"
-          className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+          className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
         >
           Hàng đợi vụ việc
         </Link>
         <Link
           href="/inspections/establishments"
-          className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+          className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
         >
           Cơ sở kiểm tra
         </Link>

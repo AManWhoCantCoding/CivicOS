@@ -33,6 +33,7 @@ export type FocusStatus =
   | 'empty'
   | 'loading'
   | 'ready'
+  | 'stale'
   | 'forbidden'
   | 'not-found'
   | 'geometry'
@@ -121,7 +122,7 @@ export function readFocusProjection(body: unknown): FocusProjection | null {
 export function mapFocusStatus(
   status: number,
   code: string | null,
-): Exclude<FocusStatus, 'empty' | 'loading' | 'ready' | 'offline'> {
+): Exclude<FocusStatus, 'empty' | 'loading' | 'ready' | 'stale' | 'offline'> {
   if (status === 401 || status === 403) return 'forbidden';
   if (status === 404) return 'not-found';
   if (status === 503 && code === 'MAP_PROVIDER_UNAVAILABLE') return 'provider';
