@@ -308,10 +308,10 @@ describe('GET /api/map/land-parcels/:parcelId safety', () => {
     const response = await GET(new Request('http://localhost'), context());
     const payload = await body(response);
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(503);
     expect(payload).toEqual({
-      code: 'LAND_GEOMETRY_INVALID',
-      error: 'Hình học thửa đất không hợp lệ.',
+      code: 'MAP_LAYER_FAILED',
+      error: 'Không thể hiển thị hình học thửa đất.',
     });
     expectSealedError(payload, response);
     expect(dbMocks.auditLandEvent).not.toHaveBeenCalled();
@@ -340,6 +340,7 @@ describe('GET /api/map/land-parcels/:parcelId safety', () => {
       'getLandParcelMapProjection',
       'auditLandEvent',
       'toLandApiError',
+      'MAP_LAYER_FAILED',
       'Cache-Control',
       'no-store',
       'land.parcel.map.viewed',

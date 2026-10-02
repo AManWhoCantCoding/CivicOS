@@ -36,6 +36,11 @@ const LAND_ERRORS: Record<string, LandApiError> = {
     code: 'LAND_GEOMETRY_INVALID',
     error: 'Hình học thửa đất không hợp lệ.',
   },
+  MAP_LAYER_FAILED: {
+    status: 503,
+    code: 'MAP_LAYER_FAILED',
+    error: 'Không thể hiển thị hình học thửa đất.',
+  },
   DUPLICATE_CODE: {
     status: 409,
     code: 'LAND_DUPLICATE_CODE',

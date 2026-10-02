@@ -6,14 +6,20 @@ import { getLandParcelMapProjection } from '@/modules/land/parcel-map-projection
 
 const NO_STORE_HEADERS = { 'Cache-Control': 'no-store' };
 
-// Map service errors to the stable LAND_* contract without leaking
-// geometry or resource detail. Every map polygon response is no-store,
-// including error responses.
+// Map service errors to the stable contract without leaking geometry or
+// resource detail. Stored projection geometry that cannot be served safely
+// is a layer failure (503 MAP_LAYER_FAILED) per the locked map API
+// contract, not a land domain rejection. Every map polygon response is
+// no-store, including error responses.
 function toErrorResponse(error: unknown): NextResponse {
   const apiError = toLandApiError(error);
+  const mapped =
+    apiError.code === 'LAND_GEOMETRY_INVALID'
+      ? toLandApiError(new Error('MAP_LAYER_FAILED'))
+      : apiError;
   return NextResponse.json(
-    { code: apiError.code, error: apiError.error },
-    { status: apiError.status, headers: { ...NO_STORE_HEADERS } },
+    { code: mapped.code, error: mapped.error },
+    { status: mapped.status, headers: { ...NO_STORE_HEADERS } },
   );
 }
 
