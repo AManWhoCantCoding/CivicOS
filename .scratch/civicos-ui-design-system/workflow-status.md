@@ -6,7 +6,7 @@
 - **B8:** `APPROVED` — user message `Được tôi chốt`.
 - **B9:** `APPROVED` — user message `Duyệt B9 — no data-model impact`; no data-model impact.
 - **B10:** `COMPLETE` — phase/ticket decomposition created; ready for Techlead dispatch.
-- **B11:** `COMPLETE` — implementation, review, verification, traceability and phase gates 01–04 passed.
+- **B11:** `BLOCKED-CONTRACT` — implementation, review, verification, traceability and phase gates 01–04 passed, but final contract-integrity closure is not ready.
 
 ## Locked scope
 
@@ -30,6 +30,13 @@
   - `docs/design/civicos-ui-design-system/overview.md`
   - `docs/design/civicos-ui-design-system/api-contract.md`
   - `docs/design/civicos-ui-design-system/data-model.md`
+
+## Contract gate exception requiring decision
+
+- `gov-contract-integrity` requires the final contract set to include 8 design docs plus a feature-list and SOW.
+- Current feature contract contains only `overview.md`, `api-contract.md`, `data-model.md` and `LOCK.json`; `.scratch/civicos-ui-design-system/feature-list.md` and `.scratch/civicos-ui-design-system/sow.md` are absent.
+- B8/B9 user approvals establish the UI-only/no-data-model scope, but do not explicitly waive the mandatory contract-integrity artifact requirement.
+- Techlead does not modify `docs/design/**` or `docs/research/**`; this is a `BLOCKED-CONTRACT` handoff requiring Research/contract-owner clarification before B12.
 
 ## B10 dependency frontier
 
@@ -60,6 +67,6 @@
 
 ## Next gate
 
-All four B11 tickets have reached their implementation/review gates and the Techlead commit/evidence bookkeeping is complete. Next workflow step: B12 human review.
+All four B11 tickets have reached their implementation/review gates and the Techlead commit/evidence bookkeeping is complete. B12 is paused until the contract gate is resolved.
 
 `NEXT-SKILL: gov-to-phases` only after B9 approval.
