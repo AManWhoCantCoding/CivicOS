@@ -9,7 +9,11 @@ import {
 } from 'react-native';
 import { ApiError } from '../../api/client';
 import { countRelatedInfo, searchRelatedInfo } from '../../api/relatedInfo';
-import { MaskedValue, StateMessage } from '../../components/States';
+import {
+  MaskedValue,
+  StateMessage,
+  mobileBaseline,
+} from '../../components/States';
 import { RelatedInfoDetail } from './RelatedInfoDetail';
 import type {
   RelatedInfoEntityType,
@@ -105,9 +109,22 @@ export function RelatedInfoScreen({
       />
     );
   return (
-    <SafeAreaView>
-      <View style={{ padding: 16, gap: 8 }}>
-        <Text>RelatedInfo · Tra cứu chỉ đọc</Text>
+    <SafeAreaView style={{ backgroundColor: mobileBaseline.color.canvas }}>
+      <View
+        style={{
+          padding: mobileBaseline.space.s4,
+          gap: mobileBaseline.space.s2,
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: mobileBaseline.font.sans,
+            fontSize: mobileBaseline.size.title,
+            color: mobileBaseline.color.text,
+          }}
+        >
+          RelatedInfo · Tra cứu chỉ đọc
+        </Text>
         <TextInput
           accessibilityLabel="Tìm kiếm"
           value={q}
@@ -115,10 +132,19 @@ export function RelatedInfoScreen({
           placeholder="Tìm kiếm"
         />
         <Pressable
+          accessibilityRole="button"
           onPress={() => setFiltersOpen((value) => !value)}
-          style={{ minHeight: 44, padding: 8 }}
+          style={{ minHeight: 44, minWidth: 44, padding: 8 }}
         >
-          <Text>Bộ lọc{filtersOpen ? ' (đóng)' : ''}</Text>
+          <Text
+            style={{
+              fontFamily: mobileBaseline.font.sans,
+              fontSize: mobileBaseline.size.label,
+              color: mobileBaseline.color.accent,
+            }}
+          >
+            Bộ lọc{filtersOpen ? ' (đóng)' : ''}
+          </Text>
         </Pressable>
         {filtersOpen && (
           <TextInput
@@ -128,7 +154,13 @@ export function RelatedInfoScreen({
             placeholder="status"
           />
         )}
-        <Text>
+        <Text
+          style={{
+            fontFamily: mobileBaseline.font.mono,
+            fontSize: mobileBaseline.size.caption,
+            color: mobileBaseline.color.textMuted,
+          }}
+        >
           ALL {counts.ALL ?? 0} · Resident {counts.RESIDENT ?? 0} · Business{' '}
           {counts.BUSINESS ?? 0} · Hotspot {counts.HOTSPOT ?? 0} · Violation{' '}
           {counts.VIOLATION ?? 0}
@@ -137,10 +169,19 @@ export function RelatedInfoScreen({
           {entityTypes.map((type) => (
             <Pressable
               key={type ?? 'ALL'}
+              accessibilityRole="button"
               onPress={() => setEntityType(type)}
-              style={{ minHeight: 44, padding: 8 }}
+              style={{ minHeight: 44, minWidth: 44, padding: 8 }}
             >
-              <Text>{type ?? 'ALL'}</Text>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.label,
+                  color: mobileBaseline.color.text,
+                }}
+              >
+                {type ?? 'ALL'}
+              </Text>
             </Pressable>
           ))}
         </View>
@@ -156,27 +197,67 @@ export function RelatedInfoScreen({
         )}
         {(state === 'ready' || state === 'masked') && (
           <View>
-            <Text>Danh sách</Text>
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.section,
+                color: mobileBaseline.color.text,
+              }}
+            >
+              Danh sách
+            </Text>
             {items.map((item) => (
               <Pressable
                 key={`${item.entityType}:${item.id}`}
+                accessibilityRole="button"
                 onPress={() => setSelected(item)}
                 onLongPress={() => setMapItem(item)}
-                style={{ minHeight: 44, padding: 8 }}
+                style={{
+                  minHeight: 44,
+                  minWidth: 44,
+                  padding: 8,
+                  backgroundColor: mobileBaseline.color.surface,
+                  borderColor: mobileBaseline.color.border,
+                  borderWidth: 1,
+                  borderRadius: mobileBaseline.radius.md,
+                }}
               >
-                <Text>{item.title}</Text>
+                <Text
+                  style={{
+                    fontFamily: mobileBaseline.font.sans,
+                    fontSize: mobileBaseline.size.body,
+                    color: mobileBaseline.color.text,
+                  }}
+                >
+                  {item.title}
+                </Text>
                 <MaskedValue value={item.address} masked={item.masked} />
-                <Text>
+                <Text
+                  style={{
+                    fontFamily: mobileBaseline.font.sans,
+                    fontSize: mobileBaseline.size.label,
+                    color: mobileBaseline.color.textMuted,
+                  }}
+                >
                   {item.status} · {item.entityType}
                 </Text>
               </Pressable>
             ))}
             {hasMore && (
               <Pressable
+                accessibilityRole="button"
                 onPress={() => void load(page + 1)}
-                style={{ minHeight: 44, padding: 8 }}
+                style={{ minHeight: 44, minWidth: 44, padding: 8 }}
               >
-                <Text>Tải thêm</Text>
+                <Text
+                  style={{
+                    fontFamily: mobileBaseline.font.sans,
+                    fontSize: mobileBaseline.size.label,
+                    color: mobileBaseline.color.accent,
+                  }}
+                >
+                  Tải thêm
+                </Text>
               </Pressable>
             )}
           </View>
@@ -190,14 +271,39 @@ export function RelatedInfoScreen({
           <View
             style={{
               marginTop: 'auto',
-              backgroundColor: '#fff',
+              backgroundColor: mobileBaseline.color.surface,
+              borderColor: mobileBaseline.color.border,
+              borderWidth: 1,
+              borderRadius: mobileBaseline.radius.lg,
               padding: 20,
               gap: 12,
             }}
           >
-            <Text>Vị trí RelatedInfo</Text>
-            <Text>{mapItem?.title}</Text>
-            <Text>
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.section,
+                color: mobileBaseline.color.text,
+              }}
+            >
+              Vị trí RelatedInfo
+            </Text>
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.body,
+                color: mobileBaseline.color.text,
+              }}
+            >
+              {mapItem?.title}
+            </Text>
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.mono,
+                fontSize: mobileBaseline.size.label,
+                color: mobileBaseline.color.textMuted,
+              }}
+            >
               {mapItem?.geometry
                 ? 'Polygon/geometry'
                 : mapItem?.lat !== undefined
@@ -205,19 +311,38 @@ export function RelatedInfoScreen({
                   : 'Không có vị trí'}
             </Text>
             <Pressable
+              accessibilityRole="button"
               onPress={() => {
                 if (mapItem) onOpenMap?.(mapItem);
                 setMapItem(null);
               }}
-              style={{ minHeight: 44 }}
+              style={{ minHeight: 44, minWidth: 44 }}
             >
-              <Text>Mở bản đồ</Text>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.label,
+                  color: mobileBaseline.color.accent,
+                }}
+              >
+                Mở bản đồ
+              </Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đóng"
               onPress={() => setMapItem(null)}
-              style={{ minHeight: 44 }}
+              style={{ minHeight: 44, minWidth: 44 }}
             >
-              <Text>Đóng</Text>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.label,
+                  color: mobileBaseline.color.text,
+                }}
+              >
+                Đóng
+              </Text>
             </Pressable>
           </View>
         </Modal>

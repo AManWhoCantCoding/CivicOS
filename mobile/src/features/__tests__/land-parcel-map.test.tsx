@@ -403,6 +403,27 @@ describe('T-005 review focus cleanup', () => {
     expect(guards.length).toBeGreaterThanOrEqual(2);
   });
 });
+// CUI-003 AC-2/AC-4: shared Light/Blue presentation on the mobile map surface.
+describe('CUI-003 mobile map presentation baseline', () => {
+  it('uses approved map fill/stroke and surface with 44px actions', () => {
+    const map = readSource('../map/MapScreen.tsx');
+    expect(map).toContain('mobileBaseline');
+    expect(map).toContain('mobileBaseline.color.mapFill');
+    expect(map).toContain('mobileBaseline.color.mapStroke');
+    expect(map).toContain('minWidth: 44');
+    expect(map).toContain('accessibilityLabel="Thử lại khi có kết nối"');
+    expect(map).toContain('accessibilityLabel="Quay lại bản đồ"');
+    expect(map).not.toMatch(/#7c3aed|#5b21b6|#14532d|#2563eb|#1d4ed8/i);
+    expect(map).not.toMatch(/#000000|#000\b|gradient|neon|glow/i);
+  });
+
+  it('keeps monospace parcel codes and simulated copy in the bottom sheet', () => {
+    const map = readSource('../map/MapScreen.tsx');
+    expect(map).toContain('mobileBaseline.font.mono');
+    expect(map).toContain('internal / simulated');
+    expect(map).toContain('land-parcel-focus-panel');
+  });
+});
 // Review gap 3: client.ts takes ApiError.code from body.error, so the mapper
 // must read the stable body.code to honor real shared error bodies.
 describe('T-005 review shared error-body shape', () => {

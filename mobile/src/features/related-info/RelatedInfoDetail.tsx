@@ -2,7 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, SafeAreaView, Text, View } from 'react-native';
 import { ApiError } from '../../api/client';
 import { getRelatedInfoDetail } from '../../api/relatedInfo';
-import { MaskedValue, StateMessage } from '../../components/States';
+import {
+  MaskedValue,
+  StateMessage,
+  mobileBaseline,
+} from '../../components/States';
 import type { RelatedInfoItem, RelatedInfoReference } from './types';
 
 type DetailState =
@@ -42,10 +46,28 @@ export function RelatedInfoDetail({
     return () => clearTimeout(timer);
   }, [load]);
   return (
-    <SafeAreaView>
-      <View style={{ padding: 16, gap: 12 }}>
-        <Pressable onPress={onBack} style={{ minHeight: 44 }}>
-          <Text>‹ Quay lại</Text>
+    <SafeAreaView style={{ backgroundColor: mobileBaseline.color.canvas }}>
+      <View
+        style={{
+          padding: mobileBaseline.space.s4,
+          gap: mobileBaseline.space.s3,
+        }}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Quay lại"
+          onPress={onBack}
+          style={{ minHeight: 44, minWidth: 44, padding: 8 }}
+        >
+          <Text
+            style={{
+              fontFamily: mobileBaseline.font.sans,
+              fontSize: mobileBaseline.size.label,
+              color: mobileBaseline.color.accent,
+            }}
+          >
+            ‹ Quay lại
+          </Text>
         </Pressable>
         {state === 'loading' && <StateMessage state="loading" />}
         {state === 'empty' && !detail && <StateMessage state="empty" />}
@@ -59,23 +81,71 @@ export function RelatedInfoDetail({
         {state === 'masked' && <StateMessage state="masked" />}
         {detail && (
           <>
-            <Text>{detail.title}</Text>
-            <Text>{detail.status}</Text>
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.title,
+                color: mobileBaseline.color.text,
+              }}
+            >
+              {detail.title}
+            </Text>
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.label,
+                color: mobileBaseline.color.textMuted,
+              }}
+            >
+              {detail.status}
+            </Text>
             <MaskedValue value={detail.address} masked={detail.masked} />
-            <Text>{detail.updatedAt}</Text>
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.mono,
+                fontSize: mobileBaseline.size.label,
+                color: mobileBaseline.color.textMuted,
+              }}
+            >
+              {detail.updatedAt}
+            </Text>
             {(detail.geometry || detail.lat !== undefined) && (
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Mở trên bản đồ"
                 onPress={() => onOpenMap?.(detail)}
-                style={{ minHeight: 44, padding: 8 }}
+                style={{ minHeight: 44, minWidth: 44, padding: 8 }}
               >
-                <Text>Mở trên bản đồ</Text>
+                <Text
+                  style={{
+                    fontFamily: mobileBaseline.font.sans,
+                    fontSize: mobileBaseline.size.label,
+                    color: mobileBaseline.color.accent,
+                  }}
+                >
+                  Mở trên bản đồ
+                </Text>
               </Pressable>
             )}
             {detail.geometry && (
-              <Text>Polygon/geometry từ response server</Text>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.caption,
+                  color: mobileBaseline.color.textMuted,
+                }}
+              >
+                Polygon/geometry từ response server
+              </Text>
             )}
             {detail.lat !== undefined && (
-              <Text>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.mono,
+                  fontSize: mobileBaseline.size.label,
+                  color: mobileBaseline.color.textMuted,
+                }}
+              >
                 Vị trí: {detail.lat}, {detail.lng}
               </Text>
             )}

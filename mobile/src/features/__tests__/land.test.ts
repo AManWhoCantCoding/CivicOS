@@ -197,4 +197,17 @@ describe('mobile land read-only projection', () => {
     expect(navigationSource).toContain("'Land'");
     expect(navigationSource).toContain('Đất đai');
   });
+
+  it('applies the shared presentation baseline without new actions', () => {
+    const screenSource = readFileSync(
+      join(__dirname, '../land/LandScreen.tsx'),
+      'utf8',
+    );
+    expect(screenSource).toContain('mobileBaseline');
+    expect(screenSource).toContain('mobileBaseline.font.mono');
+    expect(screenSource).toContain('minWidth: 44');
+    expect(screenSource).toContain('Xem trên bản đồ');
+    expect(screenSource).toContain('onOpenMap(parcel.id)');
+    expect(screenSource).not.toMatch(/#000000|#000\b|gradient|neon|glow/i);
+  });
 });

@@ -18,6 +18,7 @@ import {
   MaskedValue,
   OfflineBanner,
   StateMessage,
+  mobileBaseline,
   type DataState,
 } from '../../components/States';
 
@@ -154,6 +155,29 @@ export function landErrorMessage(error: unknown): string {
 function initialOnlineState(): boolean {
   return typeof navigator === 'undefined' || navigator.onLine !== false;
 }
+
+// Presentation-only text styles from the shared mobile baseline.
+const monoLine = {
+  fontFamily: mobileBaseline.font.mono,
+  fontSize: mobileBaseline.size.label,
+  color: mobileBaseline.color.text,
+} as const;
+const monoMuted = {
+  fontFamily: mobileBaseline.font.mono,
+  fontSize: mobileBaseline.size.label,
+  color: mobileBaseline.color.textMuted,
+} as const;
+const bodyLine = {
+  fontFamily: mobileBaseline.font.sans,
+  fontSize: mobileBaseline.size.body,
+  lineHeight: mobileBaseline.size.bodyLine,
+  color: mobileBaseline.color.text,
+} as const;
+const metaLine = {
+  fontFamily: mobileBaseline.font.sans,
+  fontSize: mobileBaseline.size.label,
+  color: mobileBaseline.color.textMuted,
+} as const;
 
 export function LandScreen({
   session,
@@ -309,25 +333,71 @@ export function LandScreen({
     timelineState === 'offline';
 
   return (
-    <SafeAreaView>
-      <View style={{ padding: 16, gap: 12 }}>
-        <Text>Đất đai · chỉ đọc</Text>
-        <View>
-          <Text>Tra cứu theo</Text>
+    <SafeAreaView style={{ backgroundColor: mobileBaseline.color.canvas }}>
+      <View
+        style={{
+          padding: mobileBaseline.space.s4,
+          gap: mobileBaseline.space.s3,
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: mobileBaseline.font.sans,
+            fontSize: mobileBaseline.size.title,
+            color: mobileBaseline.color.text,
+          }}
+        >
+          Đất đai · chỉ đọc
+        </Text>
+        <View
+          style={{
+            backgroundColor: mobileBaseline.color.surface,
+            borderColor: mobileBaseline.color.border,
+            borderWidth: 1,
+            borderRadius: mobileBaseline.radius.md,
+            padding: mobileBaseline.space.s3,
+            gap: mobileBaseline.space.s2,
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: mobileBaseline.font.sans,
+              fontSize: mobileBaseline.size.label,
+              color: mobileBaseline.color.textMuted,
+            }}
+          >
+            Tra cứu theo
+          </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
             <Pressable
               accessibilityRole="button"
               onPress={() => setMode('applicationCode')}
-              style={{ minHeight: 44, padding: 8 }}
+              style={{ minHeight: 44, minWidth: 44, padding: 8 }}
             >
-              <Text>Mã hồ sơ</Text>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.label,
+                  color: mobileBaseline.color.text,
+                }}
+              >
+                Mã hồ sơ
+              </Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
               onPress={() => setMode('parcelCode')}
-              style={{ minHeight: 44, padding: 8 }}
+              style={{ minHeight: 44, minWidth: 44, padding: 8 }}
             >
-              <Text>Mã thửa</Text>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.label,
+                  color: mobileBaseline.color.text,
+                }}
+              >
+                Mã thửa
+              </Text>
             </Pressable>
           </View>
           <TextInput
@@ -346,11 +416,28 @@ export function LandScreen({
           />
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Tra cứu"
             onPress={() => void load(1)}
             disabled={publicState === 'loading'}
-            style={{ minHeight: 44, padding: 8 }}
+            style={{
+              minHeight: 44,
+              minWidth: 44,
+              padding: 8,
+              borderColor: mobileBaseline.color.accent,
+              borderWidth: 1,
+              borderRadius: mobileBaseline.radius.sm,
+              backgroundColor: mobileBaseline.color.surface,
+            }}
           >
-            <Text>Tra cứu</Text>
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.label,
+                color: mobileBaseline.color.accent,
+              }}
+            >
+              Tra cứu
+            </Text>
           </Pressable>
         </View>
 
@@ -361,8 +448,8 @@ export function LandScreen({
               accessibilityElementsHidden
               style={{
                 height: 56,
-                borderRadius: 8,
-                backgroundColor: '#e5e7eb',
+                borderRadius: mobileBaseline.radius.sm,
+                backgroundColor: mobileBaseline.color.surfaceMuted,
               }}
             />
             <StateMessage state="loading" />
@@ -379,22 +466,69 @@ export function LandScreen({
         {errorMessage && publicState !== 'ready' && <Text>{errorMessage}</Text>}
 
         {snapshot.lookup && hasLookupResult && (
-          <View testID="land-lookup-result">
-            <Text>{snapshot.lookup.simulatedLabel}</Text>
-            <Text>Mã hồ sơ: {snapshot.lookup.applicationCode}</Text>
-            <Text>Mã thửa: {snapshot.lookup.parcelCode}</Text>
-            <Text>Số tờ bản đồ: {snapshot.lookup.mapSheetNumber}</Text>
-            <Text>Số thửa: {snapshot.lookup.parcelNumber}</Text>
-            <Text>Trạng thái: {snapshot.lookup.status}</Text>
-            <Text>Nộp lúc: {snapshot.lookup.submittedAt}</Text>
-            <Text>Cập nhật: {snapshot.lookup.updatedAt}</Text>
-            <Text>Hoàn tất lúc: {snapshot.lookup.completedAt ?? '—'}</Text>
+          <View
+            testID="land-lookup-result"
+            style={{
+              backgroundColor: mobileBaseline.color.surface,
+              borderColor: mobileBaseline.color.border,
+              borderWidth: 1,
+              borderRadius: mobileBaseline.radius.md,
+              padding: mobileBaseline.space.s3,
+              gap: mobileBaseline.space.s2,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.caption,
+                color: mobileBaseline.color.simulatedText,
+                backgroundColor: mobileBaseline.color.simulatedBg,
+              }}
+            >
+              {snapshot.lookup.simulatedLabel}
+            </Text>
+            <Text style={monoLine}>
+              Mã hồ sơ: {snapshot.lookup.applicationCode}
+            </Text>
+            <Text style={monoLine}>Mã thửa: {snapshot.lookup.parcelCode}</Text>
+            <Text style={monoLine}>
+              Số tờ bản đồ: {snapshot.lookup.mapSheetNumber}
+            </Text>
+            <Text style={monoLine}>
+              Số thửa: {snapshot.lookup.parcelNumber}
+            </Text>
+            <Text style={bodyLine}>Trạng thái: {snapshot.lookup.status}</Text>
+            <Text style={monoMuted}>
+              Nộp lúc: {snapshot.lookup.submittedAt}
+            </Text>
+            <Text style={monoMuted}>Cập nhật: {snapshot.lookup.updatedAt}</Text>
+            <Text style={monoMuted}>
+              Hoàn tất lúc: {snapshot.lookup.completedAt ?? '—'}
+            </Text>
           </View>
         )}
 
         {snapshot.lookup && hasLookupResult && (
-          <View testID="land-scoped-read">
-            <Text>Thông tin trong phạm vi được phép</Text>
+          <View
+            testID="land-scoped-read"
+            style={{
+              backgroundColor: mobileBaseline.color.surface,
+              borderColor: mobileBaseline.color.border,
+              borderWidth: 1,
+              borderRadius: mobileBaseline.radius.md,
+              padding: mobileBaseline.space.s3,
+              gap: mobileBaseline.space.s2,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.section,
+                color: mobileBaseline.color.text,
+              }}
+            >
+              Thông tin trong phạm vi được phép
+            </Text>
             {applicationState === 'loading' && <StateMessage state="loading" />}
             {applicationState === 'empty' && <StateMessage state="empty" />}
             {applicationState === 'forbidden' && (
@@ -407,16 +541,26 @@ export function LandScreen({
               <StateMessage state="error" retry={retry} />
             )}
             {snapshot.application && applicationState === 'ready' && (
-              <View testID="land-application-summary">
-                <Text>Hồ sơ: {snapshot.application.applicationCode}</Text>
-                <Text>Loại biến động: {snapshot.application.changeType}</Text>
-                <Text>Trạng thái: {snapshot.application.status}</Text>
-                <Text>Nộp lúc: {snapshot.application.submittedAt}</Text>
-                <Text>Cập nhật: {snapshot.application.updatedAt}</Text>
-                <Text>
+              <View testID="land-application-summary" style={{ gap: 8 }}>
+                <Text style={monoLine}>
+                  Hồ sơ: {snapshot.application.applicationCode}
+                </Text>
+                <Text style={bodyLine}>
+                  Loại biến động: {snapshot.application.changeType}
+                </Text>
+                <Text style={bodyLine}>
+                  Trạng thái: {snapshot.application.status}
+                </Text>
+                <Text style={monoMuted}>
+                  Nộp lúc: {snapshot.application.submittedAt}
+                </Text>
+                <Text style={monoMuted}>
+                  Cập nhật: {snapshot.application.updatedAt}
+                </Text>
+                <Text style={monoMuted}>
                   Hoàn tất lúc: {snapshot.application.completedAt ?? '—'}
                 </Text>
-                <Text>Thông tin chủ thể:</Text>
+                <Text style={metaLine}>Thông tin chủ thể:</Text>
                 <MaskedValue {...snapshot.application.maskedSubject} />
               </View>
             )}
@@ -431,23 +575,49 @@ export function LandScreen({
               <StateMessage state="error" retry={retry} />
             )}
             {snapshot.parcel && parcelState === 'ready' && (
-              <View testID="land-parcel-summary">
-                <Text>Thửa: {snapshot.parcel.parcelCode}</Text>
-                <Text>Số tờ bản đồ: {snapshot.parcel.mapSheetNumber}</Text>
-                <Text>Số thửa: {snapshot.parcel.parcelNumber}</Text>
-                <Text>Diện tích: {snapshot.parcel.areaSqm}</Text>
-                <Text>Trạng thái: {snapshot.parcel.status}</Text>
-                <Text>Cập nhật: {snapshot.parcel.updatedAt}</Text>
-                <Text>Thông tin chủ thể:</Text>
+              <View testID="land-parcel-summary" style={{ gap: 8 }}>
+                <Text style={monoLine}>Thửa: {snapshot.parcel.parcelCode}</Text>
+                <Text style={monoLine}>
+                  Số tờ bản đồ: {snapshot.parcel.mapSheetNumber}
+                </Text>
+                <Text style={monoLine}>
+                  Số thửa: {snapshot.parcel.parcelNumber}
+                </Text>
+                <Text style={monoLine}>
+                  Diện tích: {snapshot.parcel.areaSqm}
+                </Text>
+                <Text style={bodyLine}>
+                  Trạng thái: {snapshot.parcel.status}
+                </Text>
+                <Text style={monoMuted}>
+                  Cập nhật: {snapshot.parcel.updatedAt}
+                </Text>
+                <Text style={metaLine}>Thông tin chủ thể:</Text>
                 <MaskedValue {...snapshot.parcel.maskedSubject} />
                 {parcel && onOpenMap && (
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Xem thửa đất trên bản đồ"
                     onPress={() => onOpenMap(parcel.id)}
-                    style={{ minHeight: 44, padding: 8 }}
+                    style={{
+                      minHeight: 44,
+                      minWidth: 44,
+                      padding: 8,
+                      borderColor: mobileBaseline.color.accent,
+                      borderWidth: 1,
+                      borderRadius: mobileBaseline.radius.sm,
+                      backgroundColor: mobileBaseline.color.surface,
+                    }}
                   >
-                    <Text>Xem trên bản đồ</Text>
+                    <Text
+                      style={{
+                        fontFamily: mobileBaseline.font.sans,
+                        fontSize: mobileBaseline.size.label,
+                        color: mobileBaseline.color.accent,
+                      }}
+                    >
+                      Xem trên bản đồ
+                    </Text>
                   </Pressable>
                 )}
               </View>
@@ -465,14 +635,22 @@ export function LandScreen({
               <StateMessage state="error" retry={retry} />
             )}
             {snapshot.timeline.length > 0 && timelineState === 'ready' && (
-              <View testID="land-timeline">
-                <Text>Lịch sử xử lý</Text>
+              <View testID="land-timeline" style={{ gap: 8 }}>
+                <Text
+                  style={{
+                    fontFamily: mobileBaseline.font.sans,
+                    fontSize: mobileBaseline.size.section,
+                    color: mobileBaseline.color.text,
+                  }}
+                >
+                  Lịch sử xử lý
+                </Text>
                 {snapshot.timeline.map((event, index) => (
                   <View key={`${event.eventType}:${event.occurredAt}:${index}`}>
-                    <Text>{event.eventType}</Text>
-                    <Text>Người thực hiện:</Text>
+                    <Text style={bodyLine}>{event.eventType}</Text>
+                    <Text style={metaLine}>Người thực hiện:</Text>
                     <MaskedValue {...event.actor} />
-                    <Text>{event.occurredAt}</Text>
+                    <Text style={monoMuted}>{event.occurredAt}</Text>
                   </View>
                 ))}
               </View>

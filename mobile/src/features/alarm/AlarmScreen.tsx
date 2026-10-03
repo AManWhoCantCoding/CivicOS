@@ -6,6 +6,7 @@ import {
   MaskedValue,
   OfflineBanner,
   StateMessage,
+  mobileBaseline,
 } from '../../components/States';
 import { deepLinkFor } from '../../navigation/deepLinks';
 
@@ -47,24 +48,68 @@ export function AlarmScreen({
   }, [load]);
   if (state !== 'ready' && state !== 'masked' && !selected)
     return (
-      <View style={{ padding: 16 }}>
+      <View
+        style={{
+          padding: 16,
+          backgroundColor: mobileBaseline.color.canvas,
+        }}
+      >
         {state === 'offline' && <OfflineBanner />}
         <StateMessage state={state} retry={() => void load()} />
       </View>
     );
   return (
-    <View style={{ padding: 16 }}>
+    <View
+      style={{
+        padding: 16,
+        gap: 8,
+        backgroundColor: mobileBaseline.color.canvas,
+      }}
+    >
       {selected ? (
-        <View>
+        <View style={{ gap: 8 }}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Quay lại"
             onPress={() => setSelected(null)}
-            style={{ minHeight: 44 }}
+            style={{ minHeight: 44, minWidth: 44, padding: 8 }}
           >
-            <Text>‹ Quay lại</Text>
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.label,
+                color: mobileBaseline.color.accent,
+              }}
+            >
+              ‹ Quay lại
+            </Text>
           </Pressable>
-          <Text>{selected.title}</Text>
-          <Text>
-            {selected.status} · {selected.createdAt}
+          <Text
+            style={{
+              fontFamily: mobileBaseline.font.sans,
+              fontSize: mobileBaseline.size.title,
+              color: mobileBaseline.color.text,
+            }}
+          >
+            {selected.title}
+          </Text>
+          <Text
+            style={{
+              fontFamily: mobileBaseline.font.sans,
+              fontSize: mobileBaseline.size.label,
+              color: mobileBaseline.color.textMuted,
+            }}
+          >
+            {selected.status} ·{' '}
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.mono,
+                fontSize: mobileBaseline.size.label,
+                color: mobileBaseline.color.textMuted,
+              }}
+            >
+              {selected.createdAt}
+            </Text>
           </Text>
           {selected.assignmentSummary ? (
             <MaskedValue value={selected.assignmentSummary.task} />
@@ -72,13 +117,22 @@ export function AlarmScreen({
             <StateMessage state="masked" />
           )}
           <Pressable
+            accessibilityRole="button"
             onPress={() => {
               const link = deepLinkFor(selected);
               if (link) onNavigate?.(link);
             }}
-            style={{ minHeight: 44, padding: 8 }}
+            style={{ minHeight: 44, minWidth: 44, padding: 8 }}
           >
-            <Text>Mở liên kết tài nguyên</Text>
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.label,
+                color: mobileBaseline.color.accent,
+              }}
+            >
+              Mở liên kết tài nguyên
+            </Text>
           </Pressable>
         </View>
       ) : (
@@ -87,12 +141,44 @@ export function AlarmScreen({
           {alarms.map((alarm) => (
             <Pressable
               key={alarm.id}
+              accessibilityRole="button"
               onPress={() => setSelected(alarm)}
-              style={{ minHeight: 44, padding: 8 }}
+              style={{
+                minHeight: 44,
+                minWidth: 44,
+                padding: 8,
+                backgroundColor: mobileBaseline.color.surface,
+                borderColor: mobileBaseline.color.border,
+                borderWidth: 1,
+                borderRadius: mobileBaseline.radius.md,
+              }}
             >
-              <Text>{alarm.title}</Text>
-              <Text>
-                {alarm.status} · {alarm.createdAt}
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.body,
+                  color: mobileBaseline.color.text,
+                }}
+              >
+                {alarm.title}
+              </Text>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.label,
+                  color: mobileBaseline.color.textMuted,
+                }}
+              >
+                {alarm.status} ·{' '}
+                <Text
+                  style={{
+                    fontFamily: mobileBaseline.font.mono,
+                    fontSize: mobileBaseline.size.label,
+                    color: mobileBaseline.color.textMuted,
+                  }}
+                >
+                  {alarm.createdAt}
+                </Text>
               </Text>
             </Pressable>
           ))}

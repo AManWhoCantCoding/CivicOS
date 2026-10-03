@@ -264,3 +264,16 @@ describe('T-006 AC-3 stale/race invalidation and privacy', () => {
     );
   });
 });
+
+// CUI-003 AC-2/AC-4: offline panel keeps no-polygon copy on the shared baseline.
+describe('CUI-003 offline presentation baseline', () => {
+  it('keeps no-polygon copy with 44px retry/back on the shared baseline', () => {
+    const map = mapSource();
+    expect(map).toContain('mobileBaseline');
+    expect(map).toContain(
+      'Polygon thửa đất không được lưu trong bộ nhớ offline.',
+    );
+    expect(map).toContain('minWidth: 44');
+    expect(map).toContain('mobileBaseline.color.surface');
+  });
+});

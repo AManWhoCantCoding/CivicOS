@@ -6,6 +6,7 @@ import {
   MaskedValue,
   OfflineBanner,
   StateMessage,
+  mobileBaseline,
 } from '../../components/States';
 import { deepLinkFor } from '../../navigation/deepLinks';
 
@@ -61,13 +62,24 @@ export function TaskScreen({
   }, [load]);
   if (state !== 'ready' && state !== 'masked' && !detailState)
     return (
-      <View style={{ padding: 16 }}>
+      <View
+        style={{
+          padding: 16,
+          backgroundColor: mobileBaseline.color.canvas,
+        }}
+      >
         {state === 'offline' && <OfflineBanner />}
         <StateMessage state={state} retry={() => void load()} />
       </View>
     );
   return (
-    <View style={{ padding: 16 }}>
+    <View
+      style={{
+        padding: 16,
+        gap: 8,
+        backgroundColor: mobileBaseline.color.canvas,
+      }}
+    >
       {detailState === 'loading' && <StateMessage state="loading" />}
       {detailState === 'error' && (
         <StateMessage
@@ -87,16 +99,49 @@ export function TaskScreen({
       )}
       {detailState === 'masked' && <StateMessage state="masked" />}
       {selected ? (
-        <View>
+        <View style={{ gap: 8 }}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Quay lại"
             onPress={() => setSelected(null)}
-            style={{ minHeight: 44 }}
+            style={{ minHeight: 44, minWidth: 44, padding: 8 }}
           >
-            <Text>‹ Quay lại</Text>
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.label,
+                color: mobileBaseline.color.accent,
+              }}
+            >
+              ‹ Quay lại
+            </Text>
           </Pressable>
-          <Text>{selected.title}</Text>
-          <Text>
-            {selected.status} · {selected.createdAt}
+          <Text
+            style={{
+              fontFamily: mobileBaseline.font.sans,
+              fontSize: mobileBaseline.size.title,
+              color: mobileBaseline.color.text,
+            }}
+          >
+            {selected.title}
+          </Text>
+          <Text
+            style={{
+              fontFamily: mobileBaseline.font.sans,
+              fontSize: mobileBaseline.size.label,
+              color: mobileBaseline.color.textMuted,
+            }}
+          >
+            {selected.status} ·{' '}
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.mono,
+                fontSize: mobileBaseline.size.label,
+                color: mobileBaseline.color.textMuted,
+              }}
+            >
+              {selected.createdAt}
+            </Text>
           </Text>
           {selected.assignmentSummary ? (
             <MaskedValue value={selected.assignmentSummary.task} />
@@ -104,13 +149,22 @@ export function TaskScreen({
             <StateMessage state="masked" />
           )}
           <Pressable
+            accessibilityRole="button"
             onPress={() => {
               const link = deepLinkFor(selected);
               if (link) onNavigate?.(link);
             }}
-            style={{ minHeight: 44, padding: 8 }}
+            style={{ minHeight: 44, minWidth: 44, padding: 8 }}
           >
-            <Text>Mở bản đồ/RelatedInfo</Text>
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.label,
+                color: mobileBaseline.color.accent,
+              }}
+            >
+              Mở bản đồ/RelatedInfo
+            </Text>
           </Pressable>
         </View>
       ) : (
@@ -119,11 +173,34 @@ export function TaskScreen({
           {items.map((item) => (
             <Pressable
               key={item.id}
+              accessibilityRole="button"
               onPress={() => void select(item)}
-              style={{ minHeight: 44, padding: 8 }}
+              style={{
+                minHeight: 44,
+                minWidth: 44,
+                padding: 8,
+                backgroundColor: mobileBaseline.color.surface,
+                borderColor: mobileBaseline.color.border,
+                borderWidth: 1,
+                borderRadius: mobileBaseline.radius.md,
+              }}
             >
-              <Text>{item.title}</Text>
-              <Text>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.body,
+                  color: mobileBaseline.color.text,
+                }}
+              >
+                {item.title}
+              </Text>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.label,
+                  color: mobileBaseline.color.textMuted,
+                }}
+              >
                 {item.status} · {item.dispatchId ?? 'Không có dispatch'}
               </Text>
             </Pressable>
