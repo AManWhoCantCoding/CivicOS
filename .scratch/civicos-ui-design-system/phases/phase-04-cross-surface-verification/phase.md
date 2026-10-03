@@ -6,7 +6,7 @@
 - **F-xx thuộc phase:** toàn bộ feature scope §§11–29 trong `docs/design/civicos-ui-design-system/overview.md`; locked docs không cung cấp mã F-xx riêng nên không phát minh ID mới.
 - **Approved traceability:** `docs/design/civicos-ui-design-system/overview.md` §§19–29; `docs/design/civicos-ui-design-system/api-contract.md` §§7–26; `docs/design/civicos-ui-design-system/data-model.md` §§7–30; TS-01–TS-11 trong `.scratch/civicos-ui-design-system/ui/test-scenarios.md`.
 - **Dependencies:** `phase-02-web-domain-surfaces` / `CUI-002` và `phase-03-mobile-primitives-screens` / `CUI-003`.
-- **Tickets:** `CUI-004` — planned.
+- **Tickets:** `CUI-004` — done.
 - **Definition of Done:** targeted web/mobile tests và full verification pass; keyboard/focus/live-region/text/icon/touch target, masking/privacy, state copy, map no-polygon, simulated labeling và visual token matrix được kiểm tra; diff không chạm API/schema/route/permission/Assignment/masking/state-machine/seed/map-projection behavior hoặc Stitch resources.
 - **Full-gate policy:** đây là full verification lane; chạy lock verification, root/mobile checks và visual/manual matrix ở viewport web `1440 × 900`, mobile `390 × 844`; phát hiện behavior/data contract drift là blocker, không tự mở rộng ticket.
 

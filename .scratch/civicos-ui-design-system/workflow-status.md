@@ -6,7 +6,7 @@
 - **B8:** `APPROVED` — user message `Được tôi chốt`.
 - **B9:** `APPROVED` — user message `Duyệt B9 — no data-model impact`; no data-model impact.
 - **B10:** `COMPLETE` — phase/ticket decomposition created; ready for Techlead dispatch.
-- **B11:** implementation complete; phase gates 01–04 passed; final Techlead commit/evidence bookkeeping is in progress.
+- **B11:** `COMPLETE` — implementation, review, verification, traceability and phase gates 01–04 passed.
 
 ## Locked scope
 
@@ -50,6 +50,7 @@
 - Phase-03 gate: `PHASE-PASS`; root full verification plus mobile typecheck/test/build passed; evidence at `.brain/evidence/civicos-ui-design-system-phase-03/`.
 - `CUI-004` accepted after verification-only review; no source/test files changed. Root full verification passed with local backend injection; mobile verification passed. Evidence at `.brain/evidence/civicos-ui-design-system-phase-04/`.
 - Phase-04 gate: `PHASE-PASS`.
+- `CUI-004` verification batch recorded in commit `03e6900` (`chore: record cross-surface verification`).
 
 ## Dispatch guard
 
@@ -59,6 +60,6 @@
 
 ## Next gate
 
-All four B11 tickets have reached their implementation/review gates. The next workflow step is final commit bookkeeping, then B12 human review.
+All four B11 tickets have reached their implementation/review gates and the Techlead commit/evidence bookkeeping is complete. Next workflow step: B12 human review.
 
 `NEXT-SKILL: gov-to-phases` only after B9 approval.

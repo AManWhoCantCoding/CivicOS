@@ -1,7 +1,7 @@
 # CUI-004 — Cross-surface accessibility và regression verification
 
 - **Ticket ID:** `CUI-004`
-- **Status:** accepted; commit pending
+- **Status:** `done`
 - **Blocked by:** `CUI-002`, `CUI-003` — web domain/map và mobile implementation phải hoàn tất trước matrix verification.
 - **Loại:** feature
 - **Gate hướng:** không
@@ -118,3 +118,4 @@
 - Mobile gate: `node scripts/verify.mjs civicos-ui-design-system-phase-04 --scope=mobile --timeout=600000`: `PASS` (mobile typecheck, 14 suites / 90 tests, and Android build).
 - Evidence: `.brain/evidence/civicos-ui-design-system-phase-04/`.
 - Initial missing `CIVICOS_API_BASE_URL` and port contention were infrastructure setup issues; rerun with the local backend resolved them. No product regression or out-of-scope change remains.
+- Commit: `03e6900` (`chore: record cross-surface verification`).
