@@ -153,7 +153,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-amber-300/40 px-3 py-2 text-sm text-amber-100 hover:border-amber-200"
+          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-info)] px-3 py-2 text-sm text-[var(--civicos-info)] hover:border-[var(--civicos-info)]"
         >
           Thử lại
         </button>
@@ -167,7 +167,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-rose-300/40 px-3 py-2 text-sm text-rose-100 hover:border-rose-200"
+          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
         >
           Thử lại
         </button>
@@ -178,7 +178,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p role="status" className="text-sm text-slate-400">
+        <p role="status" className="text-sm text-[var(--civicos-text-muted)]">
           {visibleItems.length} hồ sơ trong hàng đợi hiện tại.
         </p>
         {canCreate ? (
@@ -190,8 +190,8 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
             }}
             className={`inline-flex min-h-[44px] items-center rounded-lg px-4 py-2 text-sm font-semibold ${
               online
-                ? 'bg-teal-700 text-white hover:bg-teal-600'
-                : 'cursor-not-allowed bg-slate-800 text-slate-500'
+                ? 'bg-[var(--civicos-accent)] text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)]'
+                : 'cursor-not-allowed bg-[var(--civicos-surface-muted)] text-[var(--civicos-text-muted)]'
             }`}
           >
             Tạo hồ sơ
@@ -199,7 +199,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
         ) : null}
       </div>
       {!online ? (
-        <p role="status" className="text-sm text-amber-200">
+        <p role="status" className="text-sm text-[var(--civicos-info)]">
           Đang ngoại tuyến. Hàng đợi đang hiển thị dữ liệu đã tải; thao tác tạo
           hồ sơ tạm tắt.
         </p>
@@ -209,7 +209,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
         onSubmit={(event) => event.preventDefault()}
         aria-label="Bộ lọc hàng đợi hồ sơ"
       >
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
           Trạng thái
           <select
             aria-label="Lọc theo trạng thái"
@@ -222,7 +222,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
                 q: searchFilter,
               })
             }
-            className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
           >
             <option value="">Tất cả</option>
             <option value="submitted">Đã tiếp nhận</option>
@@ -235,7 +235,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
             <option value="completed">Đã hoàn thành</option>
           </select>
         </label>
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
           Loại biến động
           <select
             aria-label="Lọc theo loại biến động"
@@ -248,7 +248,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
                 q: searchFilter,
               })
             }
-            className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
           >
             <option value="">Tất cả</option>
             <option value="transfer">Chuyển nhượng</option>
@@ -257,7 +257,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
             <option value="parcel_split_merge">Tách/Gộp thửa</option>
           </select>
         </label>
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
           Người được phân công
           <input
             aria-label="Lọc theo người được phân công"
@@ -271,10 +271,10 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
               })
             }
             placeholder="user-id"
-            className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]"
           />
         </label>
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
           Tìm theo mã hồ sơ
           <input
             aria-label="Tìm theo mã hồ sơ"
@@ -288,20 +288,20 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
               })
             }
             placeholder="APP-001"
-            className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]"
           />
         </label>
       </form>
       {loading ? <p role="status">Đang tải hàng đợi hồ sơ…</p> : null}
       {banner === 'error' || banner === 'offline' ? (
         <div role="alert" className="flex flex-wrap items-center gap-3">
-          <p className="text-sm text-amber-200">
+          <p className="text-sm text-[var(--civicos-warning)]">
             Không làm mới được hàng đợi; đang hiển thị nội dung đã tải. Thử lại.
           </p>
           <button
             type="button"
             onClick={() => setReloadToken((value) => value + 1)}
-            className="min-h-[44px] rounded-lg border border-amber-300/40 px-3 py-2 text-sm text-amber-100 hover:border-amber-200"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-warning)] px-3 py-2 text-sm text-[var(--civicos-warning)] hover:border-[var(--civicos-warning)]"
           >
             Thử lại
           </button>
@@ -315,35 +315,56 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
       ) : null}
       {visibleItems.length ? (
         <table className="w-full border-collapse text-sm">
-          <caption className="py-2 text-left text-slate-400">
+          <caption className="py-2 text-left text-[var(--civicos-text-muted)]">
             Hàng đợi hồ sơ biến động nội bộ theo phạm vi đơn vị
           </caption>
           <thead>
-            <tr className="text-left text-slate-300">
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+            <tr className="text-left text-[var(--civicos-text)]">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Mã hồ sơ
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Loại biến động
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Trạng thái
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Phiên bản
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Ngày nộp
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Ngày cập nhật
               </th>
             </tr>
           </thead>
           <tbody>
             {visibleItems.map((item) => (
-              <tr key={item.id} className="border-b border-slate-800">
-                <td className="px-3 py-2 font-mono text-slate-100">
+              <tr
+                key={item.id}
+                className="border-b border-[var(--civicos-border)]"
+              >
+                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                   <Link
                     href={`/land/applications/${item.id}`}
                     className="underline-offset-4 hover:underline"
@@ -351,22 +372,22 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
                     {item.applicationCode}
                   </Link>
                 </td>
-                <td className="px-3 py-2 text-slate-200">
+                <td className="px-3 py-2 text-[var(--civicos-text)]">
                   {applicationChangeTypeText(item.changeType)}
                 </td>
                 <td className="px-3 py-2">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-200">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[var(--civicos-border)] px-3 py-1 text-xs text-[var(--civicos-text)]">
                     <span aria-hidden="true">●</span>
                     {applicationStatusText(item.status)}
                   </span>
                 </td>
-                <td className="px-3 py-2 font-mono text-slate-300">
+                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                   v{item.version}
                 </td>
-                <td className="px-3 py-2 font-mono text-slate-300">
+                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                   {item.submittedAt}
                 </td>
-                <td className="px-3 py-2 font-mono text-slate-300">
+                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                   {item.updatedAt}
                 </td>
               </tr>
@@ -384,7 +405,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
               setCurrentCursor(previous);
               void load(previous);
             }}
-            className="min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
           >
             Trang trước
           </button>
@@ -397,7 +418,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
               setCurrentCursor(nextCursor);
               void load(nextCursor);
             }}
-            className="min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
           >
             Trang tiếp
           </button>

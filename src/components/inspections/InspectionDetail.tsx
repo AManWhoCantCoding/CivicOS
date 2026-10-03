@@ -219,7 +219,7 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
                 setLoading(true);
                 setReloadToken((value) => value + 1);
               }}
-              className="civicos-control border-[var(--civicos-border)] px-3 py-2 text-xs text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
+              className="civicos-control min-h-[44px] border-[var(--civicos-border)] px-3 py-2 text-xs text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
             >
               Thử lại
             </button>

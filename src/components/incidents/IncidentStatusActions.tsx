@@ -238,9 +238,11 @@ export function IncidentStatusActions({
   if (!hasActions && !message && !error) return null;
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900 p-5">
-      <h2 className="text-sm font-semibold text-white">Thao tác Incident</h2>
-      <p className="mt-2 text-xs leading-5 text-slate-500">
+    <section className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5">
+      <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
+        Thao tác Incident
+      </h2>
+      <p className="mt-2 text-xs leading-5 text-[var(--civicos-text-muted)]">
         Mỗi lệnh được kiểm tra lại ở API theo role, Assignment và trạng thái hồ
         sơ.
       </p>
@@ -249,7 +251,7 @@ export function IncidentStatusActions({
         ownAssignments !== null &&
         !hasActiveAssignment &&
         !isCommander ? (
-          <p className="rounded-lg border border-dashed border-slate-700 p-4 text-sm text-slate-500">
+          <p className="rounded-lg border border-dashed border-[var(--civicos-border)] p-4 text-sm text-[var(--civicos-text-muted)]">
             Tài khoản hiện tại không có thao tác khả dụng trên Incident này. Mọi
             lệnh vẫn được API kiểm tra lại theo role và Assignment.
           </p>
@@ -257,17 +259,19 @@ export function IncidentStatusActions({
         {status === 'received' && canMutate ? (
           <form
             onSubmit={(event) => void classify(event)}
-            className="space-y-4 border-t border-slate-800 pt-5"
+            className="space-y-4 border-t border-[var(--civicos-border)] pt-5"
           >
-            <h3 className="text-sm font-medium text-slate-200">Phân loại</h3>
+            <h3 className="text-sm font-medium text-[var(--civicos-text)]">
+              Phân loại
+            </h3>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm text-slate-300">
+              <label className="block text-sm text-[var(--civicos-text)]">
                 Category
                 <select
                   name="category"
                   value={category}
                   onChange={(event) => setCategory(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                  className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
                 >
                   <option value="other">Khác</option>
                   <option value="public_order">Trật tự công cộng</option>
@@ -276,13 +280,13 @@ export function IncidentStatusActions({
                   <option value="violence">Bạo lực</option>
                 </select>
               </label>
-              <label className="block text-sm text-slate-300">
+              <label className="block text-sm text-[var(--civicos-text)]">
                 Severity
                 <select
                   name="severity"
                   value={severity}
                   onChange={(event) => setSeverity(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                  className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
                 >
                   <option value="low">Thấp</option>
                   <option value="medium">Trung bình</option>
@@ -294,7 +298,7 @@ export function IncidentStatusActions({
             <button
               type="submit"
               disabled={pendingCommand !== null}
-              className="rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-50"
+              className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:opacity-50"
             >
               {pendingCommand === 'classify' ? 'Đang lưu…' : 'Lưu phân loại'}
             </button>
@@ -304,12 +308,12 @@ export function IncidentStatusActions({
         {status === 'classified' && canMutate ? (
           <form
             onSubmit={(event) => void verify(event)}
-            className="space-y-4 border-t border-slate-800 pt-5"
+            className="space-y-4 border-t border-[var(--civicos-border)] pt-5"
           >
-            <h3 className="text-sm font-medium text-slate-200">
+            <h3 className="text-sm font-medium text-[var(--civicos-text)]">
               Bắt đầu xác minh
             </h3>
-            <label className="block text-sm text-slate-300">
+            <label className="block text-sm text-[var(--civicos-text)]">
               Ghi chú xác minh
               <textarea
                 name="note"
@@ -317,13 +321,13 @@ export function IncidentStatusActions({
                 onChange={(event) => setVerificationNote(event.target.value)}
                 required
                 rows={4}
-                className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
               />
             </label>
             <button
               type="submit"
               disabled={pendingCommand !== null}
-              className="rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-50"
+              className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:opacity-50"
             >
               {pendingCommand === 'verify'
                 ? 'Đang bắt đầu…'
@@ -333,15 +337,15 @@ export function IncidentStatusActions({
         ) : null}
 
         {canMutate && (status === 'verifying' || status === 'transferred') ? (
-          <div className="space-y-5 border-t border-slate-800 pt-5">
+          <div className="space-y-5 border-t border-[var(--civicos-border)] pt-5">
             <form
               onSubmit={(event) => void resolve(event)}
               className="space-y-4"
             >
-              <h3 className="text-sm font-medium text-slate-200">
+              <h3 className="text-sm font-medium text-[var(--civicos-text)]">
                 Đề xuất kết quả
               </h3>
-              <label className="block text-sm text-slate-300">
+              <label className="block text-sm text-[var(--civicos-text)]">
                 Nội dung kết quả xử lý
                 <textarea
                   name="resolution"
@@ -349,13 +353,13 @@ export function IncidentStatusActions({
                   onChange={(event) => setResolution(event.target.value)}
                   required
                   rows={4}
-                  className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                  className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
                 />
               </label>
               <button
                 type="submit"
                 disabled={pendingCommand !== null}
-                className="rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-50"
+                className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:opacity-50"
               >
                 {pendingCommand === 'resolve'
                   ? 'Đang gửi…'
@@ -365,9 +369,9 @@ export function IncidentStatusActions({
             {status === 'verifying' ? (
               <form
                 onSubmit={(event) => void transfer(event)}
-                className="space-y-4 border-t border-slate-800 pt-5"
+                className="space-y-4 border-t border-[var(--civicos-border)] pt-5"
               >
-                <h3 className="text-sm font-medium text-slate-200">
+                <h3 className="text-sm font-medium text-[var(--civicos-text)]">
                   Xin chuyển cấp trên
                 </h3>
                 <OrganizationUnitPicker
@@ -378,7 +382,7 @@ export function IncidentStatusActions({
                 <button
                   type="submit"
                   disabled={pendingCommand !== null}
-                  className="rounded-lg border border-slate-600 px-4 py-2.5 text-sm font-semibold text-slate-100 hover:border-cyan-300 disabled:opacity-50"
+                  className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] disabled:opacity-50"
                 >
                   {pendingCommand === 'transfer'
                     ? 'Đang gửi…'
@@ -395,12 +399,12 @@ export function IncidentStatusActions({
               event.preventDefault();
               void send('close');
             }}
-            className="border-t border-slate-800 pt-5"
+            className="border-t border-[var(--civicos-border)] pt-5"
           >
             <button
               type="submit"
               disabled={pendingCommand !== null}
-              className="rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-50"
+              className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:opacity-50"
             >
               {pendingCommand === 'close'
                 ? 'Đang gửi…'
@@ -410,19 +414,19 @@ export function IncidentStatusActions({
         ) : null}
 
         {pendingApprovals.length ? (
-          <div className="space-y-4 border-t border-slate-800 pt-5">
+          <div className="space-y-4 border-t border-[var(--civicos-border)] pt-5">
             <div>
-              <h3 className="text-sm font-medium text-slate-200">
+              <h3 className="text-sm font-medium text-[var(--civicos-text)]">
                 Approval đang chờ
               </h3>
-              <p className="mt-2 text-xs leading-5 text-slate-500">
+              <p className="mt-2 text-xs leading-5 text-[var(--civicos-text-muted)]">
                 Chỉ Commander cùng OrganizationUnit hoặc Superior Commander ở
                 đơn vị nhận mới quyết định được Approval. Người tạo yêu cầu
                 không thể tự phê duyệt.
               </p>
             </div>
             {pendingApprovals.length > 1 ? (
-              <label className="block text-sm text-slate-300">
+              <label className="block text-sm text-[var(--civicos-text)]">
                 Approval cần xử lý
                 <select
                   value={
@@ -435,7 +439,7 @@ export function IncidentStatusActions({
                   onChange={(event) =>
                     setApprovalId(event.target.value || null)
                   }
-                  className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                  className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
                 >
                   {pendingApprovals.map((approval) => (
                     <option key={approval.id} value={approval.id}>
@@ -446,24 +450,24 @@ export function IncidentStatusActions({
                 </select>
               </label>
             ) : (
-              <p className="text-sm text-slate-300">
+              <p className="text-sm text-[var(--civicos-text)]">
                 {approvalLabel(pendingApprovals[0].action)}
               </p>
             )}
-            <label className="block text-sm text-slate-300">
+            <label className="block text-sm text-[var(--civicos-text)]">
               Lý do Approval
               <textarea
                 name="reason"
                 value={approvalReason}
                 onChange={(event) => setApprovalReason(event.target.value)}
                 rows={3}
-                className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
                 aria-describedby="approval-reason-help"
               />
             </label>
             <p
               id="approval-reason-help"
-              className="-mt-2 text-xs text-slate-500"
+              className="-mt-2 text-xs text-[var(--civicos-text-muted)]"
             >
               Bắt buộc khi từ chối; có thể ghi chú lý do quyết định khi phê
               duyệt.
@@ -481,7 +485,7 @@ export function IncidentStatusActions({
                         ) &&
                           !pendingApprovals[0])
                       }
-                      className="rounded-lg bg-emerald-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-emerald-200 disabled:opacity-50"
+                      className="min-h-[44px] rounded-lg bg-[var(--civicos-success)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:opacity-90 disabled:opacity-50"
                     >
                       {pendingCommand === 'approve'
                         ? 'Đang phê duyệt…'
@@ -498,7 +502,7 @@ export function IncidentStatusActions({
                         ) &&
                           !pendingApprovals[0])
                       }
-                      className="rounded-lg border border-rose-400/60 px-4 py-2.5 text-sm text-rose-200 hover:border-rose-300 disabled:opacity-50"
+                      className="min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-4 py-2.5 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)] disabled:opacity-50"
                     >
                       {pendingCommand === 'reject'
                         ? 'Đang từ chối…'
@@ -507,7 +511,7 @@ export function IncidentStatusActions({
                   </form>
                 </>
               ) : (
-                <p className="text-xs leading-5 text-slate-500">
+                <p className="text-xs leading-5 text-[var(--civicos-text-muted)]">
                   Tài khoản hiện tại không có quyền quyết định Approval này.
                 </p>
               )}
@@ -521,13 +525,13 @@ export function IncidentStatusActions({
         </div>
       ) : null}
       {error ? (
-        <p className="mt-4 text-sm text-rose-300" role="alert">
+        <p className="mt-4 text-sm text-[var(--civicos-danger)]" role="alert">
           {error}
         </p>
       ) : null}
       {message ? (
         <p
-          className="mt-4 text-sm text-emerald-300"
+          className="mt-4 text-sm text-[var(--civicos-success)]"
           role="status"
           aria-live="polite"
         >

@@ -123,7 +123,7 @@ export function IncidentTable() {
   if (state === 'loading') {
     return (
       <div
-        className="h-40 rounded-xl bg-slate-900 motion-safe:animate-pulse"
+        className="h-40 rounded-xl bg-[var(--civicos-surface-muted)] motion-safe:animate-pulse"
         aria-label="Đang tải hàng đợi Incident"
         role="status"
       />
@@ -136,7 +136,7 @@ export function IncidentTable() {
           <AccessDenied message={error ?? undefined} />
         ) : (
           <p
-            className="rounded-xl border border-rose-900/60 bg-rose-950/30 p-5 text-sm text-rose-200"
+            className="rounded-xl border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] p-5 text-sm text-[var(--civicos-danger)]"
             role="alert"
           >
             {error}
@@ -145,7 +145,7 @@ export function IncidentTable() {
         <button
           type="button"
           onClick={() => void retry()}
-          className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+          className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]"
         >
           Thử tải lại
         </button>
@@ -154,32 +154,32 @@ export function IncidentTable() {
   }
   if (!incidents.length) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-700 p-8 text-sm text-slate-400">
+      <div className="rounded-xl border border-dashed border-[var(--civicos-border)] p-8 text-sm text-[var(--civicos-text-muted)]">
         Chưa có Incident trong phạm vi hiển thị.
       </div>
     );
   }
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-800">
-      <div className="divide-y divide-slate-800">
+    <div className="overflow-hidden rounded-xl border border-[var(--civicos-border)]">
+      <div className="divide-y divide-[var(--civicos-border)]">
         {incidents.map((incident) => (
           <Link
             key={incident.id}
             href={`/incidents/${incident.id}`}
-            className="block p-5 transition hover:bg-slate-900"
+            className="block p-5 transition hover:bg-[var(--civicos-surface-muted)]"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="font-mono text-xs text-slate-500">
+              <span className="font-mono text-xs text-[var(--civicos-text-muted)]">
                 {incident.id.slice(0, 8)}
               </span>
-              <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">
+              <span className="rounded-full border border-[var(--civicos-accent)] bg-[var(--civicos-surface)] px-3 py-1 text-xs text-[var(--civicos-accent)]">
                 {incident.status}
               </span>
             </div>
-            <p className="mt-3 text-sm leading-6 text-slate-200">
+            <p className="mt-3 text-sm leading-6 text-[var(--civicos-text)]">
               {incident.description}
             </p>
-            <p className="mt-3 text-xs text-slate-500">
+            <p className="mt-3 text-xs text-[var(--civicos-text-muted)]">
               {incident.category ?? 'Chưa phân loại'} ·{' '}
               {incident.severity ?? 'Chưa đánh giá'} ·{' '}
               {formatDate(incident.updatedAt)}

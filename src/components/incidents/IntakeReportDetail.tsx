@@ -319,12 +319,15 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
 
   if (!detail && !error) {
     return (
-      <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
+      <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
         <div className="mx-auto max-w-5xl">
           <div className="flex justify-end">
             <SessionControls />
           </div>
-          <p className="mt-10 text-sm text-slate-400" role="status">
+          <p
+            className="mt-10 text-sm text-[var(--civicos-text-muted)]"
+            role="status"
+          >
             Đang tải hồ sơ IntakeReport…
           </p>
         </div>
@@ -334,7 +337,7 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
 
   if (!detail) {
     return (
-      <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
+      <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
         <div className="mx-auto max-w-5xl">
           <div className="flex justify-end">
             <SessionControls />
@@ -343,7 +346,7 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
             {errorStatus === 403 ? (
               <AccessDenied message={error ?? undefined} />
             ) : (
-              <p className="text-rose-200" role="alert">
+              <p className="text-[var(--civicos-danger)]" role="alert">
                 {error ?? 'Không thể mở hồ sơ IntakeReport.'}
               </p>
             )}
@@ -351,13 +354,13 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
               <button
                 type="button"
                 onClick={() => void refresh()}
-                className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+                className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]"
               >
                 Thử lại
               </button>
               <Link
                 href="/intake"
-                className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+                className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]"
               >
                 Về hàng đợi
               </Link>
@@ -376,11 +379,11 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
     report.status === 'VERIFIED' && !!report.confirmedAt && !report.incidentId;
 
   return (
-    <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
+    <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
       <div className="mx-auto max-w-5xl">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-6">
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--civicos-border)] pb-6">
           <Link
-            className="text-sm text-slate-400 underline-offset-4 hover:text-white hover:underline"
+            className="text-sm text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline"
             href="/intake"
           >
             ← Hàng đợi
@@ -389,58 +392,66 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
         </header>
         <div className="mt-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
           <div>
-            <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+            <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
               IntakeReport · {report.sourceChannel ?? '—'}
             </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--civicos-text)]">
               {report.id}
             </h1>
-            <p className="mt-4 max-w-2xl leading-7 text-slate-300">
+            <p className="mt-4 max-w-2xl leading-7 text-[var(--civicos-text)]">
               {report.content}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {report.sla.overdue ? (
-              <span className="rounded-full bg-rose-400/10 px-3 py-2 text-sm text-rose-200">
-                Quá hạn SLA
+              <span className="rounded-full border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-danger)]">
+                <span aria-hidden="true">⚠ </span>Quá hạn SLA
               </span>
             ) : null}
             {report.sla.warning && !report.sla.overdue ? (
-              <span className="rounded-full bg-amber-400/10 px-3 py-2 text-sm text-amber-200">
-                Sắp hạn SLA
+              <span className="rounded-full border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-warning)]">
+                <span aria-hidden="true">◷ </span>Sắp hạn SLA
               </span>
             ) : null}
-            <span className="rounded-full bg-cyan-400/10 px-3 py-2 text-sm text-cyan-200">
+            <span className="rounded-full border border-[var(--civicos-accent)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-accent)]">
               {report.status}
             </span>
           </div>
         </div>
         <section
-          className="mt-8 rounded-xl border border-amber-900/50 bg-amber-950/20 p-5"
+          className="mt-8 rounded-xl border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] p-5"
           aria-label="Nguồn tin"
         >
-          <h2 className="text-sm font-semibold text-amber-200">Nguồn tin</h2>
-          <p className="mt-2 text-xs leading-5 text-slate-500">
+          <h2 className="text-sm font-semibold text-[var(--civicos-warning)]">
+            Nguồn tin
+          </h2>
+          <p className="mt-2 text-xs leading-5 text-[var(--civicos-text-muted)]">
             {report.revealed
               ? 'Danh tính thật hiển thị theo quyền Trưởng CA.'
               : 'Danh tính đã che theo vai trò; chỉ Trưởng CA xem được giá trị thật.'}
           </p>
           <dl className="mt-4 grid gap-3 sm:grid-cols-3">
             <div>
-              <dt className="text-xs text-slate-500">Tên nguồn tin</dt>
-              <dd className="mt-1 text-sm text-slate-200">
+              <dt className="text-xs text-[var(--civicos-text-muted)]">
+                Tên nguồn tin
+              </dt>
+              <dd className="mt-1 text-sm text-[var(--civicos-text)]">
                 {report.sourceName ?? 'Không ghi nhận'}
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-500">Liên hệ</dt>
-              <dd className="mt-1 text-sm text-slate-200">
+              <dt className="text-xs text-[var(--civicos-text-muted)]">
+                Liên hệ
+              </dt>
+              <dd className="mt-1 text-sm text-[var(--civicos-text)]">
                 {report.sourceContact ?? 'Không ghi nhận'}
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-500">Mã tham chiếu</dt>
-              <dd className="mt-1 text-sm text-slate-200">
+              <dt className="text-xs text-[var(--civicos-text-muted)]">
+                Mã tham chiếu
+              </dt>
+              <dd className="mt-1 text-sm text-[var(--civicos-text)]">
                 {report.sensitiveRef ?? 'Không ghi nhận'}
               </dd>
             </div>
@@ -450,21 +461,27 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
           className="mt-6 grid gap-3 sm:grid-cols-3"
           aria-label="Hạn xử lý"
         >
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <p className="text-xs text-slate-500">Ghi nhận trong 24 giờ</p>
-            <p className="mt-2 text-sm text-slate-200">
+          <div className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4">
+            <p className="text-xs text-[var(--civicos-text-muted)]">
+              Ghi nhận trong 24 giờ
+            </p>
+            <p className="mt-2 text-sm text-[var(--civicos-text)]">
               {formatDate(report.sla.recordingDueAt)}
             </p>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <p className="text-xs text-slate-500">Xác minh trong 48 giờ</p>
-            <p className="mt-2 text-sm text-slate-200">
+          <div className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4">
+            <p className="text-xs text-[var(--civicos-text-muted)]">
+              Xác minh trong 48 giờ
+            </p>
+            <p className="mt-2 text-sm text-[var(--civicos-text)]">
               {formatDate(report.sla.verificationDueAt)}
             </p>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <p className="text-xs text-slate-500">Thông báo trong 20 ngày</p>
-            <p className="mt-2 text-sm text-slate-200">
+          <div className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4">
+            <p className="text-xs text-[var(--civicos-text-muted)]">
+              Thông báo trong 20 ngày
+            </p>
+            <p className="mt-2 text-sm text-[var(--civicos-text)]">
               {formatDate(report.sla.notificationDueAt)}
             </p>
           </div>
@@ -473,13 +490,13 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
           <AccessDenied message={error ?? undefined} />
         ) : null}
         {error && errorStatus !== 403 ? (
-          <p className="mt-5 text-sm text-rose-300" role="alert">
+          <p className="mt-5 text-sm text-[var(--civicos-danger)]" role="alert">
             {error}
           </p>
         ) : null}
         {message ? (
           <p
-            className="mt-5 text-sm text-emerald-300"
+            className="mt-5 text-sm text-[var(--civicos-success)]"
             role="status"
             aria-live="polite"
           >
@@ -488,11 +505,11 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
         ) : null}
         <div className="mt-10 grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
           <section className="space-y-6">
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-5">
-              <h2 className="text-sm font-semibold text-white">
+            <div className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5">
+              <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
                 Xác minh và xử lý
               </h2>
-              <p className="mt-2 text-xs leading-5 text-slate-500">
+              <p className="mt-2 text-xs leading-5 text-[var(--civicos-text-muted)]">
                 Xác minh chỉ đổi trạng thái tin báo. Tạo Incident là thao tác
                 riêng sau khi đã xác minh.
               </p>
@@ -506,19 +523,19 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                         verificationNote: verificationNote.trim(),
                       });
                     }}
-                    className="space-y-4 border-t border-slate-800 pt-5"
+                    className="space-y-4 border-t border-[var(--civicos-border)] pt-5"
                   >
-                    <h3 className="text-sm font-medium text-slate-200">
+                    <h3 className="text-sm font-medium text-[var(--civicos-text)]">
                       Phân loại và xác minh
                     </h3>
-                    <label className="block text-sm text-slate-300">
+                    <label className="block text-sm text-[var(--civicos-text)]">
                       Phân loại
                       <select
                         value={classification}
                         onChange={(event) =>
                           setClassification(event.target.value)
                         }
-                        className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                        className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
                       >
                         <option value="sufficient">Đủ cơ sở điều tra</option>
                         <option value="needs_verification">
@@ -526,7 +543,7 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                         </option>
                       </select>
                     </label>
-                    <label className="block text-sm text-slate-300">
+                    <label className="block text-sm text-[var(--civicos-text)]">
                       Ghi chú xác minh
                       <textarea
                         value={verificationNote}
@@ -534,13 +551,13 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                           setVerificationNote(event.target.value)
                         }
                         rows={4}
-                        className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                        className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
                       />
                     </label>
                     <button
                       type="submit"
                       disabled={pending !== null}
-                      className="rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-50"
+                      className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:opacity-50"
                     >
                       {pending === 'verify'
                         ? 'Đang lưu…'
@@ -556,12 +573,12 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                         processedNote: processedNote.trim(),
                       });
                     }}
-                    className="space-y-4 border-t border-slate-800 pt-5"
+                    className="space-y-4 border-t border-[var(--civicos-border)] pt-5"
                   >
-                    <h3 className="text-sm font-medium text-slate-200">
+                    <h3 className="text-sm font-medium text-[var(--civicos-text)]">
                       Ghi nhận xử lý
                     </h3>
-                    <label className="block text-sm text-slate-300">
+                    <label className="block text-sm text-[var(--civicos-text)]">
                       Kết quả xử lý
                       <textarea
                         value={processedNote}
@@ -569,13 +586,13 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                           setProcessedNote(event.target.value)
                         }
                         rows={4}
-                        className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                        className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
                       />
                     </label>
                     <button
                       type="submit"
                       disabled={pending !== null}
-                      className="rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-50"
+                      className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:opacity-50"
                     >
                       {pending === 'process'
                         ? 'Đang lưu…'
@@ -589,18 +606,18 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                       event.preventDefault();
                       void run('confirm');
                     }}
-                    className="border-t border-slate-800 pt-5"
+                    className="border-t border-[var(--civicos-border)] pt-5"
                   >
-                    <h3 className="text-sm font-medium text-slate-200">
+                    <h3 className="text-sm font-medium text-[var(--civicos-text)]">
                       Xác nhận hồ sơ
                     </h3>
-                    <p className="mt-2 text-xs leading-5 text-slate-500">
+                    <p className="mt-2 text-xs leading-5 text-[var(--civicos-text-muted)]">
                       Xác nhận chỉ ghi nhận quyết định; chưa tạo Incident.
                     </p>
                     <button
                       type="submit"
                       disabled={pending !== null}
-                      className="mt-4 rounded-lg bg-emerald-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-emerald-200 disabled:opacity-50"
+                      className="mt-4 min-h-[44px] rounded-lg bg-[var(--civicos-success)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:opacity-90 disabled:opacity-50"
                     >
                       {pending === 'confirm' ? 'Đang lưu…' : 'Xác nhận hồ sơ'}
                     </button>
@@ -612,18 +629,18 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                       event.preventDefault();
                       void run('convert_to_incident');
                     }}
-                    className="border-t border-slate-800 pt-5"
+                    className="border-t border-[var(--civicos-border)] pt-5"
                   >
-                    <h3 className="text-sm font-medium text-slate-200">
+                    <h3 className="text-sm font-medium text-[var(--civicos-text)]">
                       Chuyển thành Incident
                     </h3>
-                    <p className="mt-2 text-xs leading-5 text-slate-500">
+                    <p className="mt-2 text-xs leading-5 text-[var(--civicos-text-muted)]">
                       Chỉ sau khi xác nhận, thao tác này tạo đúng một Incident.
                     </p>
                     <button
                       type="submit"
                       disabled={pending !== null}
-                      className="mt-4 rounded-lg bg-emerald-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-emerald-200"
+                      className="mt-4 min-h-[44px] rounded-lg bg-[var(--civicos-success)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:opacity-90"
                     >
                       {pending === 'convert_to_incident'
                         ? 'Đang tạo…'
@@ -632,11 +649,11 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                   </form>
                 ) : null}
                 {report.incidentId ? (
-                  <p className="border-t border-slate-800 pt-5 text-sm text-slate-300">
+                  <p className="border-t border-[var(--civicos-border)] pt-5 text-sm text-[var(--civicos-text)]">
                     Đã liên kết Incident{' '}
                     <Link
                       href={`/incidents/${report.incidentId}`}
-                      className="text-cyan-300 underline underline-offset-4 hover:text-cyan-200"
+                      className="text-[var(--civicos-accent)] underline underline-offset-4 hover:text-[var(--civicos-accent-hover)]"
                     >
                       {report.incidentId.slice(0, 8)}
                     </Link>
@@ -650,12 +667,12 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                       event.preventDefault();
                       void run('reject', { reason: rejectReason.trim() });
                     }}
-                    className="space-y-4 border-t border-slate-800 pt-5"
+                    className="space-y-4 border-t border-[var(--civicos-border)] pt-5"
                   >
-                    <h3 className="text-sm font-medium text-slate-200">
+                    <h3 className="text-sm font-medium text-[var(--civicos-text)]">
                       Từ chối hồ sơ
                     </h3>
-                    <label className="block text-sm text-slate-300">
+                    <label className="block text-sm text-[var(--civicos-text)]">
                       Lý do từ chối
                       <textarea
                         value={rejectReason}
@@ -663,13 +680,13 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                           setRejectReason(event.target.value)
                         }
                         rows={3}
-                        className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                        className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
                       />
                     </label>
                     <button
                       type="submit"
                       disabled={pending !== null}
-                      className="rounded-lg border border-rose-400/60 px-4 py-2.5 text-sm text-rose-200 hover:border-rose-300 disabled:opacity-50"
+                      className="min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-4 py-2.5 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)] disabled:opacity-50"
                     >
                       {pending === 'reject' ? 'Đang gửi…' : 'Từ chối'}
                     </button>
@@ -681,12 +698,12 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                       event.preventDefault();
                       void run('close');
                     }}
-                    className="border-t border-slate-800 pt-5"
+                    className="border-t border-[var(--civicos-border)] pt-5"
                   >
                     <button
                       type="submit"
                       disabled={pending !== null}
-                      className="rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-50"
+                      className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:opacity-50"
                     >
                       {pending === 'close' ? 'Đang gửi…' : 'Đóng hồ sơ'}
                     </button>
@@ -699,9 +716,9 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                       organizationId: transferOrganizationId,
                     });
                   }}
-                  className="space-y-4 border-t border-slate-800 pt-5"
+                  className="space-y-4 border-t border-[var(--civicos-border)] pt-5"
                 >
-                  <h3 className="text-sm font-medium text-slate-200">
+                  <h3 className="text-sm font-medium text-[var(--civicos-text)]">
                     Chuyển vượt thẩm quyền
                   </h3>
                   <OrganizationUnitPicker
@@ -712,7 +729,7 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                   <button
                     type="submit"
                     disabled={pending !== null}
-                    className="rounded-lg border border-slate-600 px-4 py-2.5 text-sm font-semibold text-slate-100 hover:border-cyan-300 disabled:opacity-50"
+                    className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] disabled:opacity-50"
                   >
                     {pending === 'transfer'
                       ? 'Đang gửi…'
@@ -721,8 +738,8 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                 </form>
               </div>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-5">
-              <h2 className="text-sm font-semibold text-white">
+            <div className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5">
+              <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
                 Lịch sử và truy vết
               </h2>
               {detail.events.length ? (
@@ -732,8 +749,10 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                       key={event.eventId}
                       className="flex flex-wrap items-center justify-between gap-2 text-sm"
                     >
-                      <span className="text-slate-200">{event.eventType}</span>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-[var(--civicos-text)]">
+                        {event.eventType}
+                      </span>
+                      <span className="text-xs text-[var(--civicos-text-muted)]">
                         v{event.aggregateVersion} ·{' '}
                         {formatDate(event.occurredAt)}
                       </span>
@@ -741,16 +760,16 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                   ))}
                 </ol>
               ) : (
-                <p className="mt-4 text-sm text-slate-500">
+                <p className="mt-4 text-sm text-[var(--civicos-text-muted)]">
                   Chưa có sự kiện nào ngoài tiếp nhận.
                 </p>
               )}
               {detail.approvals.length ? (
-                <div className="mt-5 border-t border-slate-800 pt-4">
-                  <h3 className="text-sm font-medium text-slate-200">
+                <div className="mt-5 border-t border-[var(--civicos-border)] pt-4">
+                  <h3 className="text-sm font-medium text-[var(--civicos-text)]">
                     Approval chuyển giao
                   </h3>
-                  <ul className="mt-3 space-y-2 text-sm text-slate-300">
+                  <ul className="mt-3 space-y-2 text-sm text-[var(--civicos-text)]">
                     {detail.approvals.map((approval) => (
                       <li key={approval.id}>
                         {approval.action} · {approval.status} ·{' '}
@@ -760,12 +779,12 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                   </ul>
                 </div>
               ) : null}
-              <div className="mt-5 border-t border-slate-800 pt-4">
-                <h3 className="text-sm font-medium text-slate-200">
+              <div className="mt-5 border-t border-[var(--civicos-border)] pt-4">
+                <h3 className="text-sm font-medium text-[var(--civicos-text)]">
                   Nhật ký truy cập
                 </h3>
                 {detail.audits.length ? (
-                  <ul className="mt-3 space-y-2 text-xs text-slate-500">
+                  <ul className="mt-3 space-y-2 text-xs text-[var(--civicos-text-muted)]">
                     {detail.audits.map((audit) => (
                       <li key={audit.id}>
                         {audit.operation} · {formatDate(audit.occurredAt)}
@@ -773,7 +792,7 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-3 text-sm text-slate-500">
+                  <p className="mt-3 text-sm text-[var(--civicos-text-muted)]">
                     Chưa có nhật ký hiển thị.
                   </p>
                 )}
@@ -781,8 +800,10 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
             </div>
           </section>
           <aside className="space-y-6">
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-5">
-              <h2 className="text-sm font-semibold text-white">Bằng chứng</h2>
+            <div className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5">
+              <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
+                Bằng chứng
+              </h2>
               <div className="mt-4">
                 <EvidenceCapture
                   resourceType="IntakeReport"
@@ -797,29 +818,37 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
                   label="Đã gắn với IntakeReport"
                 />
               ) : (
-                <p className="mt-4 text-sm text-slate-500">
+                <p className="mt-4 text-sm text-[var(--civicos-text-muted)]">
                   Chưa gắn bằng chứng nào cho tin báo này.
                 </p>
               )}
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-5">
-              <h2 className="text-sm font-semibold text-white">Phân loại</h2>
+            <div className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5">
+              <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
+                Phân loại
+              </h2>
               <dl className="mt-4 space-y-3 text-sm">
                 <div>
-                  <dt className="text-xs text-slate-500">Mức phân loại</dt>
-                  <dd className="mt-1 text-slate-200">
+                  <dt className="text-xs text-[var(--civicos-text-muted)]">
+                    Mức phân loại
+                  </dt>
+                  <dd className="mt-1 text-[var(--civicos-text)]">
                     {report.classification ?? 'Chưa phân loại'}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-slate-500">Ghi chú xác minh</dt>
-                  <dd className="mt-1 text-slate-200">
+                  <dt className="text-xs text-[var(--civicos-text-muted)]">
+                    Ghi chú xác minh
+                  </dt>
+                  <dd className="mt-1 text-[var(--civicos-text)]">
                     {report.verificationNote ?? '—'}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-slate-500">Kết quả</dt>
-                  <dd className="mt-1 text-slate-200">
+                  <dt className="text-xs text-[var(--civicos-text-muted)]">
+                    Kết quả
+                  </dt>
+                  <dd className="mt-1 text-[var(--civicos-text)]">
                     {report.verificationResult ?? report.processedNote ?? '—'}
                   </dd>
                 </div>

@@ -219,14 +219,20 @@ export function EvidencePanel({
   return (
     <section
       aria-labelledby={headingId}
-      className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+      className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
     >
-      <h3 id={headingId} className="text-xl font-semibold text-slate-100">
+      <h3
+        id={headingId}
+        className="text-xl font-semibold text-[var(--civicos-text)]"
+      >
         Evidence (siêu dữ liệu)
       </h3>
 
       {loading ? (
-        <p role="status" className="mt-2 text-sm text-slate-400">
+        <p
+          role="status"
+          className="mt-2 text-sm text-[var(--civicos-text-muted)]"
+        >
           Đang tải siêu dữ liệu Evidence…
         </p>
       ) : null}
@@ -234,7 +240,7 @@ export function EvidencePanel({
         <div className="mt-2 space-y-2">
           <p
             role={listError === 'offline' ? 'status' : 'alert'}
-            className="text-sm text-slate-400"
+            className="text-sm text-[var(--civicos-text-muted)]"
           >
             {listErrorCopy(listError)}
           </p>
@@ -242,7 +248,7 @@ export function EvidencePanel({
             <button
               type="button"
               onClick={() => setReloadToken((value) => value + 1)}
-              className="min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+              className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
             >
               Thử lại
             </button>
@@ -250,61 +256,90 @@ export function EvidencePanel({
         </div>
       ) : null}
       {!loading && !listError && !evidence.length ? (
-        <p role="status" className="mt-2 text-sm text-slate-400">
+        <p
+          role="status"
+          className="mt-2 text-sm text-[var(--civicos-text-muted)]"
+        >
           Chưa có Evidence nào gắn với {evidenceResourceLabel(resourceType)}
           này.
         </p>
       ) : null}
       {evidence.length && listError !== 'forbidden' ? (
         <table className="mt-3 w-full border-collapse text-sm">
-          <caption className="py-2 text-left text-slate-400">
+          <caption className="py-2 text-left text-[var(--civicos-text-muted)]">
             Danh sách Evidence; chỉ hiển thị siêu dữ liệu bất biến
           </caption>
           <thead>
-            <tr className="text-left text-slate-300">
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+            <tr className="text-left text-[var(--civicos-text)]">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Tên tệp
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 MIME
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Dung lượng
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 SHA-256
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Bất biến
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Mô tả
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Thời điểm tạo (UTC)
               </th>
             </tr>
           </thead>
           <tbody>
             {evidence.map((item) => (
-              <tr key={item.id} className="border-b border-slate-800">
-                <td className="px-3 py-2 text-slate-200">{item.fileName}</td>
-                <td className="px-3 py-2 font-mono text-slate-300">
+              <tr
+                key={item.id}
+                className="border-b border-[var(--civicos-border)]"
+              >
+                <td className="px-3 py-2 text-[var(--civicos-text)]">
+                  {item.fileName}
+                </td>
+                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                   {item.mimeType}
                 </td>
-                <td className="px-3 py-2 font-mono text-slate-300">
+                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                   {item.sizeBytes.toLocaleString('vi-VN')} byte
                 </td>
-                <td className="px-3 py-2 font-mono text-xs break-all text-slate-300">
+                <td className="px-3 py-2 font-mono text-xs break-all text-[var(--civicos-text)]">
                   {item.originalHash}
                 </td>
-                <td className="px-3 py-2 text-slate-300">
+                <td className="px-3 py-2 text-[var(--civicos-text)]">
                   {item.immutable ? 'Có' : 'Không'}
                 </td>
-                <td className="px-3 py-2 text-slate-300">
+                <td className="px-3 py-2 text-[var(--civicos-text)]">
                   {item.description ?? '—'}
                 </td>
-                <td className="px-3 py-2 font-mono text-xs text-slate-300">
+                <td className="px-3 py-2 font-mono text-xs text-[var(--civicos-text)]">
                   {item.createdAt}
                 </td>
               </tr>
@@ -315,13 +350,13 @@ export function EvidencePanel({
 
       {showUpload ? (
         <form
-          className="mt-4 space-y-3 border-t border-slate-800 pt-4"
+          className="mt-4 space-y-3 border-t border-[var(--civicos-border)] pt-4"
           onSubmit={(event) => void submitUpload(event)}
         >
           <div>
             <label
               htmlFor={`${resourceType}-evidence-file`}
-              className="block text-sm font-semibold text-slate-200"
+              className="block text-sm font-semibold text-[var(--civicos-text)]"
             >
               Tệp Evidence
             </label>
@@ -334,22 +369,25 @@ export function EvidencePanel({
               onChange={handleFileChange}
               disabled={uploading || !online}
               aria-describedby={uploadError ? uploadErrorId : undefined}
-              className="mt-2 min-h-[44px] w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 file:mr-3 file:rounded file:border-0 file:bg-slate-700 file:px-3 file:py-2 file:text-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)] file:mr-3 file:rounded file:border-0 file:bg-[var(--civicos-surface-muted)] file:px-3 file:py-2 file:text-[var(--civicos-text)] disabled:cursor-not-allowed disabled:opacity-50"
             />
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-[var(--civicos-text-muted)]">
               Chỉ nhận PDF, JPEG hoặc PNG; tối đa 10 MiB.
             </p>
             {uploadError ? (
               <p
                 id={uploadErrorId}
                 role="alert"
-                className="mt-2 text-sm text-rose-200"
+                className="mt-2 text-sm text-[var(--civicos-danger)]"
               >
                 {uploadError}
               </p>
             ) : null}
             {!online ? (
-              <p role="status" className="mt-2 text-sm text-amber-200">
+              <p
+                role="status"
+                className="mt-2 text-sm text-[var(--civicos-info)]"
+              >
                 Đang ngoại tuyến. Tải lên Evidence tạm thời bị khóa.
               </p>
             ) : null}
@@ -357,7 +395,7 @@ export function EvidencePanel({
           <div>
             <label
               htmlFor={`${resourceType}-evidence-description`}
-              className="block text-sm font-semibold text-slate-200"
+              className="block text-sm font-semibold text-[var(--civicos-text)]"
             >
               Mô tả (tùy chọn)
             </label>
@@ -367,13 +405,13 @@ export function EvidencePanel({
               onChange={(event) => setDescription(event.target.value)}
               rows={2}
               disabled={uploading}
-              className="mt-2 min-h-[44px] w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 disabled:opacity-50"
+              className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)] disabled:opacity-50"
             />
           </div>
           <button
             type="submit"
             disabled={uploading || !selectedFile || !online}
-            className="min-h-[44px] rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2 text-sm font-semibold text-[var(--civicos-text)] hover:bg-[var(--civicos-accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {uploading ? 'Đang tải lên…' : 'Tải lên Evidence'}
           </button>

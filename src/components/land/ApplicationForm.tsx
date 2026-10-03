@@ -295,7 +295,7 @@ export function ApplicationForm() {
       className="space-y-6"
     >
       {!online ? (
-        <p role="status" className="text-sm text-amber-200">
+        <p role="status" className="text-sm text-[var(--civicos-info)]">
           Đang ngoại tuyến. Nút gửi tạm tắt; bản nháp được giữ lại trong phiên
           (sessionStorage).
         </p>
@@ -305,13 +305,13 @@ export function ApplicationForm() {
           ref={errorRef}
           tabIndex={-1}
           role="alert"
-          className="rounded-xl border border-rose-400/30 bg-rose-400/[0.06] p-4"
+          className="rounded-xl border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] p-4"
         >
-          <p className="text-sm text-rose-200">{formError}</p>
+          <p className="text-sm text-[var(--civicos-danger)]">{formError}</p>
           <button
             type="button"
             onClick={() => errorRef.current?.focus()}
-            className="mt-3 min-h-[44px] rounded-lg border border-rose-300/40 px-3 py-2 text-sm text-rose-100"
+            className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)]"
           >
             Thử lại
           </button>
@@ -320,14 +320,14 @@ export function ApplicationForm() {
       <div>
         <label
           htmlFor="lnd-change-type"
-          className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300"
+          className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]"
         >
           Loại biến động
           <select
             id="lnd-change-type"
             value={changeType}
             onChange={(event) => setChangeType(event.target.value)}
-            className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
           >
             <option value="transfer">Chuyển nhượng (transfer)</option>
             <option value="information_update">
@@ -343,16 +343,19 @@ export function ApplicationForm() {
 
       {changeType === 'transfer' ? (
         <section aria-labelledby="lnd-transfer-heading" className="space-y-4">
-          <h2 id="lnd-transfer-heading" className="text-xl text-slate-100">
+          <h2
+            id="lnd-transfer-heading"
+            className="text-xl text-[var(--civicos-text)]"
+          >
             Chuyển nhượng
           </h2>
-          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
             Chủ thể đang giữ (current holder)
             <select
               aria-label="Chủ thể đang giữ"
               value={currentHolderId}
               onChange={(event) => setCurrentHolderId(event.target.value)}
-              className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
             >
               <option value="">Chọn chủ thể</option>
               {parties.map((party) => (
@@ -363,13 +366,13 @@ export function ApplicationForm() {
             </select>
           </label>
           {fieldErrors.currentHolderId ? (
-            <p role="alert" className="text-sm text-rose-200">
+            <p role="alert" className="text-sm text-[var(--civicos-danger)]">
               {fieldErrors.currentHolderId}
             </p>
           ) : null}
           {proposedHolders.map((holder, index) => (
             <div key={index} className="flex flex-wrap gap-3">
-              <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+              <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
                 Chủ thể nhận {index + 1} (proposed holder)
                 <select
                   aria-label={`Chủ thể nhận ${index + 1}`}
@@ -383,7 +386,7 @@ export function ApplicationForm() {
                       ),
                     )
                   }
-                  className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                  className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
                 >
                   <option value="">Chọn chủ thể</option>
                   {parties.map((party) => (
@@ -393,7 +396,7 @@ export function ApplicationForm() {
                   ))}
                 </select>
               </label>
-              <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+              <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
                 Tỷ lệ (%)
                 <input
                   aria-label={`Tỷ lệ chủ thể nhận ${index + 1}`}
@@ -409,17 +412,17 @@ export function ApplicationForm() {
                   }
                   placeholder="100.00"
                   inputMode="decimal"
-                  className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100"
+                  className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]"
                 />
               </label>
             </div>
           ))}
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-[var(--civicos-text-muted)]">
             Tổng tỷ lệ phải bằng 100.00. Mã tham chiếu dùng referenceCode, số
             định danh luôn dạng che (identityNumberMasked).
           </p>
           {fieldErrors.shareTotal ? (
-            <p role="alert" className="text-sm text-rose-200">
+            <p role="alert" className="text-sm text-[var(--civicos-danger)]">
               {fieldErrors.shareTotal}
             </p>
           ) : null}
@@ -432,18 +435,18 @@ export function ApplicationForm() {
                   { partyId: '', sharePercent: '' },
                 ])
               }
-              className="min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200"
+              className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)]"
             >
               Thêm người nhận
             </button>
           </div>
-          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
             Thửa đất (parcelCode)
             <select
               aria-label="Thửa đất chuyển nhượng"
               value={subjectParcelId}
               onChange={(event) => setSubjectParcelId(event.target.value)}
-              className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100"
+              className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]"
             >
               <option value="">Chọn thửa</option>
               {parcels.map((parcel) => (
@@ -458,16 +461,19 @@ export function ApplicationForm() {
 
       {changeType === 'information_update' ? (
         <section aria-labelledby="lnd-info-heading" className="space-y-4">
-          <h2 id="lnd-info-heading" className="text-xl text-slate-100">
+          <h2
+            id="lnd-info-heading"
+            className="text-xl text-[var(--civicos-text)]"
+          >
             Cập nhật thông tin
           </h2>
-          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
             Chủ thể nộp (referenceCode)
             <select
               aria-label="Chủ thể nộp cập nhật"
               value={applicantId}
               onChange={(event) => setApplicantId(event.target.value)}
-              className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
             >
               <option value="">Chọn chủ thể</option>
               {parties.map((party) => (
@@ -477,13 +483,13 @@ export function ApplicationForm() {
               ))}
             </select>
           </label>
-          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
             Thửa đất (parcelCode)
             <select
               aria-label="Thửa đất cập nhật"
               value={subjectParcelId}
               onChange={(event) => setSubjectParcelId(event.target.value)}
-              className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100"
+              className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]"
             >
               <option value="">Chọn thửa</option>
               {parcels.map((parcel) => (
@@ -493,30 +499,30 @@ export function ApplicationForm() {
               ))}
             </select>
           </label>
-          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
             Trường cập nhật
             <select
               aria-label="Trường cập nhật"
               value={infoField}
               onChange={(event) => setInfoField(event.target.value)}
-              className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
             >
               <option value="address">address</option>
               <option value="landUseType">landUseType</option>
             </select>
           </label>
-          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
             Giá trị mới
             <input
               aria-label="Giá trị mới"
               value={infoNewValue}
               onChange={(event) => setInfoNewValue(event.target.value)}
               placeholder="Địa chỉ mới hoặc loại đất mới"
-              className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
             />
           </label>
           {fieldErrors.infoNewValue ? (
-            <p role="alert" className="text-sm text-rose-200">
+            <p role="alert" className="text-sm text-[var(--civicos-danger)]">
               {fieldErrors.infoNewValue}
             </p>
           ) : null}
@@ -525,28 +531,31 @@ export function ApplicationForm() {
 
       {changeType === 'mortgage' ? (
         <section aria-labelledby="lnd-mortgage-heading" className="space-y-4">
-          <h2 id="lnd-mortgage-heading" className="text-xl text-slate-100">
+          <h2
+            id="lnd-mortgage-heading"
+            className="text-xl text-[var(--civicos-text)]"
+          >
             Thế chấp
           </h2>
-          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
             Hành động
             <select
               aria-label="Hành động thế chấp"
               value={mortgageAction}
               onChange={(event) => setMortgageAction(event.target.value)}
-              className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
             >
               <option value="register">register</option>
               <option value="release">release</option>
             </select>
           </label>
-          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
             Thửa đất (parcelCode)
             <select
               aria-label="Thửa đất thế chấp"
               value={subjectParcelId}
               onChange={(event) => setSubjectParcelId(event.target.value)}
-              className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100"
+              className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]"
             >
               <option value="">Chọn thửa</option>
               {parcels.map((parcel) => (
@@ -557,13 +566,13 @@ export function ApplicationForm() {
             </select>
           </label>
           {mortgageAction === 'register' ? (
-            <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+            <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
               Bên được bảo đảm (secured party, chỉ cho register)
               <select
                 aria-label="Bên được bảo đảm"
                 value={securedPartyId}
                 onChange={(event) => setSecuredPartyId(event.target.value)}
-                className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
               >
                 <option value="">Chọn chủ thể</option>
                 {parties.map((party) => (
@@ -574,13 +583,13 @@ export function ApplicationForm() {
               </select>
             </label>
           ) : (
-            <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+            <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
               Chủ thể nộp (release)
               <select
                 aria-label="Chủ thể nộp giải tỏa"
                 value={applicantId}
                 onChange={(event) => setApplicantId(event.target.value)}
-                className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
               >
                 <option value="">Chọn chủ thể</option>
                 {parties.map((party) => (
@@ -596,16 +605,19 @@ export function ApplicationForm() {
 
       {changeType === 'parcel_split_merge' ? (
         <section aria-labelledby="lnd-split-heading" className="space-y-4">
-          <h2 id="lnd-split-heading" className="text-xl text-slate-100">
+          <h2
+            id="lnd-split-heading"
+            className="text-xl text-[var(--civicos-text)]"
+          >
             Tách/Gộp thửa
           </h2>
-          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
             Chủ thể nộp (referenceCode)
             <select
               aria-label="Chủ thể nộp tách gộp"
               value={applicantId}
               onChange={(event) => setApplicantId(event.target.value)}
-              className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
             >
               <option value="">Chọn chủ thể</option>
               {parties.map((party) => (
@@ -615,24 +627,26 @@ export function ApplicationForm() {
               ))}
             </select>
           </label>
-          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+          <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
             Thao tác
             <select
               aria-label="Thao tác tách gộp"
               value={splitOperation}
               onChange={(event) => setSplitOperation(event.target.value)}
-              className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
             >
               <option value="split">split</option>
               <option value="merge">merge</option>
             </select>
           </label>
           <div className="space-y-3">
-            <p className="text-sm text-slate-300">Thửa nguồn (source)</p>
+            <p className="text-sm text-[var(--civicos-text)]">
+              Thửa nguồn (source)
+            </p>
             {sourceParcelIds.map((parcelId, index) => (
               <label
                 key={index}
-                className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300"
+                className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]"
               >
                 {`Nguồn ${index + 1} (parcelCode)`}
                 <select
@@ -645,7 +659,7 @@ export function ApplicationForm() {
                       ),
                     )
                   }
-                  className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100"
+                  className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]"
                 >
                   <option value="">Chọn thửa</option>
                   {parcels.map((parcel) => (
@@ -658,11 +672,13 @@ export function ApplicationForm() {
             ))}
           </div>
           <div className="space-y-3">
-            <p className="text-sm text-slate-300">Thửa kết quả (result)</p>
+            <p className="text-sm text-[var(--civicos-text)]">
+              Thửa kết quả (result)
+            </p>
             {resultParcelIds.map((parcelId, index) => (
               <label
                 key={index}
-                className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300"
+                className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]"
               >
                 {`Kết quả ${index + 1} (parcelCode)`}
                 <select
@@ -675,7 +691,7 @@ export function ApplicationForm() {
                       ),
                     )
                   }
-                  className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100"
+                  className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]"
                 >
                   <option value="">Chọn thửa</option>
                   {parcels.map((parcel) => (
@@ -691,7 +707,7 @@ export function ApplicationForm() {
       ) : null}
 
       {fieldErrors.uniqueSelection ? (
-        <p role="alert" className="text-sm text-rose-200">
+        <p role="alert" className="text-sm text-[var(--civicos-danger)]">
           {fieldErrors.uniqueSelection}
         </p>
       ) : null}
@@ -702,14 +718,14 @@ export function ApplicationForm() {
           disabled={submitDisabled}
           className={`inline-flex min-h-[44px] items-center rounded-lg px-4 py-2 text-sm font-semibold ${
             submitDisabled
-              ? 'cursor-not-allowed bg-slate-800 text-slate-500'
-              : 'bg-teal-700 text-white hover:bg-teal-600'
+              ? 'cursor-not-allowed bg-[var(--civicos-surface-muted)] text-[var(--civicos-text-muted)]'
+              : 'bg-[var(--civicos-accent)] text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)]'
           }`}
         >
           {submitting ? 'Đang gửi…' : 'Gửi hồ sơ'}
         </button>
       </div>
-      <p className="font-mono text-xs text-slate-500">
+      <p className="font-mono text-xs text-[var(--civicos-text-muted)]">
         Idempotency-Key: {idempotencyKey}
       </p>
     </form>

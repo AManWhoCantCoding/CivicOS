@@ -73,4 +73,44 @@ describe('resident regression seam', () => {
     expect(source).not.toContain("'upper-unit'");
     expect(source).not.toContain('"upper-unit"');
   });
+
+  it('keeps Residents and Intake fields masked and actions policy/state-driven while applying shared presentation tokens', () => {
+    const list = readFileSync(
+      join(process.cwd(), 'src', 'components', 'residents', 'ResidentList.tsx'),
+      'utf8',
+    );
+    const detail = readFileSync(
+      join(
+        process.cwd(),
+        'src',
+        'components',
+        'residents',
+        'ResidentDetail.tsx',
+      ),
+      'utf8',
+    );
+    const queue = readFileSync(
+      join(
+        process.cwd(),
+        'src',
+        'components',
+        'incidents',
+        'IntakeReportQueue.tsx',
+      ),
+      'utf8',
+    );
+    for (const source of [list, detail, queue]) {
+      expect(source).toContain('var(--civicos-');
+      expect(source).not.toMatch(
+        /slate-(950|900|800|700)|cyan-(300|200)|amber-(400|300|200|100)|emerald-(400|300|200)|rose-(400|300|200|100)/,
+      );
+      expect(source).not.toMatch(/gradient|neon|glow/i);
+      expect(source).toContain('min-h-[44px]');
+    }
+    expect(detail).toContain('Danh tính đã che theo quyền.');
+    expect(detail).toContain('masked');
+    expect(queue).toContain('revealed');
+    expect(queue).toContain('RECEIVED');
+    expect(queue).not.toContain('convert_to_incident');
+  });
 });

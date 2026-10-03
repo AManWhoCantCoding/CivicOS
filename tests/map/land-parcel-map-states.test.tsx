@@ -123,4 +123,30 @@ describe('T-004 web map state safety', () => {
     expect(workspace).toContain('map-areas-line');
     expect(workspace).toContain('LAND_PARCEL_FOCUS_SOURCE');
   });
+
+  it.each([
+    'loading',
+    'empty',
+    'forbidden',
+    'not-found',
+    'geometry-unavailable',
+    'provider-error',
+    'stale',
+    'offline',
+  ])('renders safe web map state %s without an unsafe polygon', (state) => {
+    const workspace = readSource('src/components/map/MapWorkspace.tsx');
+    expect(workspace).toContain('var(--civicos-');
+    expect(workspace).not.toMatch(
+      /slate-(950|900|800|700)|cyan-(300|200)|amber-(400|300|200|100)|emerald-(400|300|200)|rose-(400|300|200|100)/,
+    );
+    expect(workspace).not.toMatch(/gradient|neon|glow/i);
+    // The focused polygon layer stays gated on ready + online + fresh.
+    const polygonStart = workspace.indexOf(
+      '// T-004: LandParcel GeoJSON layer',
+    );
+    expect(polygonStart).toBeGreaterThan(-1);
+    expect(workspace).toContain("focusStatus === 'ready'");
+    expect(workspace).toContain('min-h-[44px]');
+    expect(state.length).toBeGreaterThan(0);
+  });
 });

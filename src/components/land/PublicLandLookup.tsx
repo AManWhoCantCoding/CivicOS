@@ -81,12 +81,12 @@ export function publicLookupStatusText(status: string): string {
 
 function publicLookupStatusTone(status: string): string {
   if (status === 'completed') {
-    return 'border-[#2F7D50]/40 bg-[#2F7D50]/10 text-[#2F7D50]';
+    return 'border-[var(--civicos-success)] bg-[var(--civicos-surface)] text-[var(--civicos-success)]';
   }
   if (status === 'rejected') {
-    return 'border-[#B54747]/40 bg-[#B54747]/10 text-[#B54747]';
+    return 'border-[var(--civicos-danger)] bg-[var(--civicos-surface)] text-[var(--civicos-danger)]';
   }
-  return 'border-[#2E6F95]/40 bg-[#2E6F95]/10 text-[#2E6F95]';
+  return 'border-[var(--civicos-accent)] bg-[var(--civicos-surface)] text-[var(--civicos-accent)]';
 }
 
 export function PublicLandLookup() {
@@ -140,14 +140,14 @@ export function PublicLandLookup() {
       <form
         noValidate
         onSubmit={submit}
-        className="rounded-2xl border border-[#D8E0E6] bg-white p-5 shadow-sm sm:p-6"
+        className="rounded-2xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5 shadow-sm sm:p-6"
       >
         <fieldset>
-          <legend className="text-sm font-semibold text-[#17212B]">
+          <legend className="text-sm font-semibold text-[var(--civicos-text)]">
             Tra cứu theo
           </legend>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border border-[#D8E0E6] px-3 text-sm text-[#17212B] has-[:checked]:border-[#0F6B67] has-[:checked]:bg-[#0F6B67]/5">
+            <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border border-[var(--civicos-border)] px-3 text-sm text-[var(--civicos-text)] has-[:checked]:border-[var(--civicos-accent)] has-[:checked]:bg-[var(--civicos-surface-muted)]">
               <input
                 type="radio"
                 name="land-lookup-mode"
@@ -157,11 +157,11 @@ export function PublicLandLookup() {
                   setMode('applicationCode');
                   setError(null);
                 }}
-                className="h-4 w-4 accent-[#0F6B67]"
+                className="h-4 w-4 accent-[var(--civicos-accent)]"
               />
               Mã hồ sơ
             </label>
-            <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border border-[#D8E0E6] px-3 text-sm text-[#17212B] has-[:checked]:border-[#0F6B67] has-[:checked]:bg-[#0F6B67]/5">
+            <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border border-[var(--civicos-border)] px-3 text-sm text-[var(--civicos-text)] has-[:checked]:border-[var(--civicos-accent)] has-[:checked]:bg-[var(--civicos-surface-muted)]">
               <input
                 type="radio"
                 name="land-lookup-mode"
@@ -171,7 +171,7 @@ export function PublicLandLookup() {
                   setMode('parcelCode');
                   setError(null);
                 }}
-                className="h-4 w-4 accent-[#0F6B67]"
+                className="h-4 w-4 accent-[var(--civicos-accent)]"
               />
               Mã thửa
             </label>
@@ -181,13 +181,13 @@ export function PublicLandLookup() {
         <div className="mt-5">
           <label
             htmlFor="land-lookup-code"
-            className="block text-sm font-semibold text-[#17212B]"
+            className="block text-sm font-semibold text-[var(--civicos-text)]"
           >
             {mode === 'applicationCode' ? 'Mã hồ sơ' : 'Mã thửa'}
           </label>
           <input
             id="land-lookup-code"
-            className="mt-2 min-h-[44px] w-full rounded-lg border border-[#D8E0E6] bg-white px-3 font-mono text-base text-[#17212B] transition outline-none placeholder:text-[#65727E] focus:border-[#0F6B67] focus:ring-2 focus:ring-[#0F6B67]/20"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 font-mono text-base text-[var(--civicos-text)] transition outline-none placeholder:text-[var(--civicos-text-muted)] focus:border-[var(--civicos-accent)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
             value={code}
             onChange={(event) => setCode(event.target.value)}
             placeholder={
@@ -200,7 +200,7 @@ export function PublicLandLookup() {
             aria-describedby={error ? 'land-lookup-error' : undefined}
             required
           />
-          <p className="mt-2 text-sm text-[#65727E]">
+          <p className="mt-2 text-sm text-[var(--civicos-text-muted)]">
             Nhập đúng một mã để xem thông tin projection tối thiểu.
           </p>
         </div>
@@ -208,7 +208,7 @@ export function PublicLandLookup() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-5 min-h-[44px] rounded-lg bg-[#0F6B67] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0F6B67]/90 focus-visible:outline-[#0F6B67] disabled:cursor-wait disabled:opacity-60"
+          className="mt-5 min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] transition hover:bg-[var(--civicos-accent)]/90 focus-visible:outline-[var(--civicos-focus)] disabled:cursor-wait disabled:opacity-60"
         >
           {loading ? 'Đang tra cứu…' : 'Tra cứu'}
         </button>
@@ -217,7 +217,7 @@ export function PublicLandLookup() {
       {!online ? (
         <p
           role="status"
-          className="rounded-lg border border-[#B7791F]/40 bg-[#B7791F]/10 p-3 text-sm text-[#7A4F0D]"
+          className="rounded-lg border border-[var(--civicos-info)] bg-[var(--civicos-surface)] p-3 text-sm text-[var(--civicos-info)]"
         >
           Đang ngoại tuyến. Bạn có thể thử lại khi kết nối được khôi phục.
         </p>
@@ -228,13 +228,15 @@ export function PublicLandLookup() {
           role="status"
           aria-live="polite"
           aria-busy="true"
-          className="rounded-2xl border border-[#D8E0E6] bg-white p-6"
+          className="rounded-2xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-6"
         >
           <div
             aria-hidden="true"
-            className="h-5 w-40 animate-pulse rounded bg-[#D8E0E6]"
+            className="h-5 w-40 animate-pulse rounded bg-[var(--civicos-surface-muted)]"
           />
-          <p className="mt-3 text-sm text-[#65727E]">Đang tải kết quả…</p>
+          <p className="mt-3 text-sm text-[var(--civicos-text-muted)]">
+            Đang tải kết quả…
+          </p>
         </div>
       ) : null}
 
@@ -243,7 +245,7 @@ export function PublicLandLookup() {
           id="land-lookup-error"
           role="alert"
           aria-live="assertive"
-          className="rounded-2xl border border-[#B54747]/40 bg-[#B54747]/5 p-5 text-[#7A2F2F]"
+          className="rounded-2xl border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] p-5 text-[var(--civicos-danger)]"
         >
           <p className="text-sm leading-6">
             <strong className="font-mono">{error.code}</strong>
@@ -257,7 +259,7 @@ export function PublicLandLookup() {
               type="button"
               onClick={() => void submitLookup()}
               disabled={loading}
-              className="mt-4 min-h-[44px] rounded-lg border border-[#B54747]/50 px-4 py-2.5 text-sm font-semibold text-[#7A2F2F] transition hover:bg-[#B54747]/10 disabled:cursor-wait disabled:opacity-60"
+              className="mt-4 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-danger)] transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
             >
               Thử lại
             </button>
@@ -268,21 +270,21 @@ export function PublicLandLookup() {
       {lookup ? (
         <section
           aria-labelledby="public-land-lookup-result"
-          className="rounded-2xl border border-[#D8E0E6] bg-white p-5 shadow-sm sm:p-6"
+          className="rounded-2xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5 shadow-sm sm:p-6"
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold tracking-[0.14em] text-[#65727E] uppercase">
+              <p className="text-xs font-semibold tracking-[0.14em] text-[var(--civicos-text-muted)] uppercase">
                 Kết quả tra cứu
               </p>
               <h2
                 id="public-land-lookup-result"
-                className="mt-2 text-xl font-semibold text-[#17212B]"
+                className="mt-2 text-xl font-semibold text-[var(--civicos-text)]"
               >
                 Thông tin projection
               </h2>
             </div>
-            <span className="inline-flex min-h-[32px] items-center rounded-full border border-[#2E6F95]/40 bg-[#2E6F95]/10 px-3 text-xs font-semibold text-[#2E6F95]">
+            <span className="inline-flex min-h-[32px] items-center rounded-full border border-[var(--civicos-accent)] bg-[var(--civicos-surface)] px-3 text-xs font-semibold text-[var(--civicos-accent)]">
               Mô phỏng · simulated
             </span>
           </div>
@@ -290,9 +292,11 @@ export function PublicLandLookup() {
           <dl className="mt-6 grid gap-x-6 gap-y-5 sm:grid-cols-2">
             {lookupFields.map(({ key, label, mono }) => (
               <div key={key}>
-                <dt className="text-xs font-medium text-[#65727E]">{label}</dt>
+                <dt className="text-xs font-medium text-[var(--civicos-text-muted)]">
+                  {label}
+                </dt>
                 <dd
-                  className={`mt-1 text-sm break-words text-[#17212B] ${
+                  className={`mt-1 text-sm break-words text-[var(--civicos-text)] ${
                     mono ? 'font-mono' : ''
                   }`}
                 >

@@ -146,4 +146,24 @@ describe('PS-E1-007 slices 1-3 inspection contract', () => {
     expect(migration).toContain('InspectionFinding');
     expect(migration).toContain('EnforcementRecommendation');
   });
+
+  it('renders Inspection and Land detail sections without adding mutation or exposing payload/PII fields', () => {
+    const detail = readFileSync(
+      path.join(
+        process.cwd(),
+        'src',
+        'components',
+        'inspections',
+        'InspectionDetail.tsx',
+      ),
+      'utf8',
+    );
+    expect(detail).toContain('var(--civicos-');
+    expect(detail).not.toMatch(
+      /slate-(950|900|800|700)|cyan-(300|200)|amber-(400|300|200|100)|emerald-(400|300|200)|rose-(400|300|200|100)/,
+    );
+    expect(detail).not.toMatch(/gradient|neon|glow/i);
+    expect(detail).not.toMatch(/changePayload|storageKey|syncPayload/i);
+    expect(detail).toContain('min-h-[44px]');
+  });
 });

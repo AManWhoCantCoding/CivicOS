@@ -437,4 +437,40 @@ describe('Direct incident payload seam', () => {
       parseIncident({ description: 'x', latitude: 'north', longitude: 106.0 }),
     ).toThrow('INVALID_LOCATION');
   });
+
+  it('keeps Residents and Intake fields masked and actions policy/state-driven while applying shared presentation tokens', () => {
+    const queue = readFileSync(
+      join(
+        process.cwd(),
+        'src',
+        'components',
+        'incidents',
+        'IntakeReportQueue.tsx',
+      ),
+      'utf8',
+    );
+    const intakeDetail = readFileSync(
+      join(
+        process.cwd(),
+        'src',
+        'components',
+        'incidents',
+        'IntakeReportDetail.tsx',
+      ),
+      'utf8',
+    );
+    for (const source of [queue, intakeDetail]) {
+      expect(source).toContain('var(--civicos-');
+      expect(source).not.toMatch(
+        /slate-(950|900|800|700)|cyan-(300|200)|amber-(400|300|200|100)|emerald-(400|300|200)|rose-(400|300|200|100)/,
+      );
+      expect(source).not.toMatch(/gradient|neon|glow/i);
+      expect(source).toContain('min-h-[44px]');
+      expect(source).toContain('aria-hidden');
+    }
+    expect(intakeDetail).toContain('Danh tính đã che theo vai trò');
+    expect(intakeDetail).toContain('revealed');
+    expect(intakeDetail).toContain('convert_to_incident');
+    expect(queue).toContain('Chưa tạo Incident');
+  });
 });

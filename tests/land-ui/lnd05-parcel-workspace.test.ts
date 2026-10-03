@@ -311,3 +311,44 @@ describe('LND-05 parcel pages gate entry through the land workspace feature', ()
     expect(detailPage).toContain('AccessDenied');
   });
 });
+
+describe('CUI-002 land presentation uses shared tokens without new exposure', () => {
+  const queueSource = readSource('src/components/land/ApplicationQueue.tsx');
+  const applicationSource = readSource(
+    'src/components/land/ApplicationDetail.tsx',
+  );
+  const parcelSource = readSource('src/components/land/ParcelDetail.tsx');
+  const queuePage = readSource('src/app/land/applications/page.tsx');
+
+  const legacyPaint =
+    /slate-(950|900|800|700|600|500|400)|cyan-(300|200)|amber-(400|300|200|100)|emerald-(400|300|200)|rose-(400|300|200|100)|teal-(700|600)|bg-white|text-white|#[0-9A-Fa-f]{6}/;
+
+  it('renders Inspection and Land detail sections without adding mutation or exposing payload/PII fields', () => {
+    for (const source of [queueSource, applicationSource, parcelSource]) {
+      expect(source).not.toMatch(/storageKey/i);
+      expect(source).not.toMatch(/syncPayload|syncToken|syncSecret/i);
+      expect(source).not.toMatch(/method:\s*['"]POST['"]/);
+      expect(source).not.toMatch(/method:\s*['"]DELETE['"]/);
+    }
+    expect(queueSource).not.toMatch(/changePayload/i);
+    expect(parcelSource).not.toMatch(/changePayload/i);
+    // Application detail keeps only the pre-existing safe excerpt boundary.
+    expect(applicationSource).toContain('trích an toàn');
+    expect(applicationSource).toContain('terminal');
+    expect(parcelSource).toContain('maskedPartyLabel');
+    expect(queuePage).toContain('Mô phỏng:');
+  });
+
+  it('matches the approved token values and rejects prohibited visual treatments across web domain surfaces', () => {
+    for (const source of [queueSource, applicationSource, parcelSource]) {
+      expect(source).toContain('var(--civicos-');
+      expect(source).not.toMatch(legacyPaint);
+      expect(source).not.toMatch(/gradient|neon|glow/i);
+      expect(source).not.toContain('#000000');
+      expect(source).not.toContain('official');
+      expect(source).not.toContain('certified');
+    }
+    expect(parcelSource).toContain('min-h-[44px]');
+    expect(queueSource).toContain('min-h-[44px]');
+  });
+});

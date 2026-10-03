@@ -79,4 +79,20 @@ describe('T-004 web map accessibility and privacy contract', () => {
       expect(source).not.toMatch(/[?&]token=/i);
     }
   });
+
+  it('matches the approved token values and rejects prohibited visual treatments across web domain surfaces', () => {
+    const workspace = readSource('src/components/map/MapWorkspace.tsx');
+    expect(workspace).toContain('var(--civicos-');
+    expect(workspace).not.toMatch(
+      /slate-(950|900|800|700)|cyan-(300|200)|amber-(400|300|200|100)|emerald-(400|300|200)|rose-(400|300|200|100)/,
+    );
+    expect(workspace).not.toMatch(/gradient|neon|glow/i);
+    expect(workspace).not.toContain('#000000');
+    expect(workspace).not.toContain('certified');
+    expect(workspace).not.toContain('legal boundary');
+    expect(workspace).toContain('var(--civicos-simulated-bg)');
+    expect(workspace).toContain('var(--civicos-simulated-text)');
+    expect(workspace).toContain('var(--civicos-info)');
+    expect(workspace).toContain('min-h-[44px]');
+  });
 });

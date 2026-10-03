@@ -203,11 +203,13 @@ export function IncidentAssignmentPanel({
   }
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900 p-5">
+    <section className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-white">Phân công</h2>
-          <p className="mt-2 text-xs leading-5 text-slate-500">
+          <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
+            Phân công
+          </h2>
+          <p className="mt-2 text-xs leading-5 text-[var(--civicos-text-muted)]">
             Chỉ huy cấp quyền theo Incident; người được giao mới có thể xác
             minh.
           </p>
@@ -216,13 +218,16 @@ export function IncidentAssignmentPanel({
           type="button"
           onClick={() => void refreshAssignments()}
           disabled={state === 'loading'}
-          className="rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:border-cyan-300 hover:text-white disabled:opacity-50"
+          className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-2.5 py-1.5 text-xs text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)] disabled:opacity-50"
         >
           Làm mới
         </button>
       </div>
       {state === 'loading' ? (
-        <p className="mt-5 text-sm text-slate-500" role="status">
+        <p
+          className="mt-5 text-sm text-[var(--civicos-text-muted)]"
+          role="status"
+        >
           Đang tải Assignment…
         </p>
       ) : null}
@@ -231,14 +236,14 @@ export function IncidentAssignmentPanel({
           {denied ? (
             <AccessDenied message={error ?? undefined} />
           ) : (
-            <p className="text-sm text-rose-300" role="alert">
+            <p className="text-sm text-[var(--civicos-danger)]" role="alert">
               {error}
             </p>
           )}
           <button
             type="button"
             onClick={() => void refreshAssignments()}
-            className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]"
           >
             Thử tải lại
           </button>
@@ -251,27 +256,27 @@ export function IncidentAssignmentPanel({
               {assignments.map((assignment) => (
                 <div
                   key={assignment.id}
-                  className="rounded-lg border border-slate-800 bg-slate-950/60 p-3"
+                  className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] p-3"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <p className="min-w-0 truncate text-sm text-slate-200">
+                    <p className="min-w-0 truncate text-sm text-[var(--civicos-text)]">
                       {assignment.assigneeUserId}
                     </p>
                     <span
                       className={`shrink-0 rounded-full px-2 py-1 text-[11px] ${
                         assignment.status === 'active'
-                          ? 'bg-emerald-400/10 text-emerald-200'
-                          : 'bg-slate-800 text-slate-500'
+                          ? 'bg-[var(--civicos-surface)] text-[var(--civicos-success)]'
+                          : 'bg-[var(--civicos-surface-muted)] text-[var(--civicos-text-muted)]'
                       }`}
                     >
                       {assignment.status}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-[var(--civicos-text-muted)]">
                     {assignment.task} · {formatDate(assignment.grantedAt)}
                   </p>
                   {assignment.revokeReason ? (
-                    <p className="mt-2 text-xs text-slate-500">
+                    <p className="mt-2 text-xs text-[var(--civicos-text-muted)]">
                       Lý do thu hồi: {assignment.revokeReason}
                     </p>
                   ) : null}
@@ -279,11 +284,11 @@ export function IncidentAssignmentPanel({
               ))}
             </div>
           ) : (
-            <p className="rounded-lg border border-dashed border-slate-700 p-4 text-sm text-slate-500">
+            <p className="rounded-lg border border-dashed border-[var(--civicos-border)] p-4 text-sm text-[var(--civicos-text-muted)]">
               Chưa có Assignment cho Incident này.
             </p>
           )}
-          <div className="border-t border-slate-800 pt-5">
+          <div className="border-t border-[var(--civicos-border)] pt-5">
             {canAssign ? (
               <>
                 <UserPicker
@@ -295,13 +300,13 @@ export function IncidentAssignmentPanel({
                   type="button"
                   onClick={() => void assign()}
                   disabled={loading || !assigneeUserIds.length}
-                  className="mt-4 w-full rounded-lg border border-slate-600 px-3 py-2.5 text-sm font-semibold text-slate-100 hover:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-4 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] px-3 py-2.5 text-sm font-semibold text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading ? 'Đang gửi…' : 'Gửi phân công'}
                 </button>
               </>
             ) : (
-              <p className="rounded-lg border border-dashed border-slate-700 p-4 text-sm text-slate-500">
+              <p className="rounded-lg border border-dashed border-[var(--civicos-border)] p-4 text-sm text-[var(--civicos-text-muted)]">
                 Chỉ Commander trong cùng OrganizationUnit được tạo hoặc thu hồi
                 phân công.
               </p>
@@ -311,13 +316,13 @@ export function IncidentAssignmentPanel({
       ) : null}
       {denied && state !== 'error' ? <AccessDenied /> : null}
       {error && state !== 'error' ? (
-        <p className="mt-3 text-sm text-rose-300" role="alert">
+        <p className="mt-3 text-sm text-[var(--civicos-danger)]" role="alert">
           {error}
         </p>
       ) : null}
       {message ? (
         <p
-          className="mt-3 text-xs text-slate-300"
+          className="mt-3 text-xs text-[var(--civicos-text)]"
           role="status"
           aria-live="polite"
         >

@@ -66,8 +66,10 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
         role="status"
         aria-label="Đang tải chi tiết thửa đất"
       >
-        <div className="h-24 rounded-xl bg-slate-900 motion-safe:animate-pulse" />
-        <p className="text-sm text-slate-400">Đang tải chi tiết thửa đất…</p>
+        <div className="h-24 rounded-xl bg-[var(--civicos-surface-muted)] motion-safe:animate-pulse" />
+        <p className="text-sm text-[var(--civicos-text-muted)]">
+          Đang tải chi tiết thửa đất…
+        </p>
       </div>
     );
   }
@@ -85,7 +87,7 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
         <p>Không tìm thấy thửa đất yêu cầu.</p>
         <Link
           href="/land/parcels"
-          className="mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+          className="mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
         >
           Về danh sách thửa đất
         </Link>
@@ -102,7 +104,7 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-amber-300/40 px-3 py-2 text-sm text-amber-100 hover:border-amber-200"
+          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-info)] px-3 py-2 text-sm text-[var(--civicos-info)] hover:border-[var(--civicos-info)]"
         >
           Thử lại
         </button>
@@ -116,7 +118,7 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-rose-300/40 px-3 py-2 text-sm text-rose-100 hover:border-rose-200"
+          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
         >
           Thử lại
         </button>
@@ -130,7 +132,7 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-rose-300/40 px-3 py-2 text-sm text-rose-100 hover:border-rose-200"
+          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
         >
           Thử lại
         </button>
@@ -146,15 +148,15 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
       {banner === 'error' || banner === 'offline' ? (
         <div
           role="alert"
-          className="space-y-2 rounded-xl border border-amber-400/30 bg-amber-400/[0.06] p-4"
+          className="space-y-2 rounded-xl border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] p-4"
         >
-          <p className="text-sm text-amber-200">
+          <p className="text-sm text-[var(--civicos-warning)]">
             Không làm mới được dữ liệu; đang hiển thị nội dung đã tải. Thử lại.
           </p>
           <button
             type="button"
             onClick={() => setReloadToken((value) => value + 1)}
-            className="min-h-[44px] rounded-lg border border-amber-300/40 px-3 py-2 text-sm text-amber-100 hover:border-amber-200"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-warning)] px-3 py-2 text-sm text-[var(--civicos-warning)] hover:border-[var(--civicos-warning)]"
           >
             Thử lại
           </button>
@@ -163,53 +165,58 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
       {loading ? <p role="status">Đang làm mới chi tiết thửa đất…</p> : null}
       <section
         aria-labelledby="land-parcel-heading"
-        className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+        className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
       >
-        <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+        <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
           Thửa đất nội bộ
         </p>
         <h2
           id="land-parcel-heading"
-          className="mt-2 font-mono text-2xl font-semibold text-slate-100"
+          className="mt-2 font-mono text-2xl font-semibold text-[var(--civicos-text)]"
         >
           {parcel.parcelCode}
         </h2>
         <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-slate-500">Tờ / Thửa</dt>
-            <dd className="font-mono text-slate-200">
+            <dt className="text-[var(--civicos-text-muted)]">Tờ / Thửa</dt>
+            <dd className="font-mono text-[var(--civicos-text)]">
               {parcel.mapSheetNumber} / {parcel.parcelNumber}
             </dd>
           </div>
           <div>
-            <dt className="text-slate-500">Trạng thái</dt>
+            <dt className="text-[var(--civicos-text-muted)]">Trạng thái</dt>
             <dd>
-              <span className="inline-flex items-center gap-2 rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-200">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--civicos-border)] px-3 py-1 text-xs text-[var(--civicos-text)]">
                 <span aria-hidden="true">●</span>
                 {parcelStatusText(parcel.status)}
               </span>
             </dd>
           </div>
           <div>
-            <dt className="text-slate-500">Đơn vị</dt>
-            <dd className="font-mono text-slate-200">
+            <dt className="text-[var(--civicos-text-muted)]">Đơn vị</dt>
+            <dd className="font-mono text-[var(--civicos-text)]">
               {parcel.organizationId}
             </dd>
           </div>
           <div>
-            <dt className="text-slate-500">Phiên bản</dt>
-            <dd className="font-mono text-slate-200">v{parcel.version}</dd>
+            <dt className="text-[var(--civicos-text-muted)]">Phiên bản</dt>
+            <dd className="font-mono text-[var(--civicos-text)]">
+              v{parcel.version}
+            </dd>
           </div>
         </dl>
         <Link
           href={focusMapUrl(parcel.id)}
           aria-label="Xem thửa đất trên bản đồ"
-          className="mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+          className="mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
         >
           Xem trên bản đồ
         </Link>
         {readOnly ? (
-          <p role="status" className="mt-3 text-sm text-slate-400">
+          <p
+            role="status"
+            className="mt-3 text-sm text-[var(--civicos-text-muted)]"
+          >
             Thửa đất ở trạng thái chỉ đọc; màn hình này không cung cấp thao tác
             thay đổi hay xóa.
           </p>
@@ -218,68 +225,89 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
 
       <section
         aria-labelledby="land-parcel-overview-heading"
-        className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+        className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
       >
         <h3
           id="land-parcel-overview-heading"
-          className="text-xl font-semibold text-slate-100"
+          className="text-xl font-semibold text-[var(--civicos-text)]"
         >
           Tổng quan
         </h3>
         <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-slate-500">Diện tích (m²)</dt>
-            <dd className="font-mono text-slate-200">{parcel.areaSqm}</dd>
+            <dt className="text-[var(--civicos-text-muted)]">Diện tích (m²)</dt>
+            <dd className="font-mono text-[var(--civicos-text)]">
+              {parcel.areaSqm}
+            </dd>
           </div>
           <div>
-            <dt className="text-slate-500">Loại đất</dt>
-            <dd className="text-slate-200">{parcel.landUseType}</dd>
+            <dt className="text-[var(--civicos-text-muted)]">Loại đất</dt>
+            <dd className="text-[var(--civicos-text)]">{parcel.landUseType}</dd>
           </div>
           <div>
-            <dt className="text-slate-500">Mã xã</dt>
-            <dd className="font-mono text-slate-200">{parcel.communeCode}</dd>
+            <dt className="text-[var(--civicos-text-muted)]">Mã xã</dt>
+            <dd className="font-mono text-[var(--civicos-text)]">
+              {parcel.communeCode}
+            </dd>
           </div>
           <div>
-            <dt className="text-slate-500">Địa chỉ (nội bộ)</dt>
-            <dd className="text-slate-200">{parcel.address}</dd>
+            <dt className="text-[var(--civicos-text-muted)]">
+              Địa chỉ (nội bộ)
+            </dt>
+            <dd className="text-[var(--civicos-text)]">{parcel.address}</dd>
           </div>
         </dl>
-        <p className="mt-3 font-mono text-xs leading-5 text-slate-400">
+        <p className="mt-3 font-mono text-xs leading-5 text-[var(--civicos-text-muted)]">
           {geometryPreviewText(parcel.geometry)}
         </p>
       </section>
 
       <section
         aria-labelledby="land-rights-heading"
-        className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+        className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
       >
         <h3
           id="land-rights-heading"
-          className="text-xl font-semibold text-slate-100"
+          className="text-xl font-semibold text-[var(--civicos-text)]"
         >
           Quyền sử dụng đất
         </h3>
         {rights.length ? (
           <table className="mt-3 w-full border-collapse text-sm">
-            <caption className="py-2 text-left text-slate-400">
+            <caption className="py-2 text-left text-[var(--civicos-text-muted)]">
               Bảng quyền sử dụng đất; danh tính chủ thể hiển thị dạng che
               (masked)
             </caption>
             <thead>
-              <tr className="text-left text-slate-300">
-                <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <tr className="text-left text-[var(--civicos-text)]">
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-3 py-2"
+                >
                   Chủ thể (masked)
                 </th>
-                <th scope="col" className="border-b border-slate-700 px-3 py-2">
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-3 py-2"
+                >
                   Tỷ lệ (%)
                 </th>
-                <th scope="col" className="border-b border-slate-700 px-3 py-2">
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-3 py-2"
+                >
                   Hiệu lực
                 </th>
-                <th scope="col" className="border-b border-slate-700 px-3 py-2">
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-3 py-2"
+                >
                   Hiệu lực từ — đến
                 </th>
-                <th scope="col" className="border-b border-slate-700 px-3 py-2">
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-3 py-2"
+                >
                   Hồ sơ nguồn
                 </th>
               </tr>
@@ -288,8 +316,11 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
               {rights.map((right) => {
                 const party = parties.get(right.partyId);
                 return (
-                  <tr key={right.id} className="border-b border-slate-800">
-                    <td className="px-3 py-2 font-mono text-slate-200">
+                  <tr
+                    key={right.id}
+                    className="border-b border-[var(--civicos-border)]"
+                  >
+                    <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                       {maskedPartyLabel(
                         party
                           ? {
@@ -301,20 +332,20 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
                         right.partyId,
                       )}
                     </td>
-                    <td className="px-3 py-2 font-mono text-slate-300">
+                    <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                       {right.sharePercent}
                     </td>
                     <td className="px-3 py-2">
-                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-200">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-[var(--civicos-border)] px-3 py-1 text-xs text-[var(--civicos-text)]">
                         <span aria-hidden="true">●</span>
                         {rightStatusText(right.status)}
                       </span>
                     </td>
-                    <td className="px-3 py-2 font-mono text-slate-300">
+                    <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                       {formatDateTime(right.validFrom)} —{' '}
                       {formatDateTime(right.validTo)}
                     </td>
-                    <td className="px-3 py-2 font-mono text-slate-300">
+                    <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                       {right.sourceApplicationId ?? '—'}
                     </td>
                   </tr>
@@ -323,7 +354,10 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
             </tbody>
           </table>
         ) : (
-          <p role="status" className="mt-2 text-sm text-slate-400">
+          <p
+            role="status"
+            className="mt-2 text-sm text-[var(--civicos-text-muted)]"
+          >
             Chưa có quyền sử dụng đất nào cho thửa này.
           </p>
         )}
@@ -331,32 +365,44 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
 
       <section
         aria-labelledby="land-encumbrances-heading"
-        className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+        className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
       >
         <h3
           id="land-encumbrances-heading"
-          className="text-xl font-semibold text-slate-100"
+          className="text-xl font-semibold text-[var(--civicos-text)]"
         >
           Ràng buộc thế chấp
         </h3>
         {encumbrances.length ? (
           <table className="mt-3 w-full border-collapse text-sm">
-            <caption className="py-2 text-left text-slate-400">
+            <caption className="py-2 text-left text-[var(--civicos-text-muted)]">
               Bảng ràng buộc thế chấp; bên được bảo đảm hiển thị dạng che
               (masked)
             </caption>
             <thead>
-              <tr className="text-left text-slate-300">
-                <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <tr className="text-left text-[var(--civicos-text)]">
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-3 py-2"
+                >
                   Loại
                 </th>
-                <th scope="col" className="border-b border-slate-700 px-3 py-2">
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-3 py-2"
+                >
                   Bên được bảo đảm (masked)
                 </th>
-                <th scope="col" className="border-b border-slate-700 px-3 py-2">
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-3 py-2"
+                >
                   Hiệu lực
                 </th>
-                <th scope="col" className="border-b border-slate-700 px-3 py-2">
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-3 py-2"
+                >
                   Đăng ký — Giải tỏa
                 </th>
               </tr>
@@ -367,11 +413,14 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
                   ? parties.get(item.securedPartyId)
                   : null;
                 return (
-                  <tr key={item.id} className="border-b border-slate-800">
-                    <td className="px-3 py-2 font-mono text-slate-200">
+                  <tr
+                    key={item.id}
+                    className="border-b border-[var(--civicos-border)]"
+                  >
+                    <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                       {item.encumbranceType}
                     </td>
-                    <td className="px-3 py-2 font-mono text-slate-300">
+                    <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                       {item.securedPartyId
                         ? maskedPartyLabel(
                             secured
@@ -387,12 +436,12 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
                         : '—'}
                     </td>
                     <td className="px-3 py-2">
-                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-200">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-[var(--civicos-border)] px-3 py-1 text-xs text-[var(--civicos-text)]">
                         <span aria-hidden="true">●</span>
                         {encumbranceStatusText(item.status)}
                       </span>
                     </td>
-                    <td className="px-3 py-2 font-mono text-slate-300">
+                    <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                       {formatDateTime(item.registeredAt)} —{' '}
                       {formatDateTime(item.releasedAt)}
                     </td>
@@ -402,7 +451,10 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
             </tbody>
           </table>
         ) : (
-          <p role="status" className="mt-2 text-sm text-slate-400">
+          <p
+            role="status"
+            className="mt-2 text-sm text-[var(--civicos-text-muted)]"
+          >
             Chưa có ràng buộc thế chấp nào cho thửa này.
           </p>
         )}

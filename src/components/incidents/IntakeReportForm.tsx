@@ -97,19 +97,19 @@ export function IntakeReportForm() {
     <form
       onSubmit={submit}
       noValidate
-      className="space-y-6 rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-7"
+      className="space-y-6 rounded-2xl border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] p-5 sm:p-7"
     >
-      <p className="rounded-lg border border-slate-800 bg-slate-950/60 p-4 text-xs leading-5 text-slate-500">
+      <p className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] p-4 text-xs leading-5 text-[var(--civicos-text-muted)]">
         Biểu mẫu tiếp nhận thuộc trách nhiệm cán bộ trực ban. Tin mới chỉ tạo
         IntakeReport chờ phân loại; Incident chỉ tạo khi cán bộ xác nhận chuyển.
         Tài khoản khác gửi tin sẽ nhận trạng thái từ chối từ API.
       </p>
-      <label className="block text-sm text-slate-200">
+      <label className="block text-sm text-[var(--civicos-text)]">
         Kênh tiếp nhận
         <select
           name="sourceChannel"
           defaultValue="direct"
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
         >
           <option value="direct">Trực tiếp</option>
           <option value="phone">Điện thoại</option>
@@ -117,91 +117,91 @@ export function IntakeReportForm() {
           <option value="district_transfer">Chuyển đơn vị</option>
         </select>
       </label>
-      <label className="block text-sm text-slate-200">
+      <label className="block text-sm text-[var(--civicos-text)]">
         Thời điểm tiếp nhận
         <input
           name="receivedAt"
           type="datetime-local"
           defaultValue={new Date().toISOString().slice(0, 16)}
           required
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
         />
       </label>
-      <label className="block text-sm text-slate-200">
+      <label className="block text-sm text-[var(--civicos-text)]">
         Nội dung tin báo
         <textarea
           name="content"
           required
           rows={6}
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
         />
       </label>
-      <fieldset className="rounded-xl border border-slate-800 p-4">
-        <legend className="px-1 text-sm text-slate-200">
+      <fieldset className="rounded-xl border border-[var(--civicos-border)] p-4">
+        <legend className="px-1 text-sm text-[var(--civicos-text)]">
           Địa điểm / Location
         </legend>
-        <p className="mb-4 text-xs leading-5 text-slate-500">
+        <p className="mb-4 text-xs leading-5 text-[var(--civicos-text-muted)]">
           Nhập cả vĩ độ và kinh độ nếu tin báo có vị trí xác định.
         </p>
         <div className="grid gap-5 sm:grid-cols-2">
-          <label className="block text-sm text-slate-200">
+          <label className="block text-sm text-[var(--civicos-text)]">
             Vĩ độ
             <input
               name="latitude"
               type="number"
               step="any"
               inputMode="decimal"
-              className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+              className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
             />
           </label>
-          <label className="block text-sm text-slate-200">
+          <label className="block text-sm text-[var(--civicos-text)]">
             Kinh độ
             <input
               name="longitude"
               type="number"
               step="any"
               inputMode="decimal"
-              className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+              className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
             />
           </label>
         </div>
       </fieldset>
       <div className="grid gap-5 sm:grid-cols-2">
-        <label className="block text-sm text-slate-200">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Tên nguồn tin
           <input
             name="sourceName"
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
           />
         </label>
-        <label className="block text-sm text-slate-200">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Liên hệ nguồn tin
           <input
             name="sourceContact"
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
           />
         </label>
-        <label className="block text-sm text-slate-200">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Mã tham chiếu nhạy cảm / Sensitive ref
           <input
             name="sensitiveRef"
             autoComplete="off"
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
           />
-          <span className="mt-2 block text-xs leading-5 text-slate-500">
+          <span className="mt-2 block text-xs leading-5 text-[var(--civicos-text-muted)]">
             Giá trị được bảo vệ ở tầng ứng dụng, không hiển thị trong danh sách.
           </span>
         </label>
       </div>
       {denied ? <AccessDenied /> : null}
       {error ? (
-        <p className="text-sm text-rose-300" role="alert">
+        <p className="text-sm text-[var(--civicos-danger)]" role="alert">
           {error}
         </p>
       ) : null}
       {success ? (
         <p
-          className="text-sm text-emerald-300"
+          className="text-sm text-[var(--civicos-success)]"
           role="status"
           aria-live="polite"
         >
@@ -210,7 +210,7 @@ export function IntakeReportForm() {
       ) : null}
       <button
         disabled={loading}
-        className="rounded-lg bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 active:translate-y-px disabled:opacity-60"
+        className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-5 py-3 text-sm font-semibold text-[var(--civicos-accent-contrast)] transition hover:bg-[var(--civicos-accent-hover)] active:translate-y-px disabled:opacity-60"
         type="submit"
       >
         {loading ? 'Đang lưu…' : 'Ghi nhận tin báo'}

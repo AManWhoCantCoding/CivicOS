@@ -17,16 +17,16 @@ export default async function LandParcelDetailPage({
     current !== null &&
     !(await canEnterEntry(current, ['land-parcel-workspace']));
   return (
-    <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
+    <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
       <div className="mx-auto max-w-4xl">
         <ModuleShell module="land">
           <Link
-            className="text-sm text-slate-400 underline-offset-4 hover:text-white hover:underline"
+            className="text-sm text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline"
             href="/land/parcels"
           >
             ← Danh sách thửa đất
           </Link>
-          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-white">
+          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-[var(--civicos-text)]">
             Chi tiết thửa đất
           </h1>
           <div className="mt-8">

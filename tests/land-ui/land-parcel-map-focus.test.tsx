@@ -281,4 +281,19 @@ describe('T-003 AC-3 renders only allowlisted fields and internal/simulated labe
     });
     expect(focusApiUrl('parcel-001')).toBe('/api/map/land-parcels/parcel-001');
   });
+
+  it('renders one focused parcel with approved map tokens and no unsafe polygon', () => {
+    const workspace = readSource('src/components/map/MapWorkspace.tsx');
+    const text = workspace.replace(/\s+/g, ' ');
+    expect(workspace).toContain("'fill-color': '#38BDF8'");
+    expect(workspace).toContain("'line-color': '#075985'");
+    expect(workspace).not.toContain('#22d3ee');
+    expect(workspace).not.toContain('#34d399');
+    expect(workspace).not.toContain('#a78bfa');
+    expect(workspace).toContain('Mở chi tiết thửa');
+    expect(workspace).toContain('internal / simulated');
+    expect(text).toContain(
+      'Dữ liệu mô phỏng nội bộ; không phải ranh giới pháp lý chính thức.',
+    );
+  });
 });

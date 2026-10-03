@@ -112,7 +112,7 @@ export function ParcelList() {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-amber-300/40 px-3 py-2 text-sm text-amber-100 hover:border-amber-200"
+          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-info)] px-3 py-2 text-sm text-[var(--civicos-info)] hover:border-[var(--civicos-info)]"
         >
           Thử lại
         </button>
@@ -126,7 +126,7 @@ export function ParcelList() {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-rose-300/40 px-3 py-2 text-sm text-rose-100 hover:border-rose-200"
+          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
         >
           Thử lại
         </button>
@@ -140,12 +140,12 @@ export function ParcelList() {
         className="flex flex-wrap gap-3"
         onSubmit={(event) => event.preventDefault()}
       >
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
           Trạng thái
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
-            className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
           >
             <option value="">Tất cả</option>
             <option value="active">Đang sử dụng</option>
@@ -153,27 +153,27 @@ export function ParcelList() {
             <option value="retired">Đã ngừng</option>
           </select>
         </label>
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
           Mã xã
           <input
             value={communeFilter}
             onChange={(event) => setCommuneFilter(event.target.value)}
             placeholder="DEMO-COMMUNE"
-            className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]"
           />
         </label>
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
           Mã thửa
           <input
             value={codeFilter}
             onChange={(event) => setCodeFilter(event.target.value)}
             placeholder="PARCEL-001"
-            className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]"
           />
         </label>
       </form>
       {!online ? (
-        <p role="status" className="text-sm text-amber-200">
+        <p role="status" className="text-sm text-[var(--civicos-info)]">
           Đang ngoại tuyến. Danh sách đang hiển thị dữ liệu đã tải, không thực
           hiện thay đổi.
         </p>
@@ -186,32 +186,50 @@ export function ParcelList() {
       ) : null}
       {items.length ? (
         <table className="w-full border-collapse text-sm">
-          <caption className="py-2 text-left text-slate-400">
+          <caption className="py-2 text-left text-[var(--civicos-text-muted)]">
             Danh sách thửa đất nội bộ theo phạm vi đơn vị
           </caption>
           <thead>
-            <tr className="text-left text-slate-300">
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+            <tr className="text-left text-[var(--civicos-text)]">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Mã thửa
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Tờ / Thửa
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Diện tích (m²)
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Trạng thái
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Bản đồ
               </th>
             </tr>
           </thead>
           <tbody>
             {items.map((item) => (
-              <tr key={item.id} className="border-b border-slate-800">
-                <td className="px-3 py-2 font-mono text-slate-100">
+              <tr
+                key={item.id}
+                className="border-b border-[var(--civicos-border)]"
+              >
+                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                   <Link
                     href={`/land/parcels/${item.id}`}
                     className="underline-offset-4 hover:underline"
@@ -219,14 +237,14 @@ export function ParcelList() {
                     {item.parcelCode}
                   </Link>
                 </td>
-                <td className="px-3 py-2 font-mono text-slate-300">
+                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                   {item.mapSheetNumber} / {item.parcelNumber}
                 </td>
-                <td className="px-3 py-2 font-mono text-slate-300">
+                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                   {item.areaSqm}
                 </td>
                 <td className="px-3 py-2">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-200">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[var(--civicos-border)] px-3 py-1 text-xs text-[var(--civicos-text)]">
                     <span aria-hidden="true">●</span>
                     {parcelStatusText(item.status)}
                   </span>
@@ -255,7 +273,7 @@ export function ParcelList() {
               setCurrentCursor(previous);
               void load(previous);
             }}
-            className="min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
           >
             Trang trước
           </button>
@@ -268,7 +286,7 @@ export function ParcelList() {
               setCurrentCursor(nextCursor);
               void load(nextCursor);
             }}
-            className="min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
           >
             Trang tiếp
           </button>

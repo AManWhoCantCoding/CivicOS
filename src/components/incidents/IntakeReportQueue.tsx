@@ -106,21 +106,21 @@ function formatDate(value: string) {
 function slaBadge(item: IntakeQueueItem) {
   if (item.sla.overdue) {
     return (
-      <span className="rounded-full bg-rose-400/10 px-3 py-1 text-xs text-rose-200">
-        Quá hạn SLA
+      <span className="rounded-full border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-1 text-xs text-[var(--civicos-danger)]">
+        <span aria-hidden="true">⚠ </span>Quá hạn SLA
       </span>
     );
   }
   if (item.sla.warning) {
     return (
-      <span className="rounded-full bg-amber-400/10 px-3 py-1 text-xs text-amber-200">
-        Sắp hạn SLA
+      <span className="rounded-full border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] px-3 py-1 text-xs text-[var(--civicos-warning)]">
+        <span aria-hidden="true">◷ </span>Sắp hạn SLA
       </span>
     );
   }
   return (
-    <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200">
-      Trong hạn
+    <span className="rounded-full border border-[var(--civicos-success)] bg-[var(--civicos-surface)] px-3 py-1 text-xs text-[var(--civicos-success)]">
+      <span aria-hidden="true">● </span>Trong hạn
     </span>
   );
 }
@@ -192,7 +192,7 @@ export function IntakeReportQueue() {
   if (state === 'loading') {
     return (
       <div
-        className="h-40 rounded-xl bg-slate-900 motion-safe:animate-pulse"
+        className="h-40 rounded-xl bg-[var(--civicos-surface-muted)] motion-safe:animate-pulse"
         aria-label="Đang tải hàng đợi IntakeReport"
         role="status"
       />
@@ -202,12 +202,12 @@ export function IntakeReportQueue() {
   return (
     <section aria-label="Hàng đợi IntakeReport" className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className="block text-sm text-slate-300">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Trạng thái
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
           >
             <option value="">Tất cả</option>
             <option value="RECEIVED">Đã tiếp nhận</option>
@@ -217,12 +217,12 @@ export function IntakeReportQueue() {
             <option value="REJECTED">Đã từ chối</option>
           </select>
         </label>
-        <label className="block text-sm text-slate-300">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Kênh tiếp nhận
           <select
             value={channelFilter}
             onChange={(event) => setChannelFilter(event.target.value)}
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
           >
             <option value="">Tất cả</option>
             <option value="direct">Trực tiếp</option>
@@ -231,12 +231,12 @@ export function IntakeReportQueue() {
             <option value="district_transfer">Chuyển đơn vị</option>
           </select>
         </label>
-        <label className="block text-sm text-slate-300">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Hạn SLA
           <select
             value={slaFilter}
             onChange={(event) => setSlaFilter(event.target.value)}
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
           >
             <option value="">Tất cả</option>
             <option value="warning">Sắp hạn</option>
@@ -250,7 +250,7 @@ export function IntakeReportQueue() {
             <AccessDenied message={error ?? undefined} />
           ) : (
             <p
-              className="rounded-xl border border-rose-900/60 bg-rose-950/30 p-5 text-sm text-rose-200"
+              className="rounded-xl border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] p-5 text-sm text-[var(--civicos-danger)]"
               role="alert"
             >
               {error}
@@ -259,41 +259,41 @@ export function IntakeReportQueue() {
           <button
             type="button"
             onClick={() => void load()}
-            className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]"
           >
             Thử tải lại
           </button>
         </div>
       ) : null}
       {state === 'ready' && !reports.length ? (
-        <div className="rounded-xl border border-dashed border-slate-700 p-8 text-sm text-slate-400">
+        <div className="rounded-xl border border-dashed border-[var(--civicos-border)] p-8 text-sm text-[var(--civicos-text-muted)]">
           Chưa có IntakeReport trong phạm vi hiển thị.
         </div>
       ) : null}
       {state === 'ready' && reports.length ? (
-        <div className="overflow-hidden rounded-xl border border-slate-800">
-          <div className="divide-y divide-slate-800">
+        <div className="overflow-hidden rounded-xl border border-[var(--civicos-border)]">
+          <div className="divide-y divide-[var(--civicos-border)]">
             {reports.map((item) => (
               <Link
                 key={item.id}
                 href={`/intake/${item.id}`}
-                className="block p-5 transition hover:bg-slate-900"
+                className="block p-5 transition hover:bg-[var(--civicos-surface-muted)]"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="font-mono text-xs text-slate-500">
+                  <span className="font-mono text-xs text-[var(--civicos-text-muted)]">
                     {item.id.slice(0, 8)} · {item.sourceChannel ?? '—'}
                   </span>
                   <span className="flex flex-wrap items-center gap-2">
                     {slaBadge(item)}
-                    <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">
+                    <span className="rounded-full border border-[var(--civicos-accent)] bg-[var(--civicos-surface)] px-3 py-1 text-xs text-[var(--civicos-accent)]">
                       {item.status}
                     </span>
                   </span>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-slate-200">
+                <p className="mt-3 text-sm leading-6 text-[var(--civicos-text)]">
                   {item.content}
                 </p>
-                <p className="mt-3 text-xs text-slate-500">
+                <p className="mt-3 text-xs text-[var(--civicos-text-muted)]">
                   Nguồn tin: {item.sourceName ?? 'Không ghi nhận'} ·{' '}
                   {item.incidentId ? 'Đã chuyển Incident' : 'Chưa tạo Incident'}{' '}
                   · {formatDate(item.receivedAt)}

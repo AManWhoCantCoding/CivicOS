@@ -48,7 +48,7 @@ type MapProviderView = {
 type LoadState = 'loading' | 'ready' | 'error';
 
 const ACTION_FOCUS_CLASS =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)]';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -823,7 +823,7 @@ export function MapWorkspace({
             type: 'fill',
             source: 'map-areas',
             paint: {
-              'fill-color': '#34d399',
+              'fill-color': '#38BDF8',
               'fill-opacity': 0.25,
             },
           });
@@ -832,7 +832,7 @@ export function MapWorkspace({
             type: 'line',
             source: 'map-areas',
             paint: {
-              'line-color': '#34d399',
+              'line-color': '#075985',
               'line-width': 2,
             },
           });
@@ -864,7 +864,7 @@ export function MapWorkspace({
                 type: 'fill',
                 source: LAND_PARCEL_FOCUS_SOURCE,
                 paint: {
-                  'fill-color': '#22d3ee',
+                  'fill-color': '#38BDF8',
                   'fill-opacity': focusSelected ? 0.4 : 0.25,
                 },
               });
@@ -873,7 +873,7 @@ export function MapWorkspace({
                 type: 'line',
                 source: LAND_PARCEL_FOCUS_SOURCE,
                 paint: {
-                  'line-color': '#22d3ee',
+                  'line-color': '#075985',
                   'line-width': focusSelected ? 3 : 2,
                 },
               });
@@ -905,7 +905,7 @@ export function MapWorkspace({
                 type: 'fill',
                 source: DISCOVERY_SOURCE,
                 paint: {
-                  'fill-color': '#a78bfa',
+                  'fill-color': '#38BDF8',
                   'fill-opacity': 0.25,
                 },
               });
@@ -914,7 +914,7 @@ export function MapWorkspace({
                 type: 'line',
                 source: DISCOVERY_SOURCE,
                 paint: {
-                  'line-color': '#a78bfa',
+                  'line-color': '#075985',
                   'line-width': 2,
                 },
               });
@@ -970,8 +970,10 @@ export function MapWorkspace({
             aria-busy="true"
             aria-label="Đang tải dữ liệu thửa đất"
           >
-            <div className="h-64 rounded-xl bg-slate-900 motion-safe:animate-pulse" />
-            <p className="text-sm text-slate-400">Đang tải dữ liệu thửa đất…</p>
+            <div className="h-64 rounded-xl bg-[var(--civicos-surface-muted)] motion-safe:animate-pulse" />
+            <p className="text-sm text-[var(--civicos-text-muted)]">
+              Đang tải dữ liệu thửa đất…
+            </p>
           </div>
         </section>
       );
@@ -982,7 +984,7 @@ export function MapWorkspace({
           Đang tải bản đồ nghiệp vụ
         </h2>
         <div
-          className="h-64 rounded-xl bg-slate-900 motion-safe:animate-pulse"
+          className="h-64 rounded-xl bg-[var(--civicos-surface-muted)] motion-safe:animate-pulse"
           aria-label="Đang tải bản đồ nghiệp vụ"
           role="status"
           aria-live="polite"
@@ -1017,14 +1019,14 @@ export function MapWorkspace({
             Không thể tải bản đồ
           </h2>
           <div
-            className="rounded-xl border border-rose-900/60 bg-rose-950/30 p-5"
+            className="rounded-xl border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] p-5"
             role="alert"
             aria-live="assertive"
           >
-            <h3 className="text-base font-semibold text-rose-100">
+            <h3 className="text-base font-semibold text-[var(--civicos-danger)]">
               Bản đồ nền hiện không khả dụng
             </h3>
-            <p className="mt-2 text-sm text-rose-200">
+            <p className="mt-2 text-sm text-[var(--civicos-danger)]">
               Không thể kết nối map provider. Dữ liệu thửa đất chưa được xác
               nhận là đã hiển thị.
             </p>
@@ -1033,13 +1035,13 @@ export function MapWorkspace({
             <button
               type="button"
               onClick={refresh}
-              className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
+              className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]`}
             >
               Thử lại
             </button>
             <Link
               href="/land/parcels"
-              className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
+              className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-[var(--civicos-border)] px-4 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]`}
             >
               Quay lại danh sách thửa
             </Link>
@@ -1053,7 +1055,7 @@ export function MapWorkspace({
           Không thể tải bản đồ
         </h2>
         <p
-          className="rounded-xl border border-rose-900/60 bg-rose-950/30 p-5 text-sm text-rose-200"
+          className="rounded-xl border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] p-5 text-sm text-[var(--civicos-danger)]"
           role="alert"
           aria-live="assertive"
         >
@@ -1062,7 +1064,7 @@ export function MapWorkspace({
         <button
           type="button"
           onClick={refresh}
-          className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
+          className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]`}
         >
           Thử tải lại
         </button>
@@ -1077,7 +1079,7 @@ export function MapWorkspace({
       </h2>
       {!online ? (
         <p
-          className="rounded-xl border border-amber-400/30 bg-amber-400/[0.06] p-4 text-sm text-amber-200"
+          className="rounded-xl border border-[var(--civicos-info)] bg-[var(--civicos-surface)] p-4 text-sm text-[var(--civicos-info)]"
           role="status"
           aria-live="polite"
         >
@@ -1087,15 +1089,17 @@ export function MapWorkspace({
       ) : null}
       {masked ? (
         <p
-          className="rounded-xl border border-slate-700 p-4 text-sm text-slate-400"
+          className="rounded-xl border border-[var(--civicos-border)] p-4 text-sm text-[var(--civicos-text-muted)]"
           role="status"
           aria-live="polite"
         >
           Chưa đăng nhập nên lớp nghiệp vụ bị che; basemap vẫn xem được.
         </p>
       ) : null}
-      <fieldset className="flex flex-wrap gap-4 rounded-xl border border-slate-800 p-4 text-sm text-slate-300">
-        <legend className="px-2 text-xs text-slate-500">Lớp dữ liệu</legend>
+      <fieldset className="flex flex-wrap gap-4 rounded-xl border border-[var(--civicos-border)] p-4 text-sm text-[var(--civicos-text)]">
+        <legend className="px-2 text-xs text-[var(--civicos-text-muted)]">
+          Lớp dữ liệu
+        </legend>
         <label className="flex min-h-[44px] items-center gap-2">
           <input
             type="checkbox"
@@ -1130,18 +1134,18 @@ export function MapWorkspace({
           onKeyDown={(event) => {
             if (event.key === 'Escape') setFocusSelected(false);
           }}
-          className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+          className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
         >
           <div className="flex flex-wrap items-center gap-2">
             <h2
               id="land-parcel-focus-heading"
               ref={focusHeadingRef}
               tabIndex={-1}
-              className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase focus:outline-2 focus:outline-offset-2 focus:outline-cyan-300"
+              className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase focus:outline-2 focus:outline-offset-2 focus:outline-[var(--civicos-focus)]"
             >
               Thửa đất trên bản đồ
             </h2>
-            <span className="rounded-full border border-slate-700 px-3 py-1 font-mono text-xs text-slate-300">
+            <span className="rounded-full border border-[var(--civicos-simulated-text)] bg-[var(--civicos-simulated-bg)] px-3 py-1 font-mono text-xs text-[var(--civicos-simulated-text)]">
               internal / simulated
             </span>
           </div>
@@ -1154,8 +1158,8 @@ export function MapWorkspace({
               aria-label="Đang tải dữ liệu thửa đất"
             >
               <h3 className="sr-only">Đang tải dữ liệu thửa đất</h3>
-              <div className="h-16 rounded-lg bg-slate-900 motion-safe:animate-pulse" />
-              <p className="text-sm text-slate-400">
+              <div className="h-16 rounded-lg bg-[var(--civicos-surface-muted)] motion-safe:animate-pulse" />
+              <p className="text-sm text-[var(--civicos-text-muted)]">
                 Đang tải dữ liệu thửa đất…
               </p>
             </div>
@@ -1167,26 +1171,26 @@ export function MapWorkspace({
               aria-live="polite"
               aria-atomic="true"
             >
-              <h3 className="text-base font-semibold text-amber-100">
+              <h3 className="text-base font-semibold text-[var(--civicos-info)]">
                 Đang ngoại tuyến
               </h3>
-              <p className="text-sm text-amber-200">
+              <p className="text-sm text-[var(--civicos-info)]">
                 Đang ngoại tuyến. Không tải polygon thửa đất khi ngoại tuyến.
               </p>
-              <p className="text-sm text-amber-200">
+              <p className="text-sm text-[var(--civicos-info)]">
                 Polygon thửa đất không được lưu trong bộ nhớ offline.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={retryFocus}
-                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]`}
                 >
                   Thử lại khi có kết nối
                 </button>
                 <Link
                   href="/land/parcels"
-                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]`}
                 >
                   Quay lại danh sách thửa
                 </Link>
@@ -1195,15 +1199,15 @@ export function MapWorkspace({
           ) : null}
           {focusStatus === 'forbidden' ? (
             <div className="mt-3 space-y-3" role="alert" aria-live="assertive">
-              <h3 className="text-base font-semibold text-slate-100">
+              <h3 className="text-base font-semibold text-[var(--civicos-text)]">
                 Không được phép xem thửa đất này
               </h3>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-[var(--civicos-text-muted)]">
                 Bạn không có quyền xem nội dung này trong phạm vi hiện tại.
               </p>
               <Link
                 href="/land/parcels"
-                className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+                className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]`}
               >
                 Quay lại danh sách thửa
               </Link>
@@ -1211,15 +1215,15 @@ export function MapWorkspace({
           ) : null}
           {focusStatus === 'not-found' ? (
             <div className="mt-3 space-y-3" role="alert" aria-live="assertive">
-              <h3 className="text-base font-semibold text-slate-100">
+              <h3 className="text-base font-semibold text-[var(--civicos-text)]">
                 Không tìm thấy thửa đất
               </h3>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-[var(--civicos-text-muted)]">
                 Thửa đất không tồn tại hoặc không nằm trong phạm vi truy cập.
               </p>
               <Link
                 href="/land/parcels"
-                className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+                className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]`}
               >
                 Quay lại danh sách thửa
               </Link>
@@ -1227,23 +1231,23 @@ export function MapWorkspace({
           ) : null}
           {focusStatus === 'geometry' ? (
             <div className="mt-3 space-y-3" role="alert" aria-live="assertive">
-              <h3 className="text-base font-semibold text-slate-100">
+              <h3 className="text-base font-semibold text-[var(--civicos-text)]">
                 Không thể hiển thị hình học thửa đất
               </h3>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-[var(--civicos-text-muted)]">
                 Dữ liệu hình học hiện không sẵn sàng để hiển thị.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={retryFocus}
-                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]`}
                 >
                   Thử lại
                 </button>
                 <Link
                   href="/land/parcels"
-                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]`}
                 >
                   Quay lại danh sách thửa
                 </Link>
@@ -1252,10 +1256,10 @@ export function MapWorkspace({
           ) : null}
           {focusStatus === 'provider' ? (
             <div className="mt-3 space-y-3" role="alert" aria-live="assertive">
-              <h3 className="text-base font-semibold text-slate-100">
+              <h3 className="text-base font-semibold text-[var(--civicos-text)]">
                 Bản đồ nền hiện không khả dụng
               </h3>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-[var(--civicos-text-muted)]">
                 Không thể kết nối map provider. Dữ liệu thửa đất chưa được xác
                 nhận là đã hiển thị.
               </p>
@@ -1263,13 +1267,13 @@ export function MapWorkspace({
                 <button
                   type="button"
                   onClick={retryFocus}
-                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]`}
                 >
                   Thử lại
                 </button>
                 <Link
                   href="/land/parcels"
-                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]`}
                 >
                   Quay lại danh sách thửa
                 </Link>
@@ -1278,23 +1282,23 @@ export function MapWorkspace({
           ) : null}
           {focusStatus === 'error' ? (
             <div className="mt-3 space-y-3" role="alert" aria-live="assertive">
-              <h3 className="text-base font-semibold text-slate-100">
+              <h3 className="text-base font-semibold text-[var(--civicos-text)]">
                 Không tải được dữ liệu thửa đất
               </h3>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-[var(--civicos-text-muted)]">
                 Không thể tải lớp thửa đất. Thử lại.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={retryFocus}
-                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]`}
                 >
                   Thử lại
                 </button>
                 <Link
                   href="/land/parcels"
-                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]`}
                 >
                   Quay lại danh sách thửa
                 </Link>
@@ -1303,15 +1307,15 @@ export function MapWorkspace({
           ) : null}
           {focusStatus === 'stale' ? (
             <div
-              className="mt-3 space-y-3 rounded-xl border border-amber-400/30 bg-amber-400/[0.06] p-4"
+              className="mt-3 space-y-3 rounded-xl border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] p-4"
               role="status"
               aria-live="polite"
               aria-atomic="true"
             >
-              <h3 className="text-base font-semibold text-amber-100">
+              <h3 className="text-base font-semibold text-[var(--civicos-warning)]">
                 Dữ liệu bản đồ có thể đã cũ.
               </h3>
-              <p className="text-sm text-amber-200">
+              <p className="text-sm text-[var(--civicos-warning)]">
                 Polygon cũ không được hiển thị cho đến khi dữ liệu thửa đất được
                 tải lại.
               </p>
@@ -1320,13 +1324,13 @@ export function MapWorkspace({
                   type="button"
                   onClick={retryFocus}
                   aria-label="Tải lại dữ liệu thửa đất"
-                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-amber-300/40 px-3 py-2 text-sm text-amber-100 hover:border-amber-200`}
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-warning)] px-3 py-2 text-sm text-[var(--civicos-warning)] hover:border-[var(--civicos-warning)]`}
                 >
                   Tải lại dữ liệu
                 </button>
                 <Link
                   href="/land/parcels"
-                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+                  className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]`}
                 >
                   Quay lại danh sách thửa
                 </Link>
@@ -1335,34 +1339,38 @@ export function MapWorkspace({
           ) : null}
           {focusStatus === 'ready' && focusParcel ? (
             <div className="mt-3 space-y-3">
-              <h3 className="font-mono text-2xl font-semibold text-slate-100">
+              <h3 className="font-mono text-2xl font-semibold text-[var(--civicos-text)]">
                 {focusParcel.parcelCode}
               </h3>
               <dl className="grid gap-2 text-sm sm:grid-cols-2">
                 <div>
-                  <dt className="text-slate-500">Tờ</dt>
-                  <dd className="font-mono text-slate-200">
+                  <dt className="text-[var(--civicos-text-muted)]">Tờ</dt>
+                  <dd className="font-mono text-[var(--civicos-text)]">
                     {focusParcel.mapSheetNumber}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">Thửa</dt>
-                  <dd className="font-mono text-slate-200">
+                  <dt className="text-[var(--civicos-text-muted)]">Thửa</dt>
+                  <dd className="font-mono text-[var(--civicos-text)]">
                     {focusParcel.parcelNumber}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">Trạng thái</dt>
-                  <dd className="text-slate-200">{focusParcel.status}</dd>
+                  <dt className="text-[var(--civicos-text-muted)]">
+                    Trạng thái
+                  </dt>
+                  <dd className="text-[var(--civicos-text)]">
+                    {focusParcel.status}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">Cập nhật</dt>
-                  <dd className="font-mono text-slate-200">
+                  <dt className="text-[var(--civicos-text-muted)]">Cập nhật</dt>
+                  <dd className="font-mono text-[var(--civicos-text)]">
                     {focusParcel.updatedAt}
                   </dd>
                 </div>
               </dl>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-[var(--civicos-text-muted)]">
                 Dữ liệu mô phỏng nội bộ; không phải ranh giới pháp lý chính
                 thức.
               </p>
@@ -1377,13 +1385,13 @@ export function MapWorkspace({
               >
                 {focusSelected ? (
                   <>
-                    <p className="w-full text-sm text-slate-300">
+                    <p className="w-full text-sm text-[var(--civicos-text)]">
                       Đã chọn một thửa đất. Dữ liệu mô phỏng nội bộ; không phải
                       ranh giới pháp lý chính thức.
                     </p>
                     <Link
                       href={focusParcelDetailUrl(focusParcel.id)}
-                      className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200`}
+                      className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg bg-[var(--civicos-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)]`}
                       aria-describedby="land-parcel-focus-description"
                     >
                       Mở chi tiết thửa
@@ -1391,7 +1399,7 @@ export function MapWorkspace({
                     <button
                       type="button"
                       onClick={() => setFocusSelected(false)}
-                      className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
+                      className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2.5 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]`}
                     >
                       Bỏ chọn
                     </button>
@@ -1402,7 +1410,7 @@ export function MapWorkspace({
                     onClick={() => setFocusSelected(true)}
                     aria-pressed={focusSelected}
                     aria-describedby="land-parcel-focus-description"
-                    className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
+                    className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2.5 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]`}
                   >
                     Chọn thửa đất trên bản đồ
                   </button>
@@ -1415,20 +1423,20 @@ export function MapWorkspace({
         <>
           <section
             aria-labelledby="land-parcel-discovery-heading"
-            className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+            className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
           >
             <div className="flex flex-wrap items-center gap-2">
               <h2
                 id="land-parcel-discovery-heading"
-                className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase"
+                className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase"
               >
                 Khám phá thửa đất trong phạm vi
               </h2>
-              <span className="rounded-full border border-slate-700 px-3 py-1 font-mono text-xs text-slate-300">
+              <span className="rounded-full border border-[var(--civicos-simulated-text)] bg-[var(--civicos-simulated-bg)] px-3 py-1 font-mono text-xs text-[var(--civicos-simulated-text)]">
                 internal / simulated
               </span>
             </div>
-            <p className="mt-2 text-sm text-slate-400">
+            <p className="mt-2 text-sm text-[var(--civicos-text-muted)]">
               Nhập ít nhất một bộ lọc hoặc thu hẹp vùng bản đồ trước khi tìm.
             </p>
             <form
@@ -1440,7 +1448,7 @@ export function MapWorkspace({
             >
               <div className="grid gap-3 sm:grid-cols-2">
                 <label
-                  className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300"
+                  className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]"
                   htmlFor="discovery-parcel-code"
                 >
                   Mã thửa
@@ -1452,11 +1460,11 @@ export function MapWorkspace({
                     onChange={(event) =>
                       updateDiscoveryFilter('parcelCode', event.target.value)
                     }
-                    className={`${ACTION_FOCUS_CLASS} rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100`}
+                    className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]`}
                   />
                 </label>
                 <label
-                  className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300"
+                  className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]"
                   htmlFor="discovery-map-sheet"
                 >
                   Tờ bản đồ
@@ -1471,11 +1479,11 @@ export function MapWorkspace({
                         event.target.value,
                       )
                     }
-                    className={`${ACTION_FOCUS_CLASS} rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100`}
+                    className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]`}
                   />
                 </label>
                 <label
-                  className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300"
+                  className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]"
                   htmlFor="discovery-parcel-number"
                 >
                   Số thửa
@@ -1487,11 +1495,11 @@ export function MapWorkspace({
                     onChange={(event) =>
                       updateDiscoveryFilter('parcelNumber', event.target.value)
                     }
-                    className={`${ACTION_FOCUS_CLASS} rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100`}
+                    className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]`}
                   />
                 </label>
                 <label
-                  className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300"
+                  className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]"
                   htmlFor="discovery-commune-code"
                 >
                   Mã xã
@@ -1503,11 +1511,11 @@ export function MapWorkspace({
                     onChange={(event) =>
                       updateDiscoveryFilter('communeCode', event.target.value)
                     }
-                    className={`${ACTION_FOCUS_CLASS} rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100`}
+                    className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]`}
                   />
                 </label>
                 <label
-                  className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300"
+                  className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]"
                   htmlFor="discovery-status"
                 >
                   Trạng thái
@@ -1517,7 +1525,7 @@ export function MapWorkspace({
                     onChange={(event) =>
                       updateDiscoveryFilter('status', event.target.value)
                     }
-                    className={`${ACTION_FOCUS_CLASS} rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100`}
+                    className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]`}
                   >
                     <option value="">Tất cả trạng thái</option>
                     <option value="proposed">proposed</option>
@@ -1526,13 +1534,13 @@ export function MapWorkspace({
                   </select>
                 </label>
               </div>
-              <fieldset className="rounded-xl border border-slate-800 p-3">
-                <legend className="px-2 text-xs text-slate-500">
+              <fieldset className="rounded-xl border border-[var(--civicos-border)] p-3">
+                <legend className="px-2 text-xs text-[var(--civicos-text-muted)]">
                   Viewport / bbox (WGS84)
                 </legend>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <label
-                    className="flex min-h-[44px] flex-col gap-1 font-mono text-xs text-slate-400"
+                    className="flex min-h-[44px] flex-col gap-1 font-mono text-xs text-[var(--civicos-text-muted)]"
                     htmlFor="discovery-min-lng"
                   >
                     minLng
@@ -1546,11 +1554,11 @@ export function MapWorkspace({
                       onChange={(event) =>
                         updateDiscoveryBox('minLng', event.target.value)
                       }
-                      className={`${ACTION_FOCUS_CLASS} rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100`}
+                      className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]`}
                     />
                   </label>
                   <label
-                    className="flex min-h-[44px] flex-col gap-1 font-mono text-xs text-slate-400"
+                    className="flex min-h-[44px] flex-col gap-1 font-mono text-xs text-[var(--civicos-text-muted)]"
                     htmlFor="discovery-min-lat"
                   >
                     minLat
@@ -1564,11 +1572,11 @@ export function MapWorkspace({
                       onChange={(event) =>
                         updateDiscoveryBox('minLat', event.target.value)
                       }
-                      className={`${ACTION_FOCUS_CLASS} rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100`}
+                      className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]`}
                     />
                   </label>
                   <label
-                    className="flex min-h-[44px] flex-col gap-1 font-mono text-xs text-slate-400"
+                    className="flex min-h-[44px] flex-col gap-1 font-mono text-xs text-[var(--civicos-text-muted)]"
                     htmlFor="discovery-max-lng"
                   >
                     maxLng
@@ -1582,11 +1590,11 @@ export function MapWorkspace({
                       onChange={(event) =>
                         updateDiscoveryBox('maxLng', event.target.value)
                       }
-                      className={`${ACTION_FOCUS_CLASS} rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100`}
+                      className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]`}
                     />
                   </label>
                   <label
-                    className="flex min-h-[44px] flex-col gap-1 font-mono text-xs text-slate-400"
+                    className="flex min-h-[44px] flex-col gap-1 font-mono text-xs text-[var(--civicos-text-muted)]"
                     htmlFor="discovery-max-lat"
                   >
                     maxLat
@@ -1600,11 +1608,11 @@ export function MapWorkspace({
                       onChange={(event) =>
                         updateDiscoveryBox('maxLat', event.target.value)
                       }
-                      className={`${ACTION_FOCUS_CLASS} rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100`}
+                      className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]`}
                     />
                   </label>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-2 text-xs text-[var(--civicos-text-muted)]">
                   Giới hạn CADN: 105.93, 20.91, 106.03, 20.99 · không
                   antimeridian.
                 </p>
@@ -1612,14 +1620,14 @@ export function MapWorkspace({
               <div className="flex flex-wrap gap-3">
                 <button
                   type="submit"
-                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200`}
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)]`}
                 >
                   Tìm thửa đất
                 </button>
                 <button
                   type="button"
                   onClick={resetDiscoveryFilters}
-                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2.5 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]`}
                 >
                   Đặt lại
                 </button>
@@ -1633,15 +1641,15 @@ export function MapWorkspace({
                 aria-busy="true"
                 aria-label="Đang tải kết quả thửa đất"
               >
-                <div className="h-16 rounded-lg bg-slate-900 motion-safe:animate-pulse" />
-                <p className="text-sm text-slate-400">
+                <div className="h-16 rounded-lg bg-[var(--civicos-surface-muted)] motion-safe:animate-pulse" />
+                <p className="text-sm text-[var(--civicos-text-muted)]">
                   Đang tải kết quả thửa đất…
                 </p>
               </div>
             ) : null}
             {discoveryStatus === 'empty' ? (
               <p
-                className="mt-3 rounded-xl border border-slate-700 p-4 text-sm text-slate-300"
+                className="mt-3 rounded-xl border border-[var(--civicos-border)] p-4 text-sm text-[var(--civicos-text)]"
                 role="status"
                 aria-live="polite"
               >
@@ -1650,7 +1658,7 @@ export function MapWorkspace({
             ) : null}
             {discoveryStatus === 'invalid' ? (
               <p
-                className="mt-3 rounded-xl border border-amber-400/30 bg-amber-400/[0.06] p-4 text-sm text-amber-200"
+                className="mt-3 rounded-xl border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] p-4 text-sm text-[var(--civicos-warning)]"
                 role="alert"
                 aria-live="assertive"
               >
@@ -1660,7 +1668,7 @@ export function MapWorkspace({
             ) : null}
             {discoveryStatus === 'forbidden' ? (
               <p
-                className="mt-3 rounded-xl border border-slate-700 p-4 text-sm text-slate-300"
+                className="mt-3 rounded-xl border border-[var(--civicos-border)] p-4 text-sm text-[var(--civicos-text)]"
                 role="alert"
                 aria-live="assertive"
               >
@@ -1669,17 +1677,17 @@ export function MapWorkspace({
             ) : null}
             {discoveryStatus === 'overflow' ? (
               <div
-                className="mt-3 space-y-3 rounded-xl border border-amber-400/30 bg-amber-400/[0.06] p-4"
+                className="mt-3 space-y-3 rounded-xl border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] p-4"
                 role="alert"
                 aria-live="assertive"
               >
-                <p className="text-sm text-amber-200">
+                <p className="text-sm text-[var(--civicos-warning)]">
                   Kết quả quá lớn để hiển thị an toàn. Hãy thu hẹp bộ lọc.
                 </p>
                 <button
                   type="button"
                   onClick={reloadDiscovery}
-                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-amber-300/40 px-3 py-2 text-sm text-amber-100 hover:border-amber-200`}
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-warning)] px-3 py-2 text-sm text-[var(--civicos-warning)] hover:border-[var(--civicos-warning)]`}
                 >
                   Thử lại
                 </button>
@@ -1687,18 +1695,18 @@ export function MapWorkspace({
             ) : null}
             {discoveryStatus === 'provider' ? (
               <div
-                className="mt-3 space-y-3 rounded-xl border border-rose-900/60 bg-rose-950/30 p-4"
+                className="mt-3 space-y-3 rounded-xl border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] p-4"
                 role="alert"
                 aria-live="assertive"
               >
-                <p className="text-sm text-rose-200">
+                <p className="text-sm text-[var(--civicos-danger)]">
                   Bản đồ nền hiện không khả dụng. Dữ liệu thửa đất chưa được xác
                   nhận là đã hiển thị.
                 </p>
                 <button
                   type="button"
                   onClick={reloadDiscovery}
-                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]`}
                 >
                   Thử lại
                 </button>
@@ -1706,30 +1714,32 @@ export function MapWorkspace({
             ) : null}
             {discoveryStatus === 'offline' ? (
               <div
-                className="mt-3 space-y-2 rounded-xl border border-amber-400/30 bg-amber-400/[0.06] p-4"
+                className="mt-3 space-y-2 rounded-xl border border-[var(--civicos-info)] bg-[var(--civicos-surface)] p-4"
                 role="status"
                 aria-live="polite"
                 aria-atomic="true"
               >
-                <p className="text-sm text-amber-200">Đang ngoại tuyến.</p>
-                <p className="text-sm text-amber-200">
+                <p className="text-sm text-[var(--civicos-info)]">
+                  Đang ngoại tuyến.
+                </p>
+                <p className="text-sm text-[var(--civicos-info)]">
                   Polygon thửa đất không được lưu trong bộ nhớ offline.
                 </p>
               </div>
             ) : null}
             {discoveryStatus === 'error' ? (
               <div
-                className="mt-3 space-y-3 rounded-xl border border-rose-900/60 bg-rose-950/30 p-4"
+                className="mt-3 space-y-3 rounded-xl border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] p-4"
                 role="alert"
                 aria-live="assertive"
               >
-                <p className="text-sm text-rose-200">
+                <p className="text-sm text-[var(--civicos-danger)]">
                   Không thể tải lớp thửa đất. Thử lại.
                 </p>
                 <button
                   type="button"
                   onClick={reloadDiscovery}
-                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]`}
                 >
                   Thử lại
                 </button>
@@ -1737,15 +1747,15 @@ export function MapWorkspace({
             ) : null}
             {discoveryStatus === 'stale' ? (
               <div
-                className="mt-3 space-y-3 rounded-xl border border-amber-400/30 bg-amber-400/[0.06] p-4"
+                className="mt-3 space-y-3 rounded-xl border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] p-4"
                 role="status"
                 aria-live="polite"
                 aria-atomic="true"
               >
-                <p className="text-sm text-amber-200">
+                <p className="text-sm text-[var(--civicos-warning)]">
                   Dữ liệu bản đồ có thể đã cũ.
                 </p>
-                <p className="text-sm text-amber-200">
+                <p className="text-sm text-[var(--civicos-warning)]">
                   Polygon cũ không được hiển thị cho đến khi dữ liệu thửa đất
                   được tải lại.
                 </p>
@@ -1753,7 +1763,7 @@ export function MapWorkspace({
                   type="button"
                   onClick={reloadDiscovery}
                   aria-label="Tải lại dữ liệu thửa đất"
-                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-amber-300/40 px-3 py-2 text-sm text-amber-100 hover:border-amber-200`}
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-warning)] px-3 py-2 text-sm text-[var(--civicos-warning)] hover:border-[var(--civicos-warning)]`}
                 >
                   Tải lại dữ liệu
                 </button>
@@ -1777,22 +1787,22 @@ export function MapWorkspace({
                       aria-describedby={`discovery-desc-${item.id}`}
                       className={`${ACTION_FOCUS_CLASS} flex min-h-[44px] w-full flex-col gap-1 rounded-lg border px-3 py-2 text-left text-sm ${
                         discoverySelectedId === item.id
-                          ? 'border-cyan-300 bg-cyan-300/10 text-slate-100'
-                          : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                          ? 'border-[var(--civicos-accent)] bg-[var(--civicos-surface)] text-[var(--civicos-text)]'
+                          : 'border-[var(--civicos-border)] text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]'
                       }`}
                     >
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="font-mono font-semibold">
                           {item.parcelCode}
                         </span>
-                        <span className="rounded-full border border-slate-700 px-2 py-0.5 font-mono text-xs">
+                        <span className="rounded-full border border-[var(--civicos-border)] px-2 py-0.5 font-mono text-xs">
                           {item.status}
                         </span>
                       </span>
-                      <span className="text-slate-400">
+                      <span className="text-[var(--civicos-text-muted)]">
                         Tờ {item.mapSheetNumber} · Thửa {item.parcelNumber}
                       </span>
-                      <span className="font-mono text-xs text-slate-500">
+                      <span className="font-mono text-xs text-[var(--civicos-text-muted)]">
                         Cập nhật {item.updatedAt}
                       </span>
                       <span
@@ -1812,7 +1822,7 @@ export function MapWorkspace({
                   type="button"
                   onClick={previousDiscoveryPage}
                   disabled={discoveryHistory.length === 0}
-                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40`}
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] disabled:cursor-not-allowed disabled:opacity-40`}
                 >
                   Trang trước
                 </button>
@@ -1820,14 +1830,14 @@ export function MapWorkspace({
                   type="button"
                   onClick={nextDiscoveryPage}
                   disabled={!discoveryNext}
-                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40`}
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] disabled:cursor-not-allowed disabled:opacity-40`}
                 >
                   Trang tiếp
                 </button>
                 <button
                   type="button"
                   onClick={() => void runDiscovery(null, [])}
-                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-400 hover:border-slate-500`}
+                  className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text-muted)] hover:border-[var(--civicos-accent)]`}
                 >
                   Reset cursor
                 </button>
@@ -1835,7 +1845,7 @@ export function MapWorkspace({
             ) : null}
             {discoveryStatus === 'ready' &&
             discoveryItems.find((item) => item.id === discoverySelectedId) ? (
-              <div className="mt-3 space-y-2 rounded-xl border border-cyan-300/30 bg-cyan-300/[0.04] p-4">
+              <div className="mt-3 space-y-2 rounded-xl border border-[var(--civicos-accent)] bg-[var(--civicos-surface)] p-4">
                 {(() => {
                   const selected = discoveryItems.find(
                     (item) => item.id === discoverySelectedId,
@@ -1843,20 +1853,20 @@ export function MapWorkspace({
                   if (!selected) return null;
                   return (
                     <>
-                      <p className="font-mono text-lg font-semibold text-slate-100">
+                      <p className="font-mono text-lg font-semibold text-[var(--civicos-text)]">
                         {selected.parcelCode}
                       </p>
-                      <p className="text-sm text-slate-300">
+                      <p className="text-sm text-[var(--civicos-text)]">
                         Tờ {selected.mapSheetNumber} · Thửa{' '}
                         {selected.parcelNumber} · {selected.status}
                       </p>
-                      <p className="text-sm text-slate-400">
+                      <p className="text-sm text-[var(--civicos-text-muted)]">
                         <strong>internal / simulated</strong> · Dữ liệu mô phỏng
                         nội bộ; không phải ranh giới pháp lý chính thức.
                       </p>
                       <Link
                         href={focusParcelDetailUrl(selected.id)}
-                        className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200`}
+                        className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg bg-[var(--civicos-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)]`}
                       >
                         Mở chi tiết thửa
                       </Link>
@@ -1867,14 +1877,14 @@ export function MapWorkspace({
             ) : null}
           </section>
           <section
-            className="rounded-xl border border-dashed border-slate-700 p-6 text-sm text-slate-400"
+            className="rounded-xl border border-dashed border-[var(--civicos-border)] p-6 text-sm text-[var(--civicos-text-muted)]"
             aria-labelledby="land-parcel-empty-heading"
             role="status"
             aria-live="polite"
           >
             <h2
               id="land-parcel-empty-heading"
-              className="text-base font-semibold text-slate-200"
+              className="text-base font-semibold text-[var(--civicos-text)]"
             >
               Chưa chọn thửa đất
             </h2>
@@ -1883,7 +1893,7 @@ export function MapWorkspace({
             </p>
             <Link
               href="/land/parcels"
-              className={`${ACTION_FOCUS_CLASS} mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500`}
+              className={`${ACTION_FOCUS_CLASS} mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]`}
             >
               Quay lại danh sách thửa
             </Link>
@@ -1893,42 +1903,42 @@ export function MapWorkspace({
       <div
         ref={mapNode}
         data-testid="map-canvas"
-        className={`${ACTION_FOCUS_CLASS} h-[420px] rounded-xl border border-slate-800 bg-slate-900`}
+        className={`${ACTION_FOCUS_CLASS} h-[420px] rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)]`}
         role="application"
         aria-label="Bản đồ nghiệp vụ"
         tabIndex={0}
       />
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-[var(--civicos-text-muted)]">
         Nguồn nền:{' '}
         <a
-          className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center underline underline-offset-4 hover:text-white`}
+          className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center underline underline-offset-4 hover:text-[var(--civicos-accent)]`}
           href="https://www.openstreetmap.org/copyright"
         >
           {provider?.attribution || '© OpenStreetMap contributors'}
         </a>
       </p>
-      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-        <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-cyan-200">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--civicos-text-muted)]">
+        <span className="rounded-full border border-[var(--civicos-accent)] bg-[var(--civicos-surface)] px-3 py-1 text-[var(--civicos-accent)]">
           ● Điểm GeoPoint
         </span>
-        <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-emerald-200">
+        <span className="rounded-full border border-[var(--civicos-success)] bg-[var(--civicos-surface)] px-3 py-1 text-[var(--civicos-success)]">
           ▩ Vùng GeoArea
         </span>
-        <span className="rounded-full bg-slate-800 px-3 py-1">
+        <span className="rounded-full bg-[var(--civicos-surface-muted)] px-3 py-1">
           {online ? 'Trực tuyến · realtime 30s' : 'Ngoại tuyến · basemap'}
         </span>
         {updatedAt ? <span>Cập nhật: {updatedAt}</span> : null}
         <button
           type="button"
           onClick={refresh}
-          className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 hover:border-cyan-300 hover:text-white`}
+          className={`${ACTION_FOCUS_CLASS} min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-1.5 text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]`}
         >
           Làm mới
         </button>
       </div>
       {!masked && !visible.length ? (
         <section
-          className="rounded-xl border border-dashed border-slate-700 p-8 text-sm text-slate-400"
+          className="rounded-xl border border-dashed border-[var(--civicos-border)] p-8 text-sm text-[var(--civicos-text-muted)]"
           aria-labelledby="map-markers-empty-heading"
           role="status"
           aria-live="polite"
@@ -1943,13 +1953,13 @@ export function MapWorkspace({
         {online && !masked ? (
           <Link
             href="/intake"
-            className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-200`}
+            className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg bg-[var(--civicos-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)]`}
           >
             Ghi nhận tin báo
           </Link>
         ) : (
           <span
-            className="rounded-lg border border-slate-800 px-4 py-2.5 text-sm text-slate-500"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2.5 text-sm text-[var(--civicos-text-muted)]"
             title="Yêu cầu trực tuyến (MAP_OFFLINE_WRITE_BLOCKED)"
           >
             Ghi nhận cần trực tuyến
@@ -1957,13 +1967,13 @@ export function MapWorkspace({
         )}
         <Link
           href="/incidents"
-          className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
+          className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-[var(--civicos-border)] px-4 py-2.5 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]`}
         >
           Hàng đợi vụ việc
         </Link>
         <Link
           href="/inspections/establishments"
-          className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:border-cyan-300 hover:text-white`}
+          className={`${ACTION_FOCUS_CLASS} inline-flex min-h-[44px] items-center rounded-lg border border-[var(--civicos-border)] px-4 py-2.5 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]`}
         >
           Cơ sở kiểm tra
         </Link>

@@ -60,28 +60,50 @@ export function ActivityForm({
         event.preventDefault();
         void submit();
       }}
+      className="space-y-4 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5"
     >
-      <label>
+      <label className="block text-sm text-[var(--civicos-text)]">
         Nội dung theo dõi
         <textarea
           value={content}
           onChange={(event) => setContent(event.target.value)}
           required
+          rows={4}
+          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
         />
       </label>
-      <label>
+      <label className="block text-sm text-[var(--civicos-text)]">
         Đánh giá
         <input
           value={evaluation}
           onChange={(event) => setEvaluation(event.target.value)}
+          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
         />
       </label>
       {denied ? (
-        <p role="alert">Tài khoản không thuộc phân công của hồ sơ này.</p>
+        <p role="alert" className="text-sm text-[var(--civicos-danger)]">
+          Tài khoản không thuộc phân công của hồ sơ này.
+        </p>
       ) : null}
-      {error ? <p role="alert">{error}</p> : null}
-      {saved ? <p role="status">Đã ghi nhận hoạt động theo dõi.</p> : null}
-      <button type="submit" disabled={saving}>
+      {error ? (
+        <p role="alert" className="text-sm text-[var(--civicos-danger)]">
+          {error}
+        </p>
+      ) : null}
+      {saved ? (
+        <p
+          role="status"
+          className="text-sm text-[var(--civicos-success)]"
+          aria-live="polite"
+        >
+          <span aria-hidden="true">● </span>Đã ghi nhận hoạt động theo dõi.
+        </p>
+      ) : null}
+      <button
+        type="submit"
+        disabled={saving}
+        className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:opacity-50"
+      >
         {saving ? 'Đang lưu…' : 'Ghi nhận'}
       </button>
     </form>

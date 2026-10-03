@@ -89,7 +89,7 @@ export function PartyList() {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-amber-300/40 px-3 py-2 text-sm text-amber-100 hover:border-amber-200"
+          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-info)] px-3 py-2 text-sm text-[var(--civicos-info)] hover:border-[var(--civicos-info)]"
         >
           Thử lại
         </button>
@@ -103,7 +103,7 @@ export function PartyList() {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-rose-300/40 px-3 py-2 text-sm text-rose-100 hover:border-rose-200"
+          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
         >
           Thử lại
         </button>
@@ -117,24 +117,24 @@ export function PartyList() {
         className="flex flex-wrap gap-3"
         onSubmit={(event) => event.preventDefault()}
       >
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
           Trạng thái
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
-            className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
           >
             <option value="">Tất cả</option>
             <option value="active">Đang hoạt động</option>
             <option value="archived">Đã lưu trữ</option>
           </select>
         </label>
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-slate-300">
+        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
           Loại chủ thể
           <select
             value={typeFilter}
             onChange={(event) => setTypeFilter(event.target.value)}
-            className="min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
           >
             <option value="">Tất cả</option>
             <option value="individual">Cá nhân</option>
@@ -150,33 +150,50 @@ export function PartyList() {
       ) : null}
       {items.length ? (
         <table className="w-full border-collapse text-sm">
-          <caption className="py-2 text-left text-slate-400">
+          <caption className="py-2 text-left text-[var(--civicos-text-muted)]">
             Danh sách chủ thể nội bộ; số định danh luôn hiển thị dạng che
           </caption>
           <thead>
-            <tr className="text-left text-slate-300">
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+            <tr className="text-left text-[var(--civicos-text)]">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Mã tham chiếu
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Tên hiển thị
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Định danh (đã che)
               </th>
-              <th scope="col" className="border-b border-slate-700 px-3 py-2">
+              <th
+                scope="col"
+                className="border-b border-[var(--civicos-border)] px-3 py-2"
+              >
                 Loại
               </th>
             </tr>
           </thead>
           <tbody>
             {items.map((item) => (
-              <tr key={item.id} className="border-b border-slate-800">
-                <td className="px-3 py-2 font-mono text-slate-100">
+              <tr
+                key={item.id}
+                className="border-b border-[var(--civicos-border)]"
+              >
+                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                   {item.referenceCode}
                 </td>
-                <td className="px-3 py-2 text-slate-200">{item.displayName}</td>
-                <td className="px-3 py-2 font-mono text-slate-300">
+                <td className="px-3 py-2 text-[var(--civicos-text)]">
+                  {item.displayName}
+                </td>
+                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
                   {maskedPartyLabel(
                     {
                       referenceCode: item.referenceCode,
@@ -186,7 +203,7 @@ export function PartyList() {
                     item.id,
                   )}
                 </td>
-                <td className="px-3 py-2 text-slate-300">
+                <td className="px-3 py-2 text-[var(--civicos-text)]">
                   {partyTypeText(item.partyType)}
                 </td>
               </tr>
@@ -198,7 +215,7 @@ export function PartyList() {
         <button
           type="button"
           onClick={() => void load(nextCursor)}
-          className="min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-500"
+          className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
         >
           Trang tiếp
         </button>

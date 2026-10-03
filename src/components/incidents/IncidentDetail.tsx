@@ -234,12 +234,15 @@ export function IncidentDetail({ incidentId }: { incidentId: string }) {
 
   if (!currentDetail && !currentError) {
     return (
-      <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
+      <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
         <div className="mx-auto max-w-5xl">
           <div className="flex justify-end">
             <SessionControls />
           </div>
-          <p className="mt-10 text-sm text-slate-400" role="status">
+          <p
+            className="mt-10 text-sm text-[var(--civicos-text-muted)]"
+            role="status"
+          >
             Đang tải hồ sơ Incident…
           </p>
         </div>
@@ -249,7 +252,7 @@ export function IncidentDetail({ incidentId }: { incidentId: string }) {
 
   if (!currentDetail) {
     return (
-      <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
+      <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
         <div className="mx-auto max-w-5xl">
           <div className="flex justify-end">
             <SessionControls />
@@ -258,7 +261,7 @@ export function IncidentDetail({ incidentId }: { incidentId: string }) {
             {currentErrorStatus === 403 ? (
               <AccessDenied message={currentError ?? undefined} />
             ) : (
-              <p className="text-rose-200" role="alert">
+              <p className="text-[var(--civicos-danger)]" role="alert">
                 {currentError ?? 'Không thể mở hồ sơ Incident.'}
               </p>
             )}
@@ -266,13 +269,13 @@ export function IncidentDetail({ incidentId }: { incidentId: string }) {
               <button
                 type="button"
                 onClick={() => void refresh()}
-                className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+                className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]"
               >
                 Thử lại
               </button>
               <Link
                 href="/incidents"
-                className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+                className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]"
               >
                 Về hàng đợi
               </Link>
@@ -285,11 +288,11 @@ export function IncidentDetail({ incidentId }: { incidentId: string }) {
 
   const incident = currentDetail.incident.incident;
   return (
-    <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
+    <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
       <div className="mx-auto max-w-5xl">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-6">
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--civicos-border)] pb-6">
           <Link
-            className="text-sm text-slate-400 underline-offset-4 hover:text-white hover:underline"
+            className="text-sm text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline"
             href="/incidents"
           >
             ← Hàng đợi
@@ -297,7 +300,7 @@ export function IncidentDetail({ incidentId }: { incidentId: string }) {
           <div className="flex flex-wrap items-center justify-end gap-3">
             <Link
               href="/assignments"
-              className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+              className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]"
             >
               Assignment
             </Link>
@@ -306,13 +309,13 @@ export function IncidentDetail({ incidentId }: { incidentId: string }) {
         </header>
         <div className="mt-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
           <div>
-            <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+            <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
               Incident
             </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--civicos-text)]">
               {incident.id}
             </h1>
-            <p className="mt-4 max-w-2xl leading-7 text-slate-300">
+            <p className="mt-4 max-w-2xl leading-7 text-[var(--civicos-text)]">
               {incident.description}
             </p>
           </div>
@@ -321,11 +324,11 @@ export function IncidentDetail({ incidentId }: { incidentId: string }) {
               type="button"
               onClick={() => void refresh()}
               disabled={refreshing}
-              className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:border-cyan-300 hover:text-white disabled:opacity-50"
+              className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-xs text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)] disabled:opacity-50"
             >
               {refreshing ? 'Đang làm mới…' : 'Làm mới'}
             </button>
-            <span className="rounded-full bg-cyan-400/10 px-3 py-2 text-sm text-cyan-200">
+            <span className="rounded-full border border-[var(--civicos-accent)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-accent)]">
               {incident.status}
             </span>
           </div>
@@ -334,52 +337,58 @@ export function IncidentDetail({ incidentId }: { incidentId: string }) {
           className="mt-8 grid gap-3 sm:grid-cols-4"
           aria-label="Tóm tắt Incident"
         >
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <p className="text-xs text-slate-500">Category</p>
-            <p className="mt-2 text-sm text-slate-200">
+          <div className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4">
+            <p className="text-xs text-[var(--civicos-text-muted)]">Category</p>
+            <p className="mt-2 text-sm text-[var(--civicos-text)]">
               {incident.category ?? 'Chưa phân loại'}
             </p>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <p className="text-xs text-slate-500">Severity</p>
-            <p className="mt-2 text-sm text-slate-200">
+          <div className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4">
+            <p className="text-xs text-[var(--civicos-text-muted)]">Severity</p>
+            <p className="mt-2 text-sm text-[var(--civicos-text)]">
               {incident.severity ?? 'Chưa đánh giá'}
             </p>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <p className="text-xs text-slate-500">Địa điểm</p>
-            <p className="mt-2 text-sm text-slate-200">
+          <div className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4">
+            <p className="text-xs text-[var(--civicos-text-muted)]">Địa điểm</p>
+            <p className="mt-2 text-sm text-[var(--civicos-text)]">
               {incident.latitude && incident.longitude
                 ? `${incident.latitude}, ${incident.longitude}`
                 : 'Chưa có tọa độ'}
             </p>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <p className="text-xs text-slate-500">Cập nhật</p>
-            <p className="mt-2 text-sm text-slate-200">
+          <div className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4">
+            <p className="text-xs text-[var(--civicos-text-muted)]">Cập nhật</p>
+            <p className="mt-2 text-sm text-[var(--civicos-text)]">
               {formatDate(incident.updatedAt)}
             </p>
           </div>
         </section>
         {currentDetail.incident.informant ? (
           <section
-            className="mt-6 rounded-xl border border-amber-900/50 bg-amber-950/20 p-5"
+            className="mt-6 rounded-xl border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] p-5"
             aria-label="Nguồn tin"
           >
-            <h2 className="text-sm font-semibold text-amber-200">Nguồn tin</h2>
-            <p className="mt-2 text-xs leading-5 text-slate-500">
+            <h2 className="text-sm font-semibold text-[var(--civicos-warning)]">
+              Nguồn tin
+            </h2>
+            <p className="mt-2 text-xs leading-5 text-[var(--civicos-text-muted)]">
               Danh tính thật chỉ hiển thị trong phạm vi được phân quyền.
             </p>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
-                <dt className="text-xs text-slate-500">Tên nguồn tin</dt>
-                <dd className="mt-1 text-sm text-slate-200">
+                <dt className="text-xs text-[var(--civicos-text-muted)]">
+                  Tên nguồn tin
+                </dt>
+                <dd className="mt-1 text-sm text-[var(--civicos-text)]">
                   {currentDetail.incident.informant.name ?? 'Không ghi nhận'}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-slate-500">Liên hệ nguồn tin</dt>
-                <dd className="mt-1 text-sm text-slate-200">
+                <dt className="text-xs text-[var(--civicos-text-muted)]">
+                  Liên hệ nguồn tin
+                </dt>
+                <dd className="mt-1 text-sm text-[var(--civicos-text)]">
                   {currentDetail.incident.informant.contact ?? 'Không ghi nhận'}
                 </dd>
               </div>
@@ -387,7 +396,7 @@ export function IncidentDetail({ incidentId }: { incidentId: string }) {
           </section>
         ) : null}
         {error ? (
-          <p className="mt-5 text-sm text-rose-300" role="alert">
+          <p className="mt-5 text-sm text-[var(--civicos-danger)]" role="alert">
             {error}
           </p>
         ) : null}

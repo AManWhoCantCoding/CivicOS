@@ -11,16 +11,16 @@ export default async function LandParcelsPage() {
     current !== null &&
     !(await canEnterEntry(current, ['land-parcel-workspace']));
   return (
-    <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
+    <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
       <div className="mx-auto max-w-6xl">
         <ModuleShell module="land">
-          <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+          <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
             Quản lý đất đai nội bộ
           </p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white">
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[var(--civicos-text)]">
             Thửa đất · Chủ thể
           </h1>
-          <p className="mt-4 text-base leading-7 text-slate-400">
+          <p className="mt-4 text-base leading-7 text-[var(--civicos-text-muted)]">
             Danh sách thửa đất và chủ thể trong phạm vi đơn vị; số định danh
             luôn hiển thị dạng che.
           </p>
@@ -32,7 +32,7 @@ export default async function LandParcelsPage() {
                 <section aria-labelledby="land-parcel-list-heading">
                   <h2
                     id="land-parcel-list-heading"
-                    className="text-2xl font-semibold text-white"
+                    className="text-2xl font-semibold text-[var(--civicos-text)]"
                   >
                     Danh sách thửa đất
                   </h2>
@@ -43,7 +43,7 @@ export default async function LandParcelsPage() {
                 <section aria-labelledby="land-party-list-heading">
                   <h2
                     id="land-party-list-heading"
-                    className="text-2xl font-semibold text-white"
+                    className="text-2xl font-semibold text-[var(--civicos-text)]"
                   >
                     Danh sách chủ thể
                   </h2>

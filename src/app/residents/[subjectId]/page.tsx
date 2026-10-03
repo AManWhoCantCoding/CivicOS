@@ -9,15 +9,15 @@ export default async function ResidentDetailPage({
 }) {
   const { subjectId } = await params;
   return (
-    <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
+    <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
       <div className="mx-auto max-w-4xl">
         <Link
-          className="text-sm text-slate-400 underline-offset-4 hover:text-white hover:underline"
+          className="text-sm text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline"
           href="/residents"
         >
           ← Danh sách cư dân
         </Link>
-        <h1 className="mt-6 text-3xl font-semibold tracking-tight text-white">
+        <h1 className="mt-6 text-3xl font-semibold tracking-tight text-[var(--civicos-text)]">
           Hồ sơ cư dân
         </h1>
         <div className="mt-8">
