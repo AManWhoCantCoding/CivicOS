@@ -81,3 +81,28 @@ Error: http://localhost:3001 is already used, make sure that nothing is running 
 | mobile:typecheck | `npm run mobile:typecheck` | PASS | 3.8s |
 | mobile:test | `npm run mobile:test` | PASS | 3.7s |
 | mobile:build | `npm run mobile:build` | PASS | 8.0s |
+
+## Lần chạy 5 — 2026-10-03T10:08:05.956Z (only=prisma:generate,typecheck,lint,test,test:e2e,build)
+
+- HEAD: 5878d6f | file chưa commit: 63 | Tree: b7546d9a
+- Kết quả: **PASS**
+
+| Bước | Lệnh | Kết quả | Thời gian |
+|---|---|---|---|
+| prisma:generate | `npm run prisma:generate` | SKIPPED | - |
+| typecheck | `npm run typecheck` | PASS | 4.5s |
+| lint | `npm run lint` | PASS | 25.3s |
+| test | `npm run test` | PASS | 85.3s |
+| test:e2e | `npm run test:e2e` | PASS | 147.8s |
+| build | `npm run build` | PASS | 17.6s |
+
+## Lần chạy 6 — 2026-10-03T10:08:36.613Z (scope=mobile)
+
+- HEAD: 5878d6f | file chưa commit: 65 | Tree: b7546d9a
+- Kết quả: **PASS**
+
+| Bước | Lệnh | Kết quả | Thời gian |
+|---|---|---|---|
+| mobile:typecheck | `npm run mobile:typecheck` | PASS | 3.9s |
+| mobile:test | `npm run mobile:test` | PASS | 3.7s |
+| mobile:build | `npm run mobile:build` | PASS | 7.7s |
