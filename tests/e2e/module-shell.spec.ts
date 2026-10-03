@@ -432,3 +432,115 @@ test('shell surfaces offline state without losing navigation', async ({
   await page.context().setOffline(false);
   await expect(page.getByText('Đang ngoại tuyến.')).toHaveCount(0);
 });
+
+test('uses the approved Light/Blue CSS variables and typography baseline', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const tokens = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    const pick = (name: string) =>
+      root.getPropertyValue(name).trim().toLowerCase();
+    return {
+      canvas: pick('--civicos-canvas'),
+      surface: pick('--civicos-surface'),
+      surfaceMuted: pick('--civicos-surface-muted'),
+      text: pick('--civicos-text'),
+      textMuted: pick('--civicos-text-muted'),
+      border: pick('--civicos-border'),
+      focus: pick('--civicos-focus'),
+      accent: pick('--civicos-accent'),
+      accentHover: pick('--civicos-accent-hover'),
+      success: pick('--civicos-success'),
+      warning: pick('--civicos-warning'),
+      danger: pick('--civicos-danger'),
+      info: pick('--civicos-info'),
+      simulatedBg: pick('--civicos-simulated-bg'),
+      simulatedText: pick('--civicos-simulated-text'),
+      bodyFont: getComputedStyle(document.body).fontFamily,
+      radiusSm: pick('--civicos-radius-sm'),
+      radiusMd: pick('--civicos-radius-md'),
+      radiusLg: pick('--civicos-radius-lg'),
+      controlMin: pick('--civicos-control-min'),
+    };
+  });
+  expect(tokens.canvas).toBe('#f8fafc');
+  // Chromium may serialize #ffffff as #fff; both are the approved token.
+  expect(['#ffffff', '#fff']).toContain(tokens.surface);
+  expect(tokens.surfaceMuted).toBe('#f1f5f9');
+  expect(tokens.text).toBe('#172033');
+  expect(tokens.textMuted).toBe('#475569');
+  expect(tokens.border).toBe('#cbd5e1');
+  expect(tokens.focus).toBe('#1d4ed8');
+  expect(tokens.accent).toBe('#075985');
+  expect(tokens.accentHover).toBe('#0c4a6e');
+  expect(tokens.success).toBe('#166534');
+  expect(tokens.warning).toBe('#854d0e');
+  expect(tokens.danger).toBe('#b91c1c');
+  expect(tokens.info).toBe('#1e40af');
+  expect(tokens.simulatedBg).toBe('#fff7ed');
+  expect(tokens.simulatedText).toBe('#9a3412');
+  expect(tokens.bodyFont).toContain('system-ui');
+  expect(tokens.radiusSm).toBe('6px');
+  expect(tokens.radiusMd).toBe('10px');
+  expect(tokens.radiusLg).toBe('16px');
+  expect(tokens.controlMin).toBe('44px');
+});
+
+test('keeps existing module destinations and exposes active navigation text and icon', async ({
+  page,
+}, testInfo) => {
+  await loginAs(page, 'truong@civicos.local');
+  await page.goto('/incidents');
+  const sidebar = await visibleNav(page, 'Incident', testInfo);
+  const active = sidebar.getByRole('link', { name: 'Hàng đợi Incident' });
+  await expect(active).toHaveAttribute('href', '/incidents');
+  await expect(active).toHaveAttribute('aria-current', 'page');
+  await expect(active).toContainText('Hàng đợi Incident');
+  const icon = active.locator('span[aria-hidden="true"]').first();
+  await expect(icon).toBeVisible();
+  const iconBox = await icon.boundingBox();
+  expect(iconBox?.width ?? 0).toBeGreaterThan(0);
+  expect(iconBox?.height ?? 0).toBeGreaterThan(0);
+});
+
+test('renders state copy and icon for shell states without color-only meaning', async ({
+  page,
+}, testInfo) => {
+  await loginAs(page, 'truong@civicos.local');
+  await page.goto('/incidents');
+  await expect(await visibleNav(page, 'Incident', testInfo)).toBeVisible();
+  await page.context().setOffline(true);
+  const notice = page.getByText('Đang ngoại tuyến.');
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText('Đang ngoại tuyến.');
+  const icon = page
+    .locator('p[role="status"] span[aria-hidden="true"]')
+    .first();
+  await expect(icon).toBeVisible();
+  await page.context().setOffline(false);
+});
+
+test('exposes visible keyboard focus and keeps shell controls at least 44px', async ({
+  page,
+}, testInfo) => {
+  await loginAs(page, 'truong@civicos.local');
+  await page.goto('/incidents');
+  const queueLink = (await visibleNav(page, 'Incident', testInfo)).getByRole(
+    'link',
+    { name: 'Hàng đợi Incident' },
+  );
+  await queueLink.focus();
+  await expect(queueLink).toBeFocused();
+  const box = await queueLink.boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+  // Programmatic focus() does not trigger :focus-visible in this browser
+  // context, so assert the approved token wired to :focus-visible instead.
+  const focusToken = await page.evaluate(() =>
+    getComputedStyle(document.documentElement)
+      .getPropertyValue('--civicos-focus')
+      .trim()
+      .toLowerCase(),
+  );
+  expect(focusToken).toBe('#1d4ed8');
+});

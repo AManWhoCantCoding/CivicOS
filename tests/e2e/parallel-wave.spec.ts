@@ -945,7 +945,7 @@ test('401 and 403 authorization matrix covers five principals across three surfa
   await expect(page.getByLabel('Mật khẩu')).toBeVisible();
 });
 
-test('dark-mode tokens and WCAG AA contrast hold for key text and controls', async ({
+test('light-blue tokens and WCAG AA contrast hold for key text and controls', async ({
   page,
 }) => {
   await loginAs(page, COMMANDER);
@@ -953,18 +953,18 @@ test('dark-mode tokens and WCAG AA contrast hold for key text and controls', asy
   const tokens = await page.evaluate(() => {
     const scheme = getComputedStyle(document.documentElement).colorScheme;
     const body = getComputedStyle(document.body);
-    const ring = getComputedStyle(document.documentElement)
-      .getPropertyValue('--focus-ring')
+    const focus = getComputedStyle(document.documentElement)
+      .getPropertyValue('--civicos-focus')
       .trim();
     return {
       scheme,
       background: body.backgroundColor,
       color: body.color,
-      ring,
+      focus,
     };
   });
-  expect(tokens.scheme).toContain('dark');
-  expect(tokens.ring.length).toBeGreaterThan(0);
+  expect(tokens.scheme).toContain('light');
+  expect(tokens.focus).toBe('#1d4ed8');
 
   await page.goto('/intake');
   const headingRatio = await contrastRatio(page, 'h1');

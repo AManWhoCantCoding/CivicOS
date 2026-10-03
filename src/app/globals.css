@@ -1,22 +1,38 @@
 @import 'tailwindcss';
 
 :root {
-  color-scheme: dark;
-  --focus-ring: rgba(103, 232, 249, 0.45);
-  --civicos-canvas: #020617;
-  --civicos-surface: #0f172a;
-  --civicos-surface-raised: #111c33;
-  --civicos-border: #1e293b;
-  --civicos-text: #f8fafc;
-  --civicos-text-muted: #94a3b8;
-  --civicos-accent: #67e8f9;
-  --civicos-accent-contrast: #020617;
-  --civicos-danger: #fda4af;
-  --civicos-success: #6ee7b7;
-  --civicos-warning: #fcd34d;
-  --civicos-radius-sm: 8px;
-  --civicos-radius-md: 12px;
+  color-scheme: light;
+  --civicos-canvas: #f8fafc;
+  --civicos-surface: #ffffff;
+  --civicos-surface-muted: #f1f5f9;
+  --civicos-surface-raised: #ffffff;
+  --civicos-border: #cbd5e1;
+  --civicos-text: #172033;
+  --civicos-text-muted: #475569;
+  --civicos-focus: #1d4ed8;
+  --civicos-accent: #075985;
+  --civicos-accent-hover: #0c4a6e;
+  --civicos-accent-contrast: #ffffff;
+  --civicos-danger: #b91c1c;
+  --civicos-success: #166534;
+  --civicos-warning: #854d0e;
+  --civicos-info: #1e40af;
+  --civicos-simulated-bg: #fff7ed;
+  --civicos-simulated-text: #9a3412;
+  --civicos-map-fill: #38bdf8;
+  --civicos-map-stroke: #075985;
+  --civicos-focus-ring: #1d4ed8;
+  --civicos-space-1: 4px;
+  --civicos-space-2: 8px;
+  --civicos-space-3: 12px;
+  --civicos-space-4: 16px;
+  --civicos-space-6: 24px;
+  --civicos-space-8: 32px;
+  --civicos-space-12: 48px;
+  --civicos-radius-sm: 6px;
+  --civicos-radius-md: 10px;
   --civicos-radius-lg: 16px;
+  --civicos-focus-ring-width: 3px;
   --civicos-icon-sm: 16px;
   --civicos-icon-md: 20px;
   --civicos-icon-lg: 24px;
@@ -54,7 +70,16 @@ body {
   margin: 0;
   background: var(--civicos-canvas);
   color: var(--civicos-text);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+code,
+kbd,
+samp,
+pre,
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 button,
@@ -73,8 +98,8 @@ textarea {
 }
 
 :focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 3px;
+  outline: var(--civicos-focus-ring-width) solid var(--civicos-focus-ring);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {

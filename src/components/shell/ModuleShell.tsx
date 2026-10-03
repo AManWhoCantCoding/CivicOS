@@ -183,7 +183,15 @@ export function ModuleShell({
     }
     if (!session) {
       return (
-        <p className="rounded-xl border border-slate-800 p-4 text-sm leading-6 text-slate-500">
+        <p
+          className="rounded-xl border p-4 text-sm leading-6"
+          style={{
+            borderColor: 'var(--civicos-border)',
+            borderRadius: 'var(--civicos-radius-md)',
+            color: 'var(--civicos-text-muted)',
+            background: 'var(--civicos-surface)',
+          }}
+        >
           Đăng nhập để xem điều hướng theo phạm vi được giao.
         </p>
       );
@@ -220,7 +228,13 @@ export function ModuleShell({
             aria-expanded={!collapsed}
             aria-controls="module-sidebar"
             aria-label={collapsed ? 'Mở rộng điều hướng' : 'Thu gọn điều hướng'}
-            className="hidden min-h-[44px] items-center gap-2 rounded-lg border border-slate-800 px-3 py-2 text-xs text-slate-400 hover:border-slate-600 hover:text-white lg:inline-flex"
+            className="hidden min-h-[44px] items-center gap-2 rounded-lg border px-3 py-2 text-xs lg:inline-flex"
+            style={{
+              borderColor: 'var(--civicos-border)',
+              borderRadius: 'var(--civicos-radius-sm)',
+              color: 'var(--civicos-text-muted)',
+              background: 'var(--civicos-surface)',
+            }}
           >
             {collapsed ? '»' : '«'}
             <span className={collapsed ? 'sr-only' : ''}>
@@ -232,7 +246,10 @@ export function ModuleShell({
       </aside>
       <div className="min-w-0 flex-1 space-y-4">
         <div className="flex items-center justify-between gap-3 lg:hidden">
-          <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+          <p
+            className="font-mono text-xs tracking-[0.16em] uppercase"
+            style={{ color: 'var(--civicos-accent)' }}
+          >
             CivicOS / {definition.label}
           </p>
           <button
@@ -242,7 +259,13 @@ export function ModuleShell({
             aria-expanded={drawerOpen}
             aria-controls="module-drawer"
             aria-label={`Mở điều hướng ${definition.label}`}
-            className="min-h-[44px] rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-cyan-300 hover:text-white"
+            className="min-h-[44px] rounded-lg border px-4 py-2 text-sm"
+            style={{
+              borderColor: 'var(--civicos-border)',
+              borderRadius: 'var(--civicos-radius-sm)',
+              color: 'var(--civicos-accent)',
+              background: 'var(--civicos-surface)',
+            }}
           >
             Menu
           </button>
@@ -252,12 +275,13 @@ export function ModuleShell({
             <li>
               <Link
                 href="/"
-                className="text-slate-400 underline-offset-4 hover:text-white hover:underline"
+                className="underline-offset-4 hover:underline"
+                style={{ color: 'var(--civicos-text-muted)' }}
               >
                 Trung tâm
               </Link>
             </li>
-            <li aria-hidden="true" className="text-slate-600">
+            <li aria-hidden="true" style={{ color: 'var(--civicos-border)' }}>
               /
             </li>
             {activeFeature ? (
@@ -265,23 +289,33 @@ export function ModuleShell({
                 <li>
                   <Link
                     href={definition.homeHref}
-                    className="text-slate-400 underline-offset-4 hover:text-white hover:underline"
+                    className="underline-offset-4 hover:underline"
+                    style={{ color: 'var(--civicos-text-muted)' }}
                   >
                     Phân hệ {definition.label}
                   </Link>
                 </li>
-                <li aria-hidden="true" className="text-slate-600">
+                <li
+                  aria-hidden="true"
+                  style={{ color: 'var(--civicos-border)' }}
+                >
                   /
                 </li>
                 <li>
-                  <span aria-current="page" className="text-slate-100">
+                  <span
+                    aria-current="page"
+                    style={{ color: 'var(--civicos-text)' }}
+                  >
                     {activeFeature.label}
                   </span>
                 </li>
               </>
             ) : (
               <li>
-                <span aria-current="page" className="text-slate-100">
+                <span
+                  aria-current="page"
+                  style={{ color: 'var(--civicos-text)' }}
+                >
                   Phân hệ {definition.label}
                 </span>
               </li>
@@ -296,7 +330,8 @@ export function ModuleShell({
           <div
             aria-hidden="true"
             onClick={() => closeDrawer(true)}
-            className="absolute inset-0 bg-slate-950/70"
+            className="absolute inset-0"
+            style={{ background: 'rgba(23, 32, 51, 0.5)' }}
           />
           <div
             ref={drawerRef}
@@ -304,17 +339,30 @@ export function ModuleShell({
             aria-modal="true"
             aria-label={`Điều hướng ${definition.label}`}
             id="module-drawer"
-            className="absolute top-0 left-0 flex h-full w-80 max-w-[85vw] flex-col gap-4 overflow-y-auto border-r border-slate-800 bg-slate-950 p-5"
+            className="absolute top-0 left-0 flex h-full w-80 max-w-[85vw] flex-col gap-4 overflow-y-auto border-r p-5"
+            style={{
+              borderColor: 'var(--civicos-border)',
+              background: 'var(--civicos-surface)',
+            }}
           >
             <div className="flex items-center justify-between gap-3">
-              <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+              <p
+                className="font-mono text-xs tracking-[0.16em] uppercase"
+                style={{ color: 'var(--civicos-accent)' }}
+              >
                 CivicOS / {definition.label}
               </p>
               <button
                 type="button"
                 onClick={() => closeDrawer(true)}
                 aria-label="Đóng điều hướng"
-                className="min-h-[44px] min-w-[44px] rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-cyan-300 hover:text-white"
+                className="min-h-[44px] min-w-[44px] rounded-lg border px-3 py-2 text-sm"
+                style={{
+                  borderColor: 'var(--civicos-border)',
+                  borderRadius: 'var(--civicos-radius-sm)',
+                  color: 'var(--civicos-text)',
+                  background: 'var(--civicos-surface)',
+                }}
               >
                 ✕
               </button>

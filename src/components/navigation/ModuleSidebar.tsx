@@ -28,15 +28,31 @@ export function ModuleSidebar({
                 href={feature.href}
                 aria-current={active ? 'page' : undefined}
                 title={feature.label}
-                className={`flex min-h-[44px] items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition motion-safe:duration-150 ${
+                className={`flex min-h-[44px] items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition motion-safe:duration-150 ${collapsed ? 'justify-center px-2' : ''}`}
+                style={
                   active
-                    ? 'border-cyan-300/50 bg-cyan-400/10 font-semibold text-white'
-                    : 'border-transparent text-slate-400 hover:border-slate-700 hover:text-white'
-                } ${collapsed ? 'justify-center px-2' : ''}`}
+                    ? {
+                        borderColor: 'var(--civicos-accent)',
+                        background: 'var(--civicos-surface)',
+                        borderRadius: 'var(--civicos-radius-md)',
+                        color: 'var(--civicos-accent)',
+                        fontWeight: 600,
+                      }
+                    : {
+                        borderColor: 'transparent',
+                        borderRadius: 'var(--civicos-radius-md)',
+                        color: 'var(--civicos-text-muted)',
+                      }
+                }
               >
                 <span
                   aria-hidden="true"
-                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${active ? 'bg-cyan-300' : 'bg-slate-700'}`}
+                  className="h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{
+                    background: active
+                      ? 'var(--civicos-accent)'
+                      : 'var(--civicos-border)',
+                  }}
                 />
                 <span className={collapsed ? 'sr-only' : 'truncate'}>
                   {feature.label}
