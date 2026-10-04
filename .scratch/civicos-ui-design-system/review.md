@@ -1,6 +1,6 @@
 # B12 — Human Review `civicos-ui-design-system`
 
-- **Trạng thái:** `pending-human-approval`
+- **Trạng thái:** `APPROVED`
 - **Phạm vi:** CUI-001–CUI-004, toàn bộ Phase 01–04; web foundation/shell, Residents, Intake, Inspection, Land, map và mobile read-only surfaces.
 - **B11 status:** `COMPLETE`; contract integrity và Phase 01–04 gates đã đạt.
 - **Mục đích:** cung cấp evidence packet để người dùng thực hiện human review; Techlead không thay thế quyết định phê duyệt của người dùng.
@@ -49,9 +49,9 @@
 
 ## User decision
 
-- [ ] `APPROVED` — chuyển sang B13 Innovation.
+- [x] `APPROVED` — chuyển sang B13 Innovation. User message: `APPROVED`.
 - [ ] `CHANGES REQUESTED` — ghi rõ issue, acceptance criteria và quay lại B11.
 
-**Reviewer:** ____________________
-**Ngày:** ____________________
+**Reviewer:** User
+**Ngày:** 2026-10-04
 **Ghi chú:**
