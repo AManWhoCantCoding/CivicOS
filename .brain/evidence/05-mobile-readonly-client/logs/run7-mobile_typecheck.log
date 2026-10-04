@@ -1,8 +1,0 @@
-
-> civic-os@0.1.0 mobile:typecheck
-> npm --prefix mobile run typecheck
-
-
-> civicos-mobile@0.1.0 typecheck
-> tsc --noEmit
-

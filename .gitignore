@@ -1,5 +1,4 @@
 node_modules/
-.agents/
 .next/
 out/
 *.log
@@ -15,5 +14,38 @@ __pycache__/
 storage/
 *.egg-info/
 playwright/.pytest_cache/
-.opencode/
-opencode.jsonc
+
+# =========================================================
+# Local AI / OpenCode infrastructure
+# =========================================================
+
+# OpenCode
+/opencode.jsonc
+/.opencode/
+
+# Agent infrastructure
+/.agents/
+/AGENTS.md
+/Lesson-learned.md
+/skills-lock.json
+
+# Agent runtime / orchestration state
+/.brain/
+/.scratch/
+
+# Agent workflow documentation
+/docs/agents/
+/docs/AI-AGENT-WORKFLOW.md
+/workflow.md
+/workflow-roles/
+
+# Agent infrastructure scripts
+/scripts/agent-doctor.py
+/scripts/check-agent-infrastructure.py
+/scripts/check-scope.mjs
+/scripts/oc.mjs
+/scripts/verify.mjs
+
+# Legacy workflow backup artifacts
+*.bak-workflow-*
+*.bak-workflow-*.md
