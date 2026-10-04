@@ -7,6 +7,7 @@
 - **B9:** `APPROVED` — user message `Duyệt B9 — no data-model impact`; no data-model impact.
 - **B10:** `COMPLETE` — phase/ticket decomposition created; ready for Techlead dispatch.
 - **B11:** `COMPLETE` — implementation, review, verification, traceability, contract integrity and phase gates 01–04 passed.
+- **B12:** `PENDING-HUMAN-REVIEW` — review packet tại `.scratch/civicos-ui-design-system/review.md`.
 
 ## Locked scope
 
@@ -68,6 +69,6 @@
 
 ## Next gate
 
-All four B11 tickets have reached their implementation/review gates, contract integrity is complete, and Techlead commit/evidence bookkeeping is complete. Next workflow step: B12 human review.
+All four B11 tickets have reached their implementation/review gates, contract integrity is complete, and Techlead commit/evidence bookkeeping is complete. B12 human review is pending in `.scratch/civicos-ui-design-system/review.md`.
 
 `NEXT-SKILL: gov-to-phases` only after B9 approval.
