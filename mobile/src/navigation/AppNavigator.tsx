@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, SafeAreaView, Text, View } from 'react-native';
 import { useSession } from '../auth/SessionContext';
 import { LoginScreen } from '../auth/LoginScreen';
+import { mobileBaseline } from '../components/States';
 import { MapScreen } from '../features/map/MapScreen';
 import { RelatedInfoScreen } from '../features/related-info/RelatedInfoScreen';
 import type { RelatedInfoItem } from '../features/related-info/types';
@@ -33,7 +34,25 @@ export function AppNavigator() {
   const [context, setContext] = useState<NavigationContext>({});
   const [relatedReference, setRelatedReference] =
     useState<NavigationContext['relatedInfo']>();
-  if (session.status === 'loading') return <Text>Đang tải phiên…</Text>;
+  if (session.status === 'loading')
+    return (
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: mobileBaseline.color.canvas }}
+      >
+        <View style={{ padding: mobileBaseline.space.s4 }}>
+          <Text
+            style={{
+              fontFamily: mobileBaseline.font.sans,
+              fontSize: mobileBaseline.size.body,
+              lineHeight: mobileBaseline.size.bodyLine,
+              color: mobileBaseline.color.textMuted,
+            }}
+          >
+            Đang tải phiên…
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
   if (session.status !== 'authenticated') return <LoginScreen />;
   const navigate = (link: ReturnType<typeof deepLinkFor>) => {
     if (!link) return;
@@ -119,23 +138,59 @@ export function AppNavigator() {
       <SettingsScreen />
     );
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: mobileBaseline.color.canvas }}
+    >
       <View style={{ flex: 1 }}>{screen}</View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          backgroundColor: mobileBaseline.color.surface,
+          borderTopColor: mobileBaseline.color.border,
+          borderTopWidth: 1,
+        }}
+      >
         {routes.map((item) => (
           <Pressable
             key={item}
+            accessibilityRole="button"
             onPress={() => openTab(item)}
-            style={{ minHeight: 44, padding: 8 }}
+            style={{
+              minHeight: mobileBaseline.controlMin,
+              minWidth: mobileBaseline.controlMin,
+              padding: mobileBaseline.space.s2,
+            }}
           >
-            <Text>{item === 'Land' ? 'Đất đai' : item}</Text>
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.label,
+                color: mobileBaseline.color.text,
+              }}
+            >
+              {item === 'Land' ? 'Đất đai' : item}
+            </Text>
           </Pressable>
         ))}
         <Pressable
+          accessibilityRole="button"
           onPress={() => void signOut()}
-          style={{ minHeight: 44, padding: 8 }}
+          style={{
+            minHeight: mobileBaseline.controlMin,
+            minWidth: mobileBaseline.controlMin,
+            padding: mobileBaseline.space.s2,
+          }}
         >
-          <Text>Đăng xuất</Text>
+          <Text
+            style={{
+              fontFamily: mobileBaseline.font.sans,
+              fontSize: mobileBaseline.size.label,
+              color: mobileBaseline.color.text,
+            }}
+          >
+            Đăng xuất
+          </Text>
         </Pressable>
       </View>
     </SafeAreaView>
