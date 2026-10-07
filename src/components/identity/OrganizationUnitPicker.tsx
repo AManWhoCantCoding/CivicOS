@@ -127,7 +127,7 @@ export function OrganizationUnitPicker({
   return (
     <div>
       <label
-        className="block text-sm text-slate-200"
+        className="block text-sm break-words text-[var(--civicos-text)]"
         htmlFor="organization-unit"
       >
         {label}
@@ -138,7 +138,7 @@ export function OrganizationUnitPicker({
           required={required}
           disabled={state !== 'ready'}
           onChange={(event) => onChange(event.target.value)}
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30 disabled:cursor-wait disabled:opacity-60"
+          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] focus:ring-2 focus:ring-[var(--civicos-focus)] disabled:cursor-wait disabled:opacity-60"
         >
           <option value="">
             {state === 'loading' ? 'Đang tải đơn vị…' : 'Chọn OrganizationUnit'}
@@ -155,14 +155,17 @@ export function OrganizationUnitPicker({
           {errorStatus === 403 ? (
             <AccessDenied message={error ?? undefined} />
           ) : (
-            <p className="text-sm text-rose-300" role="alert">
+            <p
+              className="text-sm break-words text-[var(--civicos-danger)]"
+              role="alert"
+            >
               {error}
             </p>
           )}
           <button
             type="button"
             onClick={() => void retry()}
-            className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
           >
             Thử tải lại
           </button>

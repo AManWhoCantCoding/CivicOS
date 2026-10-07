@@ -136,12 +136,17 @@ export function UserPicker({
       aria-busy={state === 'loading'}
       className="min-w-0"
     >
-      <legend className="text-sm text-slate-200">{label}</legend>
-      <p className="mt-2 text-xs leading-5 text-slate-500">
+      <legend className="text-sm break-words text-[var(--civicos-text)]">
+        {label}
+      </legend>
+      <p className="mt-2 text-xs leading-5 break-words text-[var(--civicos-text-muted)]">
         Chọn một hoặc nhiều cán bộ trong cùng OrganizationUnit.
       </p>
       {state === 'loading' ? (
-        <p className="mt-3 text-sm text-slate-500" role="status">
+        <p
+          className="mt-3 text-sm text-[var(--civicos-text-muted)]"
+          role="status"
+        >
           Đang tải danh sách cán bộ…
         </p>
       ) : null}
@@ -150,40 +155,43 @@ export function UserPicker({
           {errorStatus === 403 ? (
             <AccessDenied message={error ?? undefined} />
           ) : (
-            <p className="text-sm text-rose-300" role="alert">
+            <p
+              className="text-sm break-words text-[var(--civicos-danger)]"
+              role="alert"
+            >
               {error}
             </p>
           )}
           <button
             type="button"
             onClick={() => void retry()}
-            className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
           >
             Thử tải lại
           </button>
         </div>
       ) : null}
       {state === 'ready' && !users.length ? (
-        <p className="mt-3 rounded-lg border border-dashed border-slate-700 p-4 text-sm text-slate-500">
+        <p className="mt-3 rounded-lg border border-dashed border-[var(--civicos-border)] p-4 text-sm break-words text-[var(--civicos-text-muted)]">
           Chưa có cán bộ hoạt động trong danh bạ.
         </p>
       ) : null}
       {state === 'ready' && users.length ? (
-        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/70 p-2">
+        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-2">
           {users.map((user) => (
             <label
               key={user.id}
-              className="flex cursor-pointer items-start gap-3 rounded-md px-3 py-2.5 transition hover:bg-slate-900"
+              className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-md px-3 py-2.5 transition hover:bg-[var(--civicos-surface-muted)]"
             >
               <input
                 type="checkbox"
                 checked={value.includes(user.id)}
                 onChange={() => toggleUser(user.id)}
-                className="mt-1 h-4 w-4 accent-cyan-300"
+                className="mt-1 h-4 w-4 accent-[var(--civicos-accent)]"
               />
-              <span className="min-w-0 text-sm text-slate-200">
+              <span className="min-w-0 text-sm text-[var(--civicos-text)]">
                 <span className="block truncate font-medium">{user.name}</span>
-                <span className="mt-0.5 block truncate text-xs text-slate-500">
+                <span className="mt-0.5 block truncate text-xs text-[var(--civicos-text-muted)]">
                   {user.email} · Role: {user.roles.join(' · ')}
                   {user.organizationUnitId
                     ? ` · Unit: ${user.organizationUnitId}`

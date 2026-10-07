@@ -41,19 +41,21 @@ export function LoginForm() {
   return (
     <form
       onSubmit={submit}
-      className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl shadow-black/20"
+      className="rounded-2xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-6"
     >
       <div className="mb-6">
-        <p className="text-sm font-medium text-white">Đăng nhập nội bộ</p>
-        <p className="mt-2 text-sm leading-6 text-slate-400">
+        <p className="text-sm font-medium text-[var(--civicos-text)]">
+          Đăng nhập nội bộ
+        </p>
+        <p className="mt-2 text-sm leading-6 break-words text-[var(--civicos-text-muted)]">
           Development account: mật khẩu mặc định `civicos-dev`.
         </p>
       </div>
       <div className="space-y-4">
-        <label className="block text-sm text-slate-200">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Email
           <input
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 transition outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] transition outline-none focus:border-[var(--civicos-accent)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -61,10 +63,10 @@ export function LoginForm() {
             required
           />
         </label>
-        <label className="block text-sm text-slate-200">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Mật khẩu
           <input
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 transition outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] transition outline-none focus:border-[var(--civicos-accent)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -74,12 +76,15 @@ export function LoginForm() {
         </label>
       </div>
       {error ? (
-        <p className="mt-4 text-sm text-rose-300" role="alert">
+        <p
+          className="mt-4 text-sm break-words text-[var(--civicos-danger)]"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}
       <button
-        className="mt-6 w-full rounded-lg bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 active:translate-y-px disabled:cursor-wait disabled:opacity-60"
+        className="mt-6 min-h-[44px] w-full rounded-lg bg-[var(--civicos-accent)] px-4 py-3 text-sm font-semibold text-[var(--civicos-accent-contrast)] transition hover:bg-[var(--civicos-accent-hover)] active:translate-y-px disabled:cursor-wait disabled:opacity-60"
         type="submit"
         disabled={loading}
       >

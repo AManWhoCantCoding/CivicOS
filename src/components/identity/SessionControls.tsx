@@ -108,7 +108,7 @@ export function SessionControls() {
   if (state === 'loading') {
     return (
       <span
-        className="text-sm text-slate-500"
+        className="text-sm text-[var(--civicos-text-muted)]"
         aria-live="polite"
         aria-busy="true"
       >
@@ -120,13 +120,16 @@ export function SessionControls() {
   if (state === 'error') {
     return (
       <div className="flex flex-wrap items-center justify-end gap-3">
-        <p className="text-sm text-rose-300" role="alert">
+        <p
+          className="text-sm break-words text-[var(--civicos-danger)]"
+          role="alert"
+        >
           {error}
         </p>
         <button
           type="button"
           onClick={() => void retry()}
-          className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white"
+          className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
         >
           Thử lại
         </button>
@@ -138,7 +141,7 @@ export function SessionControls() {
     return (
       <Link
         href="/login"
-        className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-cyan-300 hover:text-white"
+        className="inline-flex min-h-[44px] items-center rounded-lg border border-[var(--civicos-border)] px-4 py-2 text-sm text-[var(--civicos-text)] transition hover:border-[var(--civicos-accent)]"
       >
         Đăng nhập
       </Link>
@@ -148,8 +151,10 @@ export function SessionControls() {
   return (
     <div className="flex flex-wrap items-center justify-end gap-3">
       <div className="text-right">
-        <p className="text-sm font-medium text-slate-200">{user.name}</p>
-        <p className="text-xs text-slate-500">
+        <p className="text-sm font-medium break-words text-[var(--civicos-text)]">
+          {user.name}
+        </p>
+        <p className="text-xs break-words text-[var(--civicos-text-muted)]">
           {user.roles.join(' · ')} · {user.email}
         </p>
       </div>
@@ -157,12 +162,15 @@ export function SessionControls() {
         type="button"
         onClick={() => void logout()}
         disabled={loggingOut}
-        className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-cyan-300 hover:text-white disabled:cursor-wait disabled:opacity-60"
+        className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2 text-sm text-[var(--civicos-text)] transition hover:border-[var(--civicos-accent)] disabled:cursor-wait disabled:opacity-60"
       >
         {loggingOut ? 'Đang đăng xuất…' : 'Đăng xuất'}
       </button>
       {error ? (
-        <p className="basis-full text-right text-xs text-rose-300" role="alert">
+        <p
+          className="basis-full text-right text-xs break-words text-[var(--civicos-danger)]"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}

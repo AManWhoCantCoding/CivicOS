@@ -333,29 +333,32 @@ export function AssignmentWorkspace() {
     <div className="space-y-8">
       {denied ? <AccessDenied message={loadError ?? undefined} /> : null}
       {loadState === 'error' && !denied ? (
-        <section className="rounded-xl border border-rose-900/60 bg-rose-950/30 p-5">
-          <p className="text-sm text-rose-200" role="alert">
+        <section className="rounded-xl border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] p-5">
+          <p
+            className="text-sm break-words text-[var(--civicos-danger)]"
+            role="alert"
+          >
             {loadError}
           </p>
           <button
             type="button"
             onClick={() => void refreshAssignments()}
-            className="mt-4 rounded-lg border border-rose-300/40 px-3 py-2 text-sm text-rose-100 hover:border-rose-200"
+            className="mt-4 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
           >
             Thử tải lại
           </button>
         </section>
       ) : null}
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-7">
+      <section className="rounded-2xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5 sm:p-7">
         <div>
-          <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+          <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
             Assignment lifecycle
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-white">
+          <h2 className="mt-2 text-xl font-semibold text-[var(--civicos-text)]">
             Tạo phân công
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+          <p className="mt-2 max-w-2xl text-sm leading-6 break-words text-[var(--civicos-text-muted)]">
             Cấp quyền theo đúng hồ sơ và task. Thu hồi chỉ đổi trạng thái, không
             xoá lịch sử.
           </p>
@@ -365,42 +368,42 @@ export function AssignmentWorkspace() {
           className="mt-6 space-y-6"
         >
           <div className="grid gap-5 sm:grid-cols-2">
-            <label className="block text-sm text-slate-200">
+            <label className="block text-sm text-[var(--civicos-text)]">
               Resource type
               <input
                 value={resourceType}
                 onChange={(event) => setResourceType(event.target.value)}
                 required
-                className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
               />
             </label>
-            <label className="block text-sm text-slate-200">
+            <label className="block text-sm text-[var(--civicos-text)]">
               Resource ID
               <input
                 value={resourceId}
                 onChange={(event) => setResourceId(event.target.value)}
                 required
-                className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
                 placeholder="Ví dụ: Incident ID"
               />
             </label>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
-            <label className="block text-sm text-slate-200">
+            <label className="block text-sm text-[var(--civicos-text)]">
               Task
               <input
                 value={task}
                 onChange={(event) => setTask(event.target.value)}
                 required
-                className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
               />
             </label>
-            <label className="block text-sm text-slate-200">
+            <label className="block text-sm text-[var(--civicos-text)]">
               OrganizationUnit (tuỳ chọn)
               <input
                 value={organizationId}
                 onChange={(event) => setOrganizationId(event.target.value)}
-                className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
                 placeholder="Mặc định theo phiên hiện tại"
               />
             </label>
@@ -413,20 +416,20 @@ export function AssignmentWorkspace() {
           <button
             type="submit"
             disabled={mutation !== null || !assigneeUserIds.length}
-            className="rounded-lg bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-5 py-3 text-sm font-semibold text-[var(--civicos-accent-contrast)] transition hover:bg-[var(--civicos-accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {mutation === 'create' ? 'Đang tạo…' : 'Tạo Assignment'}
           </button>
         </form>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-7">
+      <section className="rounded-2xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5 sm:p-7">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="font-mono text-xs tracking-[0.16em] text-slate-500 uppercase">
+            <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-text-muted)] uppercase">
               Registry
             </p>
-            <h2 className="mt-2 text-xl font-semibold text-white">
+            <h2 className="mt-2 text-xl font-semibold text-[var(--civicos-text)]">
               Assignment hiện tại
             </h2>
           </div>
@@ -434,18 +437,21 @@ export function AssignmentWorkspace() {
             type="button"
             onClick={() => void refreshAssignments()}
             disabled={loadState === 'loading'}
-            className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-cyan-300 hover:text-white disabled:opacity-50"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] disabled:opacity-50"
           >
             {loadState === 'loading' ? 'Đang tải…' : 'Làm mới'}
           </button>
         </div>
         {loadState === 'loading' ? (
-          <p className="mt-6 text-sm text-slate-500" role="status">
+          <p
+            className="mt-6 text-sm text-[var(--civicos-text-muted)]"
+            role="status"
+          >
             Đang tải Assignment…
           </p>
         ) : null}
         {loadState === 'ready' && !assignments.length ? (
-          <p className="mt-6 rounded-lg border border-dashed border-slate-700 p-5 text-sm text-slate-500">
+          <p className="mt-6 rounded-lg border border-dashed border-[var(--civicos-border)] p-5 text-sm break-words text-[var(--civicos-text-muted)]">
             Chưa có Assignment nào.
           </p>
         ) : null}
@@ -462,28 +468,28 @@ export function AssignmentWorkspace() {
               return (
                 <li
                   key={assignment.id}
-                  className="rounded-xl border border-slate-800 bg-slate-950/60 p-4"
+                  className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] p-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-slate-100">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium break-words text-[var(--civicos-text)]">
                         {assignment.resourceType} · {assignment.resourceId}
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs break-words text-[var(--civicos-text-muted)]">
                         Task: {assignment.task} ·{' '}
                         {assignee
                           ? `${assignee.name} · Role: ${assignee.roles.join(' · ')}`
                           : `User: ${assignment.assigneeUserId}`}
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs break-words text-[var(--civicos-text-muted)]">
                         OrganizationUnit: {unitName ?? '—'}
                       </p>
                     </div>
                     <span
-                      className={`rounded-full px-3 py-1 text-xs ${
+                      className={`rounded-full border px-3 py-1 text-xs ${
                         assignment.status === 'active'
-                          ? 'bg-emerald-400/10 text-emerald-200'
-                          : 'bg-slate-800 text-slate-400'
+                          ? 'border-[var(--civicos-success)] text-[var(--civicos-success)]'
+                          : 'border-[var(--civicos-border)] text-[var(--civicos-text-muted)]'
                       }`}
                     >
                       {assignment.status === 'revoked'
@@ -491,14 +497,14 @@ export function AssignmentWorkspace() {
                         : assignment.status}
                     </span>
                   </div>
-                  <p className="mt-3 text-xs text-slate-500">
+                  <p className="mt-3 text-xs break-words text-[var(--civicos-text-muted)]">
                     Cấp lúc {formatDate(assignment.grantedAt)}
                     {assignment.revokedAt
                       ? ` · Thu hồi lúc ${formatDate(assignment.revokedAt)}`
                       : ''}
                   </p>
                   {assignment.revokeReason ? (
-                    <p className="mt-2 text-sm text-slate-400">
+                    <p className="mt-2 text-sm break-words text-[var(--civicos-text-muted)]">
                       Lý do thu hồi: {assignment.revokeReason}
                     </p>
                   ) : null}
@@ -510,7 +516,7 @@ export function AssignmentWorkspace() {
                         setRevokeId(assignment.id);
                         setRevokeReason('');
                       }}
-                      className="mt-4 rounded-lg border border-rose-400/50 px-3 py-2 text-sm text-rose-200 hover:border-rose-300"
+                      className="mt-4 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
                     >
                       Thu hồi Assignment
                     </button>
@@ -520,9 +526,9 @@ export function AssignmentWorkspace() {
                       onSubmit={(event) =>
                         void revokeAssignment(event, assignment.id)
                       }
-                      className="mt-4 space-y-3 border-t border-slate-800 pt-4"
+                      className="mt-4 space-y-3 border-t border-[var(--civicos-border)] pt-4"
                     >
-                      <label className="block text-sm text-slate-200">
+                      <label className="block text-sm text-[var(--civicos-text)]">
                         Lý do thu hồi
                         <textarea
                           value={revokeReason}
@@ -531,14 +537,14 @@ export function AssignmentWorkspace() {
                           }
                           required
                           rows={3}
-                          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
+                          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
                         />
                       </label>
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="submit"
                           disabled={mutation !== null}
-                          className="rounded-lg bg-rose-300 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-rose-200 disabled:opacity-50"
+                          className="min-h-[44px] rounded-lg bg-[var(--civicos-danger)] px-3 py-2 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:opacity-90 disabled:opacity-50"
                         >
                           {mutation === 'revoke'
                             ? 'Đang thu hồi…'
@@ -547,7 +553,7 @@ export function AssignmentWorkspace() {
                         <button
                           type="button"
                           onClick={() => setRevokeId(null)}
-                          className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-slate-500 hover:text-white"
+                          className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
                         >
                           Huỷ
                         </button>
@@ -562,7 +568,11 @@ export function AssignmentWorkspace() {
       </section>
 
       {message ? (
-        <p className="text-sm text-slate-300" role="status" aria-live="polite">
+        <p
+          className="text-sm break-words text-[var(--civicos-text)]"
+          role="status"
+          aria-live="polite"
+        >
           {message}
         </p>
       ) : null}
