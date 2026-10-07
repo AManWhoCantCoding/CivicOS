@@ -3,8 +3,6 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { deepLinkFor } from '../../mobile/src/navigation/deepLinks';
-
 function readSource(relativePath: string): string {
   return readFileSync(join(process.cwd(), relativePath), 'utf8');
 }
@@ -57,20 +55,13 @@ describe('T-012 mobile domain read-only', () => {
     expect(navigator()).not.toMatch(
       /'(Create|Update|CitizenIntake|Edit|Approve|Upload)'/,
     );
-    expect(deepLinkFor({ incidentId: 'inc-1' })).toEqual({
-      route: 'Incident',
-      params: expect.objectContaining({ incidentId: 'inc-1' }),
-    });
-    expect(
-      deepLinkFor({
-        relatedInfo: { entityType: 'RESIDENT', id: 'res-1' },
-      }),
-    ).toEqual({
-      route: 'RelatedInfoDetail',
-      params: expect.objectContaining({
-        relatedInfo: { entityType: 'RESIDENT', id: 'res-1' },
-      }),
-    });
+    const source = deepLinks();
+    expect(source).toContain(
+      "if (link.incidentId) return { route: 'Incident' as const, params: context };",
+    );
+    expect(source).toContain(
+      "if (link.relatedInfo)\n    return { route: 'RelatedInfoDetail' as const, params: context };",
+    );
     expect(navigator()).toContain('openMap(item, context)');
     expect(navigator()).toContain('openMap(undefined, context)');
     expect(navigator()).toContain('onOpenMap={openLandParcelOnMap}');

@@ -3,8 +3,6 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { deepLinkFor } from '../../mobile/src/navigation/deepLinks';
-
 function readSource(relativePath: string): string {
   return readFileSync(join(process.cwd(), relativePath), 'utf8');
 }
@@ -45,32 +43,19 @@ describe('T-011 mobile auth/shell', () => {
   });
 
   it('checks deep-link/back preservation', () => {
-    // Executable: deepLinkFor keeps route mapping and every parameter.
-    expect(deepLinkFor({ incidentId: 'inc-1' })).toEqual({
-      route: 'Incident',
-      params: expect.objectContaining({ incidentId: 'inc-1' }),
-    });
-    expect(
-      deepLinkFor({
-        relatedInfo: { entityType: 'RESIDENT', id: 'res-1' },
-      }),
-    ).toEqual({
-      route: 'RelatedInfoDetail',
-      params: expect.objectContaining({
-        relatedInfo: { entityType: 'RESIDENT', id: 'res-1' },
-      }),
-    });
-    expect(deepLinkFor({ resourceId: 'map-1' })).toEqual({
-      route: 'Map',
-      params: expect.objectContaining({ resourceId: 'map-1' }),
-    });
-    expect(deepLinkFor({ coordinates: { lat: 20.95, lng: 105.98 } })).toEqual({
-      route: 'Map',
-      params: expect.objectContaining({
-        coordinates: { lat: 20.95, lng: 105.98 },
-      }),
-    });
-    expect(deepLinkFor({})).toBeNull();
+    // Source-only: executable deep-link behavior stays in the mobile-package
+    // test, while this root test remains outside the mobile compiler graph.
+    const source = deepLinks();
+    expect(source).toContain(
+      "if (link.incidentId) return { route: 'Incident' as const, params: context };",
+    );
+    expect(source).toContain(
+      "if (link.relatedInfo)\n    return { route: 'RelatedInfoDetail' as const, params: context };",
+    );
+    expect(source).toContain(
+      "if (link.resourceId || link.coordinates)\n    return { route: 'Map' as const, params: context };",
+    );
+    expect(source).toContain('  return null;');
     // Route identifiers stay exactly the locked tab set.
     for (const route of [
       'Map',
