@@ -10,8 +10,8 @@ export function EvidenceList({
   if (!evidenceIds.length) return null;
 
   return (
-    <div className="mt-4 border-t border-slate-800 pt-4">
-      <p className="text-xs font-semibold tracking-wide text-slate-400 uppercase">
+    <div className="mt-4 border-t border-[var(--civicos-border)] pt-4">
+      <p className="text-xs font-semibold tracking-wide text-[var(--civicos-text-muted)] uppercase">
         {label}
       </p>
       <ul className="mt-2 space-y-2">
@@ -19,18 +19,18 @@ export function EvidenceList({
           <li key={evidenceId}>
             <div className="flex flex-wrap gap-2">
               <Link
-                className="inline-flex max-w-full items-center gap-2 rounded-md border border-slate-700 px-3 py-2 text-xs text-cyan-200 hover:border-cyan-300 hover:text-white"
+                className="inline-flex max-w-full items-center gap-2 rounded-md border border-[var(--civicos-border)] px-3 py-2 text-xs text-[var(--civicos-accent)] underline-offset-4 hover:underline"
                 href={`/api/evidence?evidenceId=${encodeURIComponent(evidenceId)}`}
                 target="_blank"
                 rel="noreferrer"
               >
                 <span aria-hidden="true">↗</span>
-                <span className="truncate">
+                <span className="max-w-full break-words">
                   {label} {index + 1} · xem
                 </span>
               </Link>
               <a
-                className="inline-flex items-center rounded-md border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:border-cyan-300 hover:text-white"
+                className="inline-flex min-h-[44px] items-center rounded-md border border-[var(--civicos-border)] px-3 py-2 text-xs text-[var(--civicos-accent)] underline-offset-4 hover:underline"
                 href={`/api/evidence?evidenceId=${encodeURIComponent(evidenceId)}`}
                 download
               >

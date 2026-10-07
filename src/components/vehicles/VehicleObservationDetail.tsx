@@ -190,7 +190,7 @@ export function VehicleObservationDetail({
     );
   if (loading && !data)
     return (
-      <section className="text-sm text-slate-400" role="status">
+      <section className="text-sm text-[var(--civicos-info)]" role="status">
         Đang tải quan sát…
       </section>
     );
@@ -199,7 +199,7 @@ export function VehicleObservationDetail({
       <section className="space-y-5">
         <Link
           href="/field/vehicles"
-          className="text-sm text-slate-400 hover:text-white"
+          className="text-sm text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline"
         >
           ← Hiện trường
         </Link>
@@ -236,18 +236,18 @@ export function VehicleObservationDetail({
         <div>
           <Link
             href="/field/vehicles"
-            className="text-sm text-slate-400 hover:text-white"
+            className="text-sm text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline"
           >
             ← Hiện trường
           </Link>
-          <p className="mt-8 font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+          <p className="mt-8 font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
             VehicleObservation
           </p>
-          <h1 className="mt-3 font-mono text-3xl font-semibold text-white">
+          <h1 className="mt-3 font-mono text-3xl font-semibold text-[var(--civicos-text)]">
             {observation.plate}
           </h1>
         </div>
-        <span className="rounded-full bg-amber-400/10 px-3 py-1 text-xs text-amber-200">
+        <span className="inline-flex items-center gap-2 rounded-full border border-[var(--civicos-border)] px-3 py-1 text-xs text-[var(--civicos-text)]">
           {statusLabel(observation.status)}
         </span>
       </div>
@@ -257,42 +257,44 @@ export function VehicleObservationDetail({
           tone="warning"
         />
       ) : null}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-5">
-        <p className="text-sm text-slate-300">
+      <div className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5">
+        <p className="text-sm text-[var(--civicos-text)]">
           {observation.description ?? 'Không có mô tả.'}
         </p>
-        <dl className="mt-5 grid gap-4 text-xs text-slate-400 sm:grid-cols-2">
+        <dl className="mt-5 grid gap-4 text-xs text-[var(--civicos-text-muted)] sm:grid-cols-2">
           <div>
-            <dt className="text-slate-600">Quan sát lúc</dt>
-            <dd className="mt-1 text-slate-300">
+            <dt className="text-[var(--civicos-text-muted)]">Quan sát lúc</dt>
+            <dd className="mt-1 text-[var(--civicos-text)]">
               {observation.observedAt
                 ? new Date(observation.observedAt).toLocaleString('vi-VN')
                 : 'Không có dữ liệu'}
             </dd>
           </div>
           <div>
-            <dt className="text-slate-600">Vị trí</dt>
-            <dd className="mt-1 text-slate-300">
+            <dt className="text-[var(--civicos-text-muted)]">Vị trí</dt>
+            <dd className="mt-1 text-[var(--civicos-text)]">
               {observation.latitude}, {observation.longitude}
             </dd>
           </div>
           <div>
-            <dt className="text-slate-600">Registry match</dt>
-            <dd className="mt-1 break-all text-slate-300">
+            <dt className="text-[var(--civicos-text-muted)]">Registry match</dt>
+            <dd className="mt-1 break-all text-[var(--civicos-text)]">
               {observation.matchedRegistryId ?? 'Không có'}
             </dd>
           </div>
           <div>
-            <dt className="text-slate-600">Xác nhận match</dt>
-            <dd className="mt-1 text-slate-300">
+            <dt className="text-[var(--civicos-text-muted)]">Xác nhận match</dt>
+            <dd className="mt-1 text-[var(--civicos-text)]">
               {observation.matchConfirmedAt
                 ? `${new Date(observation.matchConfirmedAt).toLocaleString('vi-VN')}${observation.matchConfirmedById ? ` · ${observation.matchConfirmedById}` : ''}`
                 : 'Chưa xác nhận'}
             </dd>
           </div>
           <div>
-            <dt className="text-slate-600">Chuyển đơn vị lúc</dt>
-            <dd className="mt-1 text-slate-300">
+            <dt className="text-[var(--civicos-text-muted)]">
+              Chuyển đơn vị lúc
+            </dt>
+            <dd className="mt-1 text-[var(--civicos-text)]">
               {observation.escalatedAt
                 ? new Date(observation.escalatedAt).toLocaleString('vi-VN')
                 : 'Chưa chuyển'}
@@ -302,8 +304,8 @@ export function VehicleObservationDetail({
         <EvidenceList evidenceIds={observationEvidence} />
         {data.permissions.canConfirm &&
         observation.status === 'match_suggested' ? (
-          <div className="mt-5 border-t border-slate-800 pt-4">
-            <p className="text-sm text-amber-200">
+          <div className="mt-5 border-t border-[var(--civicos-border)] pt-4">
+            <p className="text-sm text-[var(--civicos-text)]">
               Hệ thống gợi ý match với registry. Cần xác nhận trước khi xác
               minh.
             </p>
@@ -311,7 +313,7 @@ export function VehicleObservationDetail({
               type="button"
               onClick={() => void confirmMatch()}
               disabled={actionLoading || !online}
-              className="mt-3 rounded-lg bg-amber-300 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-200 disabled:opacity-50"
+              className="mt-3 min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:opacity-50"
             >
               {actionLoading ? 'Đang xác nhận…' : 'Xác nhận match'}
             </button>
@@ -345,43 +347,45 @@ export function VehicleObservationDetail({
           onSaved={updateObservation}
         />
       ) : null}
-      <section className="rounded-xl border border-slate-800 bg-slate-900 p-5">
-        <h2 className="text-sm font-semibold text-white">Lịch sử xác minh</h2>
+      <section className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5">
+        <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
+          Lịch sử xác minh
+        </h2>
         {data.verifications.length ? (
           <div className="mt-4 space-y-3">
             {data.verifications.map((verification) => (
               <article
                 key={verification.id}
-                className="rounded-lg border border-slate-800 p-4"
+                className="rounded-lg border border-[var(--civicos-border)] p-4"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <p className="text-sm text-slate-200">
+                  <p className="text-sm text-[var(--civicos-text)]">
                     {verification.result}
                   </p>
                   {verification.verifiedAt ? (
-                    <time className="text-xs text-slate-500">
+                    <time className="text-xs text-[var(--civicos-text-muted)]">
                       {new Date(verification.verifiedAt).toLocaleString(
                         'vi-VN',
                       )}
                     </time>
                   ) : null}
                 </div>
-                <p className="mt-2 text-sm leading-6 text-slate-400">
+                <p className="mt-2 text-sm leading-6 text-[var(--civicos-text-muted)]">
                   {verification.notes}
                 </p>
                 {verification.verifiedById ? (
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-2 text-xs text-[var(--civicos-text-muted)]">
                     Người xác minh: {verification.verifiedById}
                   </p>
                 ) : null}
                 {verification.ownerLookup ? (
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-2 text-xs text-[var(--civicos-text-muted)]">
                     Tra cứu chủ xe: {verification.ownerLookup}
                   </p>
                 ) : null}
                 {verification.latitude !== null &&
                 verification.latitude !== undefined ? (
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-2 text-xs text-[var(--civicos-text-muted)]">
                     Vị trí: {verification.latitude}, {verification.longitude}
                   </p>
                 ) : null}
@@ -392,7 +396,7 @@ export function VehicleObservationDetail({
             ))}
           </div>
         ) : (
-          <p className="mt-3 text-sm text-slate-500">
+          <p className="mt-3 text-sm text-[var(--civicos-text-muted)]">
             Chưa có lần xác minh nào.
           </p>
         )}

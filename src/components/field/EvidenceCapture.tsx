@@ -152,14 +152,16 @@ export function EvidenceCapture({
   }
 
   return (
-    <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/70 p-4 text-sm text-slate-300">
+    <div className="rounded-xl border border-dashed border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4 text-sm text-[var(--civicos-text)]">
       <label className="block">
-        <span className="font-medium text-white">Ảnh bằng chứng</span>
-        <span className="mt-1 block text-xs leading-5 text-slate-500">
+        <span className="font-medium text-[var(--civicos-text)]">
+          Ảnh bằng chứng
+        </span>
+        <span className="mt-1 block text-xs leading-5 text-[var(--civicos-text-muted)]">
           Tệp được gửi multipart lên hồ sơ này và giữ thời gian, vị trí nếu có.
         </span>
         <input
-          className="mt-4 block w-full text-xs text-slate-400 file:mr-3 file:rounded-md file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:font-semibold file:text-slate-950"
+          className="mt-4 block min-h-[44px] w-full text-xs text-[var(--civicos-text-muted)] file:mr-3 file:min-h-[44px] file:rounded-md file:border file:border-[var(--civicos-border)] file:bg-[var(--civicos-surface-muted)] file:px-3 file:py-2 file:font-semibold file:text-[var(--civicos-accent)]"
           type="file"
           accept="image/*"
           capture="environment"
@@ -169,16 +171,20 @@ export function EvidenceCapture({
         />
       </label>
       {file ? (
-        <p className="mt-3 text-xs text-slate-400">Đã chọn: {file.name}</p>
+        <p className="mt-3 text-xs text-[var(--civicos-text-muted)]">
+          Đã chọn: {file.name}
+        </p>
       ) : null}
-      <p className="mt-2 text-xs text-slate-500">GPS: {location}</p>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-2 text-xs text-[var(--civicos-text-muted)]">
+        GPS: {location}
+      </p>
+      <p className="mt-1 text-xs text-[var(--civicos-text-muted)]">
         Trạng thái mạng: {online ? 'online' : 'offline'}
       </p>
       {file && !uploaded ? (
         <button
           type="button"
-          className="mt-3 rounded-md border border-amber-300/50 px-3 py-2 text-xs text-amber-200 hover:border-amber-200 disabled:opacity-60"
+          className="mt-3 min-h-[44px] rounded-md border border-[var(--civicos-border)] px-3 py-2 text-xs text-[var(--civicos-accent)] hover:border-[var(--civicos-accent)] disabled:opacity-60"
           disabled={disabled || uploading}
           onClick={() => void uploadEvidence(file, coordinates)}
         >

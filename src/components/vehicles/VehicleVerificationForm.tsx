@@ -156,11 +156,13 @@ export function VehicleVerificationForm({
   return (
     <form
       onSubmit={submit}
-      className="space-y-5 rounded-xl border border-slate-800 bg-slate-900 p-5"
+      className="space-y-5 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5"
     >
       <div>
-        <h2 className="text-sm font-semibold text-white">Xác minh quan sát</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-400">
+        <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
+          Xác minh quan sát
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-[var(--civicos-text-muted)]">
           Ghi kết quả, ghi chú, vị trí xác minh và bằng chứng nếu có.
         </p>
       </div>
@@ -171,44 +173,44 @@ export function VehicleVerificationForm({
         />
       ) : null}
       {!enabled ? (
-        <p className="rounded-lg border border-slate-800 px-3 py-2 text-sm text-slate-500">
+        <p className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-text-muted)]">
           {status === 'match_suggested'
             ? 'Xác nhận match trước khi mở xác minh.'
             : 'Quan sát này đã xác minh.'}
         </p>
       ) : null}
-      <label className="block text-sm text-slate-200">
+      <label className="block text-sm text-[var(--civicos-text)]">
         Kết quả xác minh
         <input
           name="result"
           required
           disabled={!enabled || loading}
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] disabled:opacity-60"
         />
       </label>
-      <label className="block text-sm text-slate-200">
+      <label className="block text-sm text-[var(--civicos-text)]">
         Tra cứu chủ xe (không bắt buộc)
         <input
           name="ownerLookup"
           disabled={!enabled || loading}
           placeholder="Kết quả tra cứu chủ xe"
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] disabled:opacity-60"
         />
       </label>
-      <label className="block text-sm text-slate-200">
+      <label className="block text-sm text-[var(--civicos-text)]">
         Ghi chú
         <textarea
           name="notes"
           required
           rows={4}
           disabled={!enabled || loading}
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] disabled:opacity-60"
         />
       </label>
       <div>
-        <p className="text-sm text-slate-200">Vị trí xác minh</p>
+        <p className="text-sm text-[var(--civicos-text)]">Vị trí xác minh</p>
         <div className="mt-2 grid gap-4 sm:grid-cols-2">
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-[var(--civicos-text-muted)]">
             Vĩ độ
             <input
               name="latitude"
@@ -217,10 +219,10 @@ export function VehicleVerificationForm({
               value={latitude}
               onChange={(event) => setLatitude(event.target.value)}
               disabled={!enabled || loading}
-              className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+              className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] disabled:opacity-60"
             />
           </label>
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-[var(--civicos-text-muted)]">
             Kinh độ
             <input
               name="longitude"
@@ -229,7 +231,7 @@ export function VehicleVerificationForm({
               value={longitude}
               onChange={(event) => setLongitude(event.target.value)}
               disabled={!enabled || loading}
-              className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+              className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] disabled:opacity-60"
             />
           </label>
         </div>
@@ -238,11 +240,14 @@ export function VehicleVerificationForm({
             type="button"
             onClick={getLocation}
             disabled={!enabled || loading}
-            className="min-h-[44px] rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200 hover:border-cyan-300 disabled:opacity-50"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-xs text-[var(--civicos-accent)] hover:border-[var(--civicos-accent)] disabled:opacity-50"
           >
             Lấy vị trí hiện tại
           </button>
-          <span className="text-xs text-slate-500" role="status">
+          <span
+            className="text-xs text-[var(--civicos-text-muted)]"
+            role="status"
+          >
             {locationMessage}
           </span>
         </div>
@@ -263,7 +268,7 @@ export function VehicleVerificationForm({
       <button
         type="submit"
         disabled={!enabled || loading || uploading || !online}
-        className="w-full rounded-lg bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+        className="min-h-[44px] w-full rounded-lg bg-[var(--civicos-accent)] px-4 py-3 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? 'Đang gửi…' : 'Lưu xác minh'}
       </button>

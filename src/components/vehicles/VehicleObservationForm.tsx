@@ -111,13 +111,13 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
     <form
       onSubmit={submit}
       noValidate
-      className="space-y-5 rounded-2xl border border-slate-800 bg-slate-900 p-5"
+      className="space-y-5 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5"
     >
       <div>
-        <h2 className="text-base font-semibold text-white">
+        <h2 className="text-base font-semibold text-[var(--civicos-text)]">
           Ghi nhận phương tiện
         </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-400">
+        <p className="mt-2 text-sm leading-6 text-[var(--civicos-text-muted)]">
           Thao tác được gửi ngay khi có mạng hoặc giữ cục bộ trong hàng đợi
           offline.
         </p>
@@ -128,17 +128,17 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
           tone="warning"
         />
       ) : null}
-      <label className="block text-sm text-slate-200">
+      <label className="block text-sm text-[var(--civicos-text)]">
         Biển số
         <input
           name="plate"
           required
           autoCapitalize="characters"
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 font-mono text-lg text-slate-100 uppercase outline-none focus:border-cyan-300"
+          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 font-mono text-lg text-[var(--civicos-text)] uppercase outline-none focus:border-[var(--civicos-focus)]"
         />
       </label>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm text-slate-200">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Vĩ độ
           <input
             name="latitude"
@@ -147,10 +147,10 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
             step="any"
             value={latitude}
             onChange={(event) => setLatitude(event.target.value)}
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
           />
         </label>
-        <label className="block text-sm text-slate-200">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Kinh độ
           <input
             name="longitude"
@@ -159,7 +159,7 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
             step="any"
             value={longitude}
             onChange={(event) => setLongitude(event.target.value)}
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
           />
         </label>
       </div>
@@ -167,30 +167,36 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
         <button
           type="button"
           onClick={getLocation}
-          className="min-h-[44px] rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:border-cyan-300"
+          className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-accent)] hover:border-[var(--civicos-accent)]"
         >
           Lấy vị trí hiện tại
         </button>
-        <span className="text-xs text-slate-500" role="status">
+        <span
+          className="text-xs text-[var(--civicos-text-muted)]"
+          role="status"
+        >
           {locationMessage}
         </span>
       </div>
-      <p className="text-xs leading-5 text-slate-500" role="status">
+      <p
+        className="text-xs leading-5 text-[var(--civicos-text-muted)]"
+        role="status"
+      >
         GPS chỉ hỗ trợ điền nhanh; nếu không có GPS, luôn nhập tay được tọa độ.
       </p>
       <p
-        className="rounded-lg border border-slate-800 px-3 py-2 text-xs leading-5 text-slate-500"
+        className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-xs leading-5 text-[var(--civicos-text-muted)]"
         role="status"
       >
         Quan sát chỉ được coi là hoàn tất sau khi ảnh bằng chứng được tải lên.
         Khi offline, quan sát chỉ ở trạng thái chờ đồng bộ.
       </p>
-      <label className="block text-sm text-slate-200">
+      <label className="block text-sm text-[var(--civicos-text)]">
         Mô tả
         <textarea
           name="description"
           rows={4}
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
         />
       </label>
       {message ? <FeedbackMessage message={message} tone={tone} /> : null}
@@ -198,7 +204,7 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
         <>
           <Link
             href={`/field/vehicles/${observationId}`}
-            className="block text-sm text-cyan-200 hover:text-white"
+            className="block text-sm text-[var(--civicos-accent)] underline-offset-4 hover:underline"
           >
             Mở chi tiết quan sát →
           </Link>
@@ -221,7 +227,7 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
       <button
         disabled={loading || evidenceUploading}
         type="submit"
-        className="w-full rounded-lg bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:opacity-60"
+        className="min-h-[44px] w-full rounded-lg bg-[var(--civicos-accent)] px-4 py-3 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:opacity-50"
       >
         {loading ? 'Đang lưu…' : 'Ghi nhận phương tiện'}
       </button>

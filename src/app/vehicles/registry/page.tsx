@@ -11,25 +11,28 @@ export default async function VehicleRegistryPage() {
   const denied =
     current !== null && !(await canEnterEntry(current, ['vehicle-registry']));
   return (
-    <main className="min-h-dvh bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-10">
+    <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
       <div className="mx-auto max-w-6xl">
-        <Link className="text-sm text-slate-400 hover:text-white" href="/">
+        <Link
+          className="text-sm text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline"
+          href="/"
+        >
           ← Trung tâm
         </Link>
         <div className="mt-10">
-          <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+          <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
             Phương tiện
           </p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white">
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[var(--civicos-text)]">
             Registry xe cần chú ý
           </h1>
-          <p className="mt-4 text-base leading-7 text-slate-400">
+          <p className="mt-4 text-base leading-7 text-[var(--civicos-text-muted)]">
             Danh mục nội bộ có nguồn, lý do và thời hạn hiệu lực.
           </p>
         </div>
         <Link
           href="/field/vehicles"
-          className="mt-6 inline-block text-sm text-amber-200 hover:text-white"
+          className="mt-6 inline-block text-sm text-[var(--civicos-accent)] underline-offset-4 hover:underline"
         >
           Mở hiện trường xe →
         </Link>

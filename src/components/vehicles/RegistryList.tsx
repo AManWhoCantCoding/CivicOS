@@ -68,7 +68,7 @@ export function RegistryList() {
     );
   if (online && loadState === 'loading')
     return (
-      <p className="text-sm text-slate-400" role="status">
+      <p className="text-sm text-[var(--civicos-info)]" role="status">
         Đang tải registry…
       </p>
     );
@@ -86,7 +86,7 @@ export function RegistryList() {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:border-cyan-300 hover:text-white"
+          className="min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-xs text-[var(--civicos-danger)] hover:opacity-80"
         >
           Thử lại
         </button>
@@ -94,7 +94,7 @@ export function RegistryList() {
     );
   if (!items.length)
     return (
-      <div className="rounded-xl border border-dashed border-slate-700 p-8 text-sm text-slate-400">
+      <div className="rounded-xl border border-dashed border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-8 text-sm text-[var(--civicos-text-muted)]">
         Chưa có biển số trong registry.
       </div>
     );
@@ -110,29 +110,33 @@ export function RegistryList() {
       {items.map((item) => (
         <article
           key={item.id}
-          className="rounded-xl border border-slate-800 bg-slate-900 p-5"
+          className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5"
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="font-mono text-lg text-white">{item.plate}</p>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="font-mono text-lg text-[var(--civicos-text)]">
+                {item.plate}
+              </p>
+              <p className="mt-1 text-xs text-[var(--civicos-text-muted)]">
                 Nguồn: {item.source} · Có hiệu lực:{' '}
                 {new Date(item.validFrom).toLocaleDateString('vi-VN')}
               </p>
             </div>
-            <span className="rounded-full bg-amber-400/10 px-3 py-1 text-xs text-amber-200">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--civicos-border)] px-3 py-1 text-xs text-[var(--civicos-text)]">
               {item.status}
             </span>
           </div>
-          <p className="mt-4 text-sm text-slate-300">{item.reason}</p>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-4 text-sm text-[var(--civicos-text)]">
+            {item.reason}
+          </p>
+          <p className="mt-2 text-xs text-[var(--civicos-text-muted)]">
             Hết hạn:{' '}
             {item.validUntil
               ? new Date(item.validUntil).toLocaleString('vi-VN')
               : 'chưa đặt'}
           </p>
-          <details className="mt-5 border-t border-slate-800 pt-4">
-            <summary className="cursor-pointer text-sm text-cyan-200 hover:text-white">
+          <details className="mt-5 border-t border-[var(--civicos-border)] pt-4">
+            <summary className="cursor-pointer text-sm text-[var(--civicos-accent)] underline-offset-4 hover:underline">
               Chỉnh sửa trạng thái
             </summary>
             <div className="mt-4">

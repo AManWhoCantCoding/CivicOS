@@ -23,18 +23,18 @@ export default async function VehicleFieldPage() {
   return (
     <section className="space-y-6">
       <div>
-        <p className="font-mono text-xs tracking-[0.16em] text-cyan-300 uppercase">
+        <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
           Ghi nhận nhanh
         </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--civicos-text)]">
           Phương tiện tại hiện trường
         </h1>
-        <p className="mt-3 text-sm leading-6 text-slate-400">
+        <p className="mt-3 text-sm leading-6 text-[var(--civicos-text-muted)]">
           Nhập biển số, vị trí và mô tả. Khi mất mạng, thao tác sẽ chờ đồng bộ.
         </p>
         <Link
           href="/vehicles/registry"
-          className="mt-3 inline-block text-sm text-amber-200 hover:text-white"
+          className="mt-3 inline-block text-sm text-[var(--civicos-accent)] underline-offset-4 hover:underline"
         >
           Mở registry xe →
         </Link>

@@ -55,47 +55,47 @@ export function OfflineQueueStatus() {
     <section
       aria-label="Trạng thái đồng bộ"
       aria-live="polite"
-      className="rounded-xl border border-slate-800 bg-slate-900 p-5"
+      className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5"
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-white">Kết nối</p>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="text-sm font-semibold text-[var(--civicos-text)]">
+            Kết nối
+          </p>
+          <p className="mt-2 text-sm text-[var(--civicos-text-muted)]">
             {online
               ? 'Đang kết nối máy chủ.'
               : 'Đang ngoại tuyến. Thao tác mới sẽ chờ đồng bộ.'}
           </p>
         </div>
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-medium ${online ? 'bg-emerald-400/15 text-emerald-300' : 'bg-amber-400/15 text-amber-200'}`}
-        >
+        <span className="inline-flex items-center gap-2 rounded-full border border-[var(--civicos-border)] px-3 py-1 text-xs text-[var(--civicos-text)]">
           {online ? 'Online' : 'Offline'}
         </span>
       </div>
-      <dl className="mt-5 grid grid-cols-1 gap-3 border-t border-slate-800 pt-4 text-xs sm:grid-cols-3">
+      <dl className="mt-5 grid grid-cols-1 gap-3 border-t border-[var(--civicos-border)] pt-4 text-xs sm:grid-cols-3">
         <div>
-          <dt className="text-slate-500">Chờ gửi</dt>
+          <dt className="text-[var(--civicos-text-muted)]">Chờ gửi</dt>
           <dd
             data-testid="queue-pending-count"
-            className="mt-1 text-lg font-semibold text-amber-200"
+            className="mt-1 text-lg font-semibold text-[var(--civicos-text)]"
           >
             {pending}
           </dd>
         </div>
         <div>
-          <dt className="text-slate-500">Lỗi/từ chối</dt>
+          <dt className="text-[var(--civicos-text-muted)]">Lỗi/từ chối</dt>
           <dd
             data-testid="queue-failed-count"
-            className="mt-1 text-lg font-semibold text-rose-200"
+            className="mt-1 text-lg font-semibold text-[var(--civicos-danger)]"
           >
             {failed}
           </dd>
         </div>
         <div>
-          <dt className="text-slate-500">Đã xác nhận</dt>
+          <dt className="text-[var(--civicos-text-muted)]">Đã xác nhận</dt>
           <dd
             data-testid="queue-synced-count"
-            className="mt-1 text-lg font-semibold text-emerald-200"
+            className="mt-1 text-lg font-semibold text-[var(--civicos-success)]"
           >
             {synced}
           </dd>
@@ -104,7 +104,7 @@ export function OfflineQueueStatus() {
       {failedError ? (
         <p
           role="alert"
-          className="mt-3 rounded-lg border border-rose-400/30 bg-rose-950/30 px-3 py-2 text-xs text-rose-200"
+          className="mt-3 rounded-lg border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-2 text-xs text-[var(--civicos-danger)]"
         >
           Lỗi đồng bộ: {failedError}
         </p>
@@ -112,7 +112,7 @@ export function OfflineQueueStatus() {
       <button
         type="button"
         onClick={retrySync}
-        className="mt-4 min-h-[44px] w-full rounded-lg border border-cyan-300/40 px-4 py-2 text-sm font-semibold text-cyan-200 hover:border-cyan-200 hover:text-white"
+        className="mt-4 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] px-4 py-2 text-sm font-semibold text-[var(--civicos-accent)] hover:border-[var(--civicos-accent)]"
       >
         Đồng bộ ngay
       </button>

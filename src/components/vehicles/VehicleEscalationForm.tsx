@@ -118,12 +118,12 @@ export function VehicleEscalationForm({
   }
 
   return (
-    <section className="space-y-5 rounded-xl border border-slate-800 bg-slate-900 p-5">
+    <section className="space-y-5 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5">
       <div>
-        <h2 className="text-sm font-semibold text-white">
+        <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
           Chuyển OrganizationUnit
         </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-400">
+        <p className="mt-2 text-sm leading-6 text-[var(--civicos-text-muted)]">
           Chọn đơn vị đích để escalation. Mã được gửi nguyên trạng tới API.
         </p>
       </div>
@@ -134,7 +134,7 @@ export function VehicleEscalationForm({
         />
       ) : null}
       {!enabled ? (
-        <p className="rounded-lg border border-slate-800 px-3 py-2 text-sm text-slate-500">
+        <p className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-text-muted)]">
           {status === 'match_suggested'
             ? 'Xác nhận match trước khi chuyển đơn vị.'
             : 'Quan sát đã được chuyển đơn vị.'}
@@ -142,7 +142,7 @@ export function VehicleEscalationForm({
       ) : null}
       <label
         htmlFor="vehicle-escalation-organization"
-        className="block text-sm text-slate-200"
+        className="block text-sm text-[var(--civicos-text)]"
       >
         OrganizationUnit đích
         {units.length ? (
@@ -151,7 +151,7 @@ export function VehicleEscalationForm({
             value={organizationId}
             onChange={(event) => setOrganizationId(event.target.value)}
             disabled={!enabled || loading}
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] disabled:opacity-60"
           >
             <option value="" disabled>
               Chọn đơn vị
@@ -169,12 +169,12 @@ export function VehicleEscalationForm({
             onChange={(event) => setOrganizationId(event.target.value)}
             disabled={!enabled || loading}
             placeholder="Mã OrganizationUnit"
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300 disabled:opacity-60"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] disabled:opacity-60"
           />
         )}
       </label>
       {unitMessage ? (
-        <p className="text-xs text-slate-500" role="status">
+        <p className="text-xs text-[var(--civicos-text-muted)]" role="status">
           {unitMessage}
         </p>
       ) : null}
@@ -183,7 +183,7 @@ export function VehicleEscalationForm({
         type="button"
         onClick={() => void submit()}
         disabled={!enabled || loading || !online}
-        className="w-full rounded-lg border border-amber-300/60 px-4 py-3 text-sm font-semibold text-amber-100 hover:border-amber-200 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+        className="min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] px-4 py-3 text-sm font-semibold text-[var(--civicos-accent)] hover:border-[var(--civicos-accent)] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? 'Đang chuyển…' : 'Chuyển đơn vị'}
       </button>

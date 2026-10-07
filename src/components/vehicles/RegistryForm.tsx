@@ -132,13 +132,13 @@ export function RegistryForm({
     <form
       onSubmit={submit}
       noValidate
-      className="space-y-5 rounded-2xl border border-slate-800 bg-slate-900 p-5"
+      className="space-y-5 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5"
     >
       <div>
-        <h2 className="text-base font-semibold text-white">
+        <h2 className="text-base font-semibold text-[var(--civicos-text)]">
           {initial ? 'Cập nhật registry' : 'Thêm vào registry'}
         </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-400">
+        <p className="mt-2 text-sm leading-6 text-[var(--civicos-text-muted)]">
           Chỉ các trường mà API hỗ trợ sẽ được gửi khi cập nhật.
         </p>
       </div>
@@ -149,46 +149,46 @@ export function RegistryForm({
         />
       ) : null}
       {initial ? (
-        <div className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-3 font-mono text-lg text-white">
+        <div className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-3 font-mono text-lg text-[var(--civicos-text)]">
           {initial.plate}
         </div>
       ) : (
-        <label className="block text-sm text-slate-200">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Biển số
           <input
             name="plate"
             required
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 font-mono text-lg text-slate-100 uppercase outline-none focus:border-cyan-300"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 font-mono text-lg text-[var(--civicos-text)] uppercase outline-none focus:border-[var(--civicos-focus)]"
           />
         </label>
       )}
       {!initial ? (
         <>
-          <label className="block text-sm text-slate-200">
+          <label className="block text-sm text-[var(--civicos-text)]">
             Nguồn
             <input
               name="source"
               required
-              className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+              className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
             />
           </label>
-          <label className="block text-sm text-slate-200">
+          <label className="block text-sm text-[var(--civicos-text)]">
             Có hiệu lực từ
             <input
               name="validFrom"
               required
               type="datetime-local"
-              className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+              className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
             />
           </label>
         </>
       ) : (
-        <label className="block text-sm text-slate-200">
+        <label className="block text-sm text-[var(--civicos-text)]">
           Trạng thái
           <select
             name="status"
             defaultValue={initial.status}
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
           >
             {Array.from(new Set([...statusChoices, initial.status])).map(
               (status) => (
@@ -200,30 +200,31 @@ export function RegistryForm({
           </select>
         </label>
       )}
-      <label className="block text-sm text-slate-200">
+      <label className="block text-sm text-[var(--civicos-text)]">
         Lý do
         <textarea
           name="reason"
           required
           defaultValue={initial?.reason}
           rows={4}
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
         />
       </label>
-      <label className="block text-sm text-slate-200">
-        Hết hạn <span className="text-slate-500">(tuỳ chọn)</span>
+      <label className="block text-sm text-[var(--civicos-text)]">
+        Hết hạn{' '}
+        <span className="text-[var(--civicos-text-muted)]">(tuỳ chọn)</span>
         <input
           name="validUntil"
           type="datetime-local"
           defaultValue={toLocalDateTime(initial?.validUntil)}
-          className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-slate-100 outline-none focus:border-cyan-300"
+          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
         />
       </label>
       {message ? <FeedbackMessage message={message} tone={tone} /> : null}
       <button
         type="submit"
         disabled={loading || !online}
-        className="w-full rounded-lg bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+        className="min-h-[44px] w-full rounded-lg bg-[var(--civicos-accent)] px-4 py-3 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? 'Đang lưu…' : initial ? 'Lưu registry' : 'Thêm registry'}
       </button>

@@ -82,16 +82,16 @@ export function VehicleObservationList({
     <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="font-mono text-xs tracking-[0.16em] text-amber-200 uppercase">
+          <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
             Quan sát gần đây
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-white">
+          <h2 className="mt-2 text-xl font-semibold text-[var(--civicos-text)]">
             Danh sách hiện trường
           </h2>
         </div>
         <Link
           href="/field/offline"
-          className="text-xs text-slate-400 underline-offset-4 hover:text-white hover:underline"
+          className="text-xs text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline"
         >
           Xem hàng đợi offline
         </Link>
@@ -103,7 +103,7 @@ export function VehicleObservationList({
         />
       ) : null}
       {online && loadState === 'loading' ? (
-        <p className="text-sm text-slate-400" role="status">
+        <p className="text-sm text-[var(--civicos-info)]" role="status">
           Đang tải quan sát…
         </p>
       ) : null}
@@ -120,7 +120,7 @@ export function VehicleObservationList({
         />
       ) : null}
       {loadState === 'ready' && !items.length ? (
-        <div className="rounded-xl border border-dashed border-slate-700 p-6 text-sm text-slate-400">
+        <div className="rounded-xl border border-dashed border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-6 text-sm text-[var(--civicos-text-muted)]">
           Chưa có quan sát phương tiện.
         </div>
       ) : null}
@@ -129,32 +129,32 @@ export function VehicleObservationList({
           {items.map((item) => (
             <article
               key={item.id}
-              className="rounded-xl border border-slate-800 bg-slate-900 p-4"
+              className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <Link
                     href={`/field/vehicles/${item.id}`}
-                    className="font-mono text-lg text-white hover:text-cyan-200"
+                    className="font-mono text-lg text-[var(--civicos-accent)] underline-offset-4 hover:underline"
                   >
                     {item.plate}
                   </Link>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-[var(--civicos-text-muted)]">
                     {new Date(item.observedAt).toLocaleString('vi-VN')}
                   </p>
                 </div>
-                <span className="rounded-full bg-amber-400/10 px-3 py-1 text-xs text-amber-200">
+                <span className="inline-flex items-center gap-2 rounded-full border border-[var(--civicos-border)] px-3 py-1 text-xs text-[var(--civicos-text)]">
                   {statusLabel(item.status)}
                 </span>
               </div>
-              <p className="mt-3 text-sm text-slate-300">
+              <p className="mt-3 text-sm text-[var(--civicos-text)]">
                 {item.description ?? 'Không có mô tả.'}
               </p>
-              <p className="mt-3 text-xs text-slate-500">
+              <p className="mt-3 text-xs text-[var(--civicos-text-muted)]">
                 Vị trí: {item.latitude}, {item.longitude}
               </p>
               {item.matchedRegistryId ? (
-                <p className="mt-2 text-xs text-amber-200">
+                <p className="mt-2 text-xs text-[var(--civicos-text-muted)]">
                   Match registry: {item.matchedRegistryId}
                 </p>
               ) : null}
