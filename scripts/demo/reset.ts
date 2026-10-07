@@ -44,6 +44,15 @@ export const BUSINESS_TABLES = [
   'Role',
   'User',
   'OrganizationUnit',
+  // Land inventory (leaf -> root; TRUNCATE ... CASCADE makes order safe).
+  'LandNationalSync',
+  'LandApplicationParcel',
+  'LandApplicationParty',
+  'LandEncumbrance',
+  'LandRight',
+  'LandChangeApplication',
+  'LandParcel',
+  'LandParty',
 ] as const;
 
 export function resolveResetTarget(env: DemoEnv = process.env): DemoTarget {

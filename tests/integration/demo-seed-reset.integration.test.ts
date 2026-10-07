@@ -3,11 +3,8 @@ import { access, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 
-import {
-  cleanupDemoEvidenceFiles,
-  LocalEvidenceStorage,
-} from '@/modules/platform/evidence/storage-adapter';
-import { resetDemo } from '../../scripts/demo/reset';
+import { cleanupDemoEvidenceFiles } from '@/modules/platform/evidence/storage-adapter';
+import { BUSINESS_TABLES, resetDemo } from '../../scripts/demo/reset';
 
 const enabled = process.env.RUN_DB_TESTS === '1';
 const demoUrl = process.env.DEMO_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -15,39 +12,7 @@ const testDatabaseUrl =
   process.env.CIVICOS_TEST_DATABASE_URL ?? process.env.CIVICOS_E2E_DATABASE_URL;
 const civicosUrl = process.env.CIVICOS_DATABASE_URL;
 
-const applicationModels = [
-  'Assignment',
-  'OutboxMessage',
-  'EventRecord',
-  'ProjectionCheckpoint',
-  'ProjectionRecord',
-  'AuditEvent',
-  'Evidence',
-  'SlaInstance',
-  'Notification',
-  'OfflineCommand',
-  'IntakeReport',
-  'IntakeCommand',
-  'Incident',
-  'Approval',
-  'Establishment',
-  'ChecklistTemplate',
-  'Inspection',
-  'InspectionFinding',
-  'EnforcementRecommendation',
-  'SuspiciousVehicleEntry',
-  'VehicleObservation',
-  'VehicleVerification',
-  'SubjectManagementActivity',
-  'SubjectManagementRecord',
-  'Subject',
-  'ResidentMonthlyReport',
-  'Session',
-  'UserRole',
-  'Role',
-  'User',
-  'OrganizationUnit',
-] as const;
+const applicationModels: readonly string[] = BUSINESS_TABLES;
 
 describe.skipIf(!enabled)('demo reset integration', () => {
   let prisma: PrismaClient;
