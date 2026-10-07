@@ -102,3 +102,36 @@ export function assertInspectionsKeysUnique(
     throw new Error('DEMO_INSPECTION_MANIFEST_DUPLICATE_KEY');
   }
 }
+
+// Stable synthetic vehicle scenario keys for demo-seed-restart (T-005).
+// Registry scenario keys label the synthetic registry tuples (registry rows
+// carry no idempotency column, so plates are the repeat preflight key);
+// observation keys are the recordVehicleObservation clientCommandId values.
+// Database IDs stay owned by domain commands.
+export const DEMO_VEHICLE_MANIFEST = {
+  recordedRegistryKey: 'demo-seed-restart-vehicle-registry-recorded-01',
+  matchRegistryKey: 'demo-seed-restart-vehicle-registry-match-01',
+  escalatedRegistryKey: 'demo-seed-restart-vehicle-registry-escalated-01',
+  recordedPlate: '51DEMO01',
+  matchPlate: '51DEMO02',
+  escalatedPlate: '51DEMO03',
+  recordedObservationKey: 'demo-seed-restart-vehicle-observation-recorded-01',
+  matchObservationKey: 'demo-seed-restart-vehicle-observation-match-01',
+  escalatedObservationKey: 'demo-seed-restart-vehicle-observation-escalated-01',
+} as const;
+
+export type DemoVehicleManifest = typeof DEMO_VEHICLE_MANIFEST;
+
+export function vehiclesStableKeys(
+  manifest: DemoVehicleManifest = DEMO_VEHICLE_MANIFEST,
+): readonly string[] {
+  return [...Object.values(manifest)];
+}
+
+export function assertVehiclesKeysUnique(
+  keys: readonly string[] = vehiclesStableKeys(),
+): void {
+  if (new Set(keys).size !== keys.length) {
+    throw new Error('DEMO_VEHICLE_MANIFEST_DUPLICATE_KEY');
+  }
+}
