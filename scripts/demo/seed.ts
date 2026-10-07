@@ -173,6 +173,9 @@ export async function seedDemo(env: DemoEnv = process.env) {
   const { seedIdentityResidents } = await import('./seed-identity-residents');
   const identityResidents = await seedIdentityResidents();
 
+  const { seedIntakeIncidents } = await import('./seed-intake-incidents');
+  const intakeIncidents = await seedIntakeIncidents();
+
   const drained = await processOutboxUntilIdle();
   const [users, incidentCount, inspectionCount, observationCount] =
     await Promise.all([
@@ -188,6 +191,8 @@ export async function seedDemo(env: DemoEnv = process.env) {
     residentSubjectIds: identityResidents.subjectIds,
     residentRecordIds: identityResidents.recordIds,
     residentReportIds: identityResidents.reportIds,
+    intakeReportIds: intakeIncidents.reportIds,
+    intakeIncidentIds: intakeIncidents.incidentIds,
     drained,
     users,
     incidents: incidentCount,
@@ -195,7 +200,7 @@ export async function seedDemo(env: DemoEnv = process.env) {
     observations: observationCount,
   };
   console.log(
-    `seeded incident=${result.incidentId} inspection=${result.inspectionId} observation=${result.observationId} drained=${result.drained}`,
+    `seeded incident=${result.incidentId} inspection=${result.inspectionId} observation=${result.observationId} drained=${result.drained} intakes=${Object.values(result.intakeReportIds).length}`,
   );
   return result;
 }
