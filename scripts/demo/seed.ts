@@ -176,6 +176,9 @@ export async function seedDemo(env: DemoEnv = process.env) {
   const { seedIntakeIncidents } = await import('./seed-intake-incidents');
   const intakeIncidents = await seedIntakeIncidents();
 
+  const { seedInspections } = await import('./seed-inspections');
+  const inspections = await seedInspections();
+
   const drained = await processOutboxUntilIdle();
   const [users, incidentCount, inspectionCount, observationCount] =
     await Promise.all([
@@ -193,6 +196,9 @@ export async function seedDemo(env: DemoEnv = process.env) {
     residentReportIds: identityResidents.reportIds,
     intakeReportIds: intakeIncidents.reportIds,
     intakeIncidentIds: intakeIncidents.incidentIds,
+    inspectionScenarioIds: inspections.inspectionIds,
+    inspectionScenarioStatuses: inspections.statuses,
+    inspectionRecommendationIds: inspections.recommendationIds,
     drained,
     users,
     incidents: incidentCount,
@@ -200,7 +206,7 @@ export async function seedDemo(env: DemoEnv = process.env) {
     observations: observationCount,
   };
   console.log(
-    `seeded incident=${result.incidentId} inspection=${result.inspectionId} observation=${result.observationId} drained=${result.drained} intakes=${Object.values(result.intakeReportIds).length}`,
+    `seeded incident=${result.incidentId} inspection=${result.inspectionId} observation=${result.observationId} drained=${result.drained} intakes=${Object.values(result.intakeReportIds).length} inspectionScenarios=${Object.values(result.inspectionScenarioStatuses).join('/')}`,
   );
   return result;
 }

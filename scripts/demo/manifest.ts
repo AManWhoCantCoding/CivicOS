@@ -76,3 +76,29 @@ export function assertIntakeIncidentsKeysUnique(
     throw new Error('DEMO_INTAKE_MANIFEST_DUPLICATE_KEY');
   }
 }
+
+// Stable synthetic inspection scenario keys for demo-seed-restart (T-004).
+// One scenario slug per establishment/schedule tuple; establishment names,
+// addresses, scheduledAt offsets and evidence labels derive from the slug.
+// Database IDs stay owned by domain commands.
+export const DEMO_INSPECTION_MANIFEST = {
+  scheduledKey: 'demo-seed-restart-inspection-scheduled-01',
+  inProgressKey: 'demo-seed-restart-inspection-in-progress-01',
+  completedKey: 'demo-seed-restart-inspection-completed-01',
+} as const;
+
+export type DemoInspectionManifest = typeof DEMO_INSPECTION_MANIFEST;
+
+export function inspectionsStableKeys(
+  manifest: DemoInspectionManifest = DEMO_INSPECTION_MANIFEST,
+): readonly string[] {
+  return [manifest.scheduledKey, manifest.inProgressKey, manifest.completedKey];
+}
+
+export function assertInspectionsKeysUnique(
+  keys: readonly string[] = inspectionsStableKeys(),
+): void {
+  if (new Set(keys).size !== keys.length) {
+    throw new Error('DEMO_INSPECTION_MANIFEST_DUPLICATE_KEY');
+  }
+}
