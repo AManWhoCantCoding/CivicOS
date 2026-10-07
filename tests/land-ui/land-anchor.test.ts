@@ -13,7 +13,8 @@ const landSource = () => readSource('src/app/land/page.tsx');
 const applicationsSource = () =>
   readSource('src/app/land/applications/page.tsx');
 const parcelsSource = () => readSource('src/app/land/parcels/page.tsx');
-const queueSource = () => readSource('src/components/land/ApplicationQueue.tsx');
+const queueSource = () =>
+  readSource('src/components/land/ApplicationQueue.tsx');
 const parcelListSource = () => readSource('src/components/land/ParcelList.tsx');
 const partyListSource = () => readSource('src/components/land/PartyList.tsx');
 const workspaceViewSource = () =>
@@ -24,7 +25,11 @@ const driftPaint =
 
 describe('T-002 land anchor', () => {
   it('shares the canonical Light/Blue wrapper tokens across the three land entries', () => {
-    for (const source of [landSource(), applicationsSource(), parcelsSource()]) {
+    for (const source of [
+      landSource(),
+      applicationsSource(),
+      parcelsSource(),
+    ]) {
       expect(source).toContain('bg-[var(--civicos-canvas)]');
       expect(source).toContain('text-[var(--civicos-text)]');
       expect(source).toContain('text-[var(--civicos-accent)]');
@@ -38,7 +43,11 @@ describe('T-002 land anchor', () => {
   });
 
   it('keeps /land free of dark/cyan drift and textual teal baseline', () => {
-    for (const source of [landSource(), applicationsSource(), parcelsSource()]) {
+    for (const source of [
+      landSource(),
+      applicationsSource(),
+      parcelsSource(),
+    ]) {
       expect(source).not.toMatch(driftPaint);
       expect(source).not.toMatch(/gradient|neon|glow/i);
       expect(source).not.toContain('#000000');
