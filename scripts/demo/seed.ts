@@ -170,6 +170,9 @@ export async function seedDemo(env: DemoEnv = process.env) {
     field,
   );
 
+  const { seedIdentityResidents } = await import('./seed-identity-residents');
+  const identityResidents = await seedIdentityResidents();
+
   const drained = await processOutboxUntilIdle();
   const [users, incidentCount, inspectionCount, observationCount] =
     await Promise.all([
@@ -182,6 +185,9 @@ export async function seedDemo(env: DemoEnv = process.env) {
     incidentId,
     inspectionId: inspection.id,
     observationId: observation.id,
+    residentSubjectIds: identityResidents.subjectIds,
+    residentRecordIds: identityResidents.recordIds,
+    residentReportIds: identityResidents.reportIds,
     drained,
     users,
     incidents: incidentCount,

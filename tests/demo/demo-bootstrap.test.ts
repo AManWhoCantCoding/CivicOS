@@ -125,7 +125,7 @@ describe.skipIf(!postgresEnabled)('demo bootstrap smoke', () => {
         where: { clientCommandId: DEMO_LABELS.observationKey },
       }),
     ).toBe(1);
-  });
+  }, 120_000); // Two full seedDemo runs (now including identity/residents fixtures).
 
   it('dang nhap duoc bang mot Role nghiep vu', async () => {
     const { identity } = await demoModules();
