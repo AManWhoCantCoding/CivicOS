@@ -4,6 +4,7 @@ import { ApiError } from '../../api/client';
 import { getRelatedInfoDetail } from '../../api/relatedInfo';
 import {
   MaskedValue,
+  OfflineBanner,
   StateMessage,
   mobileBaseline,
 } from '../../components/States';
@@ -76,7 +77,10 @@ export function RelatedInfoDetail({
         )}
         {state === 'forbidden' && <StateMessage state="forbidden" />}
         {state === 'offline' && (
-          <StateMessage state="offline" retry={() => void load()} />
+          <>
+            <OfflineBanner />
+            <StateMessage state="offline" retry={() => void load()} />
+          </>
         )}
         {state === 'masked' && <StateMessage state="masked" />}
         {detail && (
@@ -109,25 +113,26 @@ export function RelatedInfoDetail({
             >
               {detail.updatedAt}
             </Text>
-            {(detail.geometry || detail.lat !== undefined) && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Mở trên bản đồ"
-                onPress={() => onOpenMap?.(detail)}
-                style={{ minHeight: 44, minWidth: 44, padding: 8 }}
-              >
-                <Text
-                  style={{
-                    fontFamily: mobileBaseline.font.sans,
-                    fontSize: mobileBaseline.size.label,
-                    color: mobileBaseline.color.accent,
-                  }}
+            {!detail.masked &&
+              (detail.geometry || detail.lat !== undefined) && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Mở trên bản đồ"
+                  onPress={() => onOpenMap?.(detail)}
+                  style={{ minHeight: 44, minWidth: 44, padding: 8 }}
                 >
-                  Mở trên bản đồ
-                </Text>
-              </Pressable>
-            )}
-            {detail.geometry && (
+                  <Text
+                    style={{
+                      fontFamily: mobileBaseline.font.sans,
+                      fontSize: mobileBaseline.size.label,
+                      color: mobileBaseline.color.accent,
+                    }}
+                  >
+                    Mở trên bản đồ
+                  </Text>
+                </Pressable>
+              )}
+            {!detail.masked && detail.geometry && (
               <Text
                 style={{
                   fontFamily: mobileBaseline.font.sans,
@@ -138,7 +143,7 @@ export function RelatedInfoDetail({
                 Polygon/geometry từ response server
               </Text>
             )}
-            {detail.lat !== undefined && (
+            {!detail.masked && detail.lat !== undefined && (
               <Text
                 style={{
                   fontFamily: mobileBaseline.font.mono,

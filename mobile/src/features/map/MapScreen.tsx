@@ -58,6 +58,7 @@ function featureFor(
   item: RelatedInfoItem,
   resourceId?: string,
 ): MapFeature | null {
+  if (item.masked) return null;
   const geometry =
     item.geometry ??
     (item.lat !== undefined && item.lng !== undefined
