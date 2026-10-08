@@ -8,7 +8,10 @@ import {
   StateMessage,
   mobileBaseline,
 } from '../../components/States';
-import { deepLinkFor } from '../../navigation/deepLinks';
+import {
+  deepLinkFor,
+  isVehicleObservationLink,
+} from '../../navigation/deepLinks';
 
 type SurfaceState =
   'loading' | 'empty' | 'error' | 'forbidden' | 'masked' | 'offline' | 'ready';
@@ -163,7 +166,9 @@ export function TaskScreen({
                 color: mobileBaseline.color.accent,
               }}
             >
-              Mở bản đồ/RelatedInfo
+              {isVehicleObservationLink(selected)
+                ? 'Mở chi tiết'
+                : 'Mở bản đồ/RelatedInfo'}
             </Text>
           </Pressable>
         </View>

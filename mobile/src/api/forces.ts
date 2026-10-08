@@ -2,6 +2,7 @@ import { requestJson } from './client';
 import type { RelatedInfoEntityType } from '../features/related-info/types';
 
 export type ForceLink = {
+  resourceType?: string;
   incidentId?: string;
   resourceId?: string;
   coordinates?: { lat: number; lng: number };
@@ -48,4 +49,22 @@ export function getTask(id: string) {
 }
 export function listTasksByDispatch(id: string) {
   return requestJson<ForceList>(forcePaths.tasksByDispatch(id));
+}
+// Locked DS-09 mobile-safe projection: exactly id, plate, status, observedAt,
+// latitude and longitude. Read-only GET through the shared client; the server
+// decides authorization, the client never infers it.
+export type VehicleObservationMobile = {
+  id: string;
+  plate: string;
+  status: string;
+  observedAt: string;
+  latitude: string;
+  longitude: string;
+};
+export const vehicleObservationPath = (observationId: string) =>
+  `/api/vehicles/observations/${encodeURIComponent(observationId)}?view=mobile`;
+export function getVehicleObservation(observationId: string) {
+  return requestJson<VehicleObservationMobile>(
+    vehicleObservationPath(observationId),
+  );
 }

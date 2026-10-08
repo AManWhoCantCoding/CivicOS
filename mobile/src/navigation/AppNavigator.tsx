@@ -9,10 +9,15 @@ import type { RelatedInfoItem } from '../features/related-info/types';
 import { AlarmScreen } from '../features/alarm/AlarmScreen';
 import { DispatchScreen } from '../features/dispatch/DispatchScreen';
 import { TaskScreen } from '../features/task/TaskScreen';
+import { VehicleObservationDetail } from '../features/vehicle-observation/VehicleObservationDetail';
 import { IncidentScreen } from '../features/incident/IncidentScreen';
 import { SettingsScreen } from '../features/settings/SettingsScreen';
 import { LandScreen } from '../features/land/LandScreen';
-import { deepLinkFor, type NavigationContext } from './deepLinks';
+import {
+  deepLinkFor,
+  type NavigationContext,
+  type VehicleObservationOrigin,
+} from './deepLinks';
 
 export const routes = [
   'Map',
@@ -27,11 +32,17 @@ export const routes = [
 
 export function AppNavigator() {
   const { session, signOut } = useSession();
-  const [route, setRoute] = useState<(typeof routes)[number]>('Map');
+  const [route, setRoute] = useState<
+    (typeof routes)[number] | 'VehicleObservationDetail'
+  >('Map');
   const [mapItem, setMapItem] = useState<RelatedInfoItem>();
   const [landParcelId, setLandParcelId] = useState<string | undefined>();
   const [landParcelCode, setLandParcelCode] = useState<string | undefined>();
   const [context, setContext] = useState<NavigationContext>({});
+  const [vehicleOrigin, setVehicleOrigin] =
+    useState<VehicleObservationOrigin>('Alarms');
+  const [vehicleMapOrigin, setVehicleMapOrigin] =
+    useState<VehicleObservationOrigin | null>(null);
   const [relatedReference, setRelatedReference] =
     useState<NavigationContext['relatedInfo']>();
   if (session.status === 'loading')
@@ -58,6 +69,14 @@ export function AppNavigator() {
     if (!link) return;
     setContext(link.params);
     setMapItem(undefined);
+    if (link.route === 'VehicleObservationDetail') {
+      setVehicleOrigin(
+        route === 'Dispatches' || route === 'Tasks' ? route : 'Alarms',
+      );
+      setRoute(link.route);
+      return;
+    }
+    setVehicleMapOrigin(null);
     if (link.route === 'RelatedInfoDetail') {
       setRelatedReference(link.params.relatedInfo);
       setRoute('RelatedInfo');
@@ -71,6 +90,7 @@ export function AppNavigator() {
   ) => {
     setMapItem(item);
     setLandParcelId(undefined);
+    setVehicleMapOrigin(null);
     setContext({
       ...nextContext,
       resourceId: nextContext.resourceId ?? item?.id,
@@ -82,9 +102,14 @@ export function AppNavigator() {
     });
     setRoute('Map');
   };
+  const openVehicleMap = (vehicleContext: NavigationContext) => {
+    openMap(undefined, vehicleContext);
+    setVehicleMapOrigin(vehicleOrigin);
+  };
   const openLandParcelOnMap = (parcelId: string) => {
     setMapItem(undefined);
     setLandParcelId(parcelId);
+    setVehicleMapOrigin(null);
     // Drop stale generic map context so the land focus owns the camera.
     setContext({});
     setRoute('Map');
@@ -96,21 +121,48 @@ export function AppNavigator() {
   const openTab = (item: (typeof routes)[number]) => {
     // A manual tab entry starts a blank land form, not a stale auto-load.
     if (item === 'Land') setLandParcelCode(undefined);
+    setVehicleMapOrigin(null);
     setRoute(item);
   };
   const screen =
     route === 'Map' ? (
-      <MapScreen
-        focusItem={mapItem}
-        focusResourceId={context.resourceId}
-        focusCoordinates={context.coordinates}
-        focusParcelId={landParcelId}
-        onOpenRelatedInfo={(item) => {
-          setRelatedReference({ entityType: item.entityType, id: item.id });
-          setRoute('RelatedInfo');
-        }}
-        onOpenLandDetail={openLandParcelDetail}
-      />
+      <View style={{ flex: 1, backgroundColor: mobileBaseline.color.canvas }}>
+        {vehicleMapOrigin !== null ? (
+          <View style={{ padding: mobileBaseline.space.s2 }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Quay lại"
+              onPress={() => {
+                const origin = vehicleMapOrigin;
+                setVehicleMapOrigin(null);
+                setRoute(origin);
+              }}
+              style={{ minHeight: 44, minWidth: 44, padding: 8 }}
+            >
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.label,
+                  color: mobileBaseline.color.accent,
+                }}
+              >
+                ‹ Quay lại
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+        <MapScreen
+          focusItem={mapItem}
+          focusResourceId={context.resourceId}
+          focusCoordinates={context.coordinates}
+          focusParcelId={landParcelId}
+          onOpenRelatedInfo={(item) => {
+            setRelatedReference({ entityType: item.entityType, id: item.id });
+            setRoute('RelatedInfo');
+          }}
+          onOpenLandDetail={openLandParcelDetail}
+        />
+      </View>
     ) : route === 'RelatedInfo' ? (
       <RelatedInfoScreen
         key={`${relatedReference?.entityType ?? 'list'}:${relatedReference?.id ?? ''}`}
@@ -123,6 +175,14 @@ export function AppNavigator() {
       <DispatchScreen onNavigate={navigate} />
     ) : route === 'Tasks' ? (
       <TaskScreen onNavigate={navigate} />
+    ) : route === 'VehicleObservationDetail' ? (
+      <VehicleObservationDetail
+        key={context.resourceId ?? 'vehicle'}
+        observationId={context.resourceId ?? ''}
+        assignmentSummary={context.assignmentSummary}
+        onBack={() => setRoute(vehicleOrigin)}
+        onOpenMap={openVehicleMap}
+      />
     ) : route === 'Incident' ? (
       <IncidentScreen
         incidentId={context.incidentId}

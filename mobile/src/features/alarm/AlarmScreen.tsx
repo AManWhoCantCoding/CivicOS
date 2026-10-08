@@ -8,7 +8,10 @@ import {
   StateMessage,
   mobileBaseline,
 } from '../../components/States';
-import { deepLinkFor } from '../../navigation/deepLinks';
+import {
+  deepLinkFor,
+  isVehicleObservationLink,
+} from '../../navigation/deepLinks';
 
 type SurfaceState =
   'loading' | 'empty' | 'error' | 'forbidden' | 'masked' | 'offline' | 'ready';
@@ -131,7 +134,9 @@ export function AlarmScreen({
                 color: mobileBaseline.color.accent,
               }}
             >
-              Mở liên kết tài nguyên
+              {isVehicleObservationLink(selected)
+                ? 'Mở chi tiết'
+                : 'Mở liên kết tài nguyên'}
             </Text>
           </Pressable>
         </View>
