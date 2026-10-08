@@ -70,6 +70,7 @@ function dispatchItem(
     title: assignmentTitle(row),
     status: row.status,
     createdAt: row.createdAt.toISOString(),
+    resourceType: row.resourceType,
     resourceId: row.resourceId,
     ...(row.resourceType === 'Incident' ? { incidentId: row.resourceId } : {}),
     ...(relatedInfo(row) ? { relatedInfo: relatedInfo(row) } : {}),
@@ -276,6 +277,22 @@ async function resourceLinks(
         : {}),
     });
   }
+  const observations = await prisma.vehicleObservation.findMany({
+    where: { id: { in: idsByType.get('VehicleObservation') ?? [] } },
+    select: { id: true, latitude: true, longitude: true },
+  });
+  for (const observation of observations) {
+    links.set(`VehicleObservation:${observation.id}`, {
+      ...(observation.latitude !== null && observation.longitude !== null
+        ? {
+            coordinates: {
+              lat: Number(observation.latitude),
+              lng: Number(observation.longitude),
+            },
+          }
+        : {}),
+    });
+  }
   return links;
 }
 
@@ -309,6 +326,7 @@ export async function listAlarms(
       title: 'Cảnh báo cần chú ý',
       status: 'unread',
       createdAt: notification.createdAt.toISOString(),
+      resourceType: notification.resourceType,
       resourceId: notification.resourceId,
       ...(notification.resourceType === 'Incident'
         ? { incidentId: notification.resourceId }

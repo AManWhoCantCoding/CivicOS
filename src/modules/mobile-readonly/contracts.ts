@@ -79,6 +79,7 @@ export type AlarmReadItem = {
   title: string;
   status: string;
   createdAt: string;
+  resourceType: string;
   incidentId?: string;
   resourceId?: string;
   coordinates?: Coordinates;

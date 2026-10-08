@@ -338,6 +338,21 @@ async function mobileResourceOrganizationId(
       )?.organizationId ?? undefined
     );
   }
+  if (resource.resourceType === 'VehicleObservation') {
+    const observation = await client.vehicleObservation.findUnique({
+      where: { id: resource.resourceId },
+      select: { observedById: true },
+    });
+    if (!observation) return undefined;
+    return (
+      (
+        await client.user.findUnique({
+          where: { id: observation.observedById },
+          select: { organizationUnitId: true },
+        })
+      )?.organizationUnitId ?? undefined
+    );
+  }
   return undefined;
 }
 
@@ -465,7 +480,9 @@ export async function hasActiveAssignmentForRead(
   });
   return assignments.some(
     ({ task }) =>
-      TASK_CAPABILITIES[task]?.includes('read') === true &&
+      (resource.resourceType === 'VehicleObservation'
+        ? task === 'mobile_read'
+        : TASK_CAPABILITIES[task]?.includes('read') === true) &&
       isTaskCompatibleWithRoles(task, user.roles),
   );
 }

@@ -7,18 +7,21 @@ import {
   confirmVehicleMatch,
   verifyVehicleObservation,
 } from '@/modules/vehicles';
+import { getMobileObservation } from '@/modules/vehicles/projection';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ observationId: string }> },
 ): Promise<NextResponse> {
   const user = await getCurrentUser();
   if (!user)
     return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
   try {
-    return NextResponse.json(
-      await getObservation((await context.params).observationId, user),
-    );
+    const observationId = (await context.params).observationId;
+    if (new URL(request.url).searchParams.get('view') === 'mobile') {
+      return NextResponse.json(await getMobileObservation(observationId, user));
+    }
+    return NextResponse.json(await getObservation(observationId, user));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'OBSERVATION_FAILED';

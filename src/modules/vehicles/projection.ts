@@ -10,7 +10,11 @@ import {
   replayEvents,
   type DomainEvent,
 } from '@/modules/eventing';
-import { recordAudit, requireRole } from '@/modules/identity';
+import {
+  recordAudit,
+  requireMobileReadAccess,
+  requireRole,
+} from '@/modules/identity';
 
 import type { VehicleActor } from './contracts';
 
@@ -336,23 +340,7 @@ export async function getObservation(
   observationId: string,
   actor: VehicleActor,
 ) {
-  const observation = await prisma.projectionRecord
-    .findUnique({
-      where: {
-        projectionName_aggregateType_aggregateId: {
-          projectionName: observationProjectionName,
-          aggregateType: 'VehicleObservation',
-          aggregateId: observationId,
-        },
-      },
-    })
-    .then(async (projection) => {
-      if (projection) return projection;
-      const source = await prisma.vehicleObservation.findUnique({
-        where: { id: observationId },
-      });
-      return source ? { state: observationState(source) } : null;
-    });
+  const observation = await loadObservationState(observationId);
   if (!observation) throw new Error('OBSERVATION_NOT_FOUND');
   const observer = await prisma.vehicleObservation.findUnique({
     where: { id: observationId },
@@ -420,4 +408,56 @@ export async function getObservation(
       canEscalate: isFieldOfficer && hasVerificationAssignment,
     },
   };
+}
+
+async function loadObservationState(observationId: string) {
+  return prisma.projectionRecord
+    .findUnique({
+      where: {
+        projectionName_aggregateType_aggregateId: {
+          projectionName: observationProjectionName,
+          aggregateType: 'VehicleObservation',
+          aggregateId: observationId,
+        },
+      },
+    })
+    .then(async (projection) => {
+      if (projection) return projection;
+      const source = await prisma.vehicleObservation.findUnique({
+        where: { id: observationId },
+      });
+      return source ? { state: observationState(source) } : null;
+    });
+}
+
+/** Mobile-safe vehicle projection: exactly the six DS-09 allowlist fields. */
+export function mobileObservationState(state: Record<string, unknown>) {
+  return {
+    id: String(state.id ?? ''),
+    plate: String(state.plate ?? ''),
+    status: String(state.status ?? ''),
+    observedAt: String(state.observedAt ?? ''),
+    latitude: String(state.latitude ?? ''),
+    longitude: String(state.longitude ?? ''),
+  };
+}
+
+/** Mobile vehicle detail: same load path as web, `mobile_read` boundary, allowlist only. */
+export async function getMobileObservation(
+  observationId: string,
+  actor: VehicleActor,
+) {
+  const observation = await loadObservationState(observationId);
+  if (!observation) throw new Error('OBSERVATION_NOT_FOUND');
+  await requireMobileReadAccess(actor, {
+    resourceType: 'VehicleObservation',
+    resourceId: observationId,
+  });
+  await recordAudit({
+    actor,
+    resourceType: 'VehicleObservation',
+    resourceId: observationId,
+    operation: 'vehicle_observation.read',
+  });
+  return mobileObservationState(observation.state as Record<string, unknown>);
 }
