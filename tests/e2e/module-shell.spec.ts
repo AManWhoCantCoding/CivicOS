@@ -34,9 +34,10 @@ test('dashboard preserves module cards and open-module behavior', async ({
   await expect(
     page.getByText('Đăng nhập để xem điều hướng theo phạm vi được giao.'),
   ).toBeVisible();
-  await expect(
-    page.getByRole('link', { name: 'Đăng nhập' }),
-  ).toHaveAttribute('href', '/login');
+  await expect(page.getByRole('link', { name: 'Đăng nhập' })).toHaveAttribute(
+    'href',
+    '/login',
+  );
   await expect(
     page.getByRole('heading', { name: 'Hàng đợi vụ việc' }),
   ).toHaveCount(0);
