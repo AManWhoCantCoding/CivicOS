@@ -261,7 +261,7 @@ model IntakeReport {
   incidentId        String?  @unique
   version           Int      @default(1)
   createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  updatedAt         DateTime @default(now()) @updatedAt
 
   @@index([status, receivedAt])
   @@index([organizationId, status])
@@ -550,7 +550,7 @@ model LandParcel {
   parcelCode       String   @unique
   mapSheetNumber   String
   parcelNumber     String
-  areaSqm          Decimal
+  areaSqm          Decimal            @db.Decimal(14, 2)
   landUseType      String
   address          String
   communeCode      String
@@ -566,6 +566,7 @@ model LandParcel {
   applicationParcels LandApplicationParcel[]
 
   @@unique([organizationId, mapSheetNumber, parcelNumber])
+  @@index([geometry], type: Gist, map: "LandParcel_geometry_gist_idx")
   @@index([mapSheetNumber, parcelNumber, organizationId])
   @@index([organizationId, status])
   @@index([communeCode, status])
@@ -600,7 +601,7 @@ model LandRight {
   parcelId            String
   partyId             String
   rightType           String     @default("land_use_right")
-  sharePercent        Decimal    @default(100)
+  sharePercent        Decimal    @db.Decimal(5, 2) @default(100)
   status              String     @default("active")
   validFrom           DateTime
   validTo             DateTime?
@@ -636,7 +637,7 @@ model LandApplicationParty {
   applicationId String
   partyId       String
   partyRole     String
-  sharePercent  Decimal?
+  sharePercent  Decimal? @db.Decimal(5, 2)
   createdAt     DateTime               @default(now())
   application   LandChangeApplication  @relation(fields: [applicationId], references: [id], onDelete: Restrict)
   party         LandParty              @relation(fields: [partyId], references: [id], onDelete: Restrict)
