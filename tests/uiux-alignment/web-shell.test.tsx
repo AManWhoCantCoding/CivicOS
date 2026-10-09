@@ -12,6 +12,10 @@ const sessionHook = () =>
   readSource('src/components/shell/useModuleSession.ts');
 const sidebar = () => readSource('src/components/navigation/ModuleSidebar.tsx');
 const home = () => readSource('src/app/page.tsx');
+const workspace = () =>
+  readSource('src/components/workspace/RoleWorkspace.tsx');
+const registry = () =>
+  readSource('src/components/navigation/feature-registry.ts');
 
 describe('T-003 web shell', () => {
   it('keeps shell, sidebar and home on Light/Blue semantic tokens', () => {
@@ -32,13 +36,18 @@ describe('T-003 web shell', () => {
       "from '@/components/navigation/feature-registry'",
     );
     expect(shell()).toContain('activeFeatureId(features, pathname, hash)');
-    // Home links only to existing module entry points.
-    expect(home()).toContain("href: '/incidents'");
-    expect(home()).toContain("href: '/inspections/establishments'");
-    expect(home()).toContain("href: '/field/vehicles'");
-    expect(home()).toContain('href="/assignments"');
-    expect(home()).toContain('Mở phân hệ');
-    expect(home()).toContain('Mở Assignment');
+    // Root entry delegates navigation to RoleWorkspace; projected links live
+    // there via the T-001 workspace projection, not as hard-coded home cards.
+    expect(home()).toContain('RoleWorkspace');
+    expect(home()).toContain('<RoleWorkspace />');
+    expect(workspace()).toContain('buildWorkspaceProjection(');
+    expect(workspace()).toContain('href={feature.href}');
+    expect(workspace()).toContain('Mở phân hệ');
+    // Route targets remain defined by the existing feature registry.
+    expect(registry()).toContain("href: '/incidents'");
+    expect(registry()).toContain("href: '/inspections/establishments'");
+    expect(registry()).toContain("href: '/field/vehicles'");
+    expect(registry()).toContain("href: '/assignments'");
   });
 
   it('keeps session scope, assignment visibility and safe states', () => {
@@ -85,7 +94,9 @@ describe('T-003 web shell', () => {
   });
 
   it('keeps accessible names, 44px controls, motion and viewport rules', () => {
-    for (const source of [shell(), sidebar(), home()]) {
+    // Workspace controls own the root 44px target; page.tsx is a thin
+    // RoleWorkspace host and carries no direct controls.
+    for (const source of [shell(), sidebar(), workspace()]) {
       expect(source).toContain('min-h-[44px]');
     }
     expect(shell()).toContain('aria-expanded={!collapsed}');
