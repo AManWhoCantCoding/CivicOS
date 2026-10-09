@@ -115,7 +115,7 @@ test('dashboard preserves module cards and open-module behavior', async ({
   await expect(page.locator('main, section').first()).toBeVisible();
 });
 
-test('incident shell exposes intake, work queue and assignment features with active state', async ({
+test('incident shell keeps visible assignment entry with route context and hides excluded navigation', async ({
   page,
 }, testInfo) => {
   await loginAs(page, 'truong@civicos.local');
@@ -123,63 +123,86 @@ test('incident shell exposes intake, work queue and assignment features with act
   const sidebar = await visibleNav(page, 'Incident', testInfo);
   await expect(sidebar).toBeVisible();
   await expect(
-    sidebar.getByRole('link', { name: 'Hàng đợi Incident' }),
-  ).toHaveAttribute('href', '/incidents');
-  await expect(
     sidebar.getByRole('link', { name: 'Phân công Incident' }),
   ).toHaveAttribute('href', '/assignments');
+  // R4/R9: excluded entries stay out of navigation on the hidden direct route.
   await expect(
-    sidebar.getByRole('link', { name: 'Hàng đợi Incident' }),
-  ).toHaveAttribute('aria-current', 'page');
+    sidebar.getByRole('link', { name: 'Hàng đợi Incident', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    sidebar.getByRole('link', { name: 'Ghi nhận tin báo', exact: true }),
+  ).toHaveCount(0);
   const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
   await expect(breadcrumb).toBeVisible();
   await expect(
     breadcrumb.getByRole('link', { name: 'Trung tâm' }),
   ).toHaveAttribute('href', '/');
+  // Route-owner context stays Incident without linking a hidden feature.
+  await expect(
+    breadcrumb.getByText('Phân hệ Incident', { exact: true }),
+  ).toBeVisible();
   await expect(
     breadcrumb.getByText('Hàng đợi Incident', { exact: true }),
-  ).toBeVisible();
-});
-
-test('duty officer sees intake but not commander-only assignment management', async ({
-  page,
-}, testInfo) => {
-  await loginAs(page, 'trucban@civicos.local');
-  await page.goto('/incidents');
-  const sidebar = await visibleNav(page, 'Incident', testInfo);
-  await expect(
-    sidebar.getByRole('link', { name: 'Ghi nhận tin báo' }),
-  ).toHaveAttribute('href', '/intake');
-  await expect(
-    sidebar.getByRole('link', { name: 'Phân công Incident' }),
   ).toHaveCount(0);
 });
 
-test('inspection shell lists catalogue, schedule and fieldwork queue', async ({
+test('duty officer keeps hidden intake out of navigation while direct route stays reachable', async ({
   page,
-}, testInfo) => {
+}) => {
+  await loginAs(page, 'trucban@civicos.local');
+  await page.goto('/incidents');
+  // R4/R9: hidden entries are never linked from navigation. (The page-content
+  // intake CTA is an approved direct-route deep link, not navigation.)
+  const nav = page.locator('nav[aria-label^="Điều hướng"]');
+  await expect(
+    nav.getByRole('link', { name: 'Ghi nhận tin báo', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    nav.getByRole('link', { name: 'Hàng đợi Incident', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    nav.getByRole('link', { name: 'Phân công Incident' }),
+  ).toHaveCount(0);
+  // … but the direct route page/server gate still renders.
+  await expect(
+    page.getByRole('heading', { name: 'Hàng đợi Incident' }),
+  ).toBeVisible();
+});
+
+test('inspection direct route stays reachable without hidden navigation entries', async ({
+  page,
+}) => {
   await loginAs(page, 'vanphong@civicos.local');
   await page.goto('/inspections/establishments');
-  const officeSidebar = await visibleNav(page, 'Inspection', testInfo);
+  // R4/R9: excluded catalogue/schedule/workqueue entries stay unlinked …
   await expect(
-    officeSidebar.getByRole('link', { name: 'Danh mục cơ sở' }),
-  ).toHaveAttribute('href', '/inspections/establishments');
+    page.getByRole('link', { name: 'Danh mục cơ sở', exact: true }),
+  ).toHaveCount(0);
   await expect(
-    officeSidebar.getByRole('link', { name: 'Lịch kiểm tra' }),
-  ).toHaveAttribute('href', '/inspections/establishments#inspection-schedule');
+    page.getByRole('link', { name: 'Lịch kiểm tra', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('link', { name: 'Hàng đợi fieldwork', exact: true }),
+  ).toHaveCount(0);
+  // … while the direct route page/server gate still renders.
+  await expect(
+    page.getByRole('heading', { name: 'Cơ sở kinh doanh', exact: true }),
+  ).toBeVisible();
   await page.request.delete('/api/auth/session');
 
   await loginAs(page, 'truong@civicos.local');
   await page.goto('/inspections/establishments');
-  const commanderSidebar = await visibleNav(page, 'Inspection', testInfo);
   await expect(
-    commanderSidebar.getByRole('link', { name: 'Danh mục cơ sở' }),
-  ).toBeVisible();
+    page.getByRole('link', { name: 'Danh mục cơ sở', exact: true }),
+  ).toHaveCount(0);
   await expect(
-    commanderSidebar.getByRole('link', { name: 'Lịch kiểm tra' }),
-  ).toBeVisible();
+    page.getByRole('link', { name: 'Lịch kiểm tra', exact: true }),
+  ).toHaveCount(0);
   await expect(
-    commanderSidebar.getByRole('link', { name: 'Hàng đợi fieldwork' }),
+    page.getByRole('link', { name: 'Hàng đợi fieldwork', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('heading', { name: 'Cơ sở kinh doanh', exact: true }),
   ).toBeVisible();
 });
 
@@ -297,14 +320,18 @@ test('client visibility stays in sync with server-authorized session and own ass
   );
   await page.goto('/incidents');
   if (ownActive.length > 0) {
-    const sidebar = await visibleNav(page, 'Incident', testInfo);
-    await expect(sidebar).toBeVisible();
+    // R4/R9: an authorized direct route renders its page gate while the
+    // excluded queue entry stays out of navigation.
+    await expect(page.getByTestId('module-shell')).toBeVisible();
     await expect(
-      sidebar.getByRole('link', { name: 'Phân công Incident' }),
+      page.getByRole('link', { name: 'Phân công Incident' }),
     ).toHaveCount(0);
     await expect(
-      sidebar.getByRole('link', { name: 'Hàng đợi Incident' }),
-    ).toHaveCount(1);
+      page.getByRole('link', { name: 'Hàng đợi Incident', exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('heading', { name: 'Hàng đợi Incident' }),
+    ).toBeVisible();
   } else {
     await expect(
       page.getByRole('heading', { name: 'Không có quyền truy cập' }),
@@ -399,23 +426,23 @@ test('direct links without permission return server denied states', async ({
   ).toBeVisible();
 });
 
-test('keyboard focus reaches sidebar links with visible active state', async ({
+test('keyboard focus reaches visible sidebar links with active state', async ({
   page,
 }, testInfo) => {
   await loginAs(page, 'truong@civicos.local');
-  await page.goto('/incidents');
-  const queueLink = (await visibleNav(page, 'Incident', testInfo)).getByRole(
-    'link',
-    {
-      name: 'Hàng đợi Incident',
-    },
-  );
+  await page.goto('/assignments');
+  const assignmentLink = (
+    await visibleNav(page, 'Identity', testInfo)
+  ).getByRole('link', {
+    name: 'Assignment',
+    exact: true,
+  });
   await expect(async () => {
-    await queueLink.focus();
-    await expect(queueLink).toBeFocused();
+    await assignmentLink.focus();
+    await expect(assignmentLink).toBeFocused();
   }).toPass();
-  await expect(queueLink).toHaveAttribute('aria-current', 'page');
-  const box = await queueLink.boundingBox();
+  await expect(assignmentLink).toHaveAttribute('aria-current', 'page');
+  const box = await assignmentLink.boundingBox();
   expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
 });
 
@@ -441,7 +468,7 @@ test('desktop sidebar collapses and expands on demand', async ({
   ).toHaveAttribute('aria-expanded', 'true');
   await expect(
     moduleSidebar(page, 'Incident').getByRole('link', {
-      name: 'Hàng đợi Incident',
+      name: 'Phân công Incident',
     }),
   ).toBeVisible();
 });
@@ -459,8 +486,10 @@ test('mobile drawer traps focus, closes on escape and after navigation', async (
   const drawer = page.getByRole('dialog', { name: 'Điều hướng Incident' });
   await expect(drawer).toBeVisible();
   await expect(menuButton).toHaveAttribute('aria-expanded', 'true');
-  const queueLink = drawer.getByRole('link', { name: 'Hàng đợi Incident' });
-  await expect(queueLink).toBeFocused();
+  const assignmentLink = drawer.getByRole('link', {
+    name: 'Phân công Incident',
+  });
+  await expect(assignmentLink).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(drawer).toHaveCount(0);
   await expect(menuButton).toBeFocused();
@@ -488,7 +517,7 @@ test('shell surfaces offline state without losing navigation', async ({
   await expect(page.getByText('Đang ngoại tuyến.')).toBeVisible();
   await expect(
     (await visibleNav(page, 'Incident', testInfo)).getByRole('link', {
-      name: 'Hàng đợi Incident',
+      name: 'Phân công Incident',
     }),
   ).toBeVisible();
   await page.context().setOffline(false);
@@ -549,16 +578,19 @@ test('uses the approved Light/Blue CSS variables and typography baseline', async
   expect(tokens.controlMin).toBe('44px');
 });
 
-test('keeps existing module destinations and exposes active navigation text and icon', async ({
+test('keeps visible module destinations and exposes active navigation text and icon', async ({
   page,
 }, testInfo) => {
   await loginAs(page, 'truong@civicos.local');
-  await page.goto('/incidents');
-  const sidebar = await visibleNav(page, 'Incident', testInfo);
-  const active = sidebar.getByRole('link', { name: 'Hàng đợi Incident' });
-  await expect(active).toHaveAttribute('href', '/incidents');
+  await page.goto('/assignments');
+  const sidebar = await visibleNav(page, 'Identity', testInfo);
+  const active = sidebar.getByRole('link', {
+    name: 'Assignment',
+    exact: true,
+  });
+  await expect(active).toHaveAttribute('href', '/assignments');
   await expect(active).toHaveAttribute('aria-current', 'page');
-  await expect(active).toContainText('Hàng đợi Incident');
+  await expect(active).toContainText('Assignment');
   const icon = active.locator('span[aria-hidden="true"]').first();
   await expect(icon).toBeVisible();
   const iconBox = await icon.boundingBox();
@@ -587,14 +619,13 @@ test('exposes visible keyboard focus and keeps shell controls at least 44px', as
   page,
 }, testInfo) => {
   await loginAs(page, 'truong@civicos.local');
-  await page.goto('/incidents');
-  const queueLink = (await visibleNav(page, 'Incident', testInfo)).getByRole(
-    'link',
-    { name: 'Hàng đợi Incident' },
-  );
-  await queueLink.focus();
-  await expect(queueLink).toBeFocused();
-  const box = await queueLink.boundingBox();
+  await page.goto('/assignments');
+  const assignmentLink = (
+    await visibleNav(page, 'Identity', testInfo)
+  ).getByRole('link', { name: 'Assignment', exact: true });
+  await assignmentLink.focus();
+  await expect(assignmentLink).toBeFocused();
+  const box = await assignmentLink.boundingBox();
   expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
   // Programmatic focus() does not trigger :focus-visible in this browser
   // context, so assert the approved token wired to :focus-visible instead.

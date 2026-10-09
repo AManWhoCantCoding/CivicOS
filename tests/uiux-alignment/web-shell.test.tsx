@@ -31,11 +31,19 @@ describe('T-003 web shell', () => {
   });
 
   it('keeps module visibility bound to the existing feature registry', () => {
-    expect(shell()).toContain('visibleFeatures(module, session, assignments)');
+    // The shared shell derives visibility from the T-001 workspace projection
+    // (single-expanded, navigation-filtered) rather than a per-module query.
+    expect(shell()).toContain('buildWorkspaceProjection(session, assignments)');
     expect(shell()).toContain(
       "from '@/components/navigation/feature-registry'",
     );
-    expect(shell()).toContain('activeFeatureId(features, pathname, hash)');
+    expect(shell()).toContain(
+      'inferShellModuleId(projection.features, pathname, hash)',
+    );
+    expect(shell()).toContain(
+      'activeFeatureId(activeFeatures, pathname, hash)',
+    );
+    expect(shell()).toContain('resolveShellActiveModuleId(');
     // Root entry delegates navigation to RoleWorkspace; projected links live
     // there via the T-001 workspace projection, not as hard-coded home cards.
     expect(home()).toContain('RoleWorkspace');
@@ -86,9 +94,13 @@ describe('T-003 web shell', () => {
   it('keeps breadcrumb and back route targets on existing destinations', () => {
     expect(shell()).toContain('aria-label="Breadcrumb"');
     expect(shell()).toContain('href="/"');
-    expect(shell()).toContain('href={definition.homeHref}');
+    // Route-owner chrome pins the breadcrumb to the route owner's module home;
+    // only the active module's feature list renders (single-expanded).
+    expect(shell()).toContain('href={fallbackDefinition.homeHref}');
+    expect(shell()).toContain('routeOwnerFeatures');
+    expect(shell()).toContain('routeActiveFeature');
     expect(shell()).toContain('aria-current="page"');
-    expect(shell()).toContain('features={features}');
+    expect(shell()).toContain('features={activeFeatures}');
     expect(sidebar()).toContain('href={feature.href}');
     expect(sidebar()).toContain("aria-current={active ? 'page' : undefined}");
   });
