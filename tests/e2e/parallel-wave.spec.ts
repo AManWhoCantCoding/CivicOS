@@ -187,19 +187,64 @@ const assignmentTaskByResourceType: Record<string, string> = {
 test('parallel wave entry surface links all three modules', async ({
   page,
 }) => {
+  await page.context().clearCookies();
   await page.goto('/');
   await expect(
     page.getByRole('heading', { name: 'Một nơi để biết việc gì đang xảy ra.' }),
   ).toBeVisible();
   await expect(
-    page.getByRole('link', { name: /Hàng đợi vụ việc/ }),
+    page.getByText('Đăng nhập để xem điều hướng theo phạm vi được giao.'),
   ).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: /Hàng đợi vụ việc/ }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole('link', { name: /Cơ sở kinh doanh/ }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(
     page.getByRole('link', { name: /Phương tiện hiện trường/ }),
-  ).toBeVisible();
+  ).toHaveCount(0);
+  await expect(page.getByTestId('workspace-ready')).toHaveCount(0);
+
+  await loginAs(page, COMMANDER);
+  await page.goto('/');
+  await expect(page.getByTestId('workspace-ready')).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Phân công Incident' }),
+  ).toHaveAttribute('href', '/assignments');
+  await expect(
+    page.getByRole('link', { name: 'Hàng đợi Incident', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('link', { name: 'Ghi nhận tin báo', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('link', { name: 'Danh mục cơ sở', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('link', { name: 'Lịch kiểm tra', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('link', { name: 'Hàng đợi fieldwork', exact: true }),
+  ).toHaveCount(0);
+
+  await page.getByRole('tab', { name: 'Phương tiện' }).click();
+  await expect(
+    page.getByRole('link', { name: 'Registry xe cần chú ý' }),
+  ).toHaveAttribute('href', '/vehicles/registry');
+  await expect(
+    page.getByRole('link', { name: 'Quan sát hiện trường' }),
+  ).toHaveAttribute('href', '/field/vehicles');
+
+  await page.getByRole('tab', { name: 'Identity' }).click();
+  await expect(
+    page.getByRole('link', { name: 'Quản lý User' }),
+  ).toHaveAttribute('href', '/users');
+
+  await page.getByRole('tab', { name: 'Bản đồ' }).click();
+  await expect(
+    page.getByRole('link', { name: 'Workspace bản đồ' }),
+  ).toHaveAttribute('href', '/map');
 });
 
 test('operational home exposes metadata and shell navigation to all surfaces', async ({
@@ -211,19 +256,39 @@ test('operational home exposes metadata and shell navigation to all surfaces', a
   await expect(description).toHaveAttribute('content', /Nghĩa Trụ/);
   const lang = await page.evaluate(() => document.documentElement.lang);
   expect(lang).toBe('vi');
-  for (const [name, href] of [
-    ['Hàng đợi vụ việc', '/incidents'],
-    ['Cơ sở kinh doanh', '/inspections/establishments'],
-    ['Phương tiện hiện trường', '/field/vehicles'],
-  ] as Array<[string, string]>) {
+  await page.context().clearCookies();
+  await page.goto('/');
+  await expect(
+    page.getByText('Đăng nhập để xem điều hướng theo phạm vi được giao.'),
+  ).toBeVisible();
+
+  await loginAs(page, COMMANDER);
+  for (const [tab, name, href] of [
+    ['Incident', 'Phân công Incident', '/assignments'],
+    ['Phương tiện', 'Registry xe cần chú ý', '/vehicles/registry'],
+    ['Phương tiện', 'Quan sát hiện trường', '/field/vehicles'],
+    ['Bản đồ', 'Workspace bản đồ', '/map'],
+  ] as Array<[string, string, string]>) {
     await page.goto('/');
-    await page.getByRole('link', { name: new RegExp(name) }).click();
+    await expect(page.getByTestId('workspace-ready')).toBeVisible();
+    await page.getByRole('tab', { name: tab }).click();
+    await page.getByRole('link', { name, exact: true }).click();
     await page.waitForURL(href);
     await expect(page.locator('main, section').first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
   }
   await page.goto('/');
-  await expect(page.getByRole('link', { name: /Mở Assignment/ })).toBeVisible();
+  await expect(page.getByTestId('workspace-ready')).toBeVisible();
+  await page.getByRole('tab', { name: 'Identity' }).click();
+  await expect(
+    page.getByRole('link', { name: 'Assignment', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Hàng đợi Incident', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('link', { name: 'Danh mục cơ sở', exact: true }),
+  ).toHaveCount(0);
 });
 
 test('three operational surfaces have no horizontal overflow and no clipped actions', async ({

@@ -29,28 +29,89 @@ async function visibleNav(page: Page, module: string, testInfo: TestInfo) {
 test('dashboard preserves module cards and open-module behavior', async ({
   page,
 }) => {
+  await page.context().clearCookies();
   await page.goto('/');
   await expect(
-    page.getByRole('heading', { name: 'Hàng đợi vụ việc' }),
+    page.getByText('Đăng nhập để xem điều hướng theo phạm vi được giao.'),
   ).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Đăng nhập' }),
+  ).toHaveAttribute('href', '/login');
+  await expect(
+    page.getByRole('heading', { name: 'Hàng đợi vụ việc' }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole('heading', { name: 'Cơ sở kinh doanh' }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(
     page.getByRole('heading', { name: 'Phương tiện hiện trường' }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(
     page.getByRole('link', { name: /Hàng đợi vụ việc/ }),
-  ).toHaveAttribute('href', '/incidents');
+  ).toHaveCount(0);
   await expect(
     page.getByRole('link', { name: /Cơ sở kinh doanh/ }),
-  ).toHaveAttribute('href', '/inspections/establishments');
+  ).toHaveCount(0);
   await expect(
     page.getByRole('link', { name: /Phương tiện hiện trường/ }),
-  ).toHaveAttribute('href', '/field/vehicles');
+  ).toHaveCount(0);
+  await expect(page.getByTestId('workspace-ready')).toHaveCount(0);
+
+  await loginAs(page, 'truong@civicos.local');
+  await page.goto('/');
+  await expect(page.getByTestId('workspace-ready')).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Incident' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await expect(
-    page.getByRole('link', { name: 'Mở Assignment' }),
+    page.getByRole('link', { name: 'Phân công Incident' }),
   ).toHaveAttribute('href', '/assignments');
+  await expect(
+    page.getByRole('link', { name: 'Hàng đợi Incident', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('link', { name: 'Ghi nhận tin báo', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('link', { name: 'Danh mục cơ sở', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('link', { name: 'Lịch kiểm tra', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('link', { name: 'Hàng đợi fieldwork', exact: true }),
+  ).toHaveCount(0);
+
+  await page.getByRole('tab', { name: 'Phương tiện' }).click();
+  await expect(page.getByRole('tab', { name: 'Phương tiện' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(
+    page.getByRole('link', { name: 'Registry xe cần chú ý' }),
+  ).toHaveAttribute('href', '/vehicles/registry');
+  await expect(
+    page.getByRole('link', { name: 'Quan sát hiện trường' }),
+  ).toHaveAttribute('href', '/field/vehicles');
+
+  await page.getByRole('tab', { name: 'Identity' }).click();
+  await expect(
+    page.getByRole('link', { name: 'Assignment', exact: true }),
+  ).toHaveAttribute('href', '/assignments');
+  await expect(
+    page.getByRole('link', { name: 'Quản lý User' }),
+  ).toHaveAttribute('href', '/users');
+
+  await page.getByRole('tab', { name: 'Bản đồ' }).click();
+  await expect(
+    page.getByRole('link', { name: 'Workspace bản đồ' }),
+  ).toHaveAttribute('href', '/map');
+
+  await page.getByRole('tab', { name: 'Phương tiện' }).click();
+  await page.getByRole('link', { name: 'Registry xe cần chú ý' }).click();
+  await page.waitForURL('/vehicles/registry');
+  await expect(page.locator('main, section').first()).toBeVisible();
 });
 
 test('incident shell exposes intake, work queue and assignment features with active state', async ({
