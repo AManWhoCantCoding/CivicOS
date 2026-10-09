@@ -111,4 +111,16 @@ describe('PS-E1-007 regression contracts', () => {
       evidenceIds: ['evidence-1'],
     });
   });
+
+  it('does not demand evidence for an optional item with an empty response', () => {
+    for (const value of ['', '   ']) {
+      expect(() =>
+        assertChecklistEvidence(
+          [{ key: 'photo', evidenceRequired: true }],
+          [{ key: 'photo', value }],
+          [{ checklistKey: 'photo', evidenceIds: [] }],
+        ),
+      ).not.toThrow();
+    }
+  });
 });

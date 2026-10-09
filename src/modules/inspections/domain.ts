@@ -103,7 +103,11 @@ export function assertChecklistEvidence(
   responses: ChecklistResponse[],
   findings: ChecklistFindingEvidence[],
 ): void {
-  const answered = new Set(responses.map((response) => response.key));
+  const answered = new Set(
+    responses
+      .filter((response) => response.value.trim())
+      .map((response) => response.key),
+  );
   const evidenceCount = new Map<string, number>();
   for (const finding of findings) {
     evidenceCount.set(
