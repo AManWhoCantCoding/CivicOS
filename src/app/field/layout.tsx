@@ -5,7 +5,9 @@ export default function FieldLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div className="min-h-dvh bg-[var(--civicos-canvas)] text-[var(--civicos-text)]">
-      <ModuleShell module="vehicles">{children}</ModuleShell>
+      <ModuleShell module="vehicles">
+        <main>{children}</main>
+      </ModuleShell>
     </div>
   );
 }
