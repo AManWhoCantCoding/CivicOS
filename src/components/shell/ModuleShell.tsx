@@ -5,20 +5,24 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ModuleSidebar } from '@/components/navigation/ModuleSidebar';
+import { ModuleTabs } from '@/components/navigation/ModuleTabs';
 import {
   MODULES,
   activeFeatureId,
-  visibleFeatures,
   type FeatureDef,
   type ModuleId,
 } from '@/components/navigation/feature-registry';
+import {
+  buildWorkspaceProjection,
+  type WorkspaceModuleProjection,
+} from '@/components/navigation/workspace-registry';
 import {
   ModuleEmptyState,
   ModuleErrorState,
   ModuleLoadingState,
   ModuleOfflineNotice,
 } from '@/components/shell/ModuleStatus';
-import { useModuleSession } from '@/components/shell/useModuleSession';
+import { useWorkspaceSession } from '@/components/shell/useWorkspaceSession';
 
 function useLocationHash(): string {
   const [hash, setHash] = useState<string>('');
@@ -68,6 +72,43 @@ function useCollapsed(module: ModuleId): [boolean, () => void] {
   return [collapsed, toggle];
 }
 
+// Presentation-only inference: find the eligible module owning the best
+// matching eligible feature for the current route/hash. Hidden features are
+// never in the eligible list, so a hidden direct route yields null and cannot
+// create a hidden tab. Hrefs and destinations are never rewritten here.
+export function inferShellModuleId(
+  features: readonly FeatureDef[],
+  pathname: string,
+  hash: string,
+): ModuleId | null {
+  const id = activeFeatureId(features, pathname, hash);
+  if (!id) return null;
+  return features.find((feature) => feature.id === id)?.moduleId ?? null;
+}
+
+// Presentation-only selection: explicit tab click wins while still eligible;
+// otherwise the route owner's declared module wins while eligible (tie-break
+// for duplicate hrefs such as /assignments, which exists in both incidents and
+// identity); otherwise the route-inferred module wins; otherwise the first
+// permitted module. Never grants permission; only picks among eligible tabs.
+export function resolveShellActiveModuleId(
+  modules: readonly WorkspaceModuleProjection[],
+  selectedId: ModuleId | null,
+  inferredId: ModuleId | null,
+  fallbackId: ModuleId | null,
+): ModuleId | null {
+  if (selectedId && modules.some((entry) => entry.module.id === selectedId)) {
+    return selectedId;
+  }
+  if (fallbackId && modules.some((entry) => entry.module.id === fallbackId)) {
+    return fallbackId;
+  }
+  if (inferredId && modules.some((entry) => entry.module.id === inferredId)) {
+    return inferredId;
+  }
+  return modules[0]?.module.id ?? null;
+}
+
 export function ModuleShell({
   module,
   children,
@@ -75,28 +116,66 @@ export function ModuleShell({
   module: ModuleId;
   children: React.ReactNode;
 }) {
-  const definition = MODULES[module];
+  const fallbackDefinition = MODULES[module];
   const pathname = usePathname() ?? '';
   const hash = useLocationHash();
-  const { session, assignments, state, error, online, retry } =
-    useModuleSession(module);
+  const { session, assignments, sessionState, assignmentState, online, retry } =
+    useWorkspaceSession();
   const [collapsed, toggleCollapsed] = useCollapsed(module);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const openedOnceRef = useRef(false);
   const suppressFocusRef = useRef(false);
+  const [selectedId, setSelectedId] = useState<ModuleId | null>(null);
 
-  const features = useMemo(
-    () => visibleFeatures(module, session, assignments),
-    [module, session, assignments],
+  const projection = useMemo(
+    () => buildWorkspaceProjection(session, assignments),
+    [session, assignments],
+  );
+  const inferredModuleId = useMemo(
+    () => inferShellModuleId(projection.features, pathname, hash),
+    [projection.features, pathname, hash],
+  );
+  const activeModuleId = useMemo(
+    () =>
+      resolveShellActiveModuleId(
+        projection.modules,
+        selectedId,
+        inferredModuleId,
+        module,
+      ),
+    [projection.modules, selectedId, inferredModuleId, module],
+  );
+  const activeModule =
+    projection.modules.find((entry) => entry.module.id === activeModuleId) ??
+    null;
+  const activeFeatures = useMemo(
+    () => activeModule?.features ?? [],
+    [activeModule],
   );
   const activeId = useMemo(
-    () => activeFeatureId(features, pathname, hash),
-    [features, pathname, hash],
+    () => activeFeatureId(activeFeatures, pathname, hash),
+    [activeFeatures, pathname, hash],
   );
-  const activeFeature: FeatureDef | null =
-    features.find((feature) => feature.id === activeId) ?? null;
+  const activeDefinition = activeModule?.module ?? fallbackDefinition;
+  // Route-owner context preservation (edge: hidden direct route): breadcrumb,
+  // mobile header and drawer chrome always reflect the route owner's declared
+  // module, never the selected navigation tab. The selected tab labels only
+  // the visible navigation feature list. Hidden routes therefore keep their
+  // existing page context without creating a hidden tab/link.
+  const routeOwnerFeatures = useMemo(
+    () =>
+      projection.modules.find((entry) => entry.module.id === module)
+        ?.features ?? [],
+    [projection.modules, module],
+  );
+  const routeActiveFeature: FeatureDef | null = useMemo(() => {
+    const routeActiveId = activeFeatureId(routeOwnerFeatures, pathname, hash);
+    return (
+      routeOwnerFeatures.find((feature) => feature.id === routeActiveId) ?? null
+    );
+  }, [routeOwnerFeatures, pathname, hash]);
 
   function closeDrawer(returnFocus: boolean) {
     suppressFocusRef.current = !returnFocus;
@@ -136,7 +215,7 @@ export function ModuleShell({
     dialog
       .querySelector<HTMLElement>('nav a[href]')
       ?.focus({ preventScroll: true });
-  }, [drawerOpen, state, features.length]);
+  }, [drawerOpen, sessionState, assignmentState, projection.modules.length]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -168,14 +247,14 @@ export function ModuleShell({
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [drawerOpen]);
 
-  function sidebarBody(navId: string) {
-    if (state === 'loading') {
+  function sidebarBody(navId: string, idPrefix: string) {
+    if (sessionState === 'loading') {
       return <ModuleLoadingState label="điều hướng" />;
     }
-    if (state === 'error') {
+    if (sessionState === 'error') {
       return (
         <ModuleErrorState
-          message={error ?? 'Không thể tải điều hướng.'}
+          message="Không thể tải phiên và phạm vi điều hướng."
           onRetry={retry}
           retryLabel="Thử tải lại điều hướng"
         />
@@ -196,19 +275,40 @@ export function ModuleShell({
         </p>
       );
     }
-    if (!features.length) {
+    if (assignmentState === 'loading') {
+      return <ModuleLoadingState label="điều hướng" />;
+    }
+    if (assignmentState === 'error') {
+      return (
+        <ModuleErrorState
+          message="Không thể tải điều hướng."
+          onRetry={retry}
+          retryLabel="Thử tải lại điều hướng"
+        />
+      );
+    }
+    if (projection.modules.length === 0 || !activeModule) {
       return (
         <ModuleEmptyState message="Chưa có Feature nào trong phạm vi của tài khoản." />
       );
     }
     return (
-      <ModuleSidebar
-        navLabel={`Điều hướng ${definition.label}`}
-        navId={navId}
-        features={features}
-        activeId={activeId}
-        collapsed={navId === 'module-sidebar' && collapsed}
-      />
+      <div className="space-y-3">
+        <ModuleTabs
+          modules={projection.modules}
+          activeModuleId={activeModule.module.id}
+          onSelect={setSelectedId}
+          idPrefix={idPrefix}
+          controlsId={navId}
+        />
+        <ModuleSidebar
+          navLabel={`Điều hướng ${activeDefinition.label}`}
+          navId={navId}
+          features={activeFeatures}
+          activeId={activeId}
+          collapsed={navId === 'module-sidebar' && collapsed}
+        />
+      </div>
     );
   }
 
@@ -241,7 +341,7 @@ export function ModuleShell({
               {collapsed ? 'Mở rộng' : 'Thu gọn'}
             </span>
           </button>
-          {sidebarBody('module-sidebar')}
+          {sidebarBody('module-sidebar', 'shell')}
         </div>
       </aside>
       <div className="min-w-0 flex-1 space-y-4">
@@ -250,7 +350,7 @@ export function ModuleShell({
             className="font-mono text-xs tracking-[0.16em] uppercase"
             style={{ color: 'var(--civicos-accent)' }}
           >
-            CivicOS / {definition.label}
+            CivicOS / {fallbackDefinition.label}
           </p>
           <button
             ref={menuButtonRef}
@@ -258,7 +358,7 @@ export function ModuleShell({
             onClick={openDrawer}
             aria-expanded={drawerOpen}
             aria-controls="module-drawer"
-            aria-label={`Mở điều hướng ${definition.label}`}
+            aria-label={`Mở điều hướng ${fallbackDefinition.label}`}
             className="min-h-[44px] rounded-lg border px-4 py-2 text-sm"
             style={{
               borderColor: 'var(--civicos-border)',
@@ -284,15 +384,15 @@ export function ModuleShell({
             <li aria-hidden="true" style={{ color: 'var(--civicos-border)' }}>
               /
             </li>
-            {activeFeature ? (
+            {routeActiveFeature ? (
               <>
                 <li>
                   <Link
-                    href={definition.homeHref}
+                    href={fallbackDefinition.homeHref}
                     className="underline-offset-4 hover:underline"
                     style={{ color: 'var(--civicos-text-muted)' }}
                   >
-                    Phân hệ {definition.label}
+                    Phân hệ {fallbackDefinition.label}
                   </Link>
                 </li>
                 <li
@@ -306,7 +406,7 @@ export function ModuleShell({
                     aria-current="page"
                     style={{ color: 'var(--civicos-text)' }}
                   >
-                    {activeFeature.label}
+                    {routeActiveFeature.label}
                   </span>
                 </li>
               </>
@@ -316,7 +416,7 @@ export function ModuleShell({
                   aria-current="page"
                   style={{ color: 'var(--civicos-text)' }}
                 >
-                  Phân hệ {definition.label}
+                  Phân hệ {fallbackDefinition.label}
                 </span>
               </li>
             )}
@@ -337,7 +437,7 @@ export function ModuleShell({
             ref={drawerRef}
             role="dialog"
             aria-modal="true"
-            aria-label={`Điều hướng ${definition.label}`}
+            aria-label={`Điều hướng ${fallbackDefinition.label}`}
             id="module-drawer"
             className="absolute top-0 left-0 flex h-full w-80 max-w-[85vw] flex-col gap-4 overflow-y-auto border-r p-5"
             style={{
@@ -350,7 +450,7 @@ export function ModuleShell({
                 className="font-mono text-xs tracking-[0.16em] uppercase"
                 style={{ color: 'var(--civicos-accent)' }}
               >
-                CivicOS / {definition.label}
+                CivicOS / {fallbackDefinition.label}
               </p>
               <button
                 type="button"
@@ -368,7 +468,7 @@ export function ModuleShell({
               </button>
             </div>
             <div onClick={() => closeDrawer(false)}>
-              {sidebarBody('module-drawer-nav')}
+              {sidebarBody('module-drawer-nav', 'drawer')}
             </div>
           </div>
         </div>
