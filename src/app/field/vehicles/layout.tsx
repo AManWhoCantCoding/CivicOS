@@ -1,7 +1,7 @@
-import { ModuleShell } from '@/components/shell/ModuleShell';
-
 export default function VehicleFieldLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return <ModuleShell module="vehicles">{children}</ModuleShell>;
+  // Shell ownership lives in the field parent layout; this nested layout stays
+  // a passthrough so /field/vehicles/** renders the shared shell exactly once.
+  return <>{children}</>;
 }
