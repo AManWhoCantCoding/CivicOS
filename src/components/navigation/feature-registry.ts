@@ -356,6 +356,36 @@ export function canEnterAnyFeature(
   );
 }
 
+// Navigation-only exclusion seam (T-001, R4). These feature definitions stay
+// in FEATURES so canEnterFeature()/canEnterEntry() direct-route authorization
+// is unchanged; only the workspace navigation projection omits them.
+export const NAVIGATION_EXCLUDED_FEATURE_IDS = [
+  'resident-list',
+  'resident-reports',
+  'incident-queue',
+  'incident-intake',
+  'inspection-catalogue',
+  'inspection-schedule',
+  'inspection-workqueue',
+] as const;
+
+const NAVIGATION_EXCLUDED_IDS: ReadonlySet<string> = new Set(
+  NAVIGATION_EXCLUDED_FEATURE_IDS,
+);
+
+// Navigation projection for one module: existing visibleFeatures() semantics
+// (role, requiresTask, bypassTaskRoles, active/assignee/organization scope)
+// minus the navigation-only exclusion set.
+export function visibleNavigationFeatures(
+  moduleId: ModuleId,
+  session: SessionScope,
+  assignments: readonly AssignmentScope[],
+): FeatureDef[] {
+  return visibleFeatures(moduleId, session, assignments).filter(
+    (feature) => !NAVIGATION_EXCLUDED_IDS.has(feature.id),
+  );
+}
+
 function hrefPath(href: string): string {
   return href.split('#')[0] ?? href;
 }
