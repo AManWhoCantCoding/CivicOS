@@ -12,6 +12,18 @@ function readSource(relativePath: string): string {
 }
 
 describe('navigation remains read-only', () => {
+  it('keeps the approved native route set in order', () => {
+    expect([...routes]).toEqual([
+      'Map',
+      'RelatedInfo',
+      'Alarms',
+      'Dispatches',
+      'Tasks',
+      'Incident',
+      'Land',
+      'Settings',
+    ]);
+  });
   it('does not expose create, update, or citizen intake routes', () => {
     expect(routes).not.toEqual(
       expect.arrayContaining(['Create', 'Update', 'CitizenIntake']),
