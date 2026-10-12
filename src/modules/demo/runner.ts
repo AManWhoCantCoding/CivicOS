@@ -5,6 +5,12 @@ import {
   type DemoRunState,
 } from './manifest';
 import { evaluateLiveMutation } from './live-mutation';
+import {
+  resolveDemoRecovery,
+  type DemoRecovery,
+  type DemoRecoveryState,
+  type DemoRecoverySurface,
+} from './recovery';
 
 export type { DemoRunState } from './manifest';
 
@@ -24,6 +30,9 @@ export type DemoStepEvent = {
   action: string;
   status: DemoStepOutcome;
   reason: string;
+  surface?: DemoRecoverySurface;
+  surfaceState?: DemoRecoveryState | 'unknown';
+  recovery?: DemoRecovery;
 };
 
 export type DemoTimerHandle = unknown;
@@ -42,7 +51,13 @@ export type DemoExecutorStep = {
 };
 
 export type DemoExecutorResult =
-  DemoStepOutcome | { status: DemoStepOutcome; reason?: string };
+  | DemoStepOutcome
+  | {
+      status: DemoStepOutcome;
+      reason?: string;
+      surface?: unknown;
+      surfaceState?: unknown;
+    };
 
 export type DemoExecutor = (
   step: DemoExecutorStep,
@@ -142,6 +157,17 @@ function toSafeExecutorReason(outcome: unknown): string | null {
   return SAFE_EXECUTOR_REASONS.has(reason) ? reason : null;
 }
 
+function toExecutorRecovery(outcome: unknown): DemoRecovery | null {
+  if (typeof outcome !== 'object' || outcome === null) return null;
+  const value = outcome as { surface?: unknown; surfaceState?: unknown };
+  if (value.surface === undefined && value.surfaceState === undefined)
+    return null;
+  return resolveDemoRecovery({
+    surface: value.surface,
+    state: value.surfaceState,
+  });
+}
+
 function outcomeReason(
   status: DemoStepOutcome,
   step: DemoManifestStep,
@@ -227,6 +253,7 @@ export function createDemoRunner(options: DemoRunnerOptions) {
     }
     let outcome: DemoStepOutcome;
     let executorReason: string | null = null;
+    let recovery: DemoRecovery | null = null;
     const gatedSubmit =
       manifest.mutationClass.trim() !== 'none' &&
       step.action.trim() === 'submit';
@@ -241,6 +268,10 @@ export function createDemoRunner(options: DemoRunnerOptions) {
       });
       outcome = toSafeOutcome(raw);
       executorReason = toSafeExecutorReason(raw);
+      recovery = toExecutorRecovery(raw);
+      if (recovery?.status === 'blocked') outcome = 'blocked';
+      if (recovery?.status === 'failed') outcome = 'failed';
+      if (recovery) executorReason = recovery.reason;
     } catch {
       outcome = 'failed';
     }
@@ -260,6 +291,13 @@ export function createDemoRunner(options: DemoRunnerOptions) {
         action: step.action,
         status: outcome,
         reason: executorReason ?? outcomeReason(outcome, step),
+        ...(recovery
+          ? {
+              surface: recovery.surface,
+              surfaceState: recovery.state,
+              recovery,
+            }
+          : {}),
       });
       if (outcome === 'settled') {
         setState('completed-with-cleanup-pending');
@@ -284,6 +322,13 @@ export function createDemoRunner(options: DemoRunnerOptions) {
         action: step.action,
         status: outcome,
         reason: executorReason ?? outcomeReason(outcome, step),
+        ...(recovery
+          ? {
+              surface: recovery.surface,
+              surfaceState: recovery.state,
+              recovery,
+            }
+          : {}),
       });
       return;
     }
@@ -295,6 +340,9 @@ export function createDemoRunner(options: DemoRunnerOptions) {
       action: step.action,
       status: outcome,
       reason: executorReason ?? outcomeReason(outcome, step),
+      ...(recovery
+        ? { surface: recovery.surface, surfaceState: recovery.state, recovery }
+        : {}),
     });
     if (outcome === 'blocked') {
       clearTimer();

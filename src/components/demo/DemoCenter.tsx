@@ -23,6 +23,10 @@ import { createWebActionExecutor } from '@/modules/demo/web-actions';
 import { createLiveMutationExecutor } from '@/modules/demo/live-mutation';
 import type { DemoTargetGuardResult } from '@/modules/demo/target-guard';
 import type { BridgeReadiness } from '@/modules/demo/readiness';
+import {
+  resolveDemoRecovery,
+  type DemoRecovery,
+} from '@/modules/demo/recovery';
 
 // Safe default manifest seam (replaced by T-005 action work, never by a live
 // mutation adapter here): read-only steps, no mutation, validated shape.
@@ -122,6 +126,7 @@ export function describeDemoNarrator(input: {
   lastStatus: string | null;
   lastReason: string | null;
   personaAlias: string;
+  recovery?: DemoRecovery | null;
 }): string {
   const total = Math.max(input.total, 0);
   const position =
@@ -138,9 +143,13 @@ export function describeDemoNarrator(input: {
     case 'paused':
       return `Đã tạm dừng ở bước ${position}. Nhấn Tiếp tục để chạy tiếp.`;
     case 'blocked':
-      return `Demo bị chặn ở bước ${position}. Mã trạng thái: ${reason}. Nhấn Dừng hoặc Chạy lại.`;
+      return input.recovery
+        ? `Demo bị chặn ở bước ${position}. ${input.recovery.label}: ${input.recovery.explanation} Mã trạng thái: ${input.recovery.reason}. Nhấn Dừng hoặc Chạy lại.`
+        : `Demo bị chặn ở bước ${position}. Mã trạng thái: ${reason}. Nhấn Dừng hoặc Chạy lại.`;
     case 'failed':
-      return `Demo thất bại ở bước ${position}. Mã trạng thái: ${reason}.`;
+      return input.recovery
+        ? `Demo thất bại ở bước ${position}. ${input.recovery.label}: ${input.recovery.explanation} Mã trạng thái: ${input.recovery.reason}.`
+        : `Demo thất bại ở bước ${position}. Mã trạng thái: ${reason}.`;
     case 'stopping':
       return 'Đang dừng demo.';
     case 'cancelled':
@@ -274,6 +283,14 @@ export function DemoCenter(props: DemoCenterProps) {
   const currentStep =
     total === 0 ? null : (manifest.steps[Math.min(cursor, total - 1)] ?? null);
   const lastEvent = events.length > 0 ? events[events.length - 1] : null;
+  const recovery =
+    lastEvent?.recovery ??
+    (lastEvent?.surfaceState
+      ? resolveDemoRecovery({
+          surface: lastEvent.surface,
+          state: lastEvent.surfaceState,
+        })
+      : null);
   const narration = describeDemoNarrator({
     runState,
     cursor,
@@ -282,6 +299,7 @@ export function DemoCenter(props: DemoCenterProps) {
     lastStatus: lastEvent?.status ?? null,
     lastReason: lastEvent?.reason ?? notice ?? (ready ? null : target.reason),
     personaAlias: manifest.personaAlias,
+    recovery,
   });
 
   async function handleStart(): Promise<void> {
@@ -491,6 +509,14 @@ export function DemoCenter(props: DemoCenterProps) {
                   style={{ color: 'var(--civicos-text-muted)' }}
                 >
                   Mã trạng thái: {toSafeReasonCode(lastEvent?.reason ?? notice)}
+                </p>
+              ) : null}
+              {recovery ? (
+                <p
+                  className="mt-2 text-sm leading-6"
+                  style={{ color: 'var(--civicos-text-muted)' }}
+                >
+                  {recovery.label}: {recovery.explanation}
                 </p>
               ) : null}
               {runState === 'completed-with-cleanup-pending' ? (
