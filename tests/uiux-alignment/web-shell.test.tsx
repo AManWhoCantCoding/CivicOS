@@ -47,7 +47,7 @@ describe('T-003 web shell', () => {
     // Root entry delegates navigation to RoleWorkspace; projected links live
     // there via the T-001 workspace projection, not as hard-coded home cards.
     expect(home()).toContain('RoleWorkspace');
-    expect(home()).toContain('<RoleWorkspace />');
+    expect(home()).toContain('<RoleWorkspace demoTarget={demoTarget} />');
     expect(workspace()).toContain('buildWorkspaceProjection(');
     expect(workspace()).toContain('href={feature.href}');
     expect(workspace()).toContain('Mở phân hệ');
