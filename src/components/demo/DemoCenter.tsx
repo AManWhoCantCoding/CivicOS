@@ -20,6 +20,7 @@ import {
   type DemoStepEvent,
 } from '@/modules/demo/runner';
 import { createWebActionExecutor } from '@/modules/demo/web-actions';
+import { createLiveMutationExecutor } from '@/modules/demo/live-mutation';
 import type { DemoTargetGuardResult } from '@/modules/demo/target-guard';
 
 // Safe default manifest seam (replaced by T-005 action work, never by a live
@@ -197,12 +198,31 @@ export function DemoCenter(props: DemoCenterProps) {
 
   // Single runner instance for the component lifetime; the runner owns the
   // only pacing timer and no duplicate callbacks exist.
+  // T-007: the executor is wrapped by the pure live-mutation guard so an
+  // approved submit preflights before the rendered form runs. The default
+  // read-only manifest (`mutationClass: 'none'`, no policy) passes straight
+  // through the current adapter and never mutates.
   const runnerRef = useRef<ReturnType<typeof createDemoRunner> | null>(null);
   if (runnerRef.current === null) {
+    const guardedExecutor = createLiveMutationExecutor({
+      guard: {
+        demoModeEnabled: target.reason !== 'DEMO_MODE_DISABLED',
+        targetName: target.target,
+        surface: manifest.surface,
+        mutationClass: manifest.mutationClass,
+        manifestVersion: manifest.version,
+        policy: manifest.liveMutationPolicy ?? null,
+      },
+      inner: executor,
+    });
     const created = createRunner({
       manifest,
-      executor,
+      executor: guardedExecutor,
       scheduler: props.scheduler,
+      liveMutation: {
+        demoModeEnabled: target.reason !== 'DEMO_MODE_DISABLED',
+        targetName: target.target,
+      },
       onEvent: (event) => {
         setEvents((previous) => [...previous, event]);
       },
@@ -400,6 +420,17 @@ export function DemoCenter(props: DemoCenterProps) {
                   style={{ color: 'var(--civicos-text-muted)' }}
                 >
                   Mã trạng thái: {toSafeReasonCode(lastEvent?.reason ?? notice)}
+                </p>
+              ) : null}
+              {runState === 'completed-with-cleanup-pending' ? (
+                <p
+                  data-testid="demo-cleanup-pending"
+                  className="mt-2 text-sm leading-6 font-semibold"
+                  style={{ color: 'var(--civicos-text)' }}
+                >
+                  Đã hoàn tất mutation, còn thao tác dọn dẹp chờ operator. Liên
+                  hệ operator để xác nhận và dọn dẹp, không tự reset dữ liệu
+                  demo.
                 </p>
               ) : null}
             </div>

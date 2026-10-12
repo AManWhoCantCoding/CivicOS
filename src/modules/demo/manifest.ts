@@ -44,6 +44,26 @@ export const DEMO_MUTATION_CLASSES = [
   'none',
 ] as const;
 
+// T-007 live-mutation vocabulary. The runner never invents an idempotency
+// key: only the existing domain dedupe/unique/version strategies below are
+// accepted, replay is explicit safe/blocked, and cleanup stays operator-owned.
+export const DEMO_LIVE_IDEMPOTENCY_STRATEGIES = [
+  'existing-idempotency-key',
+  'existing-unique-constraint',
+  'existing-version-check',
+] as const;
+
+export const DEMO_LIVE_REPLAY_POLICIES = ['safe', 'blocked'] as const;
+
+export const DEMO_LIVE_CLEANUP_POLICIES = ['operator'] as const;
+
+export type DemoLiveMutationPolicy = {
+  fixtureRef: string;
+  idempotencyStrategy: string;
+  replay: string;
+  cleanup: string;
+};
+
 export type DemoManifestStep = {
   id: string;
   action: string;
@@ -63,6 +83,10 @@ export type DemoManifest = {
   mutationClass: string;
   cleanupPolicy: string;
   blockedPolicy: string;
+  // Optional non-persistent T-007 live-mutation metadata. Read-only scenes
+  // (`mutationClass: 'none'`) must not carry it; mutation scenes may carry
+  // it, and the runner preflight still blocks when it is absent.
+  liveMutationPolicy?: DemoLiveMutationPolicy;
   steps: DemoManifestStep[];
 };
 
@@ -194,5 +218,63 @@ export function validateDemoManifest(input: unknown): DemoManifestValidation {
   if (scanUnsafe(manifest)) {
     return { ok: false, reason: 'DEMO_MANIFEST_UNSAFE_CONTENT' };
   }
+  const policyValidation = validateLiveMutationPolicy(
+    manifest.mutationClass,
+    manifest.liveMutationPolicy,
+  );
+  if (!policyValidation.ok) return policyValidation;
   return { ok: true };
+}
+
+function validateLiveMutationPolicy(
+  mutationClass: string,
+  policy: DemoLiveMutationPolicy | undefined,
+): DemoManifestValidation {
+  const readOnly = mutationClass.trim() === 'none';
+  if (policy === undefined) return { ok: true };
+  if (readOnly) return { ok: false, reason: 'DEMO_MANIFEST_INVALID_POLICY' };
+  if (typeof policy !== 'object' || policy === null) {
+    return { ok: false, reason: 'DEMO_MANIFEST_INVALID_POLICY' };
+  }
+  if (
+    typeof policy.fixtureRef !== 'string' ||
+    !isSafeFixtureRef(policy.fixtureRef)
+  ) {
+    return { ok: false, reason: 'DEMO_MANIFEST_INVALID_POLICY' };
+  }
+  if (
+    typeof policy.idempotencyStrategy !== 'string' ||
+    !(DEMO_LIVE_IDEMPOTENCY_STRATEGIES as readonly string[]).includes(
+      policy.idempotencyStrategy.trim(),
+    )
+  ) {
+    return { ok: false, reason: 'DEMO_MANIFEST_INVALID_POLICY' };
+  }
+  if (
+    typeof policy.replay !== 'string' ||
+    !(DEMO_LIVE_REPLAY_POLICIES as readonly string[]).includes(
+      policy.replay.trim(),
+    )
+  ) {
+    return { ok: false, reason: 'DEMO_MANIFEST_INVALID_POLICY' };
+  }
+  if (
+    typeof policy.cleanup !== 'string' ||
+    !(DEMO_LIVE_CLEANUP_POLICIES as readonly string[]).includes(
+      policy.cleanup.trim(),
+    )
+  ) {
+    return { ok: false, reason: 'DEMO_MANIFEST_INVALID_POLICY' };
+  }
+  if (containsUnsafeText(policy.fixtureRef)) {
+    return { ok: false, reason: 'DEMO_MANIFEST_INVALID_POLICY' };
+  }
+  return { ok: true };
+}
+
+function isSafeFixtureRef(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 128) return false;
+  if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$/.test(trimmed)) return false;
+  return true;
 }

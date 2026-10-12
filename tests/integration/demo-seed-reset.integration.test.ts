@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { access, mkdir, rm, writeFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 
@@ -166,5 +167,29 @@ describe.skipIf(!enabled)('demo reset integration', () => {
     expect(await civicos.user.findFirst({ orderBy: { id: 'asc' } })).toEqual(
       sentinel,
     );
+  });
+});
+
+// T-007 AC-3 operator reset boundary: the web runner never imports or calls
+// the destructive reset, and a settled mutation ends cleanup-pending through
+// the existing stopping state. No database is touched here.
+describe('T-007 operator reset boundary without a database', () => {
+  it('keeps reset operator-only: no runner or DemoCenter reset path', () => {
+    for (const file of [
+      'src/modules/demo/live-mutation.ts',
+      'src/modules/demo/runner.ts',
+      'src/modules/demo/web-actions.ts',
+      'src/components/demo/DemoCenter.tsx',
+    ]) {
+      const source = readFileSync(path.join(process.cwd(), file), 'utf8');
+      expect(source).not.toContain('resetDemo');
+      expect(source).not.toContain('scripts/demo/reset');
+      expect(source).not.toContain('demo:reset');
+    }
+    const runner = readFileSync(
+      path.join(process.cwd(), 'src/modules/demo/runner.ts'),
+      'utf8',
+    );
+    expect(runner).toContain('completed-with-cleanup-pending');
   });
 });
