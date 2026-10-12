@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, SafeAreaView, Text, View } from 'react-native';
 import { useSession } from '../auth/SessionContext';
 import { LoginScreen } from '../auth/LoginScreen';
@@ -18,6 +18,13 @@ import {
   type NavigationContext,
   type VehicleObservationOrigin,
 } from './deepLinks';
+import {
+  nativeCommandIdentity,
+  runNativeCommand,
+  resolveNativeIntent,
+  type NativeResult,
+  type NativeSceneDescriptor,
+} from '../demo/native-runner';
 
 export const routes = [
   'Map',
@@ -30,7 +37,15 @@ export const routes = [
   'Settings',
 ] as const;
 
-export function AppNavigator() {
+export function AppNavigator({
+  demoCommand,
+  demoScene,
+  onDemoResult,
+}: {
+  demoCommand?: unknown;
+  demoScene?: NativeSceneDescriptor;
+  onDemoResult?: (result: NativeResult) => void;
+}) {
   const { session, signOut } = useSession();
   const [route, setRoute] = useState<
     (typeof routes)[number] | 'VehicleObservationDetail'
@@ -45,45 +60,34 @@ export function AppNavigator() {
     useState<VehicleObservationOrigin | null>(null);
   const [relatedReference, setRelatedReference] =
     useState<NavigationContext['relatedInfo']>();
-  if (session.status === 'loading')
-    return (
-      <SafeAreaView
-        style={{ flex: 1, backgroundColor: mobileBaseline.color.canvas }}
-      >
-        <View style={{ padding: mobileBaseline.space.s4 }}>
-          <Text
-            style={{
-              fontFamily: mobileBaseline.font.sans,
-              fontSize: mobileBaseline.size.body,
-              lineHeight: mobileBaseline.size.bodyLine,
-              color: mobileBaseline.color.textMuted,
-            }}
-          >
-            Đang tải phiên…
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  if (session.status !== 'authenticated') return <LoginScreen />;
-  const navigate = (link: ReturnType<typeof deepLinkFor>) => {
-    if (!link) return;
-    setContext(link.params);
-    setMapItem(undefined);
-    if (link.route === 'VehicleObservationDetail') {
-      setVehicleOrigin(
-        route === 'Dispatches' || route === 'Tasks' ? route : 'Alarms',
-      );
+  const [relatedQuery, setRelatedQuery] = useState<string>();
+  const [relatedStatus, setRelatedStatus] = useState<string>();
+  const [relatedEntityType, setRelatedEntityType] = useState<
+    'RESIDENT' | 'BUSINESS' | 'HOTSPOT' | 'VIOLATION' | undefined
+  >();
+  const lastDemoCommand = useRef<string | undefined>(undefined);
+  const navigate = useCallback(
+    (link: ReturnType<typeof deepLinkFor>) => {
+      if (!link) return;
+      setContext(link.params);
+      setMapItem(undefined);
+      if (link.route === 'VehicleObservationDetail') {
+        setVehicleOrigin(
+          route === 'Dispatches' || route === 'Tasks' ? route : 'Alarms',
+        );
+        setRoute(link.route);
+        return;
+      }
+      setVehicleMapOrigin(null);
+      if (link.route === 'RelatedInfoDetail') {
+        setRelatedReference(link.params.relatedInfo);
+        setRoute('RelatedInfo');
+        return;
+      }
       setRoute(link.route);
-      return;
-    }
-    setVehicleMapOrigin(null);
-    if (link.route === 'RelatedInfoDetail') {
-      setRelatedReference(link.params.relatedInfo);
-      setRoute('RelatedInfo');
-      return;
-    }
-    setRoute(link.route);
-  };
+    },
+    [route],
+  );
   const openMap = (
     item?: RelatedInfoItem,
     nextContext: NavigationContext = {},
@@ -124,6 +128,51 @@ export function AppNavigator() {
     setVehicleMapOrigin(null);
     setRoute(item);
   };
+  useEffect(() => {
+    if (session.status !== 'authenticated' || demoCommand === undefined) return;
+    const identity = nativeCommandIdentity(demoCommand);
+    if (lastDemoCommand.current === identity) return;
+    lastDemoCommand.current = identity;
+    const result = runNativeCommand({
+      command: demoCommand,
+      authenticated: true,
+      scene: demoScene,
+    });
+    onDemoResult?.(result);
+    if (result.status !== 'ready') return;
+    const intent = resolveNativeIntent(demoScene);
+    queueMicrotask(() => {
+      if (intent.type === 'tab') openTab(intent.route);
+      if (intent.type === 'related-info') {
+        setRelatedReference(undefined);
+        setRelatedQuery(intent.query);
+        setRelatedStatus(intent.status);
+        setRelatedEntityType(intent.entityType);
+        openTab('RelatedInfo');
+      }
+      if (intent.type === 'deep-link') navigate(intent.link);
+    });
+  }, [demoCommand, demoScene, navigate, onDemoResult, session.status]);
+  if (session.status === 'loading')
+    return (
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: mobileBaseline.color.canvas }}
+      >
+        <View style={{ padding: mobileBaseline.space.s4 }}>
+          <Text
+            style={{
+              fontFamily: mobileBaseline.font.sans,
+              fontSize: mobileBaseline.size.body,
+              lineHeight: mobileBaseline.size.bodyLine,
+              color: mobileBaseline.color.textMuted,
+            }}
+          >
+            Đang tải phiên…
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  if (session.status !== 'authenticated') return <LoginScreen />;
   const screen =
     route === 'Map' ? (
       <View style={{ flex: 1, backgroundColor: mobileBaseline.color.canvas }}>
@@ -165,8 +214,11 @@ export function AppNavigator() {
       </View>
     ) : route === 'RelatedInfo' ? (
       <RelatedInfoScreen
-        key={`${relatedReference?.entityType ?? 'list'}:${relatedReference?.id ?? ''}`}
+        key={`${relatedReference?.entityType ?? 'list'}:${relatedReference?.id ?? ''}:${relatedQuery ?? ''}:${relatedStatus ?? ''}:${relatedEntityType ?? ''}`}
         initialReference={relatedReference}
+        initialQuery={relatedQuery}
+        initialStatus={relatedStatus}
+        initialEntityType={relatedEntityType}
         onOpenMap={(item) => openMap(item, context)}
       />
     ) : route === 'Alarms' ? (

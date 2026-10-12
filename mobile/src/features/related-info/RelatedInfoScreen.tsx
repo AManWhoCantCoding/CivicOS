@@ -35,12 +35,20 @@ const entityTypes: Array<RelatedInfoEntityType | undefined> = [
 export function RelatedInfoScreen({
   onOpenMap,
   initialReference,
+  initialQuery,
+  initialStatus,
+  initialEntityType,
 }: {
   onOpenMap?: (item: RelatedInfoItem) => void;
   initialReference?: RelatedInfoReference;
+  initialQuery?: string;
+  initialStatus?: string;
+  initialEntityType?: RelatedInfoEntityType;
 }) {
-  const [q, setQ] = useState('');
-  const [entityType, setEntityType] = useState<RelatedInfoEntityType>();
+  const [q, setQ] = useState(initialQuery ?? '');
+  const [entityType, setEntityType] = useState<
+    RelatedInfoEntityType | undefined
+  >(initialEntityType);
   const [items, setItems] = useState<RelatedInfoItem[]>([]);
   const [selected, setSelected] = useState<RelatedInfoReference | null>(
     initialReference ?? null,
@@ -50,7 +58,7 @@ export function RelatedInfoScreen({
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState(initialStatus ?? '');
   const [state, setState] = useState<ListState>('loading');
   const load = async (nextPage = 1) => {
     try {
