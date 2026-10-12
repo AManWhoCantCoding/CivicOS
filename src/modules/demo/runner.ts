@@ -21,6 +21,12 @@ export const DEMO_REPLAY_REFUSED = 'DEMO_REPLAY_REFUSED';
 // Run-level events (e.g. manifest preflight) carry no step action, so they
 // reuse a closed vocabulary member instead of inventing an action.
 const RUN_LEVEL_EVENT_ACTION = 'assert-state';
+let nextRunId = 0;
+
+function createRunId(): string {
+  nextRunId += 1;
+  return `demo-run-${nextRunId}`;
+}
 
 export type DemoStepOutcome = 'settled' | 'blocked' | 'failed';
 
@@ -68,6 +74,7 @@ export type DemoRunnerOptions = {
   scheduler?: DemoScheduler;
   executor: DemoExecutor;
   onEvent?: (event: DemoStepEvent) => void;
+  now?: () => number;
   // Optional T-007 mutation prerequisites. Absent means fail-closed: any
   // submit for a non-`none` mutation class blocks before the executor runs.
   liveMutation?: {
@@ -195,6 +202,10 @@ export function createDemoRunner(options: DemoRunnerOptions) {
   // visible component result. Stop then waits in `stopping` instead of
   // reporting `cancelled` and losing a mutation that settles afterward.
   let inFlightMutation = false;
+  let runId = 'demo-run-unknown';
+  let startedAt = 0;
+  let started = false;
+  const now = options.now ?? Date.now;
 
   function setState(next: DemoRunState): void {
     if (!canTransition(state, next)) return;
@@ -367,6 +378,9 @@ export function createDemoRunner(options: DemoRunnerOptions) {
 
   async function start(): Promise<void> {
     if (state !== 'idle') return;
+    runId = createRunId();
+    startedAt = now();
+    started = true;
     setState('preflight');
     const validation = validateDemoManifest(options.manifest);
     if (!validation.ok) {
@@ -388,6 +402,8 @@ export function createDemoRunner(options: DemoRunnerOptions) {
   return {
     getState: (): DemoRunState => state,
     getCursor: (): number => nextIndex,
+    getRunId: (): string => runId,
+    getDurationMs: (): number => (started ? Math.max(0, now() - startedAt) : 0),
     hasCommittedMutation: (): boolean => committedMutation,
     start,
     pause(): void {

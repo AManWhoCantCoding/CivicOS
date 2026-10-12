@@ -27,6 +27,7 @@ import {
   resolveDemoRecovery,
   type DemoRecovery,
 } from '@/modules/demo/recovery';
+import { mapDemoTerminalEvidence } from '@/modules/demo/safe-evidence';
 
 // Safe default manifest seam (replaced by T-005 action work, never by a live
 // mutation adapter here): read-only steps, no mutation, validated shape.
@@ -220,6 +221,11 @@ export function DemoCenter(props: DemoCenterProps) {
   const [events, setEvents] = useState<readonly DemoStepEvent[]>([]);
   const [personaAlias, setPersonaAlias] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [evidenceMeta, setEvidenceMeta] = useState({
+    runId: 'demo-run-unknown',
+    durationMs: 0,
+    committedMutation: false,
+  });
   const [busy, setBusy] = useState(false);
   const statusRef = useRef<HTMLHeadingElement>(null);
   const interactedRef = useRef(false);
@@ -262,6 +268,11 @@ export function DemoCenter(props: DemoCenterProps) {
   function syncRunner(): void {
     setRunState(runner.getState());
     setCursor(runner.getCursor());
+    setEvidenceMeta({
+      runId: runner.getRunId(),
+      durationMs: runner.getDurationMs(),
+      committedMutation: runner.hasCommittedMutation(),
+    });
   }
 
   // Focus moves to the persistent status heading after meaningful state
@@ -301,6 +312,17 @@ export function DemoCenter(props: DemoCenterProps) {
     personaAlias: manifest.personaAlias,
     recovery,
   });
+  const safeEvidence = DEMO_TERMINAL_STATES.includes(runState)
+    ? mapDemoTerminalEvidence({
+        runId: evidenceMeta.runId,
+        sceneId: manifest.sceneId,
+        stepId: lastEvent?.stepId ?? currentStep?.id ?? 'terminal',
+        terminalState: runState,
+        committedMutation: evidenceMeta.committedMutation,
+        durationMs: evidenceMeta.durationMs,
+        reason: lastEvent?.reason ?? notice,
+      })
+    : null;
 
   async function handleStart(): Promise<void> {
     if (busy) return;
@@ -529,6 +551,15 @@ export function DemoCenter(props: DemoCenterProps) {
                   hệ operator để xác nhận và dọn dẹp, không tự reset dữ liệu
                   demo.
                 </p>
+              ) : null}
+              {safeEvidence ? (
+                <pre
+                  data-testid="demo-safe-evidence"
+                  className="mt-2 overflow-auto text-xs leading-5"
+                  aria-label="Safe demo evidence"
+                >
+                  {JSON.stringify(safeEvidence)}
+                </pre>
               ) : null}
             </div>
           </div>
