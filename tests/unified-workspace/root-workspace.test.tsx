@@ -11,6 +11,7 @@ import {
   resolveActiveModuleId,
   RoleWorkspaceView,
 } from '@/components/workspace/RoleWorkspace';
+import { evaluateDemoTargetGuard } from '@/modules/demo/target-guard';
 
 function readSource(relativePath: string): string {
   return readFileSync(join(process.cwd(), relativePath), 'utf8');
@@ -247,5 +248,69 @@ describe('T-002 role-aware root workspace', () => {
     expect(workspace()).not.toContain('/api/auth/session');
     expect(workspace()).toContain('var(--civicos-');
     expect(workspace()).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  });
+
+  it('never mounts Demo Center through login, error or denied paths', () => {
+    const loginRequired = view({ session: null, assignmentState: 'ready' });
+    expect(loginRequired).not.toContain('demo-center');
+    expect(loginRequired).not.toContain('Demo Center');
+
+    const sessionLoading = view({
+      session: null,
+      sessionState: 'loading',
+      assignmentState: 'loading',
+    });
+    expect(sessionLoading).not.toContain('demo-center');
+
+    const sessionError = view({
+      sessionState: 'error',
+      assignmentState: 'ready',
+    });
+    expect(sessionError).not.toContain('demo-center');
+
+    const assignmentsError = view({ assignmentState: 'error' });
+    expect(assignmentsError).not.toContain('demo-center');
+
+    const citizen = session('citizen-1', ['citizen']);
+    const denied = view({ session: citizen });
+    expect(denied).toContain('Không có quyền truy cập');
+    expect(denied).not.toContain('demo-center');
+    expect(denied).not.toContain('LIVE_DEMO');
+  });
+
+  it('mounts Demo Center only after an eligible workspace with demo target', () => {
+    expect(view()).not.toContain('demo-center');
+
+    const disabled = view({
+      demoTarget: evaluateDemoTargetGuard({ demoModeEnabled: false }),
+    });
+    expect(disabled).not.toContain('demo-center');
+
+    const ready = view({
+      demoTarget: evaluateDemoTargetGuard({
+        demoModeEnabled: true,
+        demoDatabaseUrl:
+          'postgresql://demo-user:s3cret-token@localhost:5432/civicos_demo?schema=public',
+        databaseUrl: undefined,
+      }),
+    });
+    expect(ready).toContain('data-testid="demo-center"');
+    expect(ready).toContain('LIVE_DEMO');
+    expect(ready).not.toContain('s3cret-token');
+    expect(ready).not.toContain('postgresql://');
+
+    const blocked = view({
+      demoTarget: evaluateDemoTargetGuard({
+        demoModeEnabled: true,
+        demoDatabaseUrl:
+          'postgresql://demo-user:s3cret-token@localhost:5432/civicos_demo_shadow?schema=public',
+        databaseUrl: undefined,
+      }),
+    });
+    expect(blocked).toContain('data-testid="demo-center"');
+    expect(blocked).toContain('Demo bị chặn');
+    expect(blocked).not.toContain('Bắt đầu demo');
+    expect(blocked).not.toContain('s3cret-token');
+    expect(blocked).not.toContain('civicos_demo_shadow');
   });
 });

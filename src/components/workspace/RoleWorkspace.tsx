@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 
 import { AccessDenied } from '@/components/identity/AccessDenied';
+import { DemoCenter } from '@/components/demo/DemoCenter';
+import type { DemoTargetGuardResult } from '@/modules/demo/target-guard';
 import type {
   AssignmentScope,
   SessionScope,
@@ -38,6 +40,8 @@ export type RoleWorkspaceViewProps = {
   assignmentState: 'loading' | 'ready' | 'error';
   online: boolean;
   onRetry: () => void;
+  // Server-computed sanitized demo target; absent keeps the normal app mode.
+  demoTarget?: DemoTargetGuardResult;
 };
 
 export function RoleWorkspaceView({
@@ -47,6 +51,7 @@ export function RoleWorkspaceView({
   assignmentState,
   online,
   onRetry,
+  demoTarget,
 }: RoleWorkspaceViewProps) {
   const projection = useMemo(
     () => buildWorkspaceProjection(session, assignments),
@@ -226,11 +231,20 @@ export function RoleWorkspaceView({
           </a>
         ) : null}
       </nav>
+      {/* Demo Center mounts only after the authenticated, assignment-ready
+          projection gates above; disabled demo mode renders nothing. */}
+      {demoTarget && demoTarget.reason !== 'DEMO_MODE_DISABLED' ? (
+        <DemoCenter target={demoTarget} reloadScope={onRetry} />
+      ) : null}
     </section>
   );
 }
 
-export function RoleWorkspace() {
+export function RoleWorkspace({
+  demoTarget,
+}: {
+  demoTarget?: DemoTargetGuardResult;
+}) {
   const { session, assignments, sessionState, assignmentState, online, retry } =
     useWorkspaceSession();
   return (
@@ -241,6 +255,7 @@ export function RoleWorkspace() {
       assignmentState={assignmentState}
       online={online}
       onRetry={retry}
+      demoTarget={demoTarget}
     />
   );
 }

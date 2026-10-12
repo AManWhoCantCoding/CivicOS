@@ -1,7 +1,15 @@
 import { SessionControls } from '@/components/identity/SessionControls';
 import { RoleWorkspace } from '@/components/workspace/RoleWorkspace';
+import { evaluateDemoTargetGuard } from '@/modules/demo/target-guard';
 
 export default function Home() {
+  // Server-computed sanitized target result only; raw URLs never leave the
+  // server boundary. Demo mode stays off unless explicitly enabled.
+  const demoTarget = evaluateDemoTargetGuard({
+    demoModeEnabled: process.env.CIVICOS_DEMO_MODE === 'LIVE_DEMO',
+    demoDatabaseUrl: process.env.DEMO_DATABASE_URL,
+    databaseUrl: process.env.DATABASE_URL,
+  });
   return (
     <main
       className="min-h-dvh px-4 py-8 sm:px-6 lg:px-10"
@@ -66,7 +74,7 @@ export default function Home() {
             </p>
           </aside>
         </section>
-        <RoleWorkspace />
+        <RoleWorkspace demoTarget={demoTarget} />
         <footer
           className="mt-20 border-t pt-5 text-xs"
           style={{
