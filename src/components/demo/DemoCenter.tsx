@@ -22,6 +22,7 @@ import {
 import { createWebActionExecutor } from '@/modules/demo/web-actions';
 import { createLiveMutationExecutor } from '@/modules/demo/live-mutation';
 import type { DemoTargetGuardResult } from '@/modules/demo/target-guard';
+import type { BridgeReadiness } from '@/modules/demo/readiness';
 
 // Safe default manifest seam (replaced by T-005 action work, never by a live
 // mutation adapter here): read-only steps, no mutation, validated shape.
@@ -61,6 +62,7 @@ export type DemoCenterProps = {
   personaSwitch?: DemoPersonaSwitch;
   reloadScope?: () => void | Promise<void>;
   createRunner?: typeof createDemoRunner;
+  bridgeReadiness?: BridgeReadiness;
 };
 
 export type DemoControlStates = {
@@ -186,6 +188,23 @@ export function DemoCenter(props: DemoCenterProps) {
   const personaSwitch = props.personaSwitch ?? switchDemoPersonaClient;
   const reloadScope = props.reloadScope ?? (async () => {});
   const createRunner = props.createRunner ?? createDemoRunner;
+  const isMobileManifest = manifest.surface === 'mobile';
+  const bridgeReady =
+    !isMobileManifest ||
+    (props.bridgeReadiness?.state === 'ready' &&
+      props.bridgeReadiness.canStart === true);
+  const targetStatus =
+    target.state === 'ready' && isMobileManifest && !bridgeReady
+      ? {
+          ...target,
+          state: 'blocked' as const,
+          canStart: false,
+          reason: 'DEMO_BRIDGE_BLOCKED',
+          message:
+            props.bridgeReadiness?.message ??
+            'Cầu nối mobile chưa sẵn sàng. Liên hệ operator để chuẩn bị cầu nối trước khi chạy mobile.',
+        }
+      : target;
 
   const [runState, setRunState] = useState<DemoRunState>('idle');
   const [cursor, setCursor] = useState(0);
@@ -248,7 +267,7 @@ export function DemoCenter(props: DemoCenterProps) {
 
   const ready = target.state === 'ready';
   const controls = resolveDemoControls(runState, {
-    canStartTarget: ready && target.canStart,
+    canStartTarget: ready && target.canStart && bridgeReady,
     busy,
   });
   const total = manifest.steps.length;
@@ -267,7 +286,7 @@ export function DemoCenter(props: DemoCenterProps) {
 
   async function handleStart(): Promise<void> {
     if (busy) return;
-    if (!ready || !target.canStart) return;
+    if (!ready || !target.canStart || !bridgeReady) return;
     if (runner.getState() !== 'idle') return;
     setBusy(true);
     interactedRef.current = true;
@@ -353,10 +372,62 @@ export function DemoCenter(props: DemoCenterProps) {
 
       <div className="mt-4">
         <DemoTargetStatus
-          result={target}
+          result={targetStatus}
           onStart={controls.start ? handleStart : undefined}
         />
       </div>
+
+      {isMobileManifest ? (
+        <div
+          data-testid="demo-bridge-readiness"
+          className="mt-4 rounded-xl border p-4 text-sm leading-6"
+          style={{
+            borderColor: 'var(--civicos-border)',
+            borderRadius: 'var(--civicos-radius-md)',
+            color: 'var(--civicos-text)',
+          }}
+        >
+          <p className="font-semibold">Cầu nối mobile</p>
+          {props.bridgeReadiness ? (
+            <>
+              <div className="mt-2 grid gap-1 sm:grid-cols-2">
+                {(
+                  [
+                    ['bridge', 'Cầu nối'],
+                    ['device', 'Thiết bị'],
+                    ['api', 'API'],
+                    ['worker', 'Worker'],
+                    ['map', 'Bản đồ'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <p key={key}>
+                    {label}:{' '}
+                    {props.bridgeReadiness?.dependencies[key] === 'ready'
+                      ? 'sẵn sàng'
+                      : props.bridgeReadiness?.dependencies[key] ===
+                          'unavailable'
+                        ? 'chưa sẵn sàng'
+                        : 'chưa xác định'}
+                  </p>
+                ))}
+              </div>
+              {!bridgeReady ? (
+                <>
+                  <p className="mt-2 font-semibold">Chưa thể bắt đầu demo.</p>
+                  {props.bridgeReadiness.reasons.map((reason) => (
+                    <p key={reason}>{reason}</p>
+                  ))}
+                </>
+              ) : null}
+            </>
+          ) : (
+            <p className="mt-2">
+              Chưa thể bắt đầu demo. Cầu nối mobile chưa được kiểm tra; liên hệ
+              operator để chuẩn bị cầu nối trước khi chạy mobile.
+            </p>
+          )}
+        </div>
+      ) : null}
 
       {ready ? (
         <>
