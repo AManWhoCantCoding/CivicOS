@@ -290,11 +290,19 @@ describe('T-004 AC-2 state-safe controls and single-runner wiring', () => {
     }
   });
 
-  it('ships a validated default manifest whose default executor blocks', () => {
+  it('ships a validated default manifest whose default executor blocks safely', async () => {
     expect(validateDemoManifest(DEMO_DEFAULT_MANIFEST)).toEqual({ ok: true });
-    expect(
-      defaultDemoExecutor({ id: 'step-1', action: 'submit', index: 0 }),
-    ).toBe('blocked');
+    const outcome = await defaultDemoExecutor({
+      id: 'step-1',
+      action: 'submit',
+      index: 0,
+    });
+    expect(typeof outcome === 'string' ? outcome : outcome.status).toBe(
+      'blocked',
+    );
+    expect(typeof outcome === 'string' ? '' : (outcome.reason ?? '')).toBe(
+      'DEMO_STEP_INVALID_DESCRIPTOR',
+    );
   });
 });
 

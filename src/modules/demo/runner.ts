@@ -32,11 +32,20 @@ export type DemoScheduler = {
   cancel: (handle: DemoTimerHandle) => void;
 };
 
-export type DemoExecutor = (step: {
+export type DemoExecutorStep = {
   id: string;
   action: string;
   index: number;
-}) => DemoStepOutcome | Promise<DemoStepOutcome>;
+  detail?: string;
+  expectedState?: string;
+};
+
+export type DemoExecutorResult =
+  DemoStepOutcome | { status: DemoStepOutcome; reason?: string };
+
+export type DemoExecutor = (
+  step: DemoExecutorStep,
+) => DemoExecutorResult | Promise<DemoExecutorResult>;
 
 export type DemoRunnerOptions = {
   manifest: unknown;
@@ -77,8 +86,42 @@ const defaultScheduler: DemoScheduler = {
 };
 
 function toSafeOutcome(outcome: unknown): DemoStepOutcome {
+  if (typeof outcome === 'object' && outcome !== null) {
+    const status = (outcome as { status?: unknown }).status;
+    if (status === 'settled' || status === 'blocked') return status;
+    return 'failed';
+  }
   if (outcome === 'settled' || outcome === 'blocked') return outcome;
   return 'failed';
+}
+
+// Allowlisted executor reasons that may reach step events. Anything else
+// falls back to the closed runner vocabulary so raw errors never leak.
+const SAFE_EXECUTOR_REASONS: ReadonlySet<string> = new Set([
+  'SELECT_NOT_OPEN',
+  'DEMO_STEP_SETTLED',
+  'DEMO_STEP_BLOCKED',
+  'DEMO_STEP_FAILED',
+  'DEMO_STEP_SELECT_NOT_OPEN',
+  'DEMO_STEP_TARGET_NOT_FOUND',
+  'DEMO_STEP_TARGET_AMBIGUOUS',
+  'DEMO_STEP_TARGET_HIDDEN',
+  'DEMO_STEP_TARGET_DISABLED',
+  'DEMO_STEP_INVALID_DESCRIPTOR',
+  'DEMO_STEP_INTERACTION_UNAVAILABLE',
+  'DEMO_STEP_OPTION_NOT_FOUND',
+  'DEMO_STEP_OPTION_DISABLED',
+  'DEMO_STEP_READINESS_TIMEOUT',
+  'DEMO_STEP_ASSERT_MISMATCH',
+  'DEMO_STEP_FORBIDDEN_CONTROL',
+]);
+
+function toSafeExecutorReason(outcome: unknown): string | null {
+  if (typeof outcome !== 'object' || outcome === null) return null;
+  const reason = (outcome as { reason?: unknown }).reason;
+  if (typeof reason !== 'string') return null;
+  if (!/^[A-Z][A-Z0-9_]{1,63}$/.test(reason)) return null;
+  return SAFE_EXECUTOR_REASONS.has(reason) ? reason : null;
 }
 
 function outcomeReason(
@@ -88,7 +131,7 @@ function outcomeReason(
   if (status === 'blocked') {
     const needsSelectOpen =
       typeof step.action === 'string' && step.action.trim() === 'choose-option';
-    return needsSelectOpen ? 'DEMO_STEP_SELECT_NOT_OPEN' : 'DEMO_STEP_BLOCKED';
+    return needsSelectOpen ? 'SELECT_NOT_OPEN' : 'DEMO_STEP_BLOCKED';
   }
   return status === 'failed' ? 'DEMO_STEP_FAILED' : 'DEMO_STEP_SETTLED';
 }
@@ -124,10 +167,17 @@ export function createDemoRunner(options: DemoRunnerOptions) {
     if (!step) return;
     nextIndex = index;
     let outcome: DemoStepOutcome;
+    let executorReason: string | null = null;
     try {
-      outcome = toSafeOutcome(
-        await options.executor({ id: step.id, action: step.action, index }),
-      );
+      const raw = await options.executor({
+        id: step.id,
+        action: step.action,
+        index,
+        detail: step.detail,
+        expectedState: step.expectedState,
+      });
+      outcome = toSafeOutcome(raw);
+      executorReason = toSafeExecutorReason(raw);
     } catch {
       outcome = 'failed';
     }
@@ -138,7 +188,7 @@ export function createDemoRunner(options: DemoRunnerOptions) {
       index,
       action: step.action,
       status: outcome,
-      reason: outcomeReason(outcome, step),
+      reason: executorReason ?? outcomeReason(outcome, step),
     });
     if (outcome === 'blocked') {
       clearTimer();

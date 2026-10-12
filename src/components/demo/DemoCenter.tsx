@@ -19,6 +19,7 @@ import {
   type DemoScheduler,
   type DemoStepEvent,
 } from '@/modules/demo/runner';
+import { createWebActionExecutor } from '@/modules/demo/web-actions';
 import type { DemoTargetGuardResult } from '@/modules/demo/target-guard';
 
 // Safe default manifest seam (replaced by T-005 action work, never by a live
@@ -41,9 +42,10 @@ export const DEMO_DEFAULT_MANIFEST: DemoManifest = {
   ],
 };
 
-// Fail-safe default executor for T-004: block instead of faking a successful
-// domain action. T-005 replaces only this seam with behavior-faithful steps.
-export const defaultDemoExecutor: DemoExecutor = () => 'blocked';
+// Fail-safe default executor for T-005: the behavior-faithful web adapter.
+// The default manifest carries no target descriptor, so it stays blocked
+// rather than pretending a domain action succeeded.
+export const defaultDemoExecutor: DemoExecutor = createWebActionExecutor();
 
 export type DemoPersonaSwitch = (
   alias: string,
