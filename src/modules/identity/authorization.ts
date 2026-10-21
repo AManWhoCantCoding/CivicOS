@@ -33,7 +33,28 @@ export type EvaluatePolicyInput = {
   assignments: readonly PolicyAssignment[];
 };
 
+type ResidentActivityAssignment = PolicyAssignment & {
+  id: string;
+  assigneeUserId: string;
+};
+
+type EvaluateResidentActivityPolicyInput = {
+  user: IdentityUser;
+  resource: ResourceRef;
+  assignmentId?: string;
+  assignment?: ResidentActivityAssignment | null;
+};
+
 const COMMAND_ROLES: readonly RoleName[] = ['commander', 'superior_commander'];
+const RESIDENT_ACTIVITY_ROLES: readonly RoleName[] = [
+  'commander',
+  'duty_officer',
+  'field_officer',
+  'office_officer',
+  'village_officer',
+];
+const RESIDENT_RECORD_RESOURCE_TYPE = 'SubjectManagementRecord';
+const RESIDENT_FOLLOWUP_TASK = 'resident_followup';
 
 const LAND_RESOURCE_TYPES: readonly string[] = ['LandChangeApplication'];
 const LAND_COMMAND_ROLES: readonly RoleName[] = ['commune_leader'];
@@ -232,6 +253,120 @@ export function evaluatePolicy(input: EvaluatePolicyInput): PolicyEvaluation {
     return { allowed: false, reason: 'ORGANIZATION_SCOPE_DENIED' };
   }
   return { allowed: true, reason: 'ALLOWED' };
+}
+
+export function evaluateResidentActivityPolicy(
+  input: EvaluateResidentActivityPolicyInput,
+): PolicyEvaluation {
+  if (!hasResidentActivityRole(input.user)) {
+    return { allowed: false, reason: 'ROLE_CAPABILITY_DENIED' };
+  }
+  const assignment = input.assignment;
+  if (
+    !input.assignmentId ||
+    !assignment ||
+    assignment.id !== input.assignmentId
+  ) {
+    return { allowed: false, reason: 'ASSIGNMENT_REQUIRED' };
+  }
+  if (
+    assignment.status !== 'active' ||
+    assignment.task !== RESIDENT_FOLLOWUP_TASK ||
+    assignment.assigneeUserId !== input.user.id ||
+    input.resource.resourceType !== RESIDENT_RECORD_RESOURCE_TYPE ||
+    !input.resource.resourceId ||
+    assignment.resourceType !== RESIDENT_RECORD_RESOURCE_TYPE ||
+    assignment.resourceId !== input.resource.resourceId
+  ) {
+    return { allowed: false, reason: 'TASK_CAPABILITY_DENIED' };
+  }
+  const actorOrganizationId = input.user.organizationUnitId;
+  const recordOrganizationId = input.resource.organizationId;
+  const assignmentOrganizationId = assignment.organizationId;
+  if (
+    !actorOrganizationId?.trim() ||
+    !recordOrganizationId?.trim() ||
+    !assignmentOrganizationId?.trim() ||
+    actorOrganizationId !== recordOrganizationId ||
+    recordOrganizationId !== assignmentOrganizationId
+  ) {
+    return { allowed: false, reason: 'ORGANIZATION_SCOPE_DENIED' };
+  }
+  return { allowed: true, reason: 'ALLOWED' };
+}
+
+function hasResidentActivityRole(user: IdentityUser): boolean {
+  return RESIDENT_ACTIVITY_ROLES.some((role) => user.roles.includes(role));
+}
+
+export function assertResidentActivityRole(user: IdentityUser): void {
+  if (!hasResidentActivityRole(user)) throw new Error('FORBIDDEN');
+}
+
+export async function assertResidentActivityAccess(
+  user: IdentityUser,
+  resource: ResourceRef,
+  assignmentId: string | undefined,
+  client: PrismaClient | Prisma.TransactionClient = prisma,
+): Promise<void> {
+  if (
+    !user.organizationUnitId?.trim() ||
+    !resource.organizationId?.trim() ||
+    user.organizationUnitId !== resource.organizationId
+  ) {
+    throw new Error('FORBIDDEN');
+  }
+  const select = {
+    id: true,
+    assigneeUserId: true,
+    task: true,
+    resourceType: true,
+    resourceId: true,
+    status: true,
+    organizationId: true,
+  } as const;
+  const row =
+    assignmentId === undefined
+      ? await client.assignment.findFirst({
+          where: {
+            resourceType: resource.resourceType,
+            resourceId: resource.resourceId,
+            task: RESIDENT_FOLLOWUP_TASK,
+            assigneeUserId: user.id,
+            status: 'active',
+            ...(resource.organizationId
+              ? { organizationId: resource.organizationId }
+              : {}),
+          },
+          select,
+        })
+      : assignmentId.trim()
+        ? await client.assignment.findUnique({
+            where: { id: assignmentId },
+            select,
+          })
+        : null;
+  const assignment: ResidentActivityAssignment | undefined = row
+    ? {
+        id: row.id,
+        assigneeUserId: row.assigneeUserId,
+        task: row.task,
+        resourceType: row.resourceType,
+        resourceId: row.resourceId,
+        status: row.status as PolicyAssignment['status'],
+        organizationId: row.organizationId ?? undefined,
+      }
+    : undefined;
+  if (
+    !evaluateResidentActivityPolicy({
+      user,
+      resource,
+      assignmentId: row?.id,
+      assignment,
+    }).allowed
+  ) {
+    throw new Error('FORBIDDEN');
+  }
 }
 
 const resourceAggregateTypes: Record<string, string> = {

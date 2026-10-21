@@ -8,8 +8,15 @@ import {
   TASK_CAPABILITIES,
   isTaskCompatibleWithRoles,
 } from '@/modules/identity/contracts';
-import { evaluatePolicy } from '@/modules/identity/authorization';
-import type { IdentityUser, ResourceRef } from '@/modules/identity/contracts';
+import {
+  evaluatePolicy,
+  evaluateResidentActivityPolicy,
+} from '@/modules/identity/authorization';
+import type {
+  IdentityUser,
+  ResourceRef,
+  RoleName,
+} from '@/modules/identity/contracts';
 
 function user(
   id: string,
@@ -30,6 +37,71 @@ const resource: ResourceRef = {
   resourceId: 'res-1',
   organizationId: 'unit-a',
 };
+
+const residentActivityRoles: readonly RoleName[] = [
+  'commander',
+  'duty_officer',
+  'field_officer',
+  'office_officer',
+  'village_officer',
+];
+const residentActivityResource: ResourceRef = {
+  resourceType: 'SubjectManagementRecord',
+  resourceId: 'record-1',
+  organizationId: 'unit-a',
+};
+type ResidentActivityAssignment = NonNullable<
+  Parameters<typeof evaluateResidentActivityPolicy>[0]['assignment']
+>;
+
+function residentActivityAssignment(
+  overrides: Partial<ResidentActivityAssignment> = {},
+): ResidentActivityAssignment {
+  return {
+    id: 'assignment-1',
+    assigneeUserId: 'actor-1',
+    task: 'resident_followup',
+    resourceType: 'SubjectManagementRecord',
+    resourceId: 'record-1',
+    status: 'active',
+    organizationId: 'unit-a',
+    ...overrides,
+  };
+}
+
+function evaluateResidentActivity(
+  input: {
+    role?: RoleName;
+    assignment?: ResidentActivityAssignment | null;
+    assignmentId?: string | null;
+    actorUnit?: string | null;
+    recordUnit?: string | null;
+    resourceType?: string;
+  } = {},
+) {
+  const actor = {
+    ...user('actor-1', [input.role ?? 'field_officer']),
+    organizationUnitId:
+      input.actorUnit === null ? undefined : (input.actorUnit ?? 'unit-a'),
+  };
+  return evaluateResidentActivityPolicy({
+    user: actor,
+    resource: {
+      ...residentActivityResource,
+      resourceType: input.resourceType ?? residentActivityResource.resourceType,
+      organizationId:
+        input.recordUnit === null ? undefined : (input.recordUnit ?? 'unit-a'),
+    },
+    assignmentId:
+      input.assignmentId === null
+        ? undefined
+        : (input.assignmentId ?? 'assignment-1'),
+    assignment:
+      input.assignment === null
+        ? undefined
+        : (input.assignment ?? residentActivityAssignment()),
+  });
+}
 
 describe('capability policy contract', () => {
   it('recognizes the full role catalog', () => {
@@ -317,5 +389,90 @@ describe('capability policy contract', () => {
         ],
       }).allowed,
     ).toBe(false);
+  });
+
+  describe('FR-004-03 / D-63 resident.record_activity policy', () => {
+    it('allows only the five D-63 roles with an exact active resident-followup assignment', () => {
+      for (const role of residentActivityRoles) {
+        expect(evaluateResidentActivity({ role }).allowed).toBe(true);
+      }
+    });
+
+    it('denies every role outside D-63 for resident activity', () => {
+      for (const role of [...ROLE_CATALOG, 'supervisor'] as RoleName[]) {
+        if (residentActivityRoles.includes(role)) continue;
+        expect(evaluateResidentActivity({ role }).allowed).toBe(false);
+      }
+    });
+
+    it.each([
+      ['missing assignment', { assignment: null }],
+      ['missing assignment id', { assignmentId: null }],
+      [
+        'revoked assignment',
+        { assignment: residentActivityAssignment({ status: 'revoked' }) },
+      ],
+      [
+        'wrong task',
+        {
+          assignment: residentActivityAssignment({
+            task: 'incident_verification',
+          }),
+        },
+      ],
+      [
+        'wrong resource type',
+        {
+          assignment: residentActivityAssignment({ resourceType: 'Incident' }),
+        },
+      ],
+      [
+        'wrong resource id',
+        { assignment: residentActivityAssignment({ resourceId: 'record-2' }) },
+      ],
+      [
+        'assignment for another actor',
+        {
+          assignment: residentActivityAssignment({ assigneeUserId: 'actor-2' }),
+        },
+      ],
+      [
+        'cross-unit assignment',
+        {
+          assignment: residentActivityAssignment({ organizationId: 'unit-b' }),
+        },
+      ],
+      ['a different assignment id', { assignmentId: 'assignment-2' }],
+    ] as const)('denies %s', (_name, input) => {
+      expect(evaluateResidentActivity(input).allowed).toBe(false);
+    });
+
+    it.each([
+      ['actor', { actorUnit: null }],
+      ['record', { recordUnit: null }],
+      [
+        'assignment',
+        {
+          assignment: residentActivityAssignment({ organizationId: undefined }),
+        },
+      ],
+      ['empty actor', { actorUnit: '' }],
+      ['empty record', { recordUnit: '' }],
+      [
+        'empty assignment',
+        { assignment: residentActivityAssignment({ organizationId: '' }) },
+      ],
+      ['actor-record mismatch', { actorUnit: 'unit-b' }],
+      [
+        'assignment-record mismatch',
+        {
+          assignment: residentActivityAssignment({ organizationId: 'unit-b' }),
+        },
+      ],
+    ])(
+      'fails closed when %s organization scope is absent, empty, or different',
+      (_name, input) =>
+        expect(evaluateResidentActivity(input).allowed).toBe(false),
+    );
   });
 });

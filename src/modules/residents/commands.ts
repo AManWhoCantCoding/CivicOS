@@ -5,6 +5,10 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { appendEvent, getAggregateVersion } from '@/modules/eventing';
 import {
+  assertResidentActivityAccess,
+  assertResidentActivityRole,
+} from '@/modules/identity/authorization';
+import {
   ROLE_BASE_CAPABILITIES,
   blindIndex,
   decryptSensitive,
@@ -398,14 +402,7 @@ export async function recordActivity(
   input: RecordActivityInput,
   actor: ResidentActor,
 ) {
-  requireRole(
-    actor,
-    'commander',
-    'duty_officer',
-    'field_officer',
-    'office_officer',
-    'village_officer',
-  );
+  assertResidentActivityRole(actor);
   if (!input.content.trim()) throw new Error('CONTENT_REQUIRED');
   const occurredAt = new Date(input.occurredAt);
   if (Number.isNaN(occurredAt.getTime())) {
@@ -418,20 +415,58 @@ export async function recordActivity(
     createGeoPoint(input.latitude, input.longitude);
   }
   return prisma.$transaction(async (tx) => {
+    const record = await tx.subjectManagementRecord.findUnique({
+      where: { id: input.recordId },
+      select: { id: true, assignedOrganizationId: true },
+    });
+    if (!record) throw new Error('RECORD_NOT_FOUND');
+    await assertResidentActivityAccess(
+      actor,
+      {
+        resourceType: 'SubjectManagementRecord',
+        resourceId: record.id,
+        organizationId: record.assignedOrganizationId ?? undefined,
+      },
+      input.assignmentId,
+      tx,
+    );
     if (input.idempotencyKey) {
       const existing = await tx.subjectManagementActivity.findUnique({
         where: { idempotencyKey: input.idempotencyKey },
+        select: { id: true, recordId: true },
       });
-      if (existing) return existing;
+      if (existing) {
+        if (existing.recordId !== record.id) throw new Error('FORBIDDEN');
+        await recordAudit(
+          {
+            actor,
+            resourceType: 'SubjectManagementRecord',
+            resourceId: record.id,
+            operation: 'subject_activity.idempotency_replayed',
+            metadata: { activityId: existing.id },
+          },
+          tx,
+        );
+        const replayedActivity = await tx.subjectManagementActivity.findFirst({
+          where: { id: existing.id, recordId: record.id },
+        });
+        if (!replayedActivity || replayedActivity.recordId !== record.id) {
+          throw new Error('FORBIDDEN');
+        }
+        return replayedActivity;
+      }
     }
-    const record = await tx.subjectManagementRecord.findUnique({
-      where: { id: input.recordId },
+    const recordState = await tx.subjectManagementRecord.findUnique({
+      where: { id: record.id },
+      select: { id: true, status: true, purpose: true, version: true },
     });
-    if (!record) throw new Error('RECORD_NOT_FOUND');
-    if (record.status === 'closed' || record.status === 'transferred') {
+    if (!recordState) throw new Error('RECORD_NOT_FOUND');
+    if (
+      recordState.status === 'closed' ||
+      recordState.status === 'transferred'
+    ) {
       throw new Error('RECORD_LOCKED');
     }
-    await assertRecordAccess(tx, record, actor);
     const activity = await tx.subjectManagementActivity.create({
       data: {
         recordId: record.id,
@@ -449,15 +484,15 @@ export async function recordActivity(
     });
     if (
       input.activityType === 'checkup' &&
-      isResidentSubjectType(record.purpose)
+      isResidentSubjectType(recordState.purpose)
     ) {
       const nextCheck = nextCheckForPurpose(
-        record.purpose as ResidentSubjectType,
+        recordState.purpose as ResidentSubjectType,
         occurredAt,
       );
       await tx.subjectManagementRecord.update({
-        where: { id: record.id },
-        data: { nextCheckAt: nextCheck, version: record.version + 1 },
+        where: { id: recordState.id },
+        data: { nextCheckAt: nextCheck, version: recordState.version + 1 },
       });
       await tx.slaInstance.updateMany({
         where: {
