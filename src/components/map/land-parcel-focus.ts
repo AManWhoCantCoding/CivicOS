@@ -1,5 +1,5 @@
 // T-003 focused LandParcel helpers cho web map (phase-02).
-// Nguồn: docs/design/land-parcel-map (api-contract allowlist, screen-02/07/12).
+// Nguồn: docs/land-parcel-map (api-contract allowlist, screen-02/07/12).
 // Chỉ navigation context parcelId; quyền do route T-002 quyết định.
 // Không geometry/PII/token trong URL, không mutation, không legal claim.
 

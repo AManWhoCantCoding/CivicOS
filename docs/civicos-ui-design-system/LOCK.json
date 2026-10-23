@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "feature": "civicos-ui-design-system",
+  "stage": "full",
+  "lockedAt": "2026-10-23T14:19:42.579Z",
+  "files": {
+    "api-contract.md": "c1b30a3e5f45",
+    "data-model.md": "a00d6ccf1304",
+    "domain-rules.md": "54357cef117e",
+    "edge-cases.md": "c032b61214e2",
+    "glossary.md": "83137a15b1ee",
+    "integration-contracts.md": "69857bc16948",
+    "non-functional.md": "f1052024957e",
+    "overview.md": "7ff898a13434"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "feature": "demo-seed-restart",
+  "stage": "full",
+  "lockedAt": "2026-10-23T14:19:42.848Z",
+  "files": {
+    "api-contract.md": "dfa779f8762e",
+    "data-model.md": "4dc6ae2ed7d6",
+    "domain-rules.md": "5341e1d34f7a",
+    "edge-cases.md": "f3a57c7c4481",
+    "glossary.md": "f91afdd6fe9b",
+    "integration-contracts.md": "4312d8664b92",
+    "non-functional.md": "be0b03da7bf6",
+    "overview.md": "fbc31b945d61"
+  }
+}

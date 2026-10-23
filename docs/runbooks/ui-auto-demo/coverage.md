@@ -27,6 +27,6 @@ Operator prerequisites are listed explicitly below; thiếu prerequisite giữ n
 
 - **Dependency:** T-012 completed; review evidence tại `.brain/evidence/ui-auto-demo-T-012/review.md` ghi nhận commit `57e88b0`.
 - **Next gate:** `gov-phase-verify` cho PH-06.
-- **Locked design refs:** `docs/design/ui-auto-demo/LOCK.json` và các locked design files `overview.md`, `non-functional.md`, `edge-cases.md`, `integration-contracts.md`, `data-model.md` dưới `docs/design/ui-auto-demo/`; approved SOW là `.scratch/ui-auto-demo/sow.md`.
-- **Allowed files:** `docs/demo-script.md`, `docs/runbooks/ui-auto-demo/**`, `docs/research/ui-auto-demo/**`, `.scratch/ui-auto-demo/**`, `tests/demo-ui/**`, `tests/integration/**`.
+- **Locked design refs:** `docs/ui-auto-demo/LOCK.json` và các locked design files `overview.md`, `non-functional.md`, `edge-cases.md`, `integration-contracts.md`, `data-model.md` dưới `docs/ui-auto-demo/`; approved SOW là `.scratch/ui-auto-demo/sow.md`.
+- **Allowed files:** `docs/demo-script.md`, `docs/runbooks/ui-auto-demo/**`, `brain/domains/demo-runner/research/**`, `.scratch/ui-auto-demo/**`, `tests/demo-ui/**`, `tests/integration/**`.
 - **Operator prerequisites:** PostgreSQL với target `civicos_demo`, Next.js, worker, local/demo persona provider, readiness evidence; TileServer và CADN asset qua metadata gate nếu demo map; Metro và emulator/device nếu chạy native; operator xác nhận cleanup/reset guard.

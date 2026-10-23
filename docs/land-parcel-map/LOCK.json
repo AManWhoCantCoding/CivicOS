@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "feature": "land-parcel-map",
+  "stage": "full",
+  "lockedAt": "2026-10-23T14:19:43.026Z",
+  "files": {
+    "api-contract.md": "8719872607ad",
+    "data-model.md": "edc1ffbdf2bb",
+    "domain-rules.md": "70537708a4cc",
+    "edge-cases.md": "a617057ddb15",
+    "glossary.md": "c5a051dca30f",
+    "integration-contracts.md": "2fab8a669031",
+    "non-functional.md": "2852ca9aa442",
+    "overview.md": "020880f2d35e",
+    "source-assessment.md": "71d9c38bdbba"
+  }
+}

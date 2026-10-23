@@ -32,4 +32,4 @@ __pycache__/
 mobile/android/**/.gradle/
 mobile/android/**/.cxx/
 mobile/android/**/build/
-docs/design/civicos-e1-clone-mvp/api-contract.md
+docs/civicos-e1-clone-mvp/api-contract.md

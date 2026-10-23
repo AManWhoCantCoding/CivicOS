@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "feature": "ui-auto-demo",
+  "stage": "full",
+  "lockedAt": "2026-10-23T14:19:43.114Z",
+  "files": {
+    "api-contract.md": "72b9cc49b575",
+    "data-model.md": "5c418d046eb2",
+    "domain-rules.md": "133b3382a112",
+    "edge-cases.md": "7c9248c2c1c1",
+    "glossary.md": "7b1ef80a44b7",
+    "integration-contracts.md": "33862ce87b84",
+    "non-functional.md": "dc56161f4e39",
+    "overview.md": "a624db23290d"
+  }
+}

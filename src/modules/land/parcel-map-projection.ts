@@ -11,7 +11,7 @@ import {
 import { fromGeometryJson, type PolygonGeometry } from './parcel-geometry';
 
 // P0 single-parcel map read seam (T-001).
-// Design: docs/design/land-parcel-map (overview, data-model, domain-rules,
+// Design: docs/land-parcel-map (overview, data-model, domain-rules,
 // api-contract) and ADR-0002. Logical projection over LandParcel: no new
 // table, column, index, migration, cache or materialized view. The query
 // selects the map allowlist plus the ACL-only organizationId with

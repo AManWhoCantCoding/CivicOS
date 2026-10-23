@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "feature": "land-module",
+  "stage": "full",
+  "lockedAt": "2026-10-23T14:19:42.757Z",
+  "files": {
+    "api-contract.md": "3b5fdcda7955",
+    "data-model.md": "5e39c22bae31",
+    "domain-rules.md": "1062a8d6624a",
+    "edge-cases.md": "89bd50c14f5c",
+    "glossary.md": "b758e0679be1",
+    "integration-contracts.md": "c3df0f810579",
+    "non-functional.md": "f00aca379306",
+    "overview.md": "84b084c52fca"
+  }
+}

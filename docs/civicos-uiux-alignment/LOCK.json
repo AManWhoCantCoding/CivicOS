@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "feature": "civicos-uiux-alignment",
+  "stage": "full",
+  "lockedAt": "2026-10-23T16:01:25.220Z",
+  "files": {
+    "api-contract.md": "5fae0cea4e56",
+    "data-model.md": "ba69dbcbd0e2",
+    "domain-rules.md": "c00b1ce76e42",
+    "edge-cases.md": "6b109ef828be",
+    "glossary.md": "9b84dce0dd4e",
+    "integration-contracts.md": "3c8bb1324cc8",
+    "non-functional.md": "803f1af5010d",
+    "overview.md": "3d758ee2bb43"
+  }
+}

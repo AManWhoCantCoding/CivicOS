@@ -12,7 +12,7 @@ describe('T-013 implementation handoff', () => {
     for (const item of [
       'T-012',
       'gov-phase-verify',
-      'docs/design/ui-auto-demo/LOCK.json',
+      'docs/ui-auto-demo/LOCK.json',
       'overview.md',
       '.scratch/ui-auto-demo/sow.md',
       '.brain/evidence/ui-auto-demo-T-012/review.md',

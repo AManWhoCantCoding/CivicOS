@@ -17,7 +17,7 @@ import {
 import { decodeCursor, encodeCursor } from './schemas';
 
 // P1 web-only scoped parcel discovery (T-008).
-// Design: docs/design/land-parcel-map (api-contract P1, data-model 6/P1,
+// Design: docs/land-parcel-map (api-contract P1, data-model 6/P1,
 // domain-rules DR-LPM-12, edge-cases EC-LPM-13/14/19-25). Logical read
 // projection over LandParcel: no new table, column, index, migration, cache
 // or materialized view. Reuses the existing scalar/GiST indexes, the opaque

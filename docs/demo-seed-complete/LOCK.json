@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 2,
+  "feature": "demo-seed-complete",
+  "stage": "full",
+  "lockedAt": "2026-10-23T14:19:42.671Z",
+  "files": {
+    "api-contract.md": "29079051db3a",
+    "data-model.md": "4bce40b766c0",
+    "overview.md": "d18c7c0b2abc"
+  }
+}
