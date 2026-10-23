@@ -56,6 +56,18 @@ export type AssignmentInput = ResourceRef & {
   organizationId?: string;
 };
 
+export const USER_PROVISIONING_ROLES = [
+  'commander',
+  'duty_officer',
+  'field_officer',
+  'office_officer',
+  'village_officer',
+  'superior_officer',
+  'superior_commander',
+  'system_operator',
+  'land_officer',
+] as const;
+
 export const ROLE_CATALOG: readonly RoleName[] = [
   'commander',
   'duty_officer',

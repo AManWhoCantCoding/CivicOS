@@ -3,16 +3,7 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-const ROLE_OPTIONS = [
-  'commander',
-  'duty_officer',
-  'field_officer',
-  'office_officer',
-  'village_officer',
-  'superior_officer',
-  'superior_commander',
-  'system_operator',
-] as const;
+import { USER_PROVISIONING_ROLES } from '@/modules/identity/contracts';
 
 export function CreateUserForm() {
   const router = useRouter();
@@ -101,7 +92,7 @@ export function CreateUserForm() {
             value={role}
             onChange={(event) => setRole(event.target.value)}
           >
-            {ROLE_OPTIONS.map((option) => (
+            {USER_PROVISIONING_ROLES.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>

@@ -47,8 +47,10 @@ function mockSessionCookie(token?: string) {
 }
 
 describe('slice A role catalog contract', () => {
-  it('exposes exactly the eight approved runtime roles', () => {
-    expect([...ROLE_CATALOG].sort()).toEqual([...EXPECTED_CATALOG].sort());
+  it('exposes the eight approved runtime roles plus land roles', () => {
+    expect([...ROLE_CATALOG].sort()).toEqual(
+      [...EXPECTED_CATALOG, 'land_officer', 'commune_leader', 'citizen'].sort(),
+    );
   });
 
   it('treats supervisor as a non-business role', () => {

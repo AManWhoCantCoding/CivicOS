@@ -6,6 +6,7 @@ import {
   getCurrentUser,
   listIdentityUsers,
 } from '@/modules/identity';
+import { USER_PROVISIONING_ROLES } from '@/modules/identity/contracts';
 
 export async function GET(): Promise<NextResponse> {
   const current = await getCurrentUser();
@@ -34,20 +35,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       role?: string;
       password?: string;
     };
-    const allowedRoles = [
-      'commander',
-      'duty_officer',
-      'field_officer',
-      'office_officer',
-      'village_officer',
-      'superior_officer',
-      'superior_commander',
-      'system_operator',
-    ] as const;
-    if (
-      !body.role ||
-      !allowedRoles.includes(body.role as (typeof allowedRoles)[number])
-    ) {
+    const role = USER_PROVISIONING_ROLES.find(
+      (allowedRole) => allowedRole === body.role,
+    );
+    if (!role) {
       return NextResponse.json({ error: 'INVALID_ROLE' }, { status: 400 });
     }
     return NextResponse.json(
@@ -56,7 +47,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           {
             email: body.email ?? '',
             name: body.name ?? '',
-            role: body.role as (typeof allowedRoles)[number],
+            role,
             password: body.password ?? '',
           },
           current,

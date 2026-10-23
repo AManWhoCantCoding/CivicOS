@@ -1,4 +1,5 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { isIP } from 'node:net';
 
 import { prisma } from '@/lib/prisma';
 
@@ -8,13 +9,13 @@ import type { IdentityUser, RoleName } from './contracts';
 
 const defaultPassword = 'civicos-dev';
 
-function hashPassword(password: string): string {
+export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString('hex');
   const digest = scryptSync(password, salt, 64).toString('hex');
   return `${salt}.${digest}`;
 }
 
-function verifyPassword(password: string, stored: string): boolean {
+export function verifyPassword(password: string, stored: string): boolean {
   const [salt, digest] = stored.split('.');
   if (!salt || !digest) return false;
   const expected = Buffer.from(digest, 'hex');
@@ -22,8 +23,62 @@ function verifyPassword(password: string, stored: string): boolean {
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
+async function isPilot01DatabaseTarget(): Promise<boolean> {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl?.trim()) {
+    throw new Error('PILOT01_DATABASE_URL_REQUIRED');
+  }
+
+  let target: URL;
+  let databaseName: string;
+  try {
+    target = new URL(databaseUrl);
+    databaseName = decodeURIComponent(target.pathname.slice(1));
+  } catch {
+    throw new Error('PILOT01_DATABASE_URL_REFUSED');
+  }
+  if (
+    !['postgres:', 'postgresql:'].includes(target.protocol) ||
+    !target.hostname ||
+    !databaseName
+  ) {
+    throw new Error('PILOT01_DATABASE_URL_REFUSED');
+  }
+  const configuredForPilot01 =
+    target.hostname === '127.0.0.1' && target.port === '55432';
+  if (!configuredForPilot01) return false;
+  if (databaseName !== 'civicos_demo') {
+    throw new Error('PILOT01_SANDBOX_IDENTITY_UNVERIFIED');
+  }
+
+  // Only the approved endpoint can be Pilot; connected SQL identity must also
+  // prove the expected database, server address and port.
+  const [identity] = await prisma.$queryRaw<
+    Array<{
+      databaseName: string;
+      serverAddress: string | null;
+      serverPort: number | null;
+    }>
+  >`
+    SELECT current_database() AS "databaseName",
+      host(inet_server_addr()) AS "serverAddress",
+      inet_server_port() AS "serverPort"
+  `;
+  if (
+    !identity ||
+    identity.databaseName !== 'civicos_demo' ||
+    !identity.serverAddress ||
+    isIP(identity.serverAddress) !== 4 ||
+    identity.serverPort !== 5432
+  ) {
+    throw new Error('PILOT01_SANDBOX_IDENTITY_UNVERIFIED');
+  }
+  return true;
+}
+
 export async function ensureDevelopmentUsers(): Promise<void> {
   if (process.env.NODE_ENV === 'production') return;
+  if (await isPilot01DatabaseTarget()) return;
 
   const unit = await prisma.organizationUnit.upsert({
     where: { id: 'unit-nghia-tru' },
@@ -180,13 +235,13 @@ export async function authenticateLocal(
     where: { email: email.trim().toLowerCase() },
     include: { roles: { include: { role: true } } },
   });
-  if (
-    !user?.active ||
-    !user.passwordHash ||
-    !verifyPassword(password, user.passwordHash)
-  ) {
+  if (!user?.active || !user.passwordHash) {
     return null;
   }
+  if (password === defaultPassword && (await isPilot01DatabaseTarget())) {
+    return null;
+  }
+  if (!verifyPassword(password, user.passwordHash)) return null;
 
   return {
     id: user.id,
@@ -253,6 +308,17 @@ export async function createIdentityUser(
     throw new Error('INVALID_USER');
   }
   return prisma.$transaction(async (tx) => {
+    if (input.role === 'land_officer') {
+      const organizationUnitId = actor.organizationUnitId;
+      if (!organizationUnitId?.trim()) {
+        throw new Error('INVALID_ORGANIZATION_UNIT');
+      }
+      const organizationUnit = await tx.organizationUnit.findFirst({
+        where: { id: organizationUnitId, active: true },
+        select: { id: true },
+      });
+      if (!organizationUnit) throw new Error('INVALID_ORGANIZATION_UNIT');
+    }
     const role = await tx.role.upsert({
       where: { name: input.role },
       update: {},
