@@ -151,4 +151,34 @@ describe('T-002 AC-1 manifest validation', () => {
     expect(DEMO_ACTIONS as readonly string[]).toContain(events[0]?.action);
     expect(events[0]?.reason).toBe('DEMO_MANIFEST_UNKNOWN_ACTION');
   });
+
+  it('T-002 / UAD-02 blocks non-text step detail before executor invocation', async () => {
+    const executor = vi.fn().mockReturnValue('settled');
+    const events: { status: string; reason: string }[] = [];
+    const runner = createDemoRunner({
+      manifest: makeValidManifest({
+        steps: [
+          {
+            id: 'step-1',
+            action: 'click',
+            detail: { password: 'sensitive-demo-value' } as unknown as string,
+          },
+        ],
+      }),
+      executor,
+      onEvent: (event) => events.push(event),
+    });
+
+    await runner.start();
+
+    expect(runner.getState()).toBe('blocked');
+    expect(executor).not.toHaveBeenCalled();
+    expect(events).toEqual([
+      expect.objectContaining({
+        status: 'blocked',
+        reason: 'DEMO_MANIFEST_INVALID_SHAPE',
+      }),
+    ]);
+    expect(JSON.stringify(events)).not.toContain('sensitive-demo-value');
+  });
 });

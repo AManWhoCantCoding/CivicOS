@@ -1,14 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import {
-  authenticateLocal,
-  createSession,
-  deleteCurrentSession,
-  ensureDevelopmentUsers,
-  listAssignments,
-  sessionCookieName,
-  type IdentityUser,
-} from '@/modules/identity';
+import type { IdentityUser } from '@/modules/identity';
 import {
   switchDemoPersona,
   type PersonaBrokerRequest,
@@ -92,12 +84,20 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   let authedUser: IdentityUser | null = null;
   let sessionToken = '';
+  let identityModule: typeof import('@/modules/identity') | undefined;
+  const loadIdentity = async () => {
+    identityModule ??= await import('@/modules/identity');
+    return identityModule;
+  };
+
   const result = await switchDemoPersona(brokerRequest, {
     providerAvailable: demoPassword.length > 0,
-    endCurrentSession: () => deleteCurrentSession(),
+    endCurrentSession: async () =>
+      (await loadIdentity()).deleteCurrentSession(),
     authenticate: async (email: string) => {
-      if (nodeEnv !== 'production') await ensureDevelopmentUsers();
-      const user = await authenticateLocal(email, demoPassword);
+      const identity = await loadIdentity();
+      if (nodeEnv !== 'production') await identity.ensureDevelopmentUsers();
+      const user = await identity.authenticateLocal(email, demoPassword);
       if (!user) return null;
       authedUser = user;
       return {
@@ -110,13 +110,15 @@ export async function POST(request: Request): Promise<NextResponse> {
     },
     establishSession: async () => {
       if (!authedUser) throw new Error('SESSION_FAILED');
-      const session = await createSession(authedUser.id);
+      const identity = await loadIdentity();
+      const session = await identity.createSession(authedUser.id);
       sessionToken = session.token;
       return { expiresAt: session.expiresAt };
     },
     reloadScope: async () => {
       if (!authedUser) throw new Error('SCOPE_FAILED');
-      const assignments = await listAssignments({ actor: authedUser });
+      const identity = await loadIdentity();
+      const assignments = await identity.listAssignments({ actor: authedUser });
       return {
         ...(authedUser.organizationUnitId
           ? { organizationUnitId: authedUser.organizationUnitId }
@@ -133,7 +135,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json(result, { status: statusFor(result.reason) });
   }
   const response = NextResponse.json(result);
-  response.cookies.set(sessionCookieName, sessionToken, {
+  response.cookies.set(identityModule!.sessionCookieName, sessionToken, {
     httpOnly: true,
     sameSite: 'lax',
     secure: nodeEnv === 'production',

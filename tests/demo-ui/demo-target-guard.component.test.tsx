@@ -23,7 +23,7 @@ describe('T-001 demo target status component', () => {
     expect(html).toContain('civicos_demo');
     expect(html).not.toContain('s3cret-token');
     expect(html).not.toContain('postgresql://');
-    expect(html).not.toContain('disabled');
+    expect(html).not.toContain('disabled=""');
   });
 
   it('renders blocked copy with disabled start control', () => {

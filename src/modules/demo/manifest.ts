@@ -204,6 +204,9 @@ export function validateDemoManifest(input: unknown): DemoManifestValidation {
     ) {
       return { ok: false, reason: 'DEMO_MANIFEST_UNKNOWN_ACTION' };
     }
+    if (step.detail !== undefined && typeof step.detail !== 'string') {
+      return { ok: false, reason: 'DEMO_MANIFEST_INVALID_SHAPE' };
+    }
     if (
       step.expectedState !== undefined &&
       (isBlank(step.expectedState) ||
