@@ -10,7 +10,6 @@ import {
   rejectOfflineCommand,
 } from '@/modules/platform';
 import {
-  completeInspection,
   recordFinding,
   saveChecklistResponses,
   startInspection,
@@ -134,21 +133,6 @@ async function dispatchOfflineCommand(
         severity: finding.severity,
         category: finding.category,
         evidenceIds: finding.evidenceIds,
-      };
-    }
-    case 'inspection.complete': {
-      const inspection = await completeInspection(
-        {
-          inspectionId: resourceId(command),
-          result: stringPayload(payload, 'result'),
-          baseVersion: command.baseVersion ?? undefined,
-        },
-        actor,
-      );
-      return {
-        inspectionId: inspection.id,
-        status: inspection.status,
-        version: inspection.version,
       };
     }
     default:
