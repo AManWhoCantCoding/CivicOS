@@ -26,8 +26,13 @@ playwright/.pytest_cache/
 # Agent infrastructure
 /.agents/
 /AGENTS.md
+/CLAUDE.md
 /Lesson-learned.md
 /skills-lock.json
+/.opencode/skills
+/.claude/skills
+/.commandcode/
+/.freebuff/
 
 # Agent runtime / orchestration state
 /.brain/
@@ -35,8 +40,8 @@ playwright/.pytest_cache/
 
 # Agent workflow documentation
 /docs/agents/
-/docs/AI-AGENT-WORKFLOW.md
-/workflow.md
+/docs/archive/AI-AGENT-WORKFLOW.md
+/docs/archive/workflow.md
 /workflow-roles/
 
 # Agent infrastructure scripts
