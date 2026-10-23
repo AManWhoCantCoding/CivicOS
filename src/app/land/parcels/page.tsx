@@ -1,5 +1,6 @@
 import { AccessDenied } from '@/components/identity/AccessDenied';
 import { ParcelList } from '@/components/land/ParcelList';
+import { ParcelPageHeader } from '@/components/land/ParcelPilotUI';
 import { PartyList } from '@/components/land/PartyList';
 import { ModuleShell } from '@/components/shell/ModuleShell';
 import { canEnterEntry } from '@/components/shell/feature-entry';
@@ -12,42 +13,43 @@ export default async function LandParcelsPage() {
     !(await canEnterEntry(current, ['land-parcel-workspace']));
   return (
     <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-6xl">
+      <div className="w-full">
         <ModuleShell module="land">
-          <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
-            Quản lý đất đai nội bộ
-          </p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[var(--civicos-text)]">
-            Thửa đất · Chủ thể
-          </h1>
-          <p className="mt-4 text-base leading-7 text-[var(--civicos-text-muted)]">
-            Danh sách thửa đất và chủ thể trong phạm vi đơn vị; số định danh
-            luôn hiển thị dạng che.
-          </p>
-          <div className="mt-10 space-y-10">
+          <ParcelPageHeader
+            eyebrow="Quản lý đất đai nội bộ"
+            title="Thửa đất · Chủ thể"
+            description="Danh sách thửa đất và chủ thể trong phạm vi đơn vị; số định danh luôn hiển thị dạng che."
+          />
+          <div className="mt-8 space-y-8">
             {denied ? (
               <AccessDenied message="Danh sách thửa đất không thuộc nhiệm vụ hoặc phạm vi của tài khoản hiện tại." />
             ) : (
               <>
-                <section aria-labelledby="land-parcel-list-heading">
+                <section
+                  aria-labelledby="land-parcel-list-heading"
+                  className="space-y-4"
+                >
                   <h2
                     id="land-parcel-list-heading"
-                    className="text-2xl font-semibold text-[var(--civicos-text)]"
+                    className="border-b border-[var(--civicos-border)] pb-3 text-xl font-semibold text-[var(--civicos-text)] sm:text-2xl"
                   >
                     Danh sách thửa đất
                   </h2>
-                  <div className="mt-4">
+                  <div>
                     <ParcelList />
                   </div>
                 </section>
-                <section aria-labelledby="land-party-list-heading">
+                <section
+                  aria-labelledby="land-party-list-heading"
+                  className="space-y-4"
+                >
                   <h2
                     id="land-party-list-heading"
-                    className="text-2xl font-semibold text-[var(--civicos-text)]"
+                    className="border-b border-[var(--civicos-border)] pb-3 text-xl font-semibold text-[var(--civicos-text)] sm:text-2xl"
                   >
                     Danh sách chủ thể
                   </h2>
-                  <div className="mt-4">
+                  <div>
                     <PartyList />
                   </div>
                 </section>

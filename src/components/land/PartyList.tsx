@@ -4,6 +4,11 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { fetchPartyList } from '@/components/land/land-api';
 import {
+  ParcelFeedback,
+  ParcelFilterToolbar,
+  ParcelTableViewport,
+} from '@/components/land/ParcelPilotUI';
+import {
   mapLandApiStatus,
   maskedPartyLabel,
   type PartyView,
@@ -71,21 +76,25 @@ export function PartyList() {
   }, [load, reloadToken]);
 
   if (loading && !items.length && !banner) {
-    return <p role="status">Đang tải danh sách chủ thể…</p>;
+    return (
+      <ParcelFeedback role="status" tone="neutral">
+        Đang tải danh sách chủ thể…
+      </ParcelFeedback>
+    );
   }
   if (banner === 'denied') {
     return (
-      <p role="alert">
+      <ParcelFeedback role="alert" tone="danger">
         Tài khoản không có quyền xem chủ thể đất đai trong phạm vi này.
-      </p>
+      </ParcelFeedback>
     );
   }
   if (banner === 'offline') {
     return (
       <div>
-        <p role="status">
+        <ParcelFeedback role="status" tone="info">
           Đang ngoại tuyến. Cần kết nối để tải danh sách chủ thể mới.
-        </p>
+        </ParcelFeedback>
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
@@ -98,124 +107,127 @@ export function PartyList() {
   }
   if (banner === 'error') {
     return (
-      <div role="alert">
+      <ParcelFeedback role="alert" tone="danger" className="space-y-3">
         <p>Không tải được danh sách chủ thể. Thử lại.</p>
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
+          className="min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
         >
           Thử lại
         </button>
-      </div>
+      </ParcelFeedback>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <form
-        className="flex flex-wrap gap-3"
-        onSubmit={(event) => event.preventDefault()}
-      >
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
+    <div className="space-y-5">
+      <ParcelFilterToolbar label="Bộ lọc danh sách chủ thể" columns={2}>
+        <label className="flex min-w-0 flex-col gap-1.5 text-sm font-medium text-[var(--civicos-text)]">
           Trạng thái
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
+            className="min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
           >
             <option value="">Tất cả</option>
             <option value="active">Đang hoạt động</option>
             <option value="archived">Đã lưu trữ</option>
           </select>
         </label>
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
+        <label className="flex min-w-0 flex-col gap-1.5 text-sm font-medium text-[var(--civicos-text)]">
           Loại chủ thể
           <select
             value={typeFilter}
             onChange={(event) => setTypeFilter(event.target.value)}
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
+            className="min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
           >
             <option value="">Tất cả</option>
             <option value="individual">Cá nhân</option>
             <option value="organization">Tổ chức</option>
           </select>
         </label>
-      </form>
-      {loading ? <p role="status">Đang tải danh sách chủ thể…</p> : null}
+      </ParcelFilterToolbar>
+      {loading ? (
+        <ParcelFeedback role="status" tone="neutral">
+          Đang tải danh sách chủ thể…
+        </ParcelFeedback>
+      ) : null}
       {!items.length && !loading ? (
-        <p role="status">
+        <ParcelFeedback role="status" tone="neutral" className="px-4 py-5">
           Chưa có chủ thể nào trong phạm vi này. Điều chỉnh bộ lọc và thử lại.
-        </p>
+        </ParcelFeedback>
       ) : null}
       {items.length ? (
-        <table className="w-full border-collapse text-sm">
-          <caption className="py-2 text-left text-[var(--civicos-text-muted)]">
-            Danh sách chủ thể nội bộ; số định danh luôn hiển thị dạng che
-          </caption>
-          <thead>
-            <tr className="text-left text-[var(--civicos-text)]">
-              <th
-                scope="col"
-                className="border-b border-[var(--civicos-border)] px-3 py-2"
-              >
-                Mã tham chiếu
-              </th>
-              <th
-                scope="col"
-                className="border-b border-[var(--civicos-border)] px-3 py-2"
-              >
-                Tên hiển thị
-              </th>
-              <th
-                scope="col"
-                className="border-b border-[var(--civicos-border)] px-3 py-2"
-              >
-                Định danh (đã che)
-              </th>
-              <th
-                scope="col"
-                className="border-b border-[var(--civicos-border)] px-3 py-2"
-              >
-                Loại
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr
-                key={item.id}
-                className="border-b border-[var(--civicos-border)]"
-              >
-                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
-                  {item.referenceCode}
-                </td>
-                <td className="px-3 py-2 text-[var(--civicos-text)]">
-                  {item.displayName}
-                </td>
-                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
-                  {maskedPartyLabel(
-                    {
-                      referenceCode: item.referenceCode,
-                      identityNumberMasked: item.identityNumberMasked,
-                      displayName: item.displayName,
-                    },
-                    item.id,
-                  )}
-                </td>
-                <td className="px-3 py-2 text-[var(--civicos-text)]">
-                  {partyTypeText(item.partyType)}
-                </td>
+        <ParcelTableViewport label="Bảng danh sách chủ thể">
+          <table className="w-full min-w-[44rem] border-collapse text-sm">
+            <caption className="px-4 py-3 text-left text-xs text-[var(--civicos-text-muted)]">
+              Danh sách chủ thể nội bộ; số định danh luôn hiển thị dạng che
+            </caption>
+            <thead className="bg-[var(--civicos-surface-muted)]">
+              <tr className="text-left text-xs font-semibold tracking-wide text-[var(--civicos-text-muted)]">
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-4 py-3"
+                >
+                  Mã tham chiếu
+                </th>
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-4 py-3"
+                >
+                  Tên hiển thị
+                </th>
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-4 py-3"
+                >
+                  Định danh (đã che)
+                </th>
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-4 py-3"
+                >
+                  Loại
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr
+                  key={item.id}
+                  className="border-b border-[var(--civicos-border)] transition-colors hover:bg-[var(--civicos-surface-muted)]"
+                >
+                  <td className="px-4 py-3 font-mono text-[var(--civicos-text)]">
+                    {item.referenceCode}
+                  </td>
+                  <td className="px-4 py-3 text-[var(--civicos-text)]">
+                    {item.displayName}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-[var(--civicos-text)]">
+                    {maskedPartyLabel(
+                      {
+                        referenceCode: item.referenceCode,
+                        identityNumberMasked: item.identityNumberMasked,
+                        displayName: item.displayName,
+                      },
+                      item.id,
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-[var(--civicos-text)]">
+                    {partyTypeText(item.partyType)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ParcelTableViewport>
       ) : null}
       {nextCursor ? (
         <button
           type="button"
           onClick={() => void load(nextCursor)}
-          className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
+          className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-4 py-2 text-sm font-medium text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
         >
           Trang tiếp
         </button>

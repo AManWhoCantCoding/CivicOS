@@ -245,6 +245,7 @@ describe('LND-05 screen-04 sections render with accessible Vietnamese copy', () 
   const listSource = readSource('src/components/land/ParcelList.tsx');
   const partySource = readSource('src/components/land/PartyList.tsx');
   const detailSource = readSource('src/components/land/ParcelDetail.tsx');
+  const pilotUiSource = readSource('src/components/land/ParcelPilotUI.tsx');
   const evidenceSource = readSource('src/components/land/EvidencePanel.tsx');
 
   it('renders captioned tables with header scope for rights/encumbrances', () => {
@@ -262,6 +263,44 @@ describe('LND-05 screen-04 sections render with accessible Vietnamese copy', () 
     }
     expect(listSource).toContain('ngoại tuyến');
     expect(detailSource).toContain('ngoại tuyến');
+  });
+
+  it('keeps dense tables scrollable and keyboard reachable on narrow screens', () => {
+    for (const source of [listSource, partySource, detailSource]) {
+      expect(source).toContain('<ParcelTableViewport');
+    }
+    expect(pilotUiSource).toContain('role="region"');
+    expect(pilotUiSource).toContain('tabIndex={0}');
+    expect(pilotUiSource).toContain('overflow-x-auto');
+    expect(pilotUiSource).toContain('focus-visible:');
+  });
+
+  it('reuses pilot-only page, filter, status, feedback, and detail primitives', () => {
+    for (const primitive of [
+      'ParcelPageHeader',
+      'ParcelFilterToolbar',
+      'ParcelTableViewport',
+      'ParcelStatusBadge',
+      'ParcelFeedback',
+      'ParcelSection',
+    ]) {
+      expect(pilotUiSource).toContain(`export function ${primitive}`);
+    }
+    for (const source of [listSource, partySource]) {
+      expect(source).toContain('<ParcelFilterToolbar');
+    }
+    for (const source of [listSource, partySource, detailSource]) {
+      expect(source).toContain('<ParcelFeedback');
+    }
+    expect(listSource).toContain('<ParcelStatusBadge');
+    expect(detailSource).toContain('<ParcelStatusBadge');
+    expect(detailSource).toContain('<ParcelSection');
+    expect(readSource('src/app/land/parcels/page.tsx')).toContain(
+      '<ParcelPageHeader',
+    );
+    expect(readSource('src/app/land/parcels/[parcelId]/page.tsx')).toContain(
+      '<ParcelPageHeader',
+    );
   });
 
   it('shows masked identity and never a plaintext identity number', () => {
