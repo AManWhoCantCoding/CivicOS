@@ -1,4 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
+import { randomBytes, randomUUID } from 'node:crypto';
+
+process.env.CIVICOS_E2E_RUN_ID ??= randomUUID();
+process.env.CIVICOS_E2E_FIXTURE_PASSWORD ??=
+  randomBytes(32).toString('base64url');
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -14,6 +19,7 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120 * 1000,
   },
+  globalTeardown: './scripts/e2e/playwright-teardown.mjs',
   use: {
     baseURL: 'http://localhost:3001',
     headless: true, // Bắt buộc chạy headless để tiết kiệm tài nguyên
