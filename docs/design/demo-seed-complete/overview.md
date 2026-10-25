@@ -19,33 +19,33 @@
 
 ## Phạm vi trong và ngoài phạm vi
 
-| Phạm vi | Nội dung | Nguồn |
-|---|---|---|
-| Trong | Chỉ target database `civicos_demo`, reset toàn bộ row ứng dụng, dọn Evidence có marker `demoNamespace=civicos-demo`, giữ migration và tile asset. | Đã có (`spec.md:3-5`, `spec.md:129-135`, `issues/00-clear-demo-db.md:21-31`) |
-| Trong | Test unit/integration/E2E/mobile contract dùng `civicos_e2e` hoặc database ephemeral; snapshot chứng minh `civicos_demo` không đổi. | Đã có (`spec.md:129-135`, `issues/01-isolate-test-database.md:21-31`, `playwright/README.md:32-40`) |
-| Trong | Fixed clock, canonical identity, residents, IntakeReport/Incident, Establishment/Inspection/Recommendation, Vehicle, mobile read-only assignment/notification, rebuild/verify/runbook. | Đã có (`spec.md:20-149`, issues `00b` đến `08`) |
-| Ngoài | Reset/migrate/ghi dữ liệu vào `civicos`, `.env`, secrets, CI/CD, production data hoặc storage tile. | Đã có (`spec.md:3-5`, `spec.md:152-158`) |
-| Ngoài | Public citizen app, mobile write flow, hệ thống LPR/SMS/FCM/VietGeoX/VBDLIS thật, ký số và thay đổi layout/UI. | Đã có (`spec.md:152-158`) |
-| Ngoài | Tạo model/table `POI`, `Hotspot`, `Violation`, `Dispatch`, `Task`, `Camera`, `Vehicle` mới. | Đã có (`spec.md:14`, `spec.md:152-158`, `issues/07-seed-mobile-readonly.md:15-18`, `issues/06-seed-vehicles.md:15-17`) |
-| Ngoài | Sửa production code trong phiên design này; các ticket implementation chỉ được chạm seam/adapter đã nêu trong ticket tương ứng. | Mới (xác nhận với người dùng ngày 2026-09-29) |
+| Phạm vi | Nội dung                                                                                                                                                                               | Nguồn                                                                                                                  |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Trong   | Chỉ target database `civicos_demo`, reset toàn bộ row ứng dụng, dọn Evidence có marker `demoNamespace=civicos-demo`, giữ migration và tile asset.                                      | Đã có (`spec.md:3-5`, `spec.md:129-135`, `issues/00-clear-demo-db.md:21-31`)                                           |
+| Trong   | Test unit/integration/E2E/mobile contract dùng `civicos_e2e` hoặc database ephemeral; snapshot chứng minh `civicos_demo` không đổi.                                                    | Đã có (`spec.md:129-135`, `issues/01-isolate-test-database.md:21-31`, `playwright/README.md:32-40`)                    |
+| Trong   | Fixed clock, canonical identity, residents, IntakeReport/Incident, Establishment/Inspection/Recommendation, Vehicle, mobile read-only assignment/notification, rebuild/verify/runbook. | Đã có (`spec.md:20-149`, issues `00b` đến `08`)                                                                        |
+| Ngoài   | Reset/migrate/ghi dữ liệu vào `civicos`, `.env`, secrets, CI/CD, production data hoặc storage tile.                                                                                    | Đã có (`spec.md:3-5`, `spec.md:152-158`)                                                                               |
+| Ngoài   | Public citizen app, mobile write flow, hệ thống LPR/SMS/FCM/VietGeoX/VBDLIS thật, ký số và thay đổi layout/UI.                                                                         | Đã có (`spec.md:152-158`)                                                                                              |
+| Ngoài   | Tạo model/table `POI`, `Hotspot`, `Violation`, `Dispatch`, `Task`, `Camera`, `Vehicle` mới.                                                                                            | Đã có (`spec.md:14`, `spec.md:152-158`, `issues/07-seed-mobile-readonly.md:15-18`, `issues/06-seed-vehicles.md:15-17`) |
+| Ngoài   | Sửa production code trong phiên design này; các ticket implementation chỉ được chạm seam/adapter đã nêu trong ticket tương ứng.                                                        | Mới (xác nhận với người dùng ngày 2026-09-29)                                                                          |
 
 ## Bản đồ module
 
-| Module/file | Trạng thái và trách nhiệm | Nguồn |
-|---|---|---|
-| `scripts/demo/demo-db.ts` | Đã có; parse/sanitize URL, allowlist `civicos_demo`, áp target vào process trước dynamic import. | Đã có (`scripts/demo/demo-db.ts:4-66`) |
-| `scripts/demo/reset.ts` | Đã có; confirmation, inventory 31 model ứng dụng, cleanup Evidence namespace, `TRUNCATE ... RESTART IDENTITY CASCADE`. | Đã có (`scripts/demo/reset.ts:15-120`) |
-| `scripts/demo/seed.ts` | Đã có; dynamic import sau target validation và gọi domain command; sẽ trở thành entry point điều phối manifest nhưng không đổi contract target guard. | Đã có (`scripts/demo/seed.ts:1-27`); mở rộng theo ticket `02-07` là Mới (đã xác nhận phạm vi) |
-| `scripts/demo/manifest.ts` | Mới; giữ manifest key, input synthetic, expected counts/statuses, mapping key → database ID trong report runtime; không ghi bảng mới. | Mới (Research lập manifest theo quyền đã xác nhận ngày 2026-09-29) |
-| `scripts/demo/rebuild.ts` | Mới; CLI orchestration theo phase, validate target/clock trước mutation, gọi reset/migrate/seed/drain/verify. | Mới (xác nhận trong `issues/08-demo-rebuild-readiness.md:23-32`) |
-| `scripts/demo/verify.ts` | Mới; đọc database đã seed, kiểm tra manifest/domain/derived/file ownership, in report JSON với `unexpectedRows`, `orphanRows`, `errors`. | Mới (xác nhận trong `issues/08-demo-rebuild-readiness.md:23-32`) |
-| `src/modules/platform/clock/index.ts` | Mới; `Clock`, `systemClock`, fixed clock, parser/resolver `DEMO_NOW`; production fallback system clock. | Mới (xác nhận với người dùng ngày 2026-09-29) |
-| `src/modules/platform/sla`, `notifications`, `evidence` | Đã có; nhận time/context explicit ở demo-reachable seam, giữ public runtime fallback. | Đã có (`src/modules/platform/sla/index.ts:27-129`, `src/modules/platform/notifications/index.ts:6-89`, `src/modules/platform/evidence/evidence-service.ts:10-92`); seam mở rộng là Mới (ticket `00b`) |
-| `src/modules/eventing` | Đã có; append event/outbox/worker/projection; timestamp và worker evaluation phải nhận clock context khi được gọi từ demo. | Đã có (`src/modules/eventing/event-store.ts:108-217`, `src/modules/eventing/outbox.ts:14-333`); seam mở rộng là Mới (ticket `00b`) |
-| `src/modules/identity` | Đã có; canonical role/user/OU, assignment, audit, sensitive policy. | Đã có (`src/modules/identity/local-provider.ts:25-173`, `src/modules/identity/assignments.ts:240-277`) |
-| `src/modules/residents`, `src/modules/incidents`, `src/modules/inspections`, `src/modules/vehicles` | Đã có; domain command là owner của aggregate/event/SLA/audit/notification. Seed adapter chỉ gọi command và kiểm tra/reuse tuple deterministic. | Đã có (các command/projection/domain source được dẫn tại `data-model.md` và ticket `03-06`) |
-| `src/modules/mobile-readonly` và `src/app/api/related-info`, `src/app/api/forces` | Đã có; read projection từ Assignment/Notification, không có Dispatch/Task aggregate. | Đã có (`src/modules/mobile-readonly/contracts.ts:3-119`, `src/modules/mobile-readonly/forces.ts:64-405`, route source `src/app/api/forces/**` và `src/app/api/related-info/**`) |
-| `tests/support`, `playwright`, `scripts/e2e` | Đã có; harness hiện có nhưng `tests/support/database.ts` còn tạo Prisma trực tiếp; ticket `01` thêm guard/resolver/lifecycle test-only. | Đã có (`tests/support/database.ts:1-9`, `playwright/conftest.py:258-416`, `scripts/e2e/playwright-services.mjs:6-131`) |
+| Module/file                                                                                         | Trạng thái và trách nhiệm                                                                                                                             | Nguồn                                                                                                                                                                                                 |
+| --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/demo/demo-db.ts`                                                                           | Đã có; parse/sanitize URL, allowlist `civicos_demo`, áp target vào process trước dynamic import.                                                      | Đã có (`scripts/demo/demo-db.ts:4-66`)                                                                                                                                                                |
+| `scripts/demo/reset.ts`                                                                             | Đã có; confirmation, inventory 31 model ứng dụng, cleanup Evidence namespace, `TRUNCATE ... RESTART IDENTITY CASCADE`.                                | Đã có (`scripts/demo/reset.ts:15-120`)                                                                                                                                                                |
+| `scripts/demo/seed.ts`                                                                              | Đã có; dynamic import sau target validation và gọi domain command; sẽ trở thành entry point điều phối manifest nhưng không đổi contract target guard. | Đã có (`scripts/demo/seed.ts:1-27`); mở rộng theo ticket `02-07` là Mới (đã xác nhận phạm vi)                                                                                                         |
+| `scripts/demo/manifest.ts`                                                                          | Mới; giữ manifest key, input synthetic, expected counts/statuses, mapping key → database ID trong report runtime; không ghi bảng mới.                 | Mới (Research lập manifest theo quyền đã xác nhận ngày 2026-09-29)                                                                                                                                    |
+| `scripts/demo/rebuild.ts`                                                                           | Mới; CLI orchestration theo phase, validate target/clock trước mutation, gọi reset/migrate/seed/drain/verify.                                         | Mới (xác nhận trong `issues/08-demo-rebuild-readiness.md:23-32`)                                                                                                                                      |
+| `scripts/demo/verify.ts`                                                                            | Mới; đọc database đã seed, kiểm tra manifest/domain/derived/file ownership, in report JSON với `unexpectedRows`, `orphanRows`, `errors`.              | Mới (xác nhận trong `issues/08-demo-rebuild-readiness.md:23-32`)                                                                                                                                      |
+| `src/modules/platform/clock/index.ts`                                                               | Mới; `Clock`, `systemClock`, fixed clock, parser/resolver `DEMO_NOW`; production fallback system clock.                                               | Mới (xác nhận với người dùng ngày 2026-09-29)                                                                                                                                                         |
+| `src/modules/platform/sla`, `notifications`, `evidence`                                             | Đã có; nhận time/context explicit ở demo-reachable seam, giữ public runtime fallback.                                                                 | Đã có (`src/modules/platform/sla/index.ts:27-129`, `src/modules/platform/notifications/index.ts:6-89`, `src/modules/platform/evidence/evidence-service.ts:10-92`); seam mở rộng là Mới (ticket `00b`) |
+| `src/modules/eventing`                                                                              | Đã có; append event/outbox/worker/projection; timestamp và worker evaluation phải nhận clock context khi được gọi từ demo.                            | Đã có (`src/modules/eventing/event-store.ts:108-217`, `src/modules/eventing/outbox.ts:14-333`); seam mở rộng là Mới (ticket `00b`)                                                                    |
+| `src/modules/identity`                                                                              | Đã có; canonical role/user/OU, assignment, audit, sensitive policy.                                                                                   | Đã có (`src/modules/identity/local-provider.ts:25-173`, `src/modules/identity/assignments.ts:240-277`)                                                                                                |
+| `src/modules/residents`, `src/modules/incidents`, `src/modules/inspections`, `src/modules/vehicles` | Đã có; domain command là owner của aggregate/event/SLA/audit/notification. Seed adapter chỉ gọi command và kiểm tra/reuse tuple deterministic.        | Đã có (các command/projection/domain source được dẫn tại `data-model.md` và ticket `03-06`)                                                                                                           |
+| `src/modules/mobile-readonly` và `src/app/api/related-info`, `src/app/api/forces`                   | Đã có; read projection từ Assignment/Notification, không có Dispatch/Task aggregate.                                                                  | Đã có (`src/modules/mobile-readonly/contracts.ts:3-119`, `src/modules/mobile-readonly/forces.ts:64-405`, route source `src/app/api/forces/**` và `src/app/api/related-info/**`)                       |
+| `tests/support`, `playwright`, `scripts/e2e`                                                        | Đã có; harness hiện có nhưng `tests/support/database.ts` còn tạo Prisma trực tiếp; ticket `01` thêm guard/resolver/lifecycle test-only.               | Đã có (`tests/support/database.ts:1-9`, `playwright/conftest.py:258-416`, `scripts/e2e/playwright-services.mjs:6-131`)                                                                                |
 
 ## Ranh giới ownership giữa ticket `00b` và `08`
 
@@ -67,19 +67,19 @@
 
 ### Bảng owner timestamp
 
-| Timestamp/derived state | Owner hiện tại | Quy tắc demo | Nguồn |
-|---|---|---|---|
-| `createdAt`, `updatedAt` của aggregate | Prisma schema và domain command | Command nhận clock để ghi explicit instant khi tạo/cập nhật trong demo; production vẫn giữ default system time. | Đã có (`prisma/schema.prisma:10-529`, các command module); Mới (clock seam theo `00b`) |
-| `occurredAt` domain event | Command gọi `appendEvent` | Dùng thời điểm input manifest hoặc `clock.now()` của transition; không gọi wall-clock trong demo path. | Đã có (`src/modules/eventing/contracts.ts:31-33`, `event-store.ts:108-181`); Mới (ticket `00b`) |
-| `recordedAt` EventRecord và `availableAt` OutboxMessage | `appendEvent` | Mặc định lấy cùng instant `clock.now()`/recordedAt của event. | Đã có (`src/modules/eventing/event-store.ts:113-184`); Mới (ticket `00b`) |
-| `AuditEvent.occurredAt` | `recordAudit` | Dùng clock context của command; actor/resource vẫn do domain policy ghi. | Đã có (`src/modules/identity/audit.ts:12-78`, schema `145-158`); Mới (ticket `00b`) |
-| `SlaInstance.dueAt`, `createdAt`, `overdueAt`, `completedAt` | `createSla`, `markOverdue`, domain completion | `startedAt` explicit từ manifest hoặc aggregate event; overdue evaluation nhận `clock.now()`. | Đã có (`src/modules/platform/sla/index.ts:27-129`); Mới (ticket `00b`) |
-| `Notification.createdAt`, `readAt` | notification service | Notification phát sinh từ event flow; create/read nhận clock context; demo không đánh dấu alarm đã đọc. | Đã có (`src/modules/platform/notifications/index.ts:6-55`); Mới (ticket `00b`) |
-| Worker claim/retry/processed timestamps | `eventing/outbox.ts` | Worker drain demo nhận clock context; retry backoff dùng clock context; report chỉ thành công khi queue resolve. | Đã có (`src/modules/eventing/outbox.ts:14-240`); Mới (ticket `00b` và `08`) |
-| Resident SLA badge | `slaBadge(now, nextCheckAt)` | Đọc `clock.now()`; exact tuple là `on_time`, `due_soon`, `overdue` theo mốc manifest. | Đã có (`src/modules/residents/contracts.ts:68-77`, `projection.ts:156-170`); Mới (fixed clock) |
-| Intake SLA view | `intakeSlaSummary(receivedAt, now, completed)` | Truyền clock now vào projection/detail; không dùng system time trong demo read verification. | Đã có (`src/modules/incidents/commands.ts:686-724`); Mới (ticket `00b`) |
-| `Evidence.capturedAt` và `receivedAt` | Evidence service + caller | `capturedAt` lấy manifest, `receivedAt` lấy clock; file có marker `demoNamespace`. | Đã có (`src/modules/platform/evidence/evidence-service.ts:10-92`, schema `160-180`); Mới (manifest) |
-| Future `nextCheckAt`, `scheduledAt`, `validUntil`, recurrence `scheduledAt` | Manifest/domain rule | Chỉ dùng giá trị explicit đã ghi trong manifest hoặc do command deterministic tính từ giá trị manifest; được loại khỏi rule “không vượt now” bằng field offset đã khai báo. | Đã có (`spec.md:15`, `src/modules/inspections/commands.ts:713-809`, `src/modules/residents/contracts.ts:52-60`); Mới (manifest) |
+| Timestamp/derived state                                                     | Owner hiện tại                                 | Quy tắc demo                                                                                                                                                                | Nguồn                                                                                                                           |
+| --------------------------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `createdAt`, `updatedAt` của aggregate                                      | Prisma schema và domain command                | Command nhận clock để ghi explicit instant khi tạo/cập nhật trong demo; production vẫn giữ default system time.                                                             | Đã có (`prisma/schema.prisma:10-529`, các command module); Mới (clock seam theo `00b`)                                          |
+| `occurredAt` domain event                                                   | Command gọi `appendEvent`                      | Dùng thời điểm input manifest hoặc `clock.now()` của transition; không gọi wall-clock trong demo path.                                                                      | Đã có (`src/modules/eventing/contracts.ts:31-33`, `event-store.ts:108-181`); Mới (ticket `00b`)                                 |
+| `recordedAt` EventRecord và `availableAt` OutboxMessage                     | `appendEvent`                                  | Mặc định lấy cùng instant `clock.now()`/recordedAt của event.                                                                                                               | Đã có (`src/modules/eventing/event-store.ts:113-184`); Mới (ticket `00b`)                                                       |
+| `AuditEvent.occurredAt`                                                     | `recordAudit`                                  | Dùng clock context của command; actor/resource vẫn do domain policy ghi.                                                                                                    | Đã có (`src/modules/identity/audit.ts:12-78`, schema `145-158`); Mới (ticket `00b`)                                             |
+| `SlaInstance.dueAt`, `createdAt`, `overdueAt`, `completedAt`                | `createSla`, `markOverdue`, domain completion  | `startedAt` explicit từ manifest hoặc aggregate event; overdue evaluation nhận `clock.now()`.                                                                               | Đã có (`src/modules/platform/sla/index.ts:27-129`); Mới (ticket `00b`)                                                          |
+| `Notification.createdAt`, `readAt`                                          | notification service                           | Notification phát sinh từ event flow; create/read nhận clock context; demo không đánh dấu alarm đã đọc.                                                                     | Đã có (`src/modules/platform/notifications/index.ts:6-55`); Mới (ticket `00b`)                                                  |
+| Worker claim/retry/processed timestamps                                     | `eventing/outbox.ts`                           | Worker drain demo nhận clock context; retry backoff dùng clock context; report chỉ thành công khi queue resolve.                                                            | Đã có (`src/modules/eventing/outbox.ts:14-240`); Mới (ticket `00b` và `08`)                                                     |
+| Resident SLA badge                                                          | `slaBadge(now, nextCheckAt)`                   | Đọc `clock.now()`; exact tuple là `on_time`, `due_soon`, `overdue` theo mốc manifest.                                                                                       | Đã có (`src/modules/residents/contracts.ts:68-77`, `projection.ts:156-170`); Mới (fixed clock)                                  |
+| Intake SLA view                                                             | `intakeSlaSummary(receivedAt, now, completed)` | Truyền clock now vào projection/detail; không dùng system time trong demo read verification.                                                                                | Đã có (`src/modules/incidents/commands.ts:686-724`); Mới (ticket `00b`)                                                         |
+| `Evidence.capturedAt` và `receivedAt`                                       | Evidence service + caller                      | `capturedAt` lấy manifest, `receivedAt` lấy clock; file có marker `demoNamespace`.                                                                                          | Đã có (`src/modules/platform/evidence/evidence-service.ts:10-92`, schema `160-180`); Mới (manifest)                             |
+| Future `nextCheckAt`, `scheduledAt`, `validUntil`, recurrence `scheduledAt` | Manifest/domain rule                           | Chỉ dùng giá trị explicit đã ghi trong manifest hoặc do command deterministic tính từ giá trị manifest; được loại khỏi rule “không vượt now” bằng field offset đã khai báo. | Đã có (`spec.md:15`, `src/modules/inspections/commands.ts:713-809`, `src/modules/residents/contracts.ts:52-60`); Mới (manifest) |
 
 ## Luồng chính và nhánh lỗi
 
@@ -97,15 +97,15 @@
 
 ### Nhánh lỗi fail-closed
 
-| Điều kiện | Kết quả bắt buộc | Nguồn |
-|---|---|---|
-| Target không phải `civicos_demo` | Exit non-zero `DEMO_RESET_REFUSED`, không dynamic import Prisma, không migrate/reset/seed. | Đã có (`scripts/demo/demo-db.ts:52-59`, `issues/00-clear-demo-db.md:27`) |
-| Không có target URL | Exit non-zero `DEMO_DATABASE_URL_REQUIRED`, không mở connection. | Đã có (`scripts/demo/demo-db.ts:38-44`) |
-| Thiếu confirmation | Exit non-zero `DEMO_RESET_CONFIRM_REQUIRED`, không truncate. | Đã có (`scripts/demo/reset.ts:55-60`) |
-| `DEMO_NOW` unset/sai ISO/không timezone trong demo | Exit non-zero `DEMO_NOW_INVALID`, snapshot mọi application table không đổi. | Mới (xác nhận với người dùng và `issues/00b-fixed-demo-clock.md:28`) |
-| Test target là `civicos_demo` | Exit non-zero `TEST_DATABASE_TARGET_FORBIDDEN`, không migrate/seed/open Prisma. | Đã có (yêu cầu `issues/01-isolate-test-database.md:27-31`) |
-| Worker có pending/processing/dead-letter sau drain | Verify trả lỗi invariant và exit non-zero; không chuyển thành warning. | Đã có (`issues/08-demo-rebuild-readiness.md:27-29`) |
-| Row ngoài manifest hoặc orphan FK/resource | Verify ghi key/table cụ thể trong `unexpectedRows` hoặc `orphanRows`, exit non-zero. | Đã có (`issues/08-demo-rebuild-readiness.md:27-31`) |
+| Điều kiện                                          | Kết quả bắt buộc                                                                           | Nguồn                                                                    |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Target không phải `civicos_demo`                   | Exit non-zero `DEMO_RESET_REFUSED`, không dynamic import Prisma, không migrate/reset/seed. | Đã có (`scripts/demo/demo-db.ts:52-59`, `issues/00-clear-demo-db.md:27`) |
+| Không có target URL                                | Exit non-zero `DEMO_DATABASE_URL_REQUIRED`, không mở connection.                           | Đã có (`scripts/demo/demo-db.ts:38-44`)                                  |
+| Thiếu confirmation                                 | Exit non-zero `DEMO_RESET_CONFIRM_REQUIRED`, không truncate.                               | Đã có (`scripts/demo/reset.ts:55-60`)                                    |
+| `DEMO_NOW` unset/sai ISO/không timezone trong demo | Exit non-zero `DEMO_NOW_INVALID`, snapshot mọi application table không đổi.                | Mới (xác nhận với người dùng và `issues/00b-fixed-demo-clock.md:28`)     |
+| Test target là `civicos_demo`                      | Exit non-zero `TEST_DATABASE_TARGET_FORBIDDEN`, không migrate/seed/open Prisma.            | Đã có (yêu cầu `issues/01-isolate-test-database.md:27-31`)               |
+| Worker có pending/processing/dead-letter sau drain | Verify trả lỗi invariant và exit non-zero; không chuyển thành warning.                     | Đã có (`issues/08-demo-rebuild-readiness.md:27-29`)                      |
+| Row ngoài manifest hoặc orphan FK/resource         | Verify ghi key/table cụ thể trong `unexpectedRows` hoặc `orphanRows`, exit non-zero.       | Đã có (`issues/08-demo-rebuild-readiness.md:27-31`)                      |
 
 ## State machine và quyết định code wins
 
@@ -133,41 +133,41 @@
 
 ### Identity
 
-| Key | Email | Role | OU | Ghi chú | Nguồn |
-|---|---|---|---|---|---|
-| commander-main | `truong@civicos.local` | `commander` | `unit-nghia-tru` | Actor duyệt domain | Đã có (`spec.md:39-50`, `local-provider.ts:78-83`) |
-| duty-main | `trucban@civicos.local` | `duty_officer` | `unit-nghia-tru` | Actor intake | Đã có (`spec.md:39-50`, `local-provider.ts:84-88`) |
-| field-main | `hientruong@civicos.local` | `field_officer` | `unit-nghia-tru` | Actor field/mobile | Đã có (`spec.md:39-50`, `local-provider.ts:89-93`) |
-| office-main | `vanphong@civicos.local` | `office_officer` | `unit-nghia-tru` | Actor report | Đã có (`spec.md:39-50`, `local-provider.ts:94-98`) |
-| field-unassigned | `khongduocphancong@civicos.local` | `field_officer` | `unit-nghia-tru` | Negative mobile case, không assignment | Đã có (`spec.md:39-50`, `local-provider.ts:99-103`) |
-| superior-officer | `captren@civicos.local` | `superior_officer` | `unit-cap-tren` | Read/target cấp trên | Đã có (`spec.md:39-50`, `local-provider.ts:105-109`) |
-| superior-commander | `captren-chihuy@civicos.local` | `superior_commander` | `unit-cap-tren` | Không dùng để bypass self-approval | Đã có (`spec.md:39-50`, `local-provider.ts:110-115`) |
-| system-operator | `system-operator@civicos.local` | `system_operator` | `unit-nghia-tru` | Reference identity | Đã có (`spec.md:39-50`, `local-provider.ts:116-120`) |
-| village-officer | `thon@civicos.local` | `village_officer` | `unit-nghia-tru` | Reference identity | Đã có (`spec.md:39-50`, `local-provider.ts:121-125`) |
-| commander-fixture | `commander@civicos.local` | `commander` | `unit-nghia-tru` | ID `dev-commander`, actor approval khác submitter | Đã có (`spec.md:49`, `local-provider.ts:127-131`) |
-| field-fixture | `field@civicos.local` | `field_officer` | `unit-nghia-tru` | ID `dev-field`, fixture reference | Đã có (`spec.md:50`, `local-provider.ts:133-136`) |
+| Key                | Email                             | Role                 | OU               | Ghi chú                                           | Nguồn                                                |
+| ------------------ | --------------------------------- | -------------------- | ---------------- | ------------------------------------------------- | ---------------------------------------------------- |
+| commander-main     | `truong@civicos.local`            | `commander`          | `unit-nghia-tru` | Actor duyệt domain                                | Đã có (`spec.md:39-50`, `local-provider.ts:78-83`)   |
+| duty-main          | `trucban@civicos.local`           | `duty_officer`       | `unit-nghia-tru` | Actor intake                                      | Đã có (`spec.md:39-50`, `local-provider.ts:84-88`)   |
+| field-main         | `hientruong@civicos.local`        | `field_officer`      | `unit-nghia-tru` | Actor field/mobile                                | Đã có (`spec.md:39-50`, `local-provider.ts:89-93`)   |
+| office-main        | `vanphong@civicos.local`          | `office_officer`     | `unit-nghia-tru` | Actor report                                      | Đã có (`spec.md:39-50`, `local-provider.ts:94-98`)   |
+| field-unassigned   | `khongduocphancong@civicos.local` | `field_officer`      | `unit-nghia-tru` | Negative mobile case, không assignment            | Đã có (`spec.md:39-50`, `local-provider.ts:99-103`)  |
+| superior-officer   | `captren@civicos.local`           | `superior_officer`   | `unit-cap-tren`  | Read/target cấp trên                              | Đã có (`spec.md:39-50`, `local-provider.ts:105-109`) |
+| superior-commander | `captren-chihuy@civicos.local`    | `superior_commander` | `unit-cap-tren`  | Không dùng để bypass self-approval                | Đã có (`spec.md:39-50`, `local-provider.ts:110-115`) |
+| system-operator    | `system-operator@civicos.local`   | `system_operator`    | `unit-nghia-tru` | Reference identity                                | Đã có (`spec.md:39-50`, `local-provider.ts:116-120`) |
+| village-officer    | `thon@civicos.local`              | `village_officer`    | `unit-nghia-tru` | Reference identity                                | Đã có (`spec.md:39-50`, `local-provider.ts:121-125`) |
+| commander-fixture  | `commander@civicos.local`         | `commander`          | `unit-nghia-tru` | ID `dev-commander`, actor approval khác submitter | Đã có (`spec.md:49`, `local-provider.ts:127-131`)    |
+| field-fixture      | `field@civicos.local`             | `field_officer`      | `unit-nghia-tru` | ID `dev-field`, fixture reference                 | Đã có (`spec.md:50`, `local-provider.ts:133-136`)    |
 
 ### Residents và reports
 
-| Manifest key | Subject type | Purpose | Risk | Next check | Display name | Geo | Nguồn |
-|---|---|---|---|---|---|---|---|
-| `seed-subject-tam-tru` | `temporary_resident` | `temporary_resident` | `normal` | `2026-10-04T08:00:00.000Z` | `Seed Tam Tru` | `20.931,105.951` | Đã có key/status (`spec.md:55-67`); giá trị display/geo là Mới (manifest được phép lập) |
-| `seed-subject-nuoc-ngoai` | `foreign_resident` | `foreign_resident` | `high` | `2026-09-29T08:00:00.000Z` | `Seed Nuoc Ngoai` | `20.941,105.961` | Đã có key/status (`spec.md:55-67`); giá trị display/geo là Mới (manifest được phép lập) |
-| `seed-subject-tai-hoa-nhap` | `reintegration` | `reintegration` | `medium` | `2026-09-14T08:00:00.000Z` | `Seed Tai Hoa Nhap` | `20.951,105.971` | Đã có key/status (`spec.md:55-67`); giá trị display/geo là Mới (manifest được phép lập) |
+| Manifest key                | Subject type         | Purpose              | Risk     | Next check                 | Display name        | Geo              | Nguồn                                                                                   |
+| --------------------------- | -------------------- | -------------------- | -------- | -------------------------- | ------------------- | ---------------- | --------------------------------------------------------------------------------------- |
+| `seed-subject-tam-tru`      | `temporary_resident` | `temporary_resident` | `normal` | `2026-10-04T08:00:00.000Z` | `Seed Tam Tru`      | `20.931,105.951` | Đã có key/status (`spec.md:55-67`); giá trị display/geo là Mới (manifest được phép lập) |
+| `seed-subject-nuoc-ngoai`   | `foreign_resident`   | `foreign_resident`   | `high`   | `2026-09-29T08:00:00.000Z` | `Seed Nuoc Ngoai`   | `20.941,105.961` | Đã có key/status (`spec.md:55-67`); giá trị display/geo là Mới (manifest được phép lập) |
+| `seed-subject-tai-hoa-nhap` | `reintegration`      | `reintegration`      | `medium` | `2026-09-14T08:00:00.000Z` | `Seed Tai Hoa Nhap` | `20.951,105.971` | Đã có key/status (`spec.md:55-67`); giá trị display/geo là Mới (manifest được phép lập) |
 
 - Nguồn: Đã có (`spec.md:65-67`, `src/modules/residents/commands.ts:397-507`). Mỗi record có một activity `checkup` tại `2026-09-15T08:00:00.000Z`, Actor `field-main`, Assignment `resident_followup`; một Evidence ảnh duy nhất gắn record reintegration.
 - Nguồn: Đã có (`spec.md:66`, `src/modules/residents/commands.ts:701-930`). Reports là `2026-07=sent`, `2026-08=approved`, `2026-09=draft`; seed gọi generate/approve/send command theo đúng transition.
 
 ### IntakeReport và Incident
 
-| Intake key | Channel | Received at | Final status | Command path | Geo | Nguồn |
-|---|---|---|---|---|---|---|
-| `demo-intake-received` | `direct` | `2026-09-28T06:00:00.000Z` | `RECEIVED` | register | `20.930,105.950` | Đã có status/channel (`spec.md:71-82`); timestamp/geo là Mới (manifest) |
-| `demo-intake-verified` | `phone` | `2026-09-27T08:00:00.000Z` | `VERIFIED` | register → verify(`sufficient`) | `20.940,105.960` | Đã có status/channel (`spec.md:71-82`); timestamp/geo là Mới (manifest) |
-| `demo-intake-processed` | `app` | `2026-09-26T08:00:00.000Z` | `PROCESSED` | register → verify → process → convert | `20.950,105.970` | Đã có status/path (`spec.md:71-84`); timestamp/geo là Mới (manifest) |
-| `demo-intake-closed` | `direct` | `2026-09-25T08:00:00.000Z` | `CLOSED` | register → verify → process → close(result note) | `20.960,105.980` | Đã có status/path (`spec.md:71-84`); timestamp/geo là Mới (manifest) |
-| `demo-intake-rejected` | `app` | `2026-09-24T08:00:00.000Z` | `REJECTED` | register → reject(reason) | `20.970,105.990` | Đã có status/path (`spec.md:71-82`); timestamp/geo là Mới (manifest) |
-| `demo-intake-transfer` | `district_transfer` | `2026-09-23T08:00:00.000Z` | `VERIFIED` | register → verify → transfer pending | `20.980,106.000` | Đã có status/path (`spec.md:71-86`); timestamp/geo là Mới (manifest) |
+| Intake key              | Channel             | Received at                | Final status | Command path                                     | Geo              | Nguồn                                                                   |
+| ----------------------- | ------------------- | -------------------------- | ------------ | ------------------------------------------------ | ---------------- | ----------------------------------------------------------------------- |
+| `demo-intake-received`  | `direct`            | `2026-09-28T06:00:00.000Z` | `RECEIVED`   | register                                         | `20.930,105.950` | Đã có status/channel (`spec.md:71-82`); timestamp/geo là Mới (manifest) |
+| `demo-intake-verified`  | `phone`             | `2026-09-27T08:00:00.000Z` | `VERIFIED`   | register → verify(`sufficient`)                  | `20.940,105.960` | Đã có status/channel (`spec.md:71-82`); timestamp/geo là Mới (manifest) |
+| `demo-intake-processed` | `app`               | `2026-09-26T08:00:00.000Z` | `PROCESSED`  | register → verify → process → convert            | `20.950,105.970` | Đã có status/path (`spec.md:71-84`); timestamp/geo là Mới (manifest)    |
+| `demo-intake-closed`    | `direct`            | `2026-09-25T08:00:00.000Z` | `CLOSED`     | register → verify → process → close(result note) | `20.960,105.980` | Đã có status/path (`spec.md:71-84`); timestamp/geo là Mới (manifest)    |
+| `demo-intake-rejected`  | `app`               | `2026-09-24T08:00:00.000Z` | `REJECTED`   | register → reject(reason)                        | `20.970,105.990` | Đã có status/path (`spec.md:71-82`); timestamp/geo là Mới (manifest)    |
+| `demo-intake-transfer`  | `district_transfer` | `2026-09-23T08:00:00.000Z` | `VERIFIED`   | register → verify → transfer pending             | `20.980,106.000` | Đã có status/path (`spec.md:71-86`); timestamp/geo là Mới (manifest)    |
 
 - Nguồn: Mới (manifest được phép lập ngày 2026-09-29). Mỗi Intake key đồng thời là `idempotencyKey`; sourceName/sourceContact/sensitiveRef lần lượt dùng `Nguoi bao tin 01` đến `Nguoi bao tin 06`, contact `0900000001` đến `0900000006`, sensitiveRef `DEMO-REF-01` đến `DEMO-REF-06`; content bắt đầu bằng key để trace.
 - Nguồn: Đã có (`src/modules/incidents/contracts.ts:24-67`, `src/modules/incidents/domain.ts:96-113`, `src/modules/incidents/commands.ts:1011-1463`). Rejection reason và close result lưu trong `processedNote`; không thêm cột `rejectionReason` hoặc `closeResult`.
@@ -176,13 +176,13 @@
 
 ### Establishment, ChecklistTemplate, Inspection, Finding và Recommendation
 
-| Establishment key | Name/type | Risk/status | ScheduledAt canonical | Final result | Recommendation final | Nguồn |
-|---|---|---|---|---|---|---|
-| `demo-est-sao-dem` | `[DEMO] Quan karaoke Sao Dem` / `Karaoke` | `medium/active` | `2026-10-02T08:00:00.000Z` | `scheduled/null` | Không có | Đã có name/type/risk/status (`spec.md:90-100`); schedule là Mới (manifest) |
-| `demo-est-ben-song` | `[DEMO] Bar Ben Song` / `Bar` | `high/active` | `2026-09-20T08:00:00.000Z` | `in_progress/null` | `pending_approval` | Đã có state (`spec.md:90-100`); schedule/mapping là Mới theo code wins |
-| `demo-est-cam-do` | `[DEMO] Cam Do Nghia Tru` / `Cầm đồ` | `low/active` | `2026-09-10T08:00:00.000Z` | `completed/pass` | `transferred` tới `unit-cap-tren` | Đã có state (`spec.md:90-100`); schedule/mapping là Mới theo code wins |
-| `demo-est-game` | `[DEMO] Game Center Nghia Tru` / `Game` | `medium/active` | `2026-09-08T08:00:00.000Z` | `completed/reminder` | `rejected` | Đã có state (`spec.md:90-100`); schedule/mapping là Mới theo code wins |
-| `demo-est-nha-nghi` | `[DEMO] Nha nghi Pho Dong` / `Nhà nghỉ` | `high/archived` sau complete | `2026-09-05T08:00:00.000Z` | `completed/needs_action` | `approved` | Đã có state/archive rule (`spec.md:90-101`); mapping là Mới theo code wins |
+| Establishment key   | Name/type                                 | Risk/status                  | ScheduledAt canonical      | Final result             | Recommendation final              | Nguồn                                                                      |
+| ------------------- | ----------------------------------------- | ---------------------------- | -------------------------- | ------------------------ | --------------------------------- | -------------------------------------------------------------------------- |
+| `demo-est-sao-dem`  | `[DEMO] Quan karaoke Sao Dem` / `Karaoke` | `medium/active`              | `2026-10-02T08:00:00.000Z` | `scheduled/null`         | Không có                          | Đã có name/type/risk/status (`spec.md:90-100`); schedule là Mới (manifest) |
+| `demo-est-ben-song` | `[DEMO] Bar Ben Song` / `Bar`             | `high/active`                | `2026-09-20T08:00:00.000Z` | `in_progress/null`       | `pending_approval`                | Đã có state (`spec.md:90-100`); schedule/mapping là Mới theo code wins     |
+| `demo-est-cam-do`   | `[DEMO] Cam Do Nghia Tru` / `Cầm đồ`      | `low/active`                 | `2026-09-10T08:00:00.000Z` | `completed/pass`         | `transferred` tới `unit-cap-tren` | Đã có state (`spec.md:90-100`); schedule/mapping là Mới theo code wins     |
+| `demo-est-game`     | `[DEMO] Game Center Nghia Tru` / `Game`   | `medium/active`              | `2026-09-08T08:00:00.000Z` | `completed/reminder`     | `rejected`                        | Đã có state (`spec.md:90-100`); schedule/mapping là Mới theo code wins     |
+| `demo-est-nha-nghi` | `[DEMO] Nha nghi Pho Dong` / `Nhà nghỉ`   | `high/archived` sau complete | `2026-09-05T08:00:00.000Z` | `completed/needs_action` | `approved`                        | Đã có state/archive rule (`spec.md:90-101`); mapping là Mới theo code wins |
 
 - Nguồn: Mới (manifest được phép lập ngày 2026-09-29). Owner lần lượt `Chu co so Sao Dem`, `Chu co so Ben Song`, `Chu tiem Cam Do Nghia Tru`, `Chu Game Center Nghia Tru`, `Chu Nha nghi Pho Dong`; address lần lượt `Thon 1, Xa Nghia Tru` đến `Thon 5, Xa Nghia Tru`; licenseRef lần lượt `DEMO-LIC-001` đến `DEMO-LIC-005`; geo lần lượt `20.932,105.952`, `20.942,105.962`, `20.952,105.972`, `20.962,105.982`, `20.972,105.992`.
 - Nguồn: Đã có (`src/modules/inspections/commands.ts:97-130`, `commands.ts:333-445`). `scheduleInspection` tự đảm bảo một ChecklistTemplate version `1` theo establishment type; 5 type khác nhau tạo đúng 5 active template.
@@ -192,13 +192,13 @@
 
 ### Vehicle
 
-| Observation key | Plate | Camera fixture | ObservedAt | Final status | Flow | Geo | Nguồn |
-|---|---|---|---|---|---|---|---|
-| `demo-vehicle-observation-01` | `43DEMO01` | `89A12345` | `2026-09-22T08:00:00.000Z` | `recorded` | outside registry active window | `20.933,105.953` | Đã có key/status (`spec.md:107-116`); values là Mới (manifest) |
-| `demo-vehicle-observation-02` | `29DEMO02` | `29B67890` | `2026-09-23T09:00:00.000Z` | `match_suggested` | registry match | `20.943,105.963` | Đã có key/status (`spec.md:107-116`); values là Mới (manifest) |
-| `demo-vehicle-observation-03` | `89DEMO03` | `89C11223` | `2026-09-24T10:00:00.000Z` | `match_confirmed` | match suggested → confirm | `20.953,105.973` | Đã có key/status (`spec.md:107-116`); values là Mới (manifest) |
-| `demo-vehicle-observation-04` | `89DEMO03` | `89C11223` | `2026-09-25T11:00:00.000Z` | `verified` | match suggested → confirm → verify | `20.963,105.983` | Đã có key/status (`spec.md:107-116`); values là Mới (manifest) |
-| `demo-vehicle-observation-05` | `89DEMO03` | `89C11223` | `2026-09-26T12:00:00.000Z` | `escalated` | match suggested → confirm → escalate | `20.973,105.993` | Đã có key/status (`spec.md:107-116`); values là Mới (manifest) |
+| Observation key               | Plate      | Camera fixture | ObservedAt                 | Final status      | Flow                                 | Geo              | Nguồn                                                          |
+| ----------------------------- | ---------- | -------------- | -------------------------- | ----------------- | ------------------------------------ | ---------------- | -------------------------------------------------------------- |
+| `demo-vehicle-observation-01` | `43DEMO01` | `89A12345`     | `2026-09-22T08:00:00.000Z` | `recorded`        | outside registry active window       | `20.933,105.953` | Đã có key/status (`spec.md:107-116`); values là Mới (manifest) |
+| `demo-vehicle-observation-02` | `29DEMO02` | `29B67890`     | `2026-09-23T09:00:00.000Z` | `match_suggested` | registry match                       | `20.943,105.963` | Đã có key/status (`spec.md:107-116`); values là Mới (manifest) |
+| `demo-vehicle-observation-03` | `89DEMO03` | `89C11223`     | `2026-09-24T10:00:00.000Z` | `match_confirmed` | match suggested → confirm            | `20.953,105.973` | Đã có key/status (`spec.md:107-116`); values là Mới (manifest) |
+| `demo-vehicle-observation-04` | `89DEMO03` | `89C11223`     | `2026-09-25T11:00:00.000Z` | `verified`        | match suggested → confirm → verify   | `20.963,105.983` | Đã có key/status (`spec.md:107-116`); values là Mới (manifest) |
+| `demo-vehicle-observation-05` | `89DEMO03` | `89C11223`     | `2026-09-26T12:00:00.000Z` | `escalated`       | match suggested → confirm → escalate | `20.973,105.993` | Đã có key/status (`spec.md:107-116`); values là Mới (manifest) |
 
 - Nguồn: Mới (manifest được phép lập ngày 2026-09-29). Registry `43DEMO01` active có `validFrom=2026-10-01T00:00:00.000Z`, `29DEMO02` được active trong lúc record rồi update `expired`, `89DEMO03` được active trong lúc match rồi update `revoked`; final map đúng spec.
 - Nguồn: Đã có (`src/modules/vehicles/commands.ts:374-523,728-998`, `src/modules/vehicles/domain.ts:49`). `clientCommandId` là observation key; match suggestion tạo Notification hiện có, verification tạo một `VehicleVerification`, escalation giữ SLA `vehicle_escalation_2h` và tạo `vehicle_escalated` notification.
@@ -220,16 +220,16 @@
 
 ## Seam kiểm thử
 
-| Seam | Assertion | Nguồn |
-|---|---|---|
-| Clock parser/resolver | Unset, no timezone, invalid ISO → `DEMO_NOW_INVALID`; valid ISO → fixed instant; production fallback không bị clock process khác ảnh hưởng. | Đã có yêu cầu (`issues/00b-fixed-demo-clock.md:25-42`); API seam là Mới (user xác nhận) |
-| Target guard | `civicos`/shadow URL fail trước Prisma import; `civicos_demo` chỉ reset khi confirmation. | Đã có (`tests/demo/demo-bootstrap.test.ts`, `scripts/demo/reset.ts:49-120`) |
-| Test database | Resolver đổi default sang `civicos_e2e`; app/worker/migrate/fixture cùng URL; snapshot demo trước/sau không đổi. | Đã có yêu cầu (`issues/01-isolate-test-database.md:25-56`, `playwright/conftest.py:258-416`) |
-| Inspection state | Assert transition; completion checklist/evidence; `needs_action` với approved; recurrence count/schedule; recommendation approval/transfer separation. | Đã có (`src/modules/inspections/domain.ts:42-121`, tests inspection) |
-| Derived pipeline | Outbox drain, projection/checkpoint, SLA, audit, notification resource keys resolve manifest; no pending/dead-letter. | Đã có (`issues/08-demo-rebuild-readiness.md:23-41`) |
-| Evidence ownership | Exactly 6 rows: 1 resident, 4 inspection, 1 vehicle; physical files only demo namespace removed by reset. | Đã có (`spec.md:67,103-104,114,132`, `scripts/demo/reset.ts:102-109`) |
-| Mobile boundary | Counts 3/5/6/4, unassigned actor empty/403, redaction and assignment boundary shared by count/list/detail. | Đã có (`issues/07-seed-mobile-readonly.md:24-41`, `src/modules/mobile-readonly/related-info.ts:403-463`) |
-| Repeat | Rebuild twice with same clock; normalized report same; direct scenario rerun does not add aggregate/key/derived duplicate. | Đã có (`issues/03-08`, skeletons `03-08`) |
+| Seam                  | Assertion                                                                                                                                              | Nguồn                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Clock parser/resolver | Unset, no timezone, invalid ISO → `DEMO_NOW_INVALID`; valid ISO → fixed instant; production fallback không bị clock process khác ảnh hưởng.            | Đã có yêu cầu (`issues/00b-fixed-demo-clock.md:25-42`); API seam là Mới (user xác nhận)                  |
+| Target guard          | `civicos`/shadow URL fail trước Prisma import; `civicos_demo` chỉ reset khi confirmation.                                                              | Đã có (`tests/demo/demo-bootstrap.test.ts`, `scripts/demo/reset.ts:49-120`)                              |
+| Test database         | Resolver đổi default sang `civicos_e2e`; app/worker/migrate/fixture cùng URL; snapshot demo trước/sau không đổi.                                       | Đã có yêu cầu (`issues/01-isolate-test-database.md:25-56`, `playwright/conftest.py:258-416`)             |
+| Inspection state      | Assert transition; completion checklist/evidence; `needs_action` với approved; recurrence count/schedule; recommendation approval/transfer separation. | Đã có (`src/modules/inspections/domain.ts:42-121`, tests inspection)                                     |
+| Derived pipeline      | Outbox drain, projection/checkpoint, SLA, audit, notification resource keys resolve manifest; no pending/dead-letter.                                  | Đã có (`issues/08-demo-rebuild-readiness.md:23-41`)                                                      |
+| Evidence ownership    | Exactly 6 rows: 1 resident, 4 inspection, 1 vehicle; physical files only demo namespace removed by reset.                                              | Đã có (`spec.md:67,103-104,114,132`, `scripts/demo/reset.ts:102-109`)                                    |
+| Mobile boundary       | Counts 3/5/6/4, unassigned actor empty/403, redaction and assignment boundary shared by count/list/detail.                                             | Đã có (`issues/07-seed-mobile-readonly.md:24-41`, `src/modules/mobile-readonly/related-info.ts:403-463`) |
+| Repeat                | Rebuild twice with same clock; normalized report same; direct scenario rerun does not add aggregate/key/derived duplicate.                             | Đã có (`issues/03-08`, skeletons `03-08`)                                                                |
 
 ## Quyết định kỹ thuật và nhật ký thay đổi
 
