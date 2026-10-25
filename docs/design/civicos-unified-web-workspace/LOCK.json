@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "feature": "civicos-unified-web-workspace",
+  "stage": "full",
+  "lockedAt": "2026-10-09T06:42:44.327Z",
+  "files": {
+    "api-contract.md": "17e852b16c1d",
+    "data-model.md": "7033ffcb514f",
+    "domain-rules.md": "438935d56924",
+    "edge-cases.md": "f4ee8951a669",
+    "glossary.md": "ebed1c50074e",
+    "integration-contracts.md": "6e718837a82d",
+    "non-functional.md": "b20c142e99ab",
+    "overview.md": "ae79c7597765"
+  }
+}

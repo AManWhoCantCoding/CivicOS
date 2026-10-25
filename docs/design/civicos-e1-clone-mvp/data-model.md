@@ -6,63 +6,63 @@
 
 ## Nhóm Identity & tổ chức
 
-| Bảng | Nguồn | Ghi chú chính |
-|---|---|---|
-| `User` | [CODE] | email unique, passwordHash, organizationUnitId, active |
-| `Role` / `UserRole` | [CODE] | M2M, composite key [userId, roleId] |
-| `OrganizationUnit` | [CODE] | name, level, parentId (tự tham chiếu qua parentId logic), active |
-| `Assignment` | [CODE] | resourceType+resourceId+task, assignee, grantedBy, status, revoke fields; index [resourceType,resourceId,status] |
-| `Session` | [CODE] | tokenHash unique, expiresAt, cascade delete theo user |
+| Bảng                | Nguồn  | Ghi chú chính                                                                                                    |
+| ------------------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
+| `User`              | [CODE] | email unique, passwordHash, organizationUnitId, active                                                           |
+| `Role` / `UserRole` | [CODE] | M2M, composite key [userId, roleId]                                                                              |
+| `OrganizationUnit`  | [CODE] | name, level, parentId (tự tham chiếu qua parentId logic), active                                                 |
+| `Assignment`        | [CODE] | resourceType+resourceId+task, assignee, grantedBy, status, revoke fields; index [resourceType,resourceId,status] |
+| `Session`           | [CODE] | tokenHash unique, expiresAt, cascade delete theo user                                                            |
 
 ## Nhóm Event kernel (nền tảng)
 
-| Bảng | Nguồn | Ghi chú chính |
-|---|---|---|
-| `EventRecord` | [CODE] | eventId unique, aggregateType+Id+Version unique (optimistic concurrency), payload/metadata Json, actor fields |
-| `OutboxMessage` | [CODE] | status pending → claimed → processed; attempts, deadLetterAt; cascade theo EventRecord |
-| `ProjectionCheckpoint` | [CODE] | theo tên projection, lastRecordedAt + processedEventIds |
-| `ProjectionRecord` | [CODE] | unique [projectionName, aggregateType, aggregateId], state Json |
-| `AuditEvent` | [CODE] | resourceType+resourceId+operation, actorId, metadata; index truy vết |
-| `SlaInstance` | [CODE] | unique [resourceType, resourceId, kind], dueAt/status/overdueEventId unique |
-| `Notification` | [CODE] | userId, sourceEventId unique (idempotent theo event) |
-| `OfflineCommand` | [CODE] | clientCommandId unique (idempotency offline), baseVersion, status |
-| `Evidence` | [CODE] | resourceType+resourceId, storageKey, originalHash, GPS lat/lng, immutable=true; unique [resourceType,resourceId,originalHash] |
+| Bảng                   | Nguồn  | Ghi chú chính                                                                                                                 |
+| ---------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `EventRecord`          | [CODE] | eventId unique, aggregateType+Id+Version unique (optimistic concurrency), payload/metadata Json, actor fields                 |
+| `OutboxMessage`        | [CODE] | status pending → claimed → processed; attempts, deadLetterAt; cascade theo EventRecord                                        |
+| `ProjectionCheckpoint` | [CODE] | theo tên projection, lastRecordedAt + processedEventIds                                                                       |
+| `ProjectionRecord`     | [CODE] | unique [projectionName, aggregateType, aggregateId], state Json                                                               |
+| `AuditEvent`           | [CODE] | resourceType+resourceId+operation, actorId, metadata; index truy vết                                                          |
+| `SlaInstance`          | [CODE] | unique [resourceType, resourceId, kind], dueAt/status/overdueEventId unique                                                   |
+| `Notification`         | [CODE] | userId, sourceEventId unique (idempotent theo event)                                                                          |
+| `OfflineCommand`       | [CODE] | clientCommandId unique (idempotency offline), baseVersion, status                                                             |
+| `Evidence`             | [CODE] | resourceType+resourceId, storageKey, originalHash, GPS lat/lng, immutable=true; unique [resourceType,resourceId,originalHash] |
 
 ## Nhóm Tố giác (PS-E1-005)
 
-| Bảng | Nguồn | Ghi chú chính |
-|---|---|---|
-| `IntakeReport` | [CODE] | status RECEIVED/VERIFIED/PROCESSED/CLOSED/REJECTED (giữ semantics source); sourceChannel (cần đủ direct/phone/app/district_transfer — [SPEC]); sensitiveRef + sensitiveRefIndex (vùng bảo vệ danh tính [SPEC]); idempotencyKey unique; incidentId unique 1-1 |
-| `IntakeCommand` | [CODE] | unique [reportId, command, idempotencyKey] — log lệnh idempotent |
-| `Incident` | [CODE] | intakeReportId unique 1-1 (chỉ tạo khi convert — [SPEC] mục 4.2), status/category/severity, version optimistic |
+| Bảng            | Nguồn  | Ghi chú chính                                                                                                                                                                                                                                                |
+| --------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `IntakeReport`  | [CODE] | status RECEIVED/VERIFIED/PROCESSED/CLOSED/REJECTED (giữ semantics source); sourceChannel (cần đủ direct/phone/app/district_transfer — [SPEC]); sensitiveRef + sensitiveRefIndex (vùng bảo vệ danh tính [SPEC]); idempotencyKey unique; incidentId unique 1-1 |
+| `IntakeCommand` | [CODE] | unique [reportId, command, idempotencyKey] — log lệnh idempotent                                                                                                                                                                                             |
+| `Incident`      | [CODE] | intakeReportId unique 1-1 (chỉ tạo khi convert — [SPEC] mục 4.2), status/category/severity, version optimistic                                                                                                                                               |
 
 ## Nhóm Cư dân đặc biệt (PS-E1-004)
 
-| Bảng | Nguồn | Ghi chú chính |
-|---|---|---|
-| `Subject` | [CODE] | subjectType, sensitiveProfile + sensitiveIndex (mask theo role [SPEC]), status |
-| `SubjectManagementRecord` | [CODE] | purpose, riskLevel, nextCheckAt (cảnh báo theo dõi tháng [SPEC]), version |
-| `SubjectManagementActivity` | [CODE] | activityType, occurredAt, actorId, assignmentId, evidenceIds; idempotencyKey unique |
-| `ResidentMonthlyReport` | [CODE] | unique [organizationId, period], status draft→approved→sent, snapshotPayload+snapshotHash (bất biến khi gửi [SPEC]) |
+| Bảng                        | Nguồn  | Ghi chú chính                                                                                                       |
+| --------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------- |
+| `Subject`                   | [CODE] | subjectType, sensitiveProfile + sensitiveIndex (mask theo role [SPEC]), status                                      |
+| `SubjectManagementRecord`   | [CODE] | purpose, riskLevel, nextCheckAt (cảnh báo theo dõi tháng [SPEC]), version                                           |
+| `SubjectManagementActivity` | [CODE] | activityType, occurredAt, actorId, assignmentId, evidenceIds; idempotencyKey unique                                 |
+| `ResidentMonthlyReport`     | [CODE] | unique [organizationId, period], status draft→approved→sent, snapshotPayload+snapshotHash (bất biến khi gửi [SPEC]) |
 
 ## Nhóm Cơ sở kinh doanh có điều kiện (PS-E1-007)
 
-| Bảng | Nguồn | Ghi chú chính |
-|---|---|---|
-| `Establishment` | [CODE] | type, licenseRef, risk (default medium), status; index [type, active] |
-| `ChecklistTemplate` | [CODE] | unique [establishmentType, version] — checklist theo loại hình [SPEC] |
-| `Inspection` | [CODE] | unique [establishmentId, scheduledAt], cadenceMonths default 6 (2 lần/năm [SPEC]), checklistResponses Json, result |
-| `InspectionFinding` | [CODE] | checklistKey, severity, evidenceIds |
-| `EnforcementRecommendation` | [CODE] | findingIds, status pending_approval → …; KHÔNG tự phát hành quyết định pháp lý [SPEC] |
-| `Approval` | [CODE] | unique [resourceType, resourceId, action, status] — quyết định Trưởng CA |
+| Bảng                        | Nguồn  | Ghi chú chính                                                                                                      |
+| --------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------ |
+| `Establishment`             | [CODE] | type, licenseRef, risk (default medium), status; index [type, active]                                              |
+| `ChecklistTemplate`         | [CODE] | unique [establishmentType, version] — checklist theo loại hình [SPEC]                                              |
+| `Inspection`                | [CODE] | unique [establishmentId, scheduledAt], cadenceMonths default 6 (2 lần/năm [SPEC]), checklistResponses Json, result |
+| `InspectionFinding`         | [CODE] | checklistKey, severity, evidenceIds                                                                                |
+| `EnforcementRecommendation` | [CODE] | findingIds, status pending_approval → …; KHÔNG tự phát hành quyết định pháp lý [SPEC]                              |
+| `Approval`                  | [CODE] | unique [resourceType, resourceId, action, status] — quyết định Trưởng CA                                           |
 
 ## Nhóm Phương tiện (PS-E1-009 — nền, chưa phải tranche chính)
 
-| Bảng | Nguồn | Ghi chú chính |
-|---|---|---|
-| `SuspiciousVehicleEntry` | [CODE] | plate, validFrom/validUntil, status |
-| `VehicleObservation` | [CODE] | plate, GPS, clientCommandId unique, matchedRegistryId, escalation |
-| `VehicleVerification` | [CODE] | observationId, result, ownerLookup, evidenceIds |
+| Bảng                     | Nguồn  | Ghi chú chính                                                     |
+| ------------------------ | ------ | ----------------------------------------------------------------- |
+| `SuspiciousVehicleEntry` | [CODE] | plate, validFrom/validUntil, status                               |
+| `VehicleObservation`     | [CODE] | plate, GPS, clientCommandId unique, matchedRegistryId, escalation |
+| `VehicleVerification`    | [CODE] | observationId, result, ownerLookup, evidenceIds                   |
 
 ## Khác biệt giữa schema và spec — GAP cần biết khi tạo ticket
 

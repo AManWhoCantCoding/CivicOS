@@ -12,6 +12,7 @@
 ## Phạm vi
 
 **Trong phạm vi (tranche):**
+
 - Nền tảng tạo được từng hồ sơ bằng command riêng (chưa hoàn tất đầy đủ E1-001).
 - PS-E1-004: quản lý cư dân đặc biệt (Subject/SubjectManagementRecord/Activity/báo cáo tháng).
 - PS-E1-005: tiếp nhận + theo dõi tố giác (web-only, masking danh tính).
@@ -19,6 +20,7 @@
 - Mobile: read-only cho E1-004/E1-007; E1-005 web-only.
 
 **NGOÀI phạm vi (tranche này):**
+
 - Public citizen app (tố giác từ dân qua app).
 - Mobile write flow mới cho E1-004/E1-007.
 - Tích hợp thật VietGeoX/VBDLIS, LPR, SMS, FCM, ký số — chỉ adapter/mock.
@@ -27,23 +29,23 @@
 
 ## Bản đồ module
 
-| Module | Trạng thái | Nguồn | Ghi chú |
-|---|---|---|---|
-| eventing (EventRecord/Outbox/Projection/SLA/Audit) | Đã có | `src/modules/eventing/` | nền tảng, không xây lại |
-| identity (User/Role/OrganizationUnit/Assignment) | Đã có | `src/modules/identity/` | local auth, giữ contract role/permission |
-| incidents (IntakeReport/Incident) | Đã có + cần sửa | `src/modules/incidents/` | [GAP] registerIntakeReport đang tạo Incident ngay khi nhập; channel thiếu app/district_transfer |
-| inspections (Establishment/Inspection/Checklist/Recommendation) | Đã có + cần gap-fill | `src/modules/inspections/` | đóng gap PS-E1-007, UI mới |
-| residents (Subject/SubjectManagementRecord/Report) | Đã có (mới trong tranche) | `src/modules/residents/` | PS-E1-004 |
-| vehicles | Đã có | `src/modules/vehicles/` | E1-009 nền, ngoài tranche chính |
-| platform (notifications, evidence, sla) | Đã có | `src/modules/platform/` | adapter SMS/FCM mock |
-| mobile-readonly | Đã có | `src/modules/mobile-readonly/` | chỉ đọc |
-| MapLibre workspace | Mới | web + mobile | provider sau adapter, OSS tự host MVP |
+| Module                                                          | Trạng thái                | Nguồn                          | Ghi chú                                                                                         |
+| --------------------------------------------------------------- | ------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| eventing (EventRecord/Outbox/Projection/SLA/Audit)              | Đã có                     | `src/modules/eventing/`        | nền tảng, không xây lại                                                                         |
+| identity (User/Role/OrganizationUnit/Assignment)                | Đã có                     | `src/modules/identity/`        | local auth, giữ contract role/permission                                                        |
+| incidents (IntakeReport/Incident)                               | Đã có + cần sửa           | `src/modules/incidents/`       | [GAP] registerIntakeReport đang tạo Incident ngay khi nhập; channel thiếu app/district_transfer |
+| inspections (Establishment/Inspection/Checklist/Recommendation) | Đã có + cần gap-fill      | `src/modules/inspections/`     | đóng gap PS-E1-007, UI mới                                                                      |
+| residents (Subject/SubjectManagementRecord/Report)              | Đã có (mới trong tranche) | `src/modules/residents/`       | PS-E1-004                                                                                       |
+| vehicles                                                        | Đã có                     | `src/modules/vehicles/`        | E1-009 nền, ngoài tranche chính                                                                 |
+| platform (notifications, evidence, sla)                         | Đã có                     | `src/modules/platform/`        | adapter SMS/FCM mock                                                                            |
+| mobile-readonly                                                 | Đã có                     | `src/modules/mobile-readonly/` | chỉ đọc                                                                                         |
+| MapLibre workspace                                              | Mới                       | web + mobile                   | provider sau adapter, OSS tự host MVP                                                           |
 
 ## Luồng chính (kèm nhánh lỗi)
 
-1. **E1-005 Tố giác:** trực ban POST /api/intake-reports (bắt buộc sourceChannel) → lưu danh tính vùng bảo vệ → lệnh verify (48h SLA) → đủ cơ sở → POST /api/incidents convert (detected→open) + notification. *Lỗi:* thiếu channel → 400; version lệch → 409; vượt thẩm quyền → transfer lên huyện.
+1. **E1-005 Tố giác:** trực ban POST /api/intake-reports (bắt buộc sourceChannel) → lưu danh tính vùng bảo vệ → lệnh verify (48h SLA) → đủ cơ sở → POST /api/incidents convert (detected→open) + notification. _Lỗi:_ thiếu channel → 400; version lệch → 409; vượt thẩm quyền → transfer lên huyện.
 2. **E1-004 Cư dân đặc biệt:** tạo Subject + ManagementRecord (24h từ nhận hồ sơ) → Trưởng CA tạo Assignment → cán bộ ghi Activity tháng (cập nhật nextCheckAt) → biến động/nguy cơ → DomainEvent + thông báo CA huyện → cuối tháng MonthlyReport → approve (đóng băng snapshot) → send.
-   *Lỗi:* hoạt động không có Assignment → từ chối; report sai period → 409 (unique organizationId+period).
+   _Lỗi:_ hoạt động không có Assignment → từ chối; report sai period → 409 (unique organizationId+period).
 3. **E1-007 Cơ sở KD:** quản lý Establishment → lịch Inspection định kỳ 6 tháng (đột xuất khi có dấu hiệu) → chọn ChecklistTemplate version theo loại hình → ghi kết quả + GPS + Evidence → Finding → EnforcementRecommendation → Trưởng CA phê duyệt/trả lại/chuyển huyện. Vi phạm xử lý trong 7 ngày; không tự phát hành quyết định pháp lý.
 
 ## Quy tắc nghiệp vụ & máy trạng thái
@@ -72,6 +74,6 @@
 
 ## Nhật ký thay đổi
 
-| Ngày | Đổi gì | Lý do | Người xác nhận |
-|---|---|---|---|
+| Ngày       | Đổi gì                                              | Lý do                        | Người xác nhận                     |
+| ---------- | --------------------------------------------------- | ---------------------------- | ---------------------------------- |
 | 2026-09-30 | Dựng lại theo workflow v3.1 từ spec + code hiện hữu | Di trú workflow cũ sang v3.1 | (chờ người dùng xác nhận khi lock) |
