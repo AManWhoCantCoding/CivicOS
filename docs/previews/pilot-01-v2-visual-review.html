@@ -1,0 +1,2856 @@
+<!doctype html>
+<!--
+  title: CivicOS — Pilot 01 visual review preview (V3 continuation)
+  status: proposed
+  owner: techlead (execution plan owner)
+  created: 2026-10-21
+  updated: 2026-10-21
+  sources:
+    - .brain/evidence/PILOT-01-V2-VISUAL-PREVIEW/execution-plan.md
+    - CIVICOS-PILOT-01-V2-VISUAL-DESIGN-AND-WEB-COVERAGE.md (one-file, eight-state scope)
+    - PO-approved Pilot 01 V3 visual-review ticket (2026-10-21; NGOÀI BASELINE)
+    - docs/civicos-ui-design-system/non-functional.md
+    - docs/civicos-ui-design-system/domain-rules.md
+    - docs/land-module/overview.md
+    - src/components/land/workspace-view.ts:88-107 (parcel status wording)
+-->
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Không gian quản trị CivicOS cho tra cứu thửa đất và chủ thể liên quan."
+    />
+    <title>Không gian làm việc · CivicOS</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        --canvas: #f8fafc;
+        --surface: #ffffff;
+        --text: #172033;
+        --muted: #475569;
+        --action: #075985;
+        --focus: #1d4ed8;
+        --border: #d7e0ea;
+        --subtle: #f1f5f9;
+        --blue-soft: #edf6fc;
+        --success: #166534;
+        --success-soft: #ecfdf3;
+        --warning: #854d0e;
+        --warning-soft: #fffbeb;
+        --neutral-soft: #f1f5f9;
+        --sidebar-wide: 264px;
+        --sidebar-narrow: 72px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      html {
+        min-width: 320px;
+        background: var(--canvas);
+        scroll-behavior: smooth;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        color: var(--text);
+        background: var(--canvas);
+        font-size: 16px;
+        line-height: 1.5;
+        letter-spacing: -0.006em;
+      }
+
+      a {
+        color: var(--action);
+        text-underline-offset: 0.18em;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      button,
+      select,
+      input {
+        min-height: 44px;
+      }
+
+      button {
+        color: inherit;
+      }
+
+      :focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .skip-link {
+        position: fixed;
+        z-index: 50;
+        top: 8px;
+        left: 8px;
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        padding: 0 14px;
+        transform: translateY(-160%);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        background: var(--surface);
+      }
+
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+
+      .app-shell {
+        display: grid;
+        min-height: 100vh;
+        grid-template-columns: var(--sidebar-wide) minmax(0, 1fr);
+        transition: grid-template-columns 180ms ease;
+      }
+
+      body.sidebar-collapsed .app-shell {
+        grid-template-columns: var(--sidebar-narrow) minmax(0, 1fr);
+      }
+
+      .sidebar {
+        position: sticky;
+        z-index: 30;
+        top: 0;
+        display: flex;
+        min-width: 0;
+        height: 100vh;
+        height: 100dvh;
+        flex-direction: column;
+        border-right: 1px solid var(--border);
+        background: var(--surface);
+      }
+
+      .sidebar-header {
+        display: flex;
+        min-height: 76px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .brand {
+        display: inline-flex;
+        min-width: 0;
+        min-height: 44px;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .brand-mark {
+        display: inline-grid;
+        width: 36px;
+        height: 36px;
+        flex: 0 0 36px;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--action);
+        background: var(--subtle);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+      }
+
+      .drawer-close {
+        display: none;
+        width: 44px;
+        flex: 0 0 44px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        cursor: pointer;
+      }
+
+      .primary-nav {
+        display: grid;
+        gap: 4px;
+        padding: 16px 10px;
+      }
+
+      .primary-nav a {
+        display: flex;
+        min-width: 0;
+        min-height: 48px;
+        align-items: center;
+        gap: 12px;
+        padding: 6px 10px;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      .primary-nav a:hover,
+      .primary-nav a[aria-current='page'] {
+        border-color: var(--border);
+        color: var(--text);
+        background: var(--subtle);
+      }
+
+      .nav-icon {
+        display: inline-grid;
+        width: 24px;
+        height: 24px;
+        flex: 0 0 24px;
+        place-items: center;
+        color: var(--action);
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      .sidebar-footer {
+        display: grid;
+        gap: 10px;
+        margin-top: auto;
+        padding: 12px 10px 16px;
+        border-top: 1px solid var(--border);
+      }
+
+      .collapse-button,
+      .menu-button {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        background: var(--surface);
+        cursor: pointer;
+      }
+
+      .collapse-button {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .main-column {
+        min-width: 0;
+      }
+
+      .topbar {
+        display: flex;
+        min-height: 76px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 12px 32px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+      }
+
+      .menu-button {
+        display: none;
+        flex: 0 0 auto;
+      }
+
+      .topbar-context {
+        display: grid;
+        min-width: 0;
+        flex: 1;
+        gap: 2px;
+      }
+
+      .eyebrow {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 650;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      code,
+      time,
+      .mono {
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono',
+          monospace;
+      }
+
+      .readonly-badge,
+      .status-badge {
+        display: inline-flex;
+        min-height: 32px;
+        align-items: center;
+        gap: 7px;
+        padding: 4px 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: var(--text);
+        background: var(--surface);
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .main-content {
+        min-width: 0;
+        min-height: calc(100vh - 76px);
+      }
+
+      .page-shell {
+        width: min(100%, 1120px);
+        min-width: 0;
+        margin: 0 auto;
+        padding: 28px 32px 56px;
+      }
+
+      .breadcrumbs {
+        display: flex;
+        min-height: 44px;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .breadcrumbs a {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+      }
+
+      .page-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 22px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        overflow-wrap: anywhere;
+      }
+
+      h1 {
+        margin: 3px 0 8px;
+        font-size: clamp(26px, 3vw, 34px);
+        line-height: 1.2;
+        letter-spacing: -0.025em;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.35;
+      }
+
+      .page-description {
+        max-width: 68ch;
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .surface-card,
+      .filter-panel {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+      }
+
+      .filter-panel {
+        display: grid;
+        grid-template-columns:
+          minmax(160px, 0.8fr) minmax(180px, 1fr) minmax(200px, 1.2fr)
+          auto;
+        align-items: end;
+        gap: 12px;
+        margin: 0 0 18px;
+        padding: 16px;
+      }
+
+      .field {
+        display: grid;
+        min-width: 0;
+        gap: 6px;
+      }
+
+      .field label {
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .field input,
+      .field select {
+        width: 100%;
+        min-width: 0;
+        padding: 8px 10px;
+        border: 1px solid #94a3b8;
+        border-radius: 7px;
+        color: var(--text);
+        background: var(--surface);
+      }
+
+      .reset-button {
+        min-height: 44px;
+        padding: 0 13px;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background: var(--surface);
+        cursor: pointer;
+      }
+
+      .reset-button:disabled {
+        color: var(--muted);
+        cursor: not-allowed;
+      }
+
+      .table-heading {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 0 0 8px;
+      }
+
+      .result-summary {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .table-region {
+        max-width: 100%;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        overscroll-behavior-inline: contain;
+        scrollbar-gutter: stable;
+      }
+
+      .parcel-table {
+        width: 100%;
+        min-width: 680px;
+        border-collapse: collapse;
+        text-align: left;
+      }
+
+      .party-list {
+        margin-top: 26px;
+      }
+
+      .party-table {
+        min-width: 440px;
+      }
+
+      .parcel-table th,
+      .parcel-table td {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+      }
+
+      .parcel-table th {
+        color: var(--muted);
+        background: var(--subtle);
+        font-size: 12px;
+        font-weight: 650;
+        white-space: nowrap;
+      }
+
+      .parcel-table td {
+        min-height: 64px;
+      }
+
+      .parcel-table tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .parcel-code-link {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        font-weight: 650;
+      }
+
+      .status-content {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        white-space: nowrap;
+      }
+
+      .status-icon {
+        color: var(--action);
+        font-size: 12px;
+      }
+
+      .empty-results {
+        margin: 12px 0 0;
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        color: var(--muted);
+        background: var(--surface);
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .surface-card {
+        min-width: 0;
+        padding: 20px;
+      }
+
+      .surface-card h2 {
+        margin-bottom: 16px;
+      }
+
+      .card-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .card-heading h2 {
+        margin: 0;
+      }
+
+      .detail-list {
+        display: grid;
+        grid-template-columns: minmax(110px, 0.8fr) minmax(0, 1.2fr);
+        gap: 12px 16px;
+        margin: 0;
+      }
+
+      .detail-list dt {
+        color: var(--muted);
+      }
+
+      .detail-list dd {
+        min-width: 0;
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .party-mask {
+        display: inline-block;
+        width: fit-content;
+        padding: 3px 6px;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        background: var(--surface);
+        letter-spacing: 0.04em;
+      }
+
+      .readonly-note {
+        margin: 16px 0 0;
+        padding: 12px 14px;
+        border-left: 3px solid var(--action);
+        color: var(--muted);
+        background: var(--surface);
+      }
+
+      .not-found {
+        padding: 20px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+      }
+
+      .not-found p {
+        margin: 0 0 12px;
+      }
+
+      .back-link {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 18px;
+        font-weight: 600;
+      }
+
+      .drawer-backdrop {
+        display: none;
+      }
+
+      body.sidebar-collapsed .sidebar-header {
+        justify-content: center;
+        padding-right: 8px;
+        padding-left: 8px;
+      }
+
+      body.sidebar-collapsed .brand-word,
+      body.sidebar-collapsed .nav-label,
+      body.sidebar-collapsed .collapse-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      body.sidebar-collapsed .primary-nav {
+        padding-right: 8px;
+        padding-left: 8px;
+      }
+
+      body.sidebar-collapsed .primary-nav a {
+        justify-content: center;
+        padding-right: 4px;
+        padding-left: 4px;
+      }
+
+      body.sidebar-collapsed .collapse-button {
+        justify-content: center;
+        padding: 0;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+
+      button,
+      input,
+      select {
+        letter-spacing: inherit;
+      }
+
+      .sidebar {
+        border-right-color: #d3dce7;
+        background: #fff;
+      }
+
+      .sidebar-header {
+        min-height: 82px;
+        justify-content: flex-start;
+        padding: 16px 20px;
+      }
+
+      .brand {
+        gap: 11px;
+        font-size: 17px;
+        letter-spacing: -0.025em;
+      }
+
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+        flex-basis: 38px;
+        border: 0;
+        border-radius: 11px;
+        color: #fff;
+        background: var(--action);
+      }
+
+      .primary-nav {
+        gap: 12px;
+        padding: 24px 12px;
+      }
+
+      .primary-nav a {
+        min-height: 46px;
+        gap: 11px;
+        padding: 7px 12px;
+        border-radius: 9px;
+        font-size: 14px;
+        font-weight: 550;
+      }
+
+      .primary-nav a:hover {
+        border-color: transparent;
+        background: #f6f9fc;
+      }
+
+      .primary-nav a[aria-current='page'] {
+        border-color: #c9dfef;
+        color: #064a70;
+        background: var(--blue-soft);
+        font-weight: 650;
+      }
+
+      .nav-group {
+        position: relative;
+        display: grid;
+        gap: 5px;
+      }
+
+      .nav-group::before {
+        position: absolute;
+        top: 43px;
+        bottom: 13px;
+        left: 21px;
+        border-left: 1px solid #dce5ee;
+        content: '';
+      }
+
+      .nav-group-title {
+        display: flex;
+        min-height: 38px;
+        align-items: center;
+        gap: 11px;
+        padding: 0 12px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.055em;
+        text-transform: uppercase;
+      }
+
+      .nav-group-title .icon {
+        color: var(--action);
+      }
+
+      .primary-nav .nav-feature {
+        position: relative;
+        margin-left: 21px;
+        padding-left: 14px;
+      }
+
+      .primary-nav .nav-feature::before {
+        position: absolute;
+        top: 50%;
+        left: -1px;
+        width: 9px;
+        border-top: 1px solid #dce5ee;
+        content: '';
+      }
+
+      .icon {
+        display: block;
+        width: 20px;
+        height: 20px;
+        flex: 0 0 20px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      .nav-icon {
+        width: 22px;
+        height: 22px;
+        flex-basis: 22px;
+      }
+
+      .sidebar-footer {
+        padding: 12px;
+        border-top-color: #e5ebf1;
+      }
+
+      .collapse-button,
+      .menu-button,
+      .drawer-close {
+        min-height: 44px;
+        border-color: var(--border);
+        border-radius: 9px;
+        background: #fff;
+      }
+
+      .collapse-button {
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .topbar {
+        position: sticky;
+        z-index: 15;
+        top: 0;
+        min-height: 76px;
+        justify-content: flex-start;
+        gap: 20px;
+        padding: 10px 38px;
+        border-bottom-color: #dce4ed;
+        box-shadow: 0 2px 9px rgb(23 32 51 / 3%);
+      }
+
+      .topbar-brand {
+        display: inline-flex;
+        min-height: 44px;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 9px;
+        color: var(--text);
+        font-size: 15px;
+        font-weight: 720;
+        letter-spacing: -0.02em;
+        text-decoration: none;
+      }
+
+      .topbar-brand .brand-mark {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
+        border-radius: 10px;
+      }
+
+      .topbar-divider {
+        width: 1px;
+        height: 34px;
+        flex: 0 0 1px;
+        background: var(--border);
+      }
+
+      .topbar-breadcrumb {
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .topbar-current {
+        overflow: hidden;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .account-context {
+        display: inline-flex;
+        min-height: 44px;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        color: var(--muted);
+        background: var(--subtle);
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .account-context .icon {
+        width: 18px;
+        height: 18px;
+      }
+
+      .page-shell {
+        width: min(100%, 1480px);
+        padding: 30px 42px 64px;
+      }
+
+      .breadcrumbs {
+        min-height: 32px;
+        gap: 9px;
+        margin-bottom: 20px;
+        font-size: 13px;
+      }
+
+      .breadcrumbs a {
+        min-height: 44px;
+      }
+
+      .not-found a {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+      }
+
+      .page-header {
+        align-items: center;
+        margin-bottom: 26px;
+      }
+
+      .eyebrow {
+        font-size: 11px;
+        letter-spacing: 0.075em;
+      }
+
+      h1 {
+        margin: 5px 0 8px;
+        font-size: clamp(28px, 2.5vw, 36px);
+        font-weight: 690;
+        letter-spacing: -0.04em;
+      }
+
+      h2 {
+        font-size: 18px;
+        font-weight: 680;
+        letter-spacing: -0.02em;
+      }
+
+      .page-description {
+        max-width: 70ch;
+        font-size: 14px;
+        line-height: 1.65;
+      }
+
+      .readonly-badge,
+      .status-badge {
+        min-height: 30px;
+        border-color: #d5dee8;
+        border-radius: 999px;
+        font-size: 12px;
+      }
+
+      .home-workspace {
+        display: grid;
+        gap: 30px;
+      }
+
+      .workspace-hero {
+        position: relative;
+        display: grid;
+        min-height: 250px;
+        grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
+        align-items: center;
+        gap: 30px;
+        overflow: hidden;
+        padding: 32px 36px;
+        border: 1px solid #d5e2ed;
+        border-radius: 16px;
+        background: var(--surface);
+      }
+
+      .workspace-hero-copy {
+        position: relative;
+        z-index: 1;
+        max-width: 650px;
+      }
+
+      .workspace-hero-copy h2 {
+        margin: 8px 0 12px;
+        font-size: clamp(25px, 3vw, 34px);
+        line-height: 1.2;
+      }
+
+      .workspace-hero-copy p:last-child {
+        max-width: 60ch;
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      .workspace-mark {
+        display: grid;
+        width: 176px;
+        height: 176px;
+        justify-self: center;
+        place-items: center;
+        border: 1px solid #d4e5f2;
+        border-radius: 50%;
+        color: var(--action);
+        background: rgb(255 255 255 / 76%);
+        box-shadow: 0 12px 36px rgb(7 89 133 / 8%);
+      }
+
+      .workspace-mark .icon {
+        width: 76px;
+        height: 76px;
+        stroke-width: 1.35;
+      }
+
+      .workspace-section {
+        display: grid;
+        gap: 14px;
+      }
+
+      .workspace-section-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .workspace-section-heading h2 {
+        margin-top: 4px;
+      }
+
+      .workspace-module {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--surface);
+        box-shadow: 0 5px 18px rgb(23 32 51 / 3%);
+      }
+
+      .workspace-module-heading {
+        display: flex;
+        min-height: 68px;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 20px;
+        border-bottom: 1px solid #e7edf3;
+        background: #fbfdff;
+      }
+
+      .module-icon,
+      .feature-icon {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        flex: 0 0 42px;
+        place-items: center;
+        border: 1px solid #d7e8f4;
+        border-radius: 11px;
+        color: var(--action);
+        background: var(--blue-soft);
+      }
+
+      .workspace-module-heading h3 {
+        margin: 2px 0 0;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .feature-entry {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 16px;
+        padding: 22px 20px;
+      }
+
+      .feature-entry h3 {
+        margin: 2px 0 4px;
+        font-size: 16px;
+        font-weight: 680;
+      }
+
+      .feature-entry p:last-child {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .feature-link,
+      .parcel-code-link,
+      .map-link {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        gap: 8px;
+        font-weight: 650;
+        text-decoration: none;
+      }
+
+      .feature-link {
+        justify-content: center;
+        padding: 0 15px;
+        border: 1px solid var(--action);
+        border-radius: 9px;
+        color: #fff;
+        background: var(--action);
+        white-space: nowrap;
+      }
+
+      .feature-link:hover {
+        background: #06496d;
+        text-decoration: underline;
+      }
+
+      .filter-panel {
+        grid-template-columns:
+          minmax(150px, 0.85fr) minmax(170px, 1fr) minmax(190px, 1.15fr)
+          auto;
+        gap: 14px;
+        margin-bottom: 20px;
+        padding: 18px;
+        border-color: #d7e0ea;
+        border-radius: 13px;
+        box-shadow: 0 4px 16px rgb(23 32 51 / 2%);
+      }
+
+      .filter-panel-heading {
+        display: flex;
+        grid-column: 1 / -1;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 1px;
+      }
+
+      .filter-panel-heading h2 {
+        font-size: 15px;
+      }
+
+      .field {
+        gap: 7px;
+      }
+
+      .field label {
+        font-size: 12px;
+        font-weight: 680;
+      }
+
+      .field input,
+      .field select {
+        min-height: 46px;
+        padding: 9px 12px;
+        border-color: #b8c5d3;
+        border-radius: 8px;
+        font-size: 14px;
+      }
+
+      .field input::placeholder {
+        color: #64748b;
+        opacity: 1;
+      }
+
+      .reset-button,
+      .pagination-button {
+        min-height: 44px;
+        padding: 0 14px;
+        border: 1px solid #c8d3df;
+        border-radius: 8px;
+        color: var(--text);
+        background: #fff;
+        font-size: 13px;
+        font-weight: 620;
+        cursor: pointer;
+      }
+
+      .reset-button:hover:not(:disabled),
+      .pagination-button:hover:not(:disabled) {
+        border-color: #8eabc2;
+        background: #f8fbfd;
+      }
+
+      .reset-button:disabled,
+      .pagination-button:disabled {
+        color: #64748b;
+        background: #f8fafc;
+        cursor: not-allowed;
+        opacity: 0.72;
+      }
+
+      .table-heading {
+        align-items: end;
+        margin: 0 0 10px;
+      }
+
+      .table-heading h2 {
+        font-size: 17px;
+      }
+
+      .result-summary,
+      .page-indicator {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .table-region {
+        border-color: #d2dce7;
+        border-radius: 12px;
+        box-shadow: 0 5px 18px rgb(23 32 51 / 3%);
+      }
+
+      .parcel-table {
+        min-width: 820px;
+        font-size: 13px;
+      }
+
+      .parcel-table th,
+      .parcel-table td {
+        padding: 11px 15px;
+      }
+
+      .parcel-table th {
+        height: 44px;
+        color: #3e5065;
+        background: #f4f7fa;
+        font-size: 11px;
+        letter-spacing: 0.025em;
+      }
+
+      .parcel-table td {
+        min-height: 58px;
+        color: #253449;
+      }
+
+      .parcel-table tbody tr:hover {
+        background: #f8fbfd;
+      }
+
+      .parcel-code-link,
+      .map-link {
+        color: var(--action);
+      }
+
+      .parcel-code-link:hover,
+      .map-link:hover {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .status-content {
+        min-height: 28px;
+        gap: 7px;
+        padding: 3px 9px;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 620;
+      }
+
+      .status-badge.status-active,
+      .status-content.status-active {
+        color: var(--success);
+        border-color: #b9e5c9;
+        background: var(--success-soft);
+      }
+
+      .status-badge.status-proposed,
+      .status-content.status-proposed {
+        color: var(--warning);
+        border-color: #f2dda8;
+        background: var(--warning-soft);
+      }
+
+      .status-badge.status-retired,
+      .status-content.status-retired {
+        color: #475569;
+        border-color: #d8e0e9;
+        background: var(--neutral-soft);
+      }
+
+      .status-icon {
+        color: currentColor;
+        font-size: 11px;
+      }
+
+      .pagination {
+        display: flex;
+        min-height: 60px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 2px 0;
+      }
+
+      .pagination-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .empty-results {
+        margin-top: 0;
+        padding: 24px;
+        border-color: #d7e0ea;
+        border-radius: 12px;
+        background: #fff;
+      }
+
+      .party-list {
+        margin-top: 34px;
+      }
+
+      .party-list .table-region {
+        box-shadow: none;
+      }
+
+      .party-table {
+        min-width: 520px;
+      }
+
+      .surface-card {
+        padding: 22px;
+        border-color: #d7e0ea;
+        border-radius: 13px;
+        box-shadow: 0 5px 18px rgb(23 32 51 / 3%);
+      }
+
+      .detail-card-primary {
+        box-shadow: 0 8px 24px rgb(23 32 51 / 7%);
+      }
+
+      .detail-card-secondary {
+        background: var(--subtle);
+        box-shadow: none;
+      }
+
+      .surface-card h2 {
+        margin-bottom: 18px;
+      }
+
+      .card-heading {
+        align-items: center;
+      }
+
+      .detail-list {
+        grid-template-columns: minmax(120px, 0.75fr) minmax(0, 1.25fr);
+        gap: 12px 18px;
+        font-size: 14px;
+      }
+
+      .detail-list dt {
+        color: #526276;
+        font-size: 13px;
+      }
+
+      .detail-list dd {
+        font-weight: 560;
+      }
+
+      .party-mask {
+        border-color: #d7e0ea;
+        border-radius: 6px;
+        color: #334155;
+        font-size: 13px;
+        letter-spacing: 0.07em;
+      }
+
+      .back-link {
+        margin-bottom: 16px;
+        color: var(--action);
+        font-size: 14px;
+      }
+
+      .readonly-note {
+        margin-top: 18px;
+        border-left-color: var(--action);
+        border-radius: 0 8px 8px 0;
+        color: #475569;
+        background: #f1f6fa;
+        font-size: 13px;
+      }
+
+      body.sidebar-collapsed .nav-group-title {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      body.sidebar-collapsed .nav-group::before {
+        display: none;
+      }
+
+      body.sidebar-collapsed .primary-nav .nav-feature {
+        margin-left: 0;
+        padding-right: 4px;
+        padding-left: 4px;
+      }
+
+      @media (max-width: 1040px) and (min-width: 761px) {
+        .page-shell {
+          padding-right: 28px;
+          padding-left: 28px;
+        }
+
+        .topbar {
+          padding-right: 28px;
+          padding-left: 28px;
+        }
+
+        .filter-panel {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .filter-panel-heading {
+          grid-column: 1 / -1;
+        }
+
+        .reset-button {
+          width: 100%;
+        }
+      }
+
+      @media (max-width: 760px) {
+        html,
+        body {
+          overflow-x: clip;
+        }
+
+        .app-shell,
+        body.sidebar-collapsed .app-shell {
+          display: block;
+          min-height: 100vh;
+        }
+
+        .sidebar {
+          position: fixed;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          width: min(86vw, 340px);
+          max-width: 86vw;
+          height: 100vh;
+          height: 100dvh;
+          min-height: 0;
+          transform: translateX(-105%);
+          visibility: hidden;
+          border-right: 1px solid var(--border);
+          border-radius: 0 14px 14px 0;
+          box-shadow: none;
+          transition: transform 180ms ease;
+        }
+
+        .sidebar.is-open {
+          transform: translateX(0);
+          visibility: visible;
+          box-shadow: 0 16px 44px rgb(23 32 51 / 18%);
+        }
+
+        body.sidebar-collapsed .sidebar-header {
+          justify-content: space-between;
+          padding: 12px 16px;
+        }
+
+        body.sidebar-collapsed .brand-word,
+        body.sidebar-collapsed .nav-label,
+        body.sidebar-collapsed .collapse-label {
+          position: static;
+          width: auto;
+          height: auto;
+          padding: 0;
+          margin: 0;
+          overflow: visible;
+          clip: auto;
+          white-space: normal;
+          border: 0;
+        }
+
+        body.sidebar-collapsed .primary-nav {
+          padding: 16px 10px;
+        }
+
+        body.sidebar-collapsed .primary-nav a {
+          justify-content: flex-start;
+          padding: 6px 10px;
+        }
+
+        body.sidebar-collapsed .collapse-button {
+          justify-content: flex-start;
+          padding: 0 12px;
+        }
+
+        .drawer-close {
+          display: inline-flex;
+        }
+
+        .drawer-backdrop:not([hidden]) {
+          position: fixed;
+          z-index: 20;
+          inset: 0;
+          display: block;
+          width: 100%;
+          height: 100%;
+          min-height: 100vh;
+          border: 0;
+          border-radius: 0;
+          background: rgb(23 32 51 / 38%);
+          cursor: default;
+        }
+
+        .topbar {
+          min-height: 68px;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 14px;
+        }
+
+        .menu-button {
+          display: inline-flex;
+          min-width: 44px;
+          margin: 0;
+          padding: 0 10px;
+        }
+
+        .topbar-brand {
+          gap: 7px;
+          font-size: 14px;
+        }
+
+        .topbar-brand .brand-mark {
+          width: 32px;
+          height: 32px;
+          flex-basis: 32px;
+        }
+
+        .topbar-divider {
+          height: 30px;
+        }
+
+        .topbar-context {
+          flex: 1;
+          gap: 0;
+        }
+
+        .topbar-breadcrumb {
+          font-size: 10px;
+        }
+
+        .topbar-current {
+          font-size: 12px;
+        }
+
+        .page-shell {
+          padding: 18px 16px 40px;
+        }
+
+        .breadcrumbs {
+          margin-bottom: 14px;
+          font-size: 12px;
+        }
+
+        .page-header {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 10px;
+          margin-bottom: 20px;
+        }
+
+        h1 {
+          font-size: 27px;
+        }
+
+        .workspace-hero {
+          min-height: 0;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 22px;
+          padding: 24px 20px;
+        }
+
+        .workspace-mark {
+          width: 112px;
+          height: 112px;
+          justify-self: start;
+          grid-row: 1;
+        }
+
+        .workspace-mark .icon {
+          width: 54px;
+          height: 54px;
+        }
+
+        .workspace-hero-copy h2 {
+          font-size: 25px;
+        }
+
+        .workspace-section-heading {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .feature-entry {
+          grid-template-columns: auto minmax(0, 1fr);
+          gap: 13px;
+          padding: 18px 16px;
+        }
+
+        .feature-link {
+          grid-column: 1 / -1;
+          justify-self: stretch;
+        }
+
+        .filter-panel {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 12px;
+          padding: 15px;
+        }
+
+        .filter-panel-heading {
+          grid-column: auto;
+        }
+
+        .reset-button {
+          width: 100%;
+        }
+
+        .table-heading {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .pagination {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .pagination-actions {
+          width: 100%;
+        }
+
+        .pagination-button {
+          flex: 1;
+        }
+
+        .detail-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .surface-card {
+          padding: 17px;
+        }
+
+        .detail-list {
+          grid-template-columns: minmax(100px, 0.78fr) minmax(0, 1.22fr);
+          gap: 10px 12px;
+        }
+
+        body.sidebar-collapsed .nav-group-title {
+          position: static;
+          width: auto;
+          height: auto;
+          padding: 0 12px;
+          margin: 0;
+          overflow: visible;
+          clip: auto;
+          white-space: normal;
+          border: 0;
+        }
+
+        body.sidebar-collapsed .nav-group::before {
+          display: block;
+        }
+
+        body.sidebar-collapsed .primary-nav .nav-feature {
+          margin-left: 21px;
+          padding-right: 12px;
+          padding-left: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Bỏ qua điều hướng, đến nội dung</a>
+    <button
+      class="drawer-backdrop"
+      id="drawer-backdrop"
+      type="button"
+      aria-label="Đóng menu điều hướng"
+      hidden
+    ></button>
+    <div class="app-shell">
+      <aside class="sidebar" id="shell-sidebar" aria-label="Điều hướng chính">
+        <header class="sidebar-header">
+          <button
+            class="drawer-close"
+            id="drawer-close"
+            type="button"
+            aria-label="Đóng menu điều hướng"
+            hidden
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+          <a class="brand" href="#/" aria-label="CivicOS, Trang chủ">
+            <span class="brand-mark" aria-hidden="true">CO</span>
+            <span class="brand-word">CivicOS</span>
+          </a>
+        </header>
+        <nav
+          class="primary-nav"
+          data-primary-nav
+          aria-label="Điều hướng không gian làm việc"
+        >
+          <a href="#/" data-nav-route="/" aria-current="page">
+            <svg class="icon nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"
+              />
+            </svg>
+            <span class="nav-label">Trang chủ</span>
+          </a>
+          <div class="nav-group" role="group" aria-label="Mô-đun Đất đai">
+            <div class="nav-group-title">
+              <svg class="icon nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 21V5l8-2 8 2v16M4 9h16M8 13h2m4 0h2m-8 4h2m4 0h2" />
+              </svg>
+              <span>Đất đai</span>
+            </div>
+            <a
+              class="nav-feature"
+              href="#/land/parcels"
+              data-nav-route="/land/parcels"
+            >
+              <svg class="icon nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M4 5.5 12 3l8 2.5v13L12 21l-8-2.5zM4 5.5l8 2.5m0 13v-13m8-2.5-8 2.5"
+                />
+              </svg>
+              <span class="nav-label">Thửa đất · Chủ thể</span>
+            </a>
+          </div>
+        </nav>
+        <div class="sidebar-footer">
+          <button
+            class="collapse-button"
+            id="sidebar-toggle"
+            type="button"
+            aria-label="Thu gọn thanh điều hướng"
+            aria-controls="shell-sidebar"
+            aria-expanded="true"
+          >
+            <span aria-hidden="true">⇤</span>
+            <span class="collapse-label">Thu gọn</span>
+          </button>
+        </div>
+      </aside>
+
+      <div class="main-column">
+        <header class="topbar">
+          <button
+            class="menu-button"
+            id="menu-toggle"
+            type="button"
+            aria-label="Mở menu điều hướng"
+            aria-controls="shell-sidebar"
+            aria-expanded="false"
+          >
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <a class="topbar-brand" href="#/" aria-label="CivicOS, Trang chủ">
+            <span class="brand-mark" aria-hidden="true">CO</span>
+            <span>CivicOS</span>
+          </a>
+          <span class="topbar-divider" aria-hidden="true"></span>
+          <div class="topbar-context">
+            <span class="topbar-breadcrumb" id="topbar-breadcrumb"
+              >Trung tâm</span
+            >
+            <span class="topbar-current" id="topbar-current"
+              >Trung tâm điều hành</span
+            >
+          </div>
+          <div class="account-context">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="8" r="3.5" />
+              <path d="M5 21a7 7 0 0 1 14 0" />
+            </svg>
+            <span>Tài khoản</span>
+          </div>
+        </header>
+
+        <main class="main-content" id="main" tabindex="-1">
+          <section
+            class="page-shell"
+            data-page="home"
+            aria-labelledby="home-title"
+          >
+            <nav class="breadcrumbs" aria-label="Đường dẫn điều hướng">
+              <span>Trung tâm</span>
+              <span aria-hidden="true">/</span>
+              <span aria-current="page">Trang chủ</span>
+            </nav>
+            <div class="home-workspace">
+              <section class="workspace-hero" aria-labelledby="home-title">
+                <div class="workspace-hero-copy">
+                  <p class="eyebrow">CIVICOS · KHÔNG GIAN LÀM VIỆC</p>
+                  <h1 id="home-title" tabindex="-1">Tra cứu và điều hành</h1>
+                  <p>
+                    Truy cập danh sách thửa đất, thông tin quyền sử dụng và hồ
+                    sơ liên quan trong cùng một không gian làm việc.
+                  </p>
+                </div>
+                <div class="workspace-mark" aria-hidden="true">
+                  <svg class="icon" viewBox="0 0 64 64">
+                    <path
+                      d="m8 17 20-7 28 9v29l-20 8-28-9zM8 17l28 9m0 30V26m20-7-20 7"
+                    />
+                    <path d="m19 34 8-3m18 10 5-2" />
+                  </svg>
+                </div>
+              </section>
+              <section
+                class="workspace-section"
+                aria-labelledby="workspace-modules-title"
+              >
+                <div class="workspace-section-heading">
+                  <div>
+                    <p class="eyebrow">KHU VỰC NGHIỆP VỤ</p>
+                    <h2 id="workspace-modules-title">Mô-đun nghiệp vụ</h2>
+                  </div>
+                </div>
+                <section
+                  class="workspace-module"
+                  aria-labelledby="home-land-title"
+                >
+                  <header class="workspace-module-heading">
+                    <span class="module-icon" aria-hidden="true">
+                      <svg class="icon" viewBox="0 0 24 24">
+                        <path
+                          d="M4 21V5l8-2 8 2v16M4 9h16M8 13h2m4 0h2m-8 4h2m4 0h2"
+                        />
+                      </svg>
+                    </span>
+                    <div>
+                      <p class="eyebrow">MÔ-ĐUN</p>
+                      <h3 id="home-land-title">Đất đai</h3>
+                    </div>
+                  </header>
+                  <div class="feature-entry">
+                    <span class="feature-icon" aria-hidden="true">
+                      <svg class="icon" viewBox="0 0 24 24">
+                        <path
+                          d="M4 5.5 12 3l8 2.5v13L12 21l-8-2.5zM4 5.5l8 2.5m0 13v-13m8-2.5-8 2.5"
+                        />
+                      </svg>
+                    </span>
+                    <div>
+                      <p class="eyebrow">CHỨC NĂNG</p>
+                      <h3>Thửa đất · Chủ thể</h3>
+                      <p>
+                        Tra cứu thửa đất, quyền sử dụng, ràng buộc và Evidence
+                        metadata.
+                      </p>
+                    </div>
+                    <a class="feature-link" href="#/land/parcels">
+                      <span>Mở danh sách thửa đất</span>
+                      <span aria-hidden="true">→</span>
+                    </a>
+                  </div>
+                </section>
+              </section>
+            </div>
+          </section>
+
+          <section
+            class="page-shell"
+            data-page="list"
+            aria-labelledby="list-title"
+            hidden
+          >
+            <nav class="breadcrumbs" aria-label="Đường dẫn điều hướng">
+              <a href="#/">Trang chủ</a>
+              <span aria-hidden="true">/</span>
+              <span>Đất đai</span>
+              <span aria-hidden="true">/</span>
+              <span aria-current="page">Thửa đất · Chủ thể</span>
+            </nav>
+            <header class="page-header">
+              <div>
+                <p class="eyebrow">ĐẤT ĐAI</p>
+                <h1 id="list-title" tabindex="-1">Thửa đất · Chủ thể</h1>
+                <p class="page-description">
+                  Tra cứu thửa đất, quyền sử dụng và chủ thể liên quan.
+                </p>
+              </div>
+              <span class="readonly-badge">
+                <span aria-hidden="true">●</span> Chỉ đọc
+              </span>
+            </header>
+
+            <form
+              class="filter-panel"
+              id="parcel-filters"
+              aria-label="Lọc thửa đất"
+            >
+              <div class="filter-panel-heading">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 6h16M7 12h10m-7 6h4" />
+                </svg>
+                <h2>Bộ lọc</h2>
+              </div>
+              <div class="field">
+                <label for="status-filter">Trạng thái</label>
+                <select id="status-filter" name="status">
+                  <option value="">Tất cả trạng thái</option>
+                  <option value="active">Đang sử dụng</option>
+                  <option value="proposed">Đề xuất (chỉ đọc)</option>
+                  <option value="retired">Đã ngừng (chỉ đọc)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="commune-filter">Mã xã</label>
+                <input
+                  id="commune-filter"
+                  name="communeCode"
+                  type="text"
+                  placeholder="VD: XA-021"
+                  autocomplete="off"
+                  aria-describedby="commune-help"
+                />
+                <span class="visually-hidden" id="commune-help">
+                  Lọc theo toàn bộ hoặc một phần mã xã.
+                </span>
+              </div>
+              <div class="field">
+                <label for="parcel-filter">Mã thửa</label>
+                <input
+                  id="parcel-filter"
+                  name="parcelCode"
+                  type="text"
+                  placeholder="VD: 004-0247"
+                  autocomplete="off"
+                  aria-describedby="parcel-help"
+                />
+                <span class="visually-hidden" id="parcel-help">
+                  Lọc theo toàn bộ hoặc một phần mã thửa.
+                </span>
+              </div>
+              <button
+                class="reset-button"
+                id="clear-filters"
+                type="reset"
+                disabled
+              >
+                Xóa bộ lọc
+              </button>
+            </form>
+
+            <div class="table-heading">
+              <h2>Danh sách thửa đất</h2>
+              <p class="result-summary" id="result-summary" aria-live="polite">
+                1–3 / 4 thửa đất
+              </p>
+            </div>
+            <div
+              class="table-region"
+              id="parcel-table-region"
+              role="region"
+              aria-label="Bảng thửa đất — cuộn ngang để xem đầy đủ các cột"
+              tabindex="0"
+            >
+              <table class="parcel-table">
+                <caption class="visually-hidden">
+                  Danh sách thửa đất. Trên màn hình nhỏ, cuộn ngang để xem đầy
+                  đủ các cột.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Mã thửa</th>
+                    <th scope="col">Tờ bản đồ / thửa</th>
+                    <th scope="col">Diện tích (m²)</th>
+                    <th scope="col">Mã xã</th>
+                    <th scope="col">Trạng thái</th>
+                    <th scope="col">Bản đồ</th>
+                  </tr>
+                </thead>
+                <tbody id="parcel-rows">
+                  <tr
+                    data-parcel-row
+                    data-parcel-id="parcel-0247"
+                    data-status="active"
+                    data-commune="XA-021"
+                    data-code="004-0247"
+                  >
+                    <td>
+                      <a
+                        class="parcel-code-link mono"
+                        href="#/land/parcels/parcel-0247"
+                      >
+                        004-0247
+                      </a>
+                    </td>
+                    <td class="mono">004 / 0247</td>
+                    <td class="mono">312.40</td>
+                    <td class="mono">XA-021</td>
+                    <td>
+                      <span class="status-content status-active">
+                        <span class="status-icon" aria-hidden="true">●</span>
+                        Đang sử dụng
+                      </span>
+                    </td>
+                    <td>
+                      <a
+                        class="map-link"
+                        data-map-link
+                        href="/map?parcelId=parcel-0247"
+                        aria-label="Xem thửa 004-0247 trên bản đồ"
+                      >
+                        Xem trên bản đồ
+                      </a>
+                    </td>
+                  </tr>
+                  <tr
+                    data-parcel-row
+                    data-parcel-id="parcel-0381"
+                    data-status="proposed"
+                    data-commune="XA-021"
+                    data-code="004-0381"
+                  >
+                    <td>
+                      <a
+                        class="parcel-code-link mono"
+                        href="#/land/parcels/parcel-0381"
+                      >
+                        004-0381
+                      </a>
+                    </td>
+                    <td class="mono">004 / 0381</td>
+                    <td class="mono">289.00</td>
+                    <td class="mono">XA-021</td>
+                    <td>
+                      <span class="status-content status-proposed">
+                        <span class="status-icon" aria-hidden="true">◷</span>
+                        Đề xuất (chỉ đọc)
+                      </span>
+                    </td>
+                    <td>
+                      <a
+                        class="map-link"
+                        data-map-link
+                        href="/map?parcelId=parcel-0381"
+                        aria-label="Xem thửa 004-0381 trên bản đồ"
+                      >
+                        Xem trên bản đồ
+                      </a>
+                    </td>
+                  </tr>
+                  <tr
+                    data-parcel-row
+                    data-parcel-id="parcel-0562"
+                    data-status="retired"
+                    data-commune="XA-022"
+                    data-code="007-0562"
+                  >
+                    <td>
+                      <a
+                        class="parcel-code-link mono"
+                        href="#/land/parcels/parcel-0562"
+                      >
+                        007-0562
+                      </a>
+                    </td>
+                    <td class="mono">007 / 0562</td>
+                    <td class="mono">401.75</td>
+                    <td class="mono">XA-022</td>
+                    <td>
+                      <span class="status-content status-retired">
+                        <span class="status-icon" aria-hidden="true">✓</span>
+                        Đã ngừng (chỉ đọc)
+                      </span>
+                    </td>
+                    <td>
+                      <a
+                        class="map-link"
+                        data-map-link
+                        href="/map?parcelId=parcel-0562"
+                        aria-label="Xem thửa 007-0562 trên bản đồ"
+                      >
+                        Xem trên bản đồ
+                      </a>
+                    </td>
+                  </tr>
+                  <tr
+                    data-parcel-row
+                    data-parcel-id="parcel-0612"
+                    data-status="active"
+                    data-commune="XA-023"
+                    data-code="002-0612"
+                  >
+                    <td>
+                      <a
+                        class="parcel-code-link mono"
+                        href="#/land/parcels/parcel-0612"
+                      >
+                        002-0612
+                      </a>
+                    </td>
+                    <td class="mono">002 / 0612</td>
+                    <td class="mono">276.50</td>
+                    <td class="mono">XA-023</td>
+                    <td>
+                      <span class="status-content status-active">
+                        <span class="status-icon" aria-hidden="true">●</span>
+                        Đang sử dụng
+                      </span>
+                    </td>
+                    <td>
+                      <a
+                        class="map-link"
+                        data-map-link
+                        href="/map?parcelId=parcel-0612"
+                        aria-label="Xem thửa 002-0612 trên bản đồ"
+                      >
+                        Xem trên bản đồ
+                      </a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="empty-results" id="empty-results" role="status" hidden>
+              Không tìm thấy thửa đất phù hợp. Hãy điều chỉnh hoặc xóa bộ lọc.
+            </p>
+            <nav class="pagination" aria-label="Phân trang thửa đất">
+              <span
+                class="page-indicator"
+                id="page-indicator"
+                aria-live="polite"
+                >Trang 1</span
+              >
+              <div class="pagination-actions">
+                <button
+                  class="pagination-button"
+                  id="previous-page"
+                  type="button"
+                  disabled
+                >
+                  Trang trước
+                </button>
+                <button class="pagination-button" id="next-page" type="button">
+                  Trang sau
+                </button>
+              </div>
+            </nav>
+
+            <section class="party-list" aria-labelledby="party-list-title">
+              <div class="table-heading">
+                <h2 id="party-list-title">Danh sách chủ thể</h2>
+                <p class="result-summary">Thông tin định danh được che</p>
+              </div>
+              <div
+                class="table-region"
+                role="region"
+                aria-label="Danh sách chủ thể — cuộn ngang để xem đầy đủ các cột"
+                tabindex="0"
+              >
+                <table class="parcel-table party-table">
+                  <caption class="visually-hidden">
+                    Danh sách chủ thể liên quan với thông tin định danh đã che.
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Mã chủ thể</th>
+                      <th scope="col">Thông tin định danh</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>CT-001</code></td>
+                      <td><code>•••• •••• ••••</code></td>
+                    </tr>
+                    <tr>
+                      <td><code>CT-002</code></td>
+                      <td><code>•••• •••• ••••</code></td>
+                    </tr>
+                    <tr>
+                      <td><code>CT-003</code></td>
+                      <td><code>•••• •••• ••••</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <section
+            class="page-shell"
+            data-page="detail"
+            aria-labelledby="detail-title"
+            hidden
+          >
+            <nav class="breadcrumbs" aria-label="Đường dẫn điều hướng">
+              <a href="#/">Trang chủ</a>
+              <span aria-hidden="true">/</span>
+              <a href="#/land/parcels">Danh sách thửa đất</a>
+              <span aria-hidden="true">/</span>
+              <span id="detail-breadcrumb-code" aria-current="page"
+                >Chi tiết thửa đất</span
+              >
+            </nav>
+            <a class="back-link" href="#/land/parcels">
+              <span aria-hidden="true">←</span> Quay lại danh sách
+            </a>
+            <header class="page-header">
+              <div>
+                <p class="eyebrow">ĐẤT ĐAI · CHI TIẾT THỬA ĐẤT</p>
+                <h1 id="detail-title" tabindex="-1">004-0247</h1>
+                <p class="page-description">
+                  Thông tin tổng quan, quyền sử dụng và hồ sơ liên quan.
+                </p>
+              </div>
+              <span
+                class="status-badge status-active"
+                id="detail-header-status"
+              >
+                <span
+                  class="status-icon"
+                  id="detail-header-status-icon"
+                  aria-hidden="true"
+                  >●</span
+                >
+                <span id="detail-header-status-text">Đang sử dụng</span>
+              </span>
+            </header>
+            <div id="detail-content" class="detail-grid">
+              <section
+                class="surface-card detail-card-primary"
+                aria-labelledby="parcel-info-title"
+              >
+                <div class="card-heading">
+                  <h2 id="parcel-info-title">Tổng quan thửa đất</h2>
+                </div>
+                <dl class="detail-list">
+                  <dt>Mã thửa</dt>
+                  <dd><code id="detail-code">004-0247</code></dd>
+                  <dt>Tờ bản đồ / thửa</dt>
+                  <dd><code id="detail-sheet">004 / 0247</code></dd>
+                  <dt>Diện tích</dt>
+                  <dd><span class="mono" id="detail-area">312.40 m²</span></dd>
+                  <dt>Phiên bản</dt>
+                  <dd><code id="detail-version">v3</code></dd>
+                </dl>
+              </section>
+              <section
+                class="surface-card detail-card-secondary"
+                aria-labelledby="right-title"
+              >
+                <div class="card-heading">
+                  <h2 id="right-title">Quyền sử dụng</h2>
+                </div>
+                <dl class="detail-list">
+                  <dt>Mã chủ thể</dt>
+                  <dd id="party-reference">CT-001</dd>
+                  <dt>Trạng thái quyền</dt>
+                  <dd>
+                    <span
+                      class="status-content status-active"
+                      id="right-status-content"
+                    >
+                      <span
+                        class="status-icon"
+                        id="right-status-icon"
+                        aria-hidden="true"
+                        >●</span
+                      >
+                      <span id="right-status">Đang hiệu lực</span>
+                    </span>
+                  </dd>
+                  <dt>Hiệu lực từ</dt>
+                  <dd>
+                    <time id="effective-date" datetime="2026-10-01"
+                      >01-10-2026</time
+                    >
+                  </dd>
+                  <dt>Hiệu lực đến</dt>
+                  <dd id="end-date">Không có thời hạn kết thúc</dd>
+                </dl>
+              </section>
+              <section
+                class="surface-card detail-card-secondary"
+                aria-labelledby="encumbrance-title"
+              >
+                <div class="card-heading">
+                  <h2 id="encumbrance-title">Ràng buộc</h2>
+                  <span
+                    class="status-badge status-active"
+                    id="encumbrance-status-badge"
+                  >
+                    <span
+                      class="status-icon"
+                      id="encumbrance-status-icon"
+                      aria-hidden="true"
+                      >●</span
+                    >
+                    <span id="encumbrance-status">Đang hiệu lực</span>
+                  </span>
+                </div>
+                <dl class="detail-list">
+                  <dt>Mã ràng buộc</dt>
+                  <dd><code id="encumbrance-id">RB-0247</code></dd>
+                  <dt>Đăng ký</dt>
+                  <dd>
+                    <time id="encumbrance-date" datetime="2026-10-08"
+                      >08-10-2026</time
+                    >
+                  </dd>
+                  <dt>Giải tỏa</dt>
+                  <dd id="encumbrance-release">Chưa ghi nhận</dd>
+                </dl>
+              </section>
+              <section
+                class="surface-card detail-card-secondary"
+                aria-labelledby="related-parties-title"
+              >
+                <div class="card-heading">
+                  <h2 id="related-parties-title">Chủ thể liên quan</h2>
+                </div>
+                <div
+                  class="table-region"
+                  role="region"
+                  aria-label="Chủ thể liên quan — thông tin định danh đã che"
+                  tabindex="0"
+                >
+                  <table class="parcel-table party-table">
+                    <caption class="visually-hidden">
+                      Danh sách chủ thể liên quan với thông tin định danh đã
+                      che.
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Mã chủ thể</th>
+                        <th scope="col">Thông tin định danh</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><code id="detail-related-party">CT-001</code></td>
+                        <td>
+                          <code class="party-mask" id="party-mask"
+                            >•••• •••• ••••</code
+                          >
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+              <section
+                class="surface-card detail-card-secondary"
+                aria-labelledby="evidence-title"
+              >
+                <div class="card-heading">
+                  <h2 id="evidence-title">Evidence metadata</h2>
+                  <span class="readonly-badge">Chỉ metadata</span>
+                </div>
+                <p class="page-description">
+                  Thông tin tệp và thời điểm ghi nhận.
+                </p>
+                <dl class="detail-list">
+                  <dt>Mã Evidence</dt>
+                  <dd><code id="evidence-id">EV-0247</code></dd>
+                  <dt>Tên tệp</dt>
+                  <dd><code id="evidence-file">ho-so-thua-dat.pdf</code></dd>
+                  <dt>MIME</dt>
+                  <dd><code id="evidence-mime">application/pdf</code></dd>
+                  <dt>Dung lượng</dt>
+                  <dd>
+                    <span class="mono" id="evidence-size">248,320 bytes</span>
+                  </dd>
+                  <dt>Ghi nhận</dt>
+                  <dd>
+                    <time id="evidence-date" datetime="2026-10-09"
+                      >09-10-2026</time
+                    >
+                  </dd>
+                </dl>
+              </section>
+              <section
+                class="surface-card detail-card-secondary"
+                aria-labelledby="parcel-map-title"
+              >
+                <div class="card-heading">
+                  <h2 id="parcel-map-title">Bản đồ</h2>
+                </div>
+                <p class="page-description">
+                  Mở thửa đất trong không gian bản đồ.
+                </p>
+                <a
+                  class="feature-link"
+                  id="detail-map-link"
+                  href="/map?parcelId=parcel-0247"
+                  aria-label="Xem thửa 004-0247 trên bản đồ"
+                >
+                  Xem trên bản đồ
+                  <span aria-hidden="true">↗</span>
+                </a>
+              </section>
+            </div>
+            <p class="readonly-note" id="readonly-note">
+              Thông tin thửa đất đang ở chế độ chỉ đọc.
+            </p>
+            <div class="not-found" id="detail-not-found" role="status" hidden>
+              <p>Không tìm thấy thửa đất.</p>
+              <a href="#/land/parcels">Về danh sách thửa đất</a>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const parcelRecords = [
+          {
+            id: 'parcel-0247',
+            code: '004-0247',
+            sheet: '004 / 0247',
+            area: '312.40',
+            status: 'active',
+            version: 'v3',
+            party: 'CT-001',
+            maskedIdentity: '•••• •••• ••••',
+            rightStatus: 'active',
+            validFrom: '2026-10-01',
+            validTo: null,
+            encumbranceStatus: 'active',
+            encumbranceRegisteredAt: '2026-10-08',
+            encumbranceReleasedAt: null,
+            evidenceDate: '2026-10-09',
+          },
+          {
+            id: 'parcel-0381',
+            code: '004-0381',
+            sheet: '004 / 0381',
+            area: '289.00',
+            status: 'proposed',
+            version: 'v1',
+            party: 'CT-002',
+            maskedIdentity: '•••• •••• ••••',
+            rightStatus: 'active',
+            validFrom: '2026-09-15',
+            validTo: null,
+            encumbranceStatus: 'released',
+            encumbranceRegisteredAt: '2026-08-12',
+            encumbranceReleasedAt: '2026-09-20',
+            evidenceDate: '2026-09-16',
+          },
+          {
+            id: 'parcel-0562',
+            code: '007-0562',
+            sheet: '007 / 0562',
+            area: '401.75',
+            status: 'retired',
+            version: 'v2',
+            party: 'CT-003',
+            maskedIdentity: '•••• •••• ••••',
+            rightStatus: 'ended',
+            validFrom: '2025-04-12',
+            validTo: '2026-06-30',
+            encumbranceStatus: 'released',
+            encumbranceRegisteredAt: '2025-05-01',
+            encumbranceReleasedAt: '2026-05-30',
+            evidenceDate: '2025-04-14',
+          },
+          {
+            id: 'parcel-0612',
+            code: '002-0612',
+            sheet: '002 / 0612',
+            area: '276.50',
+            status: 'active',
+            version: 'v1',
+            party: 'CT-004',
+            maskedIdentity: '•••• •••• ••••',
+            rightStatus: 'active',
+            validFrom: '2026-07-03',
+            validTo: null,
+            encumbranceStatus: 'released',
+            encumbranceRegisteredAt: '2026-07-12',
+            encumbranceReleasedAt: '2026-08-01',
+            evidenceDate: '2026-07-04',
+          },
+        ];
+
+        const statusCopy = {
+          active: { label: 'Đang sử dụng', icon: '●' },
+          proposed: { label: 'Đề xuất (chỉ đọc)', icon: '◷' },
+          retired: { label: 'Đã ngừng (chỉ đọc)', icon: '✓' },
+        };
+        const rightStatusCopy = {
+          active: { label: 'Đang hiệu lực', icon: '●' },
+          ended: { label: 'Đã kết thúc', icon: '✓' },
+        };
+        const encumbranceStatusCopy = {
+          active: { label: 'Đang hiệu lực', icon: '●' },
+          released: { label: 'Đã giải tỏa', icon: '✓' },
+        };
+
+        const body = document.body;
+        const sidebar = document.getElementById('shell-sidebar');
+        const menuToggle = document.getElementById('menu-toggle');
+        const drawerClose = document.getElementById('drawer-close');
+        const backdrop = document.getElementById('drawer-backdrop');
+        const collapseToggle = document.getElementById('sidebar-toggle');
+        const mobileViewport = window.matchMedia('(max-width: 760px)');
+        let drawerOpen = false;
+
+        function closeDrawer(returnFocus) {
+          drawerOpen = false;
+          sidebar.classList.remove('is-open');
+          sidebar.removeAttribute('role');
+          sidebar.removeAttribute('aria-modal');
+          menuToggle.setAttribute('aria-expanded', 'false');
+          backdrop.hidden = true;
+
+          if (mobileViewport.matches) {
+            sidebar.inert = true;
+            sidebar.setAttribute('aria-hidden', 'true');
+          } else {
+            sidebar.inert = false;
+            sidebar.removeAttribute('aria-hidden');
+          }
+
+          if (returnFocus && mobileViewport.matches) menuToggle.focus();
+        }
+
+        function openDrawer() {
+          if (!mobileViewport.matches) return;
+          drawerOpen = true;
+          sidebar.inert = false;
+          sidebar.removeAttribute('aria-hidden');
+          sidebar.setAttribute('role', 'dialog');
+          sidebar.setAttribute('aria-modal', 'true');
+          sidebar.setAttribute('aria-label', 'Menu điều hướng');
+          sidebar.classList.add('is-open');
+          menuToggle.setAttribute('aria-expanded', 'true');
+          backdrop.hidden = false;
+          window.requestAnimationFrame(() => drawerClose.focus());
+        }
+
+        function syncViewport() {
+          const isMobile = mobileViewport.matches;
+          menuToggle.hidden = !isMobile;
+          drawerClose.hidden = !isMobile;
+          collapseToggle.hidden = isMobile;
+          closeDrawer(false);
+        }
+
+        menuToggle.addEventListener('click', () => {
+          if (drawerOpen) closeDrawer(false);
+          else openDrawer();
+        });
+        drawerClose.addEventListener('click', () => closeDrawer(true));
+        backdrop.addEventListener('click', () => closeDrawer(true));
+
+        collapseToggle.addEventListener('click', () => {
+          const collapsed = body.classList.toggle('sidebar-collapsed');
+          collapseToggle.setAttribute('aria-expanded', String(!collapsed));
+          collapseToggle.setAttribute(
+            'aria-label',
+            collapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng',
+          );
+          collapseToggle.querySelector('.collapse-label').textContent =
+            collapsed ? 'Mở rộng' : 'Thu gọn';
+          collapseToggle.querySelector('[aria-hidden]').textContent = collapsed
+            ? '⇥'
+            : '⇤';
+        });
+
+        function visibleDrawerItems() {
+          return Array.from(
+            sidebar.querySelectorAll(
+              'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled])',
+            ),
+          ).filter(
+            (element) => !element.hidden && element.getClientRects().length,
+          );
+        }
+
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape' && drawerOpen && mobileViewport.matches) {
+            event.preventDefault();
+            closeDrawer(true);
+            return;
+          }
+          if (event.key !== 'Tab' || !drawerOpen || !mobileViewport.matches)
+            return;
+
+          const items = visibleDrawerItems();
+          const first = items[0];
+          const last = items[items.length - 1];
+          if (!first || !last) return;
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          } else if (!sidebar.contains(document.activeElement)) {
+            event.preventDefault();
+            first.focus();
+          }
+        });
+
+        const pages = Array.from(document.querySelectorAll('[data-page]'));
+        const navLinks = Array.from(
+          document.querySelectorAll('[data-nav-route]'),
+        );
+        const listRows = Array.from(
+          document.querySelectorAll('[data-parcel-row]'),
+        );
+        const filterForm = document.getElementById('parcel-filters');
+        const statusFilter = document.getElementById('status-filter');
+        const communeFilter = document.getElementById('commune-filter');
+        const parcelFilter = document.getElementById('parcel-filter');
+        const clearFilters = document.getElementById('clear-filters');
+        const resultSummary = document.getElementById('result-summary');
+        const emptyResults = document.getElementById('empty-results');
+        const tableRegion = document.getElementById('parcel-table-region');
+        const pagination = document.querySelector('.pagination');
+        const previousPage = document.getElementById('previous-page');
+        const nextPage = document.getElementById('next-page');
+        const pageIndicator = document.getElementById('page-indicator');
+        const detailContent = document.getElementById('detail-content');
+        const detailNotFound = document.getElementById('detail-not-found');
+        const pageSize = 3;
+        let filteredRows = listRows;
+        let cursorHistory = [null];
+        let currentPageRows = [];
+
+        function renderParcelPage() {
+          const cursor = cursorHistory[cursorHistory.length - 1];
+          const cursorIndex = cursor
+            ? filteredRows.findIndex((row) => row.dataset.parcelId === cursor)
+            : -1;
+          const startIndex = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+          currentPageRows = filteredRows.slice(
+            startIndex,
+            startIndex + pageSize,
+          );
+          const endIndex = startIndex + currentPageRows.length;
+
+          for (const row of listRows)
+            row.hidden = !currentPageRows.includes(row);
+
+          const hasResults = filteredRows.length > 0;
+          resultSummary.textContent = hasResults
+            ? `${startIndex + 1}–${endIndex} / ${filteredRows.length} thửa đất`
+            : '0 thửa đất';
+          pageIndicator.textContent = `Trang ${hasResults ? cursorHistory.length : 0}`;
+          tableRegion.hidden = !hasResults;
+          emptyResults.hidden = hasResults;
+          pagination.hidden = !hasResults;
+          previousPage.disabled = cursorHistory.length <= 1;
+          nextPage.disabled = endIndex >= filteredRows.length;
+        }
+
+        function applyFilters() {
+          const status = statusFilter.value;
+          const commune = communeFilter.value.trim().toLocaleLowerCase('vi');
+          const code = parcelFilter.value.trim().toLocaleLowerCase('vi');
+          filteredRows = listRows.filter(
+            (row) =>
+              (!status || row.dataset.status === status) &&
+              (!commune ||
+                row.dataset.commune
+                  .toLocaleLowerCase('vi')
+                  .includes(commune)) &&
+              (!code ||
+                row.dataset.code.toLocaleLowerCase('vi').includes(code)),
+          );
+
+          const hasFilter = Boolean(status || commune || code);
+          clearFilters.disabled = !hasFilter;
+          cursorHistory = [null];
+          renderParcelPage();
+        }
+
+        filterForm.addEventListener('input', applyFilters);
+        filterForm.addEventListener('change', applyFilters);
+        filterForm.addEventListener('reset', () =>
+          window.requestAnimationFrame(applyFilters),
+        );
+        filterForm.addEventListener('submit', (event) =>
+          event.preventDefault(),
+        );
+        previousPage.addEventListener('click', () => {
+          if (cursorHistory.length > 1) cursorHistory.pop();
+          renderParcelPage();
+        });
+        nextPage.addEventListener('click', () => {
+          if (nextPage.disabled || !currentPageRows.length) return;
+          cursorHistory.push(
+            currentPageRows[currentPageRows.length - 1].dataset.parcelId,
+          );
+          renderParcelPage();
+        });
+
+        function formatDate(isoDate) {
+          const [year, month, day] = isoDate.split('-');
+          return `${day}-${month}-${year}`;
+        }
+
+        function showParcel(parcel) {
+          const status = statusCopy[parcel.status];
+          const rightStatus = rightStatusCopy[parcel.rightStatus];
+          const headerStatus = document.getElementById('detail-header-status');
+          headerStatus.className = `status-badge status-${parcel.status}`;
+          document.getElementById('detail-title').textContent = parcel.code;
+          document.getElementById('detail-breadcrumb-code').textContent =
+            parcel.code;
+          document.getElementById('detail-code').textContent = parcel.code;
+          document.getElementById('detail-sheet').textContent = parcel.sheet;
+          document.getElementById('detail-area').textContent =
+            `${parcel.area} m²`;
+          document.getElementById('detail-version').textContent =
+            parcel.version;
+          document.getElementById('detail-header-status-text').textContent =
+            status.label;
+          document.getElementById('detail-header-status-icon').textContent =
+            status.icon;
+          document.getElementById('party-reference').textContent = parcel.party;
+          document.getElementById('detail-related-party').textContent =
+            parcel.party;
+          document.getElementById('party-mask').textContent =
+            parcel.maskedIdentity;
+          document.getElementById('right-status-content').className =
+            `status-content ${parcel.rightStatus === 'active' ? 'status-active' : 'status-retired'}`;
+          document.getElementById('right-status').textContent =
+            rightStatus.label;
+          document.getElementById('right-status-icon').textContent =
+            rightStatus.icon;
+          const effectiveDate = document.getElementById('effective-date');
+          effectiveDate.dateTime = parcel.validFrom;
+          effectiveDate.textContent = formatDate(parcel.validFrom);
+          document.getElementById('end-date').textContent = parcel.validTo
+            ? formatDate(parcel.validTo)
+            : 'Không có thời hạn kết thúc';
+          const encumbranceStatus =
+            encumbranceStatusCopy[parcel.encumbranceStatus];
+          const encumbranceBadge = document.getElementById(
+            'encumbrance-status-badge',
+          );
+          encumbranceBadge.className = `status-badge ${parcel.encumbranceStatus === 'active' ? 'status-active' : 'status-retired'}`;
+          document.getElementById('encumbrance-id').textContent =
+            `RB-${parcel.code.slice(-4)}`;
+          document.getElementById('encumbrance-status').textContent =
+            encumbranceStatus.label;
+          document.getElementById('encumbrance-status-icon').textContent =
+            encumbranceStatus.icon;
+          const encumbranceDate = document.getElementById('encumbrance-date');
+          encumbranceDate.dateTime = parcel.encumbranceRegisteredAt;
+          encumbranceDate.textContent = formatDate(
+            parcel.encumbranceRegisteredAt,
+          );
+          document.getElementById('encumbrance-release').textContent =
+            parcel.encumbranceReleasedAt
+              ? formatDate(parcel.encumbranceReleasedAt)
+              : 'Chưa ghi nhận';
+          document.getElementById('evidence-id').textContent =
+            `EV-${parcel.code.slice(-4)}`;
+          document.getElementById('evidence-file').textContent =
+            `ho-so-thua-dat-${parcel.code.slice(-4)}.pdf`;
+          const evidenceDate = document.getElementById('evidence-date');
+          evidenceDate.dateTime = parcel.evidenceDate;
+          evidenceDate.textContent = formatDate(parcel.evidenceDate);
+          const detailMapLink = document.getElementById('detail-map-link');
+          detailMapLink.href = `/map?parcelId=${encodeURIComponent(parcel.id)}`;
+          detailMapLink.setAttribute(
+            'aria-label',
+            `Xem thửa ${parcel.code} trên bản đồ`,
+          );
+        }
+
+        function routeFromHash() {
+          const rawPath = window.location.hash.slice(1);
+          const path = rawPath.startsWith('/') ? rawPath : '/';
+          if (path === '/') {
+            return { page: 'home', title: 'Trung tâm điều hành' };
+          }
+          if (path === '/land/parcels') {
+            return { page: 'list', title: 'Thửa đất · Chủ thể' };
+          }
+          const detailMatch = path.match(/^\/land\/parcels\/([^/]+)$/);
+          if (detailMatch) {
+            let id = '';
+            try {
+              id = decodeURIComponent(detailMatch[1]);
+            } catch {
+              id = '';
+            }
+            const parcel = parcelRecords.find((item) => item.id === id) ?? null;
+            return {
+              page: 'detail',
+              title: parcel?.code ?? 'Chi tiết thửa đất',
+              parcel,
+            };
+          }
+          return { page: 'home', title: 'Trung tâm điều hành' };
+        }
+
+        function renderRoute(moveFocus = false) {
+          const route = routeFromHash();
+          const activeRoute = route.page === 'home' ? '/' : '/land/parcels';
+          for (const page of pages)
+            page.hidden = page.dataset.page !== route.page;
+          for (const link of navLinks) {
+            const active = link.dataset.navRoute === activeRoute;
+            if (active) link.setAttribute('aria-current', 'page');
+            else link.removeAttribute('aria-current');
+          }
+
+          document.getElementById('topbar-breadcrumb').textContent =
+            route.page === 'home'
+              ? 'Trung tâm'
+              : 'Đất đai / Thửa đất · Chủ thể';
+          document.getElementById('topbar-current').textContent = route.title;
+
+          if (route.page === 'detail') {
+            detailContent.hidden = !route.parcel;
+            detailNotFound.hidden = Boolean(route.parcel);
+            if (route.parcel) showParcel(route.parcel);
+          }
+
+          document.title = `${route.title} · CivicOS`;
+          if (mobileViewport.matches && drawerOpen) closeDrawer(false);
+          if (moveFocus) {
+            const heading = document.querySelector(
+              `[data-page="${route.page}"] h1`,
+            );
+            heading?.focus({ preventScroll: true });
+            window.scrollTo(0, 0);
+          }
+        }
+
+        window.addEventListener('hashchange', () => renderRoute(true));
+        mobileViewport.addEventListener('change', syncViewport);
+        syncViewport();
+        applyFilters();
+        renderRoute(false);
+      })();
+    </script>
+  </body>
+</html>

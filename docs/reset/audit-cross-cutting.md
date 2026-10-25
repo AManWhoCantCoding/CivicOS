@@ -8,23 +8,23 @@ Trạng thái: **CÓ** = đầy đủ; **MỘT PHẦN** = một phần; **KHÔNG
 
 ## NFR-X-01 — Bảo mật & phân quyền: RBAC theo cấp độ bí mật dữ liệu (PS-003, PS-005), NĐ 13/2023/NĐ-CP
 
-| ID con | Trạng thái | Bằng chứng code (file:line) | Test (CHƯA CHẠY) | Ghi chú |
+| ID con | Trạng thái | Bằng chứng code (file:line) | Test / kết quả | Ghi chú |
 |---|---|---|---|---|
-| NFR-X-01a | **CÓ** | `src/modules/identity/contracts.ts:73-86` (ROLE_BASE_CAPABILITIES per role) <br> `src/modules/identity/authorization.ts:134-234` (evaluatePolicy: ROLE_CAPABILITY_DENIED, ASSIGNMENT_REQUIRED, TASK_CAPABILITY_DENIED, ORGANIZATION_SCOPE_DENIED) | `tests/identity/authorization.postgres.test.ts` — **CHƯA CHẠY** | RBAC: role capabilities + assignment-based access. Policy evaluation có 5 denial reasons. |
-| NFR-X-01b | **CÓ** | `src/modules/identity/encryption.ts:18-46` (encryptSensitive/decryptSensitive AES-256-GCM) <br> `src/modules/identity/encryption.ts:48-52` (blindIndex) <br> `src/modules/incidents/commands.ts:525-539` (encryptSensitive sourceName, sourceContact, sensitiveRef) | `tests/incidents/intake-report-separation.postgres.test.ts:834-898` — **CHƯA CHẠY** | Mã hóa AES-256-GCM cho sensitive fields (sourceName, sourceContact, sensitiveRef, identityNumber). blindIndex cho tìm kiếm. |
-| NFR-X-01c | **CÓ** | `src/modules/identity/authorization.ts:194-205` (read_sensitive gate cho LandParty) <br> `src/modules/incidents/commands.ts:828-845` (canRevealIntakeRow: commander + Assignment + read_sensitive) <br> `src/modules/residents/contracts.ts:63-66` (maskDisplayName) | `tests/incidents/intake-report-separation.postgres.test.ts:834-898` — **CHƯA CHẠY** | Reveal chỉ commander có Assignment `incident_verification` + policy grant. Mask display name (chữ cái đầu + ***). |
-| NFR-X-01d | **CÓ** | `src/modules/identity/audit.ts:24-77` (recordAudit cho mọi operation) <br> `src/modules/incidents/commands.ts` (gọi recordAudit: intake.created, intake.verified, intake.sensitive_reveal) | `tests/incidents/intake-report-separation.postgres.test.ts:852-898` — **CHƯA CHẠY** | Audit log đầy đủ: intake.created, intake.verified, intake.sensitive_reveal, intake.read. |
-| NFR-X-01e | **MỘT PHẦN** | `src/modules/identity/contracts.ts:88-95` (ASSIGNMENT_TASKS bao gồm resident_followup, vehicle_verification, land_review) | **CHƯA CHẠY** | Assignment task mapping cho PS-003 (resident_followup), PS-005 (vehicle_verification). **Thiếu**: task chuyên biệt cho PS-003 sensitive data (hiện dùng resident_followup chung). |
+| NFR-X-01a | **CÓ** | `src/modules/identity/contracts.ts:73-86` (ROLE_BASE_CAPABILITIES per role) <br> `src/modules/identity/authorization.ts:134-234` (evaluatePolicy: ROLE_CAPABILITY_DENIED, ASSIGNMENT_REQUIRED, TASK_CAPABILITY_DENIED, ORGANIZATION_SCOPE_DENIED) | `tests/identity/capability-policy.test.ts` — 32/32 passed locally (policy unit contract); PostgreSQL authorization seam not run. | RBAC: role capabilities + assignment-based access. Policy evaluation có 5 denial reasons. |
+| NFR-X-01b | **CÓ** | `src/modules/identity/encryption.ts:18-46` (encryptSensitive/decryptSensitive AES-256-GCM) <br> `src/modules/identity/encryption.ts:48-52` (blindIndex) <br> `src/modules/incidents/commands.ts:525-539` (encryptSensitive sourceName, sourceContact, sensitiveRef) | `tests/identity/encryption.integration.test.ts` — 4 passed, 1 DB-gated skipped (`RUN_DB_TESTS=0`); persisted sensitive-field assertion not run. | Mã hóa AES-256-GCM cho sensitive fields (sourceName, sourceContact, sensitiveRef, identityNumber). blindIndex cho tìm kiếm. |
+| NFR-X-01c | **CÓ** | `src/modules/identity/authorization.ts:194-205` (read_sensitive gate cho LandParty) <br> `src/modules/incidents/commands.ts:828-845` (canRevealIntakeRow: commander + Assignment + read_sensitive) <br> `src/modules/residents/contracts.ts:63-66` (maskDisplayName) | `tests/residents/resident-contracts.test.ts` — 11/11 (mask helper); `tests/residents/resident-sensitive-access.test.ts` — 8/8 (access helper). Intake reveal/persistence seam remains DB-unverified. | Reveal chỉ commander có Assignment `incident_verification` + policy grant. Mask display name (chữ cái đầu + ***). |
+| NFR-X-01d | **CÓ** | `src/modules/identity/audit.ts:24-77` (recordAudit cho mọi operation) <br> `src/modules/incidents/commands.ts` (gọi recordAudit: intake.created, intake.verified, intake.sensitive_reveal) | `tests/identity/audit.integration.test.ts` — 1 passed, 2 DB-gated skipped (`RUN_DB_TESTS=0`); persistence/outbox assertions remain unrun. | Audit log đầy đủ: intake.created, intake.verified, intake.sensitive_reveal, intake.read. |
+| NFR-X-01e | **MỘT PHẦN** | `src/modules/identity/contracts.ts:88-95` (ASSIGNMENT_TASKS bao gồm resident_followup, vehicle_verification, land_review) | `tests/identity/lnd04-land-assignment-policy.test.ts` — 15/15; `tests/identity/capability-policy.test.ts` — 32/32 passed locally. | Assignment task mapping cho PS-003 (resident_followup), PS-005 (vehicle_verification). **Thiếu**: task chuyên biệt cho PS-003 sensitive data (hiện dùng resident_followup chung); policy test không chứng minh tách biệt quyền sensitive. |
 
 ---
 
 ## NFR-X-02 — Định vị & bản đồ: chung 1 hệ tọa độ/nền bản đồ (VietGeoX/VBDLIS) cho PS-001
 
-| ID con | Trạng thái | Bằng chứng code (file:line) | Test (CHƯA CHẠY) | Ghi chú |
+| ID con | Trạng thái | Bằng chứng code (file:line) | Test / kết quả | Ghi chú |
 |---|---|---|---|---|
-| NFR-X-02a | **CÓ** | `src/modules/platform/geo/index.ts:1-10` (GeoPoint, GeoArea: coordinateReference: 'WGS84') <br> `src/modules/platform/geo/index.ts:12-110` (createGeoPoint, createGeoArea validate WGS84) | `tests/map/map-geometry.test.ts` — **CHƯA CHẠY** | Hệ tọa độ WGS84 chuẩn. GeoPoint validate -90..90, -180..180. GeoArea validate polygon closed, non-self-intersect, area > 0. |
-| NFR-X-02b | **MỘT PHẦN** | `src/modules/platform/map/index.ts:7, 108-109` (CADN_BOUNDS = [105.93, 20.91, 106.03, 20.99]) <br> `src/components/map/MapWorkspace.tsx:176-188` (bbox validation trong CADN_BOUNDS) | `tests/map/map-provider.test.ts:31-38` — **CHƯA CHẠY** | Bounds CADN hardcode. **Thiếu**: tích hợp VietGeoX/VBDLIS thật (hiện dùng OSS TileServer GL). Baseline mục 5: camera/VietGeoX/VBDLIS là external dependency. |
-| NFR-X-02c | **CÓ** | `src/modules/platform/map/index.ts:161-189` (projectToMapMarkers cho Incident, Inspection) <br> `src/components/map/MapWorkspace.tsx:791-838` (render marker + polygon) <br> `src/modules/mobile-readonly/layers.ts:37-38` (HOTSPOT map sang Incident) | `tests/map/map-smoke.test.ts:32-48` — **CHƯA CHẠY** | Marker/polygon dùng chung projection từ Incident, Inspection, LandParcel. HOTSPOT map sang Incident. |
+| NFR-X-02a | **CÓ** | `src/modules/platform/geo/index.ts:1-10` (GeoPoint, GeoArea: coordinateReference: 'WGS84') <br> `src/modules/platform/geo/index.ts:12-110` (createGeoPoint, createGeoArea validate WGS84) | `tests/map/map-geometry.test.ts` — 5/5 passed locally (non-DB). | Hệ tọa độ WGS84 chuẩn. GeoPoint validate -90..90, -180..180. GeoArea validate polygon closed, non-self-intersect, area > 0. |
+| NFR-X-02b | **MỘT PHẦN** | `src/modules/platform/map/index.ts:7, 108-109` (CADN_BOUNDS = [105.93, 20.91, 106.03, 20.99]) <br> `src/components/map/MapWorkspace.tsx:176-188` (bbox validation trong CADN_BOUNDS) | `tests/map/map-provider.test.ts` — 6/6 passed locally (non-DB). | Bounds CADN hardcode. **Thiếu**: tích hợp VietGeoX/VBDLIS thật (hiện dùng OSS TileServer GL). Baseline mục 5: camera/VietGeoX/VBDLIS là external dependency. |
+| NFR-X-02c | **CÓ** | `src/modules/platform/map/index.ts:161-189` (projectToMapMarkers cho Incident, Inspection) <br> `src/components/map/MapWorkspace.tsx:791-838` (render marker + polygon) <br> `src/modules/mobile-readonly/layers.ts:37-38` (HOTSPOT map sang Incident) | `tests/map/map-smoke.test.ts` — 4/4 passed locally (non-DB). | Marker/polygon dùng chung projection từ Incident, Inspection, LandParcel. HOTSPOT map sang Incident. |
 
 ---
 
@@ -58,12 +58,12 @@ Trạng thái: **CÓ** = đầy đủ; **MỘT PHẦN** = một phần; **KHÔNG
 
 ## Mục 5 — Phụ thuộc Camera/LPR (NFR-CAM-01..04)
 
-| ID | Trạng thái | Bằng chứng code (file:line) | Test (CHƯA CHẠY) | Ghi chú |
+| ID | Trạng thái | Bằng chứng code (file:line) | Test / kết quả | Ghi chú |
 |---|---|---|---|---|
-| NFR-CAM-01 (Adapter pattern) | **MỘT PHẦN** | `src/modules/vehicles/mock-camera-adapter.ts` (MOCK_CAMERA_FIXTURES, createMockCameraAdapter) | **CHƯA CHẠY** | Có mock adapter interface. **Thiếu**: interface chung `CameraDataSource` cho PS-001/003/009 (hiện chỉ vehicle mock). |
-| NFR-CAM-02 (Mock data) | **CÓ** | `src/modules/vehicles/mock-camera-adapter.ts:1-30` (MOCK_CAMERA_FIXTURES 3 observation) | **CHƯA CHẠY** | Có mock data 3 observation in-memory. |
-| NFR-CAM-03 (Fallback nhập tay) | **CÓ** | `src/modules/vehicles/contracts.ts:5-14` (VehicleObservationInput: plate, observedAt, lat, lng) <br> `src/modules/vehicles/commands.ts:39-55` (recordVehicleObservation validate lat/lng) | `tests/vehicles/vehicle-watch-contract.test.ts` — **CHƯA CHẠY** | recordVehicleObservation cho phép nhập tay biển số, lat, lng. Không bắt buộc camera. |
-| NFR-CAM-04 (Phân kỳ Phase 2) | **PHASE 2** | `src/modules/vehicles/mock-camera-adapter.ts` (mock) <br> `docs/reset/requirements-baseline.md` mục 5: PS-001 FR-001-01, PS-003 FR-003-06, PS-009 FR-009-01/02, PS-010 camera field → Phase 2 | **CHƯA CHẠY** | Baseline đưa camera dependencies vào Phase 2. Code hiện chỉ mock vehicle. PS-001 layer Camera hiển thị "Chưa kết nối nguồn camera" (chưa thấy code, cần UI). |
+| NFR-CAM-01 (Adapter pattern) | **MỘT PHẦN** | `src/modules/vehicles/mock-camera-adapter.ts` (MOCK_CAMERA_FIXTURES, createMockCameraAdapter) | `tests/vehicles/vehicle-watch-slices-8-9.test.ts` — 5/5 passed locally for the vehicle mock adapter contract (non-DB). | Có mock adapter interface. **Thiếu**: interface chung `CameraDataSource` cho PS-001/003/009 (hiện chỉ vehicle mock). |
+| NFR-CAM-02 (Mock data) | **CÓ** | `src/modules/vehicles/mock-camera-adapter.ts:1-30` (MOCK_CAMERA_FIXTURES 3 observation) | `tests/vehicles/vehicle-watch-slices-8-9.test.ts` — 5/5 passed locally, including deterministic three-observation fixtures (non-DB). | Có mock data 3 observation in-memory. |
+| NFR-CAM-03 (Fallback nhập tay) | **CÓ** | `src/modules/vehicles/contracts.ts:5-14` (VehicleObservationInput: plate, observedAt, lat, lng) <br> `src/modules/vehicles/commands.ts:39-55` (recordVehicleObservation validate lat/lng) | `tests/vehicles/vehicle-watch-slices-8-9.test.ts` — 5/5 passed locally for `manualInputAvailable` when the adapter is unavailable; this does not exercise persisted manual entry. | recordVehicleObservation cho phép nhập tay biển số, lat, lng. Không bắt buộc camera. |
+| NFR-CAM-04 (Phân kỳ Phase 2) | **PHASE 2** | `src/modules/vehicles/mock-camera-adapter.ts` (vehicle mock) <br> `src/components/map/MapWorkspace.tsx:1173-1196` (Phase 1 Camera unavailable UI only) <br> `docs/reset/requirements-baseline.md` mục 5: camera data-source dependencies → Phase 2 | `tests/uiux-alignment/map-safe-states.test.tsx` — 18/18 passed locally for the Camera fallback contract; no source integration tested. | Camera fallback UI is implemented; no CameraDataSource, real camera/LPR data, or mock camera layer was added to the map. Camera-dependent integrations remain Phase 2. |
 
 ---
 
@@ -83,10 +83,9 @@ Trạng thái: **CÓ** = đầy đủ; **MỘT PHẦN** = một phần; **KHÔNG
 
 ---
 
-## Câu hỏi mở cross-cutting → thêm vào decision-log.md
+## Cross-cutting decision status
 
-- D-47: NFR-X-02 "VietGeoX/VBDLIS" — có hợp đồng/cấp phép truy cập không? Hiện dùng OSS TileServer GL.
-- D-48: NFR-X-03 "mobile-first" — mobile write flow (ADR-0005) khi nào triển khai cho PS-005/008/009?
-- D-49: NFR-X-04 "chung 1 engine báo cáo" — architecture như thế nào (module report chung, hay aggregation service)?
-- D-50: NFR-CAM-01 "Camera/LPR Data Source interface" — interface thiết kế như thế nào (polling, webhook, gRPC)?
-- D-51: NFR-CAM-04 "Phase 2" — timeline Phase 2 khi nào? Camera dependency có block go-live MVP không?
+- **D-47 — CLOSED by D-76 (2026-10-24):** no VietGeoX/VBDLIS integration without an access/license agreement. The demo reuses the configured map/tile provider and attribution; that provider is not a source of authoritative LandParcel geometry.
+- **D-48 — CLOSED by D-22/D-65 (2026-10-24):** internal offline writes are limited to the approved E1-004 and E1-007 allowlists. E1-005 mutations/authority actions remain online-only; E1-008 and E1-009 mobile work is outside current scope.
+- **D-49 — CLOSED by D-76 (2026-10-24):** keep reports per domain; no shared report engine/aggregation service is required or authorized by this work item.
+- **D-50/D-51 — OUT OF SCOPE by D-65:** Camera/LPR interface and Phase 2 schedule remain unresolved for a future explicitly authorized scope; they do not block current acceptance.

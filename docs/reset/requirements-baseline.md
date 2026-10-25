@@ -235,7 +235,15 @@ Luật Công an nhân dân 2018, Điều 14 (phân tích, đánh giá tình hìn
 ## PS-E1-007 — Quản lý Cơ sở Kinh doanh Có Điều kiện — T1, Must Have
 
 ### Căn cứ pháp lý
-Luật Đầu tư 2020, Điều 7 (danh mục ngành nghề kinh doanh có điều kiện); Nghị định 167/2013/NĐ-CP, Điều 11–20; Nghị định 96/2016/NĐ-CP (điều kiện ANTT đối với ngành nghề kinh doanh có điều kiện).
+
+> **Ghi chú truy vết & diễn giải (2026-10-24 — đợt xác minh E1-007; chi tiết provision-level: `docs/reset/legal-traceability-pilot.md` mục 3, 9):**
+>
+> 1. **Dòng căn cứ gốc của PS-E1-007 trong `Requirement.md`** là: "Luật Đầu tư 2020, Điều 7 (danh mục ngành nghề kinh doanh có điều kiện); Nghị định 167/2013/NĐ-CP, Điều 11–20; Nghị định 96/2016/NĐ-CP (điều kiện ANTT đối với ngành nghề kinh doanh có điều kiện)". Giữ nguyên ở đây như trích gốc, **hai văn bản đầu không còn dùng làm căn cứ hiện hành** — dùng chuỗi dưới đây.
+> 2. **Danh mục ngành nghề kinh doanh có điều kiện:** Luật Đầu tư **143/2025/QH15, Điều 7 + Phụ lục IV** — riêng Đ7 + Phụ lục IV có hiệu lực từ 01-07-2026 (thay chỗ Đ7 + Phụ lục IV Luật Đầu tư 2020); **NQ 66.17/2026/NQ-CP** ban hành Danh mục kèm Phụ lục (142 dòng) — hiệu lực 01-07-2026 đến hết 28-02-2027 theo Điều 6.1, phần quy định "tương ứng" có thể tự hết hiệu lực sớm hơn theo Điều 6.2 nếu văn bản mới có hiệu lực trong khung (ví dụ NĐ 392/2026, hiệu lực 15-11-2026 — **chưa hiệu lực tại thời điểm ghi chú**).
+> 3. **Điều kiện ANTT theo loại hình:** NĐ **96/2016** (sửa bởi NĐ **56/2023**, NĐ **58/2026**); từ 01-07-2026 **NQ 66.18/2026 Phụ lục I.1** (Mục 3 phần B) quy định "không thực hiện" điều kiện ANTT của 3 loại hình. **Không coi toàn bộ 23 loại hình trong danh sách gốc NĐ 96 Điều 3 đều còn hiện hành/được phủ:** Điều 3 k.13 (kinh doanh khí) đã bị bãi bỏ từ 15-03-2026 (NĐ 58 k.22); 3 loại hình bị "không thực hiện" từ 01-07-2026 (NQ 66.18 I.1); hai dòng "đòi nợ" (k.10) và "phẫu thuật thẩm mỹ" (k.20) xử lý thế nào trong giai đoạn danh mục mới **vẫn unresolved** (pilot §9.7a/b). Phạm vi loại hình của pilot theo **D-62**: giới hạn ở loại hình có điều kiện ANTT, không phải mọi ngành nghề kinh doanh có điều kiện; checklist từng loại hình phải dựng từ nguồn pháp lý chính thức.
+> 4. **Xử phạt vi phạm hành chính (chỉ khía cạnh chế tài):** NĐ **282/2025** (sửa bởi NĐ **347/2026**) thay chỗ NĐ 167/2013 — không trích "hành vi/mức phạt" cụ thể khi chưa đối chiếu nguyên văn.
+
+**Ranh giới:** mục này là **nguồn tham chiếu của yêu cầu**, không phải tuyên bố tuân thủ hay tư vấn pháp luật; không cấp phép xử lý dữ liệu cá nhân thật (dữ liệu demo là synthetic-only); CivicOS không ban hành quyết định xử phạt (xem Ghi chú diễn giải dưới bảng yêu cầu — D-55/D-64/D-29).
 
 ### Actor (bảng Actor trong story)
 | Actor | Nền tảng | Vai trò |
@@ -250,7 +258,7 @@ Luật Đầu tư 2020, Điều 7 (danh mục ngành nghề kinh doanh có đi�
 
 | ID gốc | Phát biểu (trích nguyên văn) | Actor | Căn cứ pháp lý | Vị trí (mục) |
 |---|---|---|---|---|
-| FR-007-01 | Lập danh mục cơ sở KDCĐK (tên, chủ, địa chỉ, loại hình, giấy phép). | Cán bộ văn phòng | Luật Đầu tư 2020 Đ7; NĐ 167/2013 Đ11–20; NĐ 96/2016 | Functional Requirements |
+| FR-007-01 | Lập danh mục cơ sở KDCĐK (tên, chủ, địa chỉ, loại hình, giấy phép). | Cán bộ văn phòng | Luật 143/2025/QH15 Đ7 + Phụ lục IV; NQ 66.17/2026/NQ-CP; NĐ 96/2016 (sửa NĐ 56/2023, NĐ 58/2026); NQ 66.18/2026 I.1 — *thay căn cứ gốc "Luật Đầu tư 2020 Đ7; NĐ 167/2013 Đ11–20" (xem Ghi chú truy vết)* | Functional Requirements |
 | FR-007-02 | Lập lịch kiểm tra định kỳ 6 tháng/lần. | Cán bộ văn phòng | (như trên) | Functional Requirements |
 | FR-007-03 | Checklist kiểm tra chuẩn hóa theo từng loại hình cơ sở. | Cán bộ văn phòng / Hệ thống | (như trên) | Functional Requirements |
 | FR-007-04 | Ghi nhận kết quả kiểm tra thực địa kèm ảnh có gắn GPS. | Cán bộ hiện trường (Mobile) | (như trên) | Functional Requirements |
@@ -262,11 +270,20 @@ Luật Đầu tư 2020, Điều 7 (danh mục ngành nghề kinh doanh có đi�
 | NFR-007-03 | Vi phạm được xử lý trong 7 ngày. | Trưởng CA xã / Hệ thống (SLA) | (như trên) | Non-Functional Requirements |
 | NFR-007-04 | Checklist phải theo đúng cấu trúc từng loại hình, không dùng chung 1 mẫu. | Cán bộ văn phòng / Hệ thống | (như trên) | Non-Functional Requirements |
 
+### Ghi chú diễn giải & phân tách chính sách sản phẩm (2026-10-24 — D-55/D-64/D-29/D-62)
+
+- **FR-007-05 / FR-007-06 — "xử phạt" / "luồng xử phạt (Trưởng CA xã) hoặc chuyển huyện":** phát biểu gốc ở bảng trên giữ nguyên như trích từ `Requirement.md`; **diễn giải sản phẩm hiện hành** (D-55, D-64): CivicOS chỉ phát hành **`EnforcementRecommendation` (khuyến nghị)**; hành vi "phê duyệt / trả về / chuyển hồ sơ" thực hiện theo **vai trò/phạm vi được cấu hình (D-64)** — **CivicOS không ban hành quyết định xử phạt**, không là chủ thể xác lập thẩm quyền pháp lý. Cụm "Chỉ đạo, xử phạt hoặc chuyển huyện" trong bảng Actor và trong FR-007-06 đọc theo nghĩa luồng khuyến nghị/phân loại kết quả (đạt / nhắc nhở / khuyến nghị xử lý), **không** theo nghĩa hệ thống ra quyết định xử phạt; ghi chú này **không khẳng định hay thay đổi thẩm quyền pháp lý** của Trưởng CA xã/cấp xã — thẩm quyền cụ thể cho một hành vi/vụ việc thuộc quy định lĩnh vực hiện hành + tình tiết vụ việc, và là việc của cơ quan có thẩm quyền, không phải của CivicOS.
+- **FR-007-02 / NFR-007-01 — 6 tháng/lần; ≥2 lần/năm; "100%":** tần suất và "100%" là **policy/quản trị của CivicOS** (D-56), không bắt nguồn từ nghĩa vụ pháp lý định kỳ (pilot §5.2, §9.7f).
+- **NFR-007-02 — "Biên bản kèm ảnh GPS đủ giá trị chứng cứ":** theo **D-57 (PO-approved)**, hệ thống chỉ nghiệm thu **technical provenance**, KHÔNG tuyên bố giá trị pháp lý của chứng cứ; không thêm tuyên bố "đủ giá trị chứng cứ" vào UI/báo cáo sản phẩm mà không có đối chiếu pháp lý bổ sung.
+- **NFR-007-03 — "Vi phạm được xử lý trong 7 ngày":** theo **D-29 (PO-approved 2026-10-21, user clarification 2026-10-24)**, mốc **7 ngày lịch liên tục (7×24h, gồm cuối tuần/ngày lễ) là SLA sản phẩm CivicOS** cho việc xử lý `EnforcementRecommendation` (phê duyệt/trả về/chuyển). **Không đồng nhất với thời hạn pháp lý của cơ quan có thẩm quyền**: theo hợp nhất Luật Xử lý vi phạm hành chính 171/2026/VBHN-LQ-VPQH (nguyên văn Đ58/Đ66/Đ70 đã đối chiếu — pilot §9.9), Đ66 k.1(a) là **7 ngày làm việc** (hoặc 10 ngày làm việc khi phải gửi hồ sơ cho người có thẩm quyền xử phạt — trừ Đ63 k.3; k.1(b) **1 tháng** khi cá nhân/tổ chức yêu cầu giải trình hoặc cần xác minh sự việc theo Đ59; k.1(c) **2 tháng** cho vụ việc **thuộc trường hợp k.1(b) nhưng đặc biệt nghiêm trọng**, có nhiều tình tiết phức tạp và **cần thêm thời gian xác minh/thu thập chứng cứ**) và Đ70 k.1 là **3 ngày làm việc** để gửi quyết định — đây là **nghĩa vụ/thời hạn của cơ quan nhà nước có thẩm quyền** trong quy trình xử phạt chính thức, không phải SLA của hệ thống và không thay cho SLA D-29.
+- **NFR-007-04:** checklist theo từng loại hình là yêu cầu sản phẩm theo **D-62** (giới hạn ở loại hình có điều kiện ANTT); nội dung checklist phải lấy từ nguồn pháp lý chính thức; việc liệt kê clause-level tài liệu hồ sơ per-type còn mở (pilot backlog P2.5).
+
 ### CÂU HỎI
 - "chuyển huyện" trong FR-007-06 — xem Gap 2 (chuyển cấp tỉnh/đầu mối nghiệp vụ).
 - "Phòng CSKT huyện" — role `superior_officer`/`superior_commander` hay role riêng?
 - FR-007-04 "ảnh có gắn GPS" — metadata chuẩn nào (EXIF, custom)?
 - "loại hình cơ sở" — danh sách loại hình tham chiếu từ đâu (Luật Đầu tư, NĐ 167/2013)?
+  → **Cập nhật 2026-10-24:** danh mục ngành nghề truy về Luật Đầu tư **143/2025/QH15** Đ7 + Phụ lục IV + **NQ 66.17/2026/NQ-CP**; điều kiện ANTT theo NĐ **96/2016** (sửa NĐ 56/2023, NĐ 58/2026; NQ 66.18 I.1 "không thực hiện" 3 loại hình từ 01-07-2026) — xem Ghi chú truy vết ở đầu PS-E1-007. Phạm vi loại hình theo D-62 (chỉ loại hình có điều kiện ANTT).
 
 ---
 
@@ -444,7 +461,7 @@ Chính thức đưa vào làm yêu cầu chuẩn thay vì gap treo — đã có 
 
 9. "vụ việc ANTT" trong PS-E1-006 — tập hợp entity nào (IntakeReport, Incident, Hotspot, Vehicle...)?
 
-10. "loại hình cơ sở" trong PS-E1-007 — danh sách tham chiếu từ đâu (Luật Đầu tư, NĐ 167/2013)?
+10. "loại hình cơ sở" trong PS-E1-007 — danh sách tham chiếu từ đâu (Luật Đầu tư, NĐ 167/2013)? → **Cập nhật 2026-10-24:** truy về Luật 143/2025/QH15 Đ7 + Phụ lục IV + NQ 66.17/2026 (ĐKKD, 142 dòng); điều kiện ANTT theo NĐ 96/2016 (sửa NĐ 56/2023, NĐ 58/2026; NQ 66.18 I.1 cắt 3 loại hình từ 01-07-2026) — đã trả lời trong Ghi chú truy vết ở đầu PS-E1-007; phạm vi theo D-62 (chỉ loại hình có điều kiện ANTT).
 
 11. NFR-008-05 `[BỔ SUNG]` — cần xác nhận với đơn vị nghiệp vụ.
 
