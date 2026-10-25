@@ -14,6 +14,7 @@
 
 - Cách gọi: interface nội bộ `NationalLandAdapter`; gọi đồng bộ trong `POST /api/land/applications/{applicationId}/sync` và `/sync/retry`; không gọi HTTP service thật.
 - Request:
+
 ```json
 {
   "requestKey": "sync-key-001",
@@ -23,7 +24,9 @@
   "mode": "mock"
 }
 ```
+
 - Response success:
+
 ```json
 {
   "status": "succeeded",
@@ -31,7 +34,9 @@
   "responsePayload": { "accepted": true, "simulated": true }
 }
 ```
+
 - Response failure:
+
 ```json
 {
   "status": "failed",
@@ -39,6 +44,7 @@
   "responsePayload": { "accepted": false, "simulated": true }
 }
 ```
+
 - Lỗi xử lý: Adapter failure lưu `LandNationalSync.status=failed`, trả `502 LAND_SYNC_FAILED`, không tạo Approval và không mutate land aggregate.
 - Retry/Timeout: Không automatic retry vô hạn; retry thủ công dùng cùng `requestKey`. Adapter là local mock nên không có network timeout; mọi exception được chuẩn hóa thành failure fixture.
 - Fallback: Giữ application `sync_failed`, cho phép `/sync/retry`; không suy diễn success.

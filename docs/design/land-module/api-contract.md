@@ -14,36 +14,36 @@
 
 ### `Party`
 
-| Field | Kiểu | Nullable | Ghi chú |
-|---|---|---|---|
-| `id` | `string` | Không | Cuid. |
-| `referenceCode` | `string` | Không | Mã không nhận diện. |
-| `partyType` | `"individual" | "organization"` | Không | Theo data model. |
-| `displayName` | `string` | Không | Đã giải mã cho internal role có `read_sensitive`. |
-| `identityNumberMasked` | `string` | Có | Null nếu không có identity number; giữ 4 ký tự cuối, phần còn lại thay bằng `*`. |
-| `status` | `"active" | "archived"` | Không | Không hard-delete. |
-| `createdAt` | `IsoDate` | Không | UTC. |
-| `updatedAt` | `IsoDate` | Không | UTC. |
+| Field                  | Kiểu          | Nullable        | Ghi chú                                                                          |
+| ---------------------- | ------------- | --------------- | -------------------------------------------------------------------------------- |
+| `id`                   | `string`      | Không           | Cuid.                                                                            |
+| `referenceCode`        | `string`      | Không           | Mã không nhận diện.                                                              |
+| `partyType`            | `"individual" | "organization"` | Không                                                                            | Theo data model.   |
+| `displayName`          | `string`      | Không           | Đã giải mã cho internal role có `read_sensitive`.                                |
+| `identityNumberMasked` | `string`      | Có              | Null nếu không có identity number; giữ 4 ký tự cuối, phần còn lại thay bằng `*`. |
+| `status`               | `"active"     | "archived"`     | Không                                                                            | Không hard-delete. |
+| `createdAt`            | `IsoDate`     | Không           | UTC.                                                                             |
+| `updatedAt`            | `IsoDate`     | Không           | UTC.                                                                             |
 
 ### `Parcel`
 
-| Field | Kiểu | Nullable | Ghi chú |
-|---|---|---|---|
-| `id` | `string` | Không | Cuid. |
-| `parcelCode` | `string` | Không | Unique toàn module. |
-| `mapSheetNumber` | `string` | Không | Số tờ. |
-| `parcelNumber` | `string` | Không | Số thửa. |
-| `areaSqm` | `DecimalString` | Không | `>0`. |
-| `landUseType` | `string` | Không | Catalog cấu hình. |
-| `address` | `string` | Không | Internal response; không public. |
-| `communeCode` | `string` | Không | Mã xã. |
-| `organizationId` | `string` | Không | Phạm vi đơn vị. |
-| `geometry` | `GeometryPolygon` | Không | Internal response; không public. |
-| `nationalRecordRef` | `string` | Có | Null trước sync success. |
-| `status` | `"proposed" | "active" | "retired"` | Không | `proposed` trước completed split/merge. |
-| `version` | `integer` | Không | Optimistic concurrency. |
-| `createdAt` | `IsoDate` | Không | UTC. |
-| `updatedAt` | `IsoDate` | Không | UTC. |
+| Field               | Kiểu              | Nullable | Ghi chú                          |
+| ------------------- | ----------------- | -------- | -------------------------------- |
+| `id`                | `string`          | Không    | Cuid.                            |
+| `parcelCode`        | `string`          | Không    | Unique toàn module.              |
+| `mapSheetNumber`    | `string`          | Không    | Số tờ.                           |
+| `parcelNumber`      | `string`          | Không    | Số thửa.                         |
+| `areaSqm`           | `DecimalString`   | Không    | `>0`.                            |
+| `landUseType`       | `string`          | Không    | Catalog cấu hình.                |
+| `address`           | `string`          | Không    | Internal response; không public. |
+| `communeCode`       | `string`          | Không    | Mã xã.                           |
+| `organizationId`    | `string`          | Không    | Phạm vi đơn vị.                  |
+| `geometry`          | `GeometryPolygon` | Không    | Internal response; không public. |
+| `nationalRecordRef` | `string`          | Có       | Null trước sync success.         |
+| `status`            | `"proposed"       | "active" | "retired"`                       | Không | `proposed` trước completed split/merge. |
+| `version`           | `integer`         | Không    | Optimistic concurrency.          |
+| `createdAt`         | `IsoDate`         | Không    | UTC.                             |
+| `updatedAt`         | `IsoDate`         | Không    | UTC.                             |
 
 ### `LandRightSummary` và `LandEncumbranceSummary`
 
@@ -54,22 +54,22 @@
 
 ### `ApplicationSummary` và `ApplicationDetail`
 
-| Field | Kiểu | Nullable | Ghi chú |
-|---|---|---|---|
-| `id` | `string` | Không | Aggregate ID. |
-| `applicationCode` | `string` | Không | Public lookup key. |
-| `organizationId` | `string` | Không | Scope đơn vị. |
-| `changeType` | `"transfer" | "information_update" | "mortgage" | "parcel_split_merge"` | Không | Bốn loại trong scope. |
-| `status` | `string` | Không | Một trong tám state data model. |
-| `changePayload` | `object` | Không | Chỉ có ở detail; không public. |
-| `createdById` | `string` | Không | Actor cán bộ. |
-| `parties` | `ApplicationParty[]` | Không | Detail; có thể rỗng khi list link chưa có. |
-| `parcels` | `ApplicationParcel[]` | Không | Detail; có thể rỗng khi list link chưa có. |
-| `version` | `integer` | Không | Header `If-Match-Version`. |
-| `submittedAt` | `IsoDate` | Không | UTC. |
-| `updatedAt` | `IsoDate` | Không | UTC. |
-| `completedAt` | `IsoDate` | Có | Null trước completed. |
-| `rejectionReason` | `string` | Có | Null nếu chưa rejected. |
+| Field             | Kiểu                  | Nullable             | Ghi chú                                    |
+| ----------------- | --------------------- | -------------------- | ------------------------------------------ |
+| `id`              | `string`              | Không                | Aggregate ID.                              |
+| `applicationCode` | `string`              | Không                | Public lookup key.                         |
+| `organizationId`  | `string`              | Không                | Scope đơn vị.                              |
+| `changeType`      | `"transfer"           | "information_update" | "mortgage"                                 | "parcel_split_merge"` | Không | Bốn loại trong scope. |
+| `status`          | `string`              | Không                | Một trong sáu application states tại data model. |
+| `changePayload`   | `object`              | Không                | Chỉ có ở detail; không public.             |
+| `createdById`     | `string`              | Không                | Actor cán bộ.                              |
+| `parties`         | `ApplicationParty[]`  | Không                | Detail; có thể rỗng khi list link chưa có. |
+| `parcels`         | `ApplicationParcel[]` | Không                | Detail; có thể rỗng khi list link chưa có. |
+| `version`         | `integer`             | Không                | Header `If-Match-Version`.                 |
+| `submittedAt`     | `IsoDate`             | Không                | UTC.                                       |
+| `updatedAt`       | `IsoDate`             | Không                | UTC.                                       |
+| `completedAt`     | `IsoDate`             | Có                   | Null trước completed.                      |
+| `rejectionReason` | `string`              | Có                   | Null nếu chưa rejected.                    |
 
 `ApplicationParty` gồm `partyId: string`, `partyRole: string`, `sharePercent: DecimalString | null`. `ApplicationParcel` gồm `parcelId: string`, `parcelRole: "subject" | "source" | "result"`.
 
@@ -86,41 +86,41 @@
 
 ## Bảng endpoint
 
-| Method | Path | Auth | Tính năng | Ghi chú | Nguồn |
-|---|---|---|---|---|---|
-| GET | `/api/land/parties` | `land_officer`/`commune_leader` | F-01 | Cursor list, cùng OrganizationUnit. | Mới, B6 Q12/Q15 |
-| POST | `/api/land/parties` | `land_officer`/`commune_leader` | F-01 | Encrypt sensitive fields. | Mới, B6 Q12/Q19 |
-| GET | `/api/land/parcels` | `land_officer`/`commune_leader` | F-01 | Cursor list, geometry nội bộ. | Mới, B6 Q12/Q15 |
-| POST | `/api/land/parcels` | `land_officer`/`commune_leader` | F-01 | GeoJSON Polygon SRID 4326. | Mới, B6 Q12/Q20 |
-| GET | `/api/land/parcels/{parcelId}` | scoped internal role | F-01 | Parcel detail kèm rights/encumbrances. | Mới, B6 Q27 |
-| GET | `/api/land/applications` | `land_officer`/`commune_leader` | F-02 | Filter + cursor. | Mới, B6 Q12/Q15 |
-| POST | `/api/land/applications` | `land_officer` | F-02 | `Idempotency-Key` bắt buộc. | Mới, B6 Q12/Q21 |
-| GET | `/api/land/applications/{applicationId}` | scoped internal role | F-02 | Detail, PII theo capability. | Mới, B6 Q12/Q19 |
-| POST | `/api/land/applications/{applicationId}/review` | assigned `land_officer` | F-02/F-06 | `submitted → in_review`. | Mới, B6 Q12/Q13/Q22 |
-| POST | `/api/land/applications/{applicationId}/sync` | assigned `land_officer` | F-03 | Sync mock đồng bộ. | Mới, B6 Q12/Q14 |
-| POST | `/api/land/applications/{applicationId}/sync/retry` | assigned `land_officer` | F-03 | Chỉ từ `sync_failed`. | Mới, B6 Q12/Q14 |
-| POST | `/api/land/applications/{applicationId}/approve` | `commune_leader` | F-04 | `pending_approval → completed`. | Mới, B6 Q12/Q22 |
-| POST | `/api/land/applications/{applicationId}/reject` | `commune_leader` | F-04 | Reason bắt buộc. | Mới, B6 Q12/Q22 |
-| GET | `/api/land/applications/{applicationId}/timeline` | scoped internal role | F-02/F-06 | Event timeline, không public. | Mới, B6 Q9/Q12 |
-| POST | `/api/land/applications/{applicationId}/evidence` | scoped internal role | F-07 | Multipart, max 10 MiB. | Mới, B6 Q16/Q23 |
-| GET | `/api/land/applications/{applicationId}/evidence` | scoped internal role | F-07 | Metadata, không storageKey. | Mới, B6 Q12/Q23 |
-| POST | `/api/land/parcels/{parcelId}/evidence` | scoped internal role | F-07 | Nested multipart, max 10 MiB. | Mới, người dùng xác nhận 2026-09-30 |
-| GET | `/api/land/parcels/{parcelId}/evidence` | scoped internal role | F-07 | Nested metadata, không storageKey. | Mới, người dùng xác nhận 2026-09-30 |
-| POST | `/api/land/parties/{partyId}/evidence` | scoped internal role | F-07 | Nested multipart, max 10 MiB. | Mới, người dùng xác nhận 2026-09-30 |
-| GET | `/api/land/parties/{partyId}/evidence` | scoped internal role | F-07 | Nested metadata, không storageKey. | Mới, người dùng xác nhận 2026-09-30 |
-| GET | `/api/public/land/lookup` | Không cần session | F-05 | Chính xác một query key. | Mới, B6 Q12/Q24 |
-| GET | `/api/identity/assignments` | Existing identity policy | F-06 | Reuse route; filter LandChangeApplication. | Đã có, `src/app/api/identity/assignments/route.ts:11-25` |
-| POST | `/api/identity/assignments` | `commune_leader` sau policy mở rộng | F-06 | Reuse route; task `land_review`. | Đã có route, role land là mới |
-| DELETE | `/api/identity/assignments` | `commune_leader` sau policy mở rộng | F-06 | Reuse route; reason bắt buộc. | Đã có, `src/app/api/identity/assignments/route.ts:76-105` |
+| Method | Path                                                | Auth                                | Tính năng | Ghi chú                                    | Nguồn                                                     |
+| ------ | --------------------------------------------------- | ----------------------------------- | --------- | ------------------------------------------ | --------------------------------------------------------- |
+| GET    | `/api/land/parties`                                 | `land_officer`/`commune_leader`     | F-01      | Chỉ Party đã link qua application thuộc OU. | D-67/D-75; người dùng duyệt 2026-10-24                    |
+| GET    | `/api/land/parcels`                                 | `land_officer`/`commune_leader`     | F-01      | Cursor list, geometry nội bộ.              | Mới, B6 Q12/Q15                                           |
+| POST   | `/api/land/parcels`                                 | `land_officer`/`commune_leader`     | F-01      | GeoJSON Polygon SRID 4326.                 | Mới, B6 Q12/Q20                                           |
+| GET    | `/api/land/parcels/{parcelId}`                      | scoped internal role                | F-01      | Parcel detail kèm rights/encumbrances.     | Mới, B6 Q27                                               |
+| GET    | `/api/land/applications`                            | `land_officer`/`commune_leader`     | F-02      | Filter + cursor.                           | Mới, B6 Q12/Q15                                           |
+| POST   | `/api/land/applications`                            | `land_officer`                      | F-02      | `Idempotency-Key` bắt buộc.                | Mới, B6 Q12/Q21                                           |
+| GET    | `/api/land/applications/{applicationId}`            | scoped internal role                | F-02      | Detail, PII theo capability.               | Mới, B6 Q12/Q19                                           |
+| POST   | `/api/land/applications/{applicationId}/review`     | assigned `land_officer`             | F-02/F-06 | `submitted → in_review`.                   | Mới, B6 Q12/Q13/Q22                                       |
+| POST   | `/api/land/applications/{applicationId}/sync`       | assigned `land_officer`             | F-03      | Sync mock đồng bộ.                         | Mới, B6 Q12/Q14                                           |
+| POST   | `/api/land/applications/{applicationId}/sync/retry` | assigned `land_officer`             | F-03      | Chỉ từ `sync_failed`.                      | Mới, B6 Q12/Q14                                           |
+| POST   | `/api/land/applications/{applicationId}/approve`    | `commune_leader`                    | F-04      | `pending_approval → completed`.            | Mới, B6 Q12/Q22                                           |
+| POST   | `/api/land/applications/{applicationId}/reject`     | `commune_leader`                    | F-04      | Reason bắt buộc.                           | Mới, B6 Q12/Q22                                           |
+| GET    | `/api/land/applications/{applicationId}/timeline`   | scoped internal role                | F-02/F-06 | Event timeline, không public.              | Mới, B6 Q9/Q12                                            |
+| POST   | `/api/land/applications/{applicationId}/evidence`   | scoped internal role                | F-07      | Multipart, max 10 MiB.                     | Mới, B6 Q16/Q23                                           |
+| GET    | `/api/land/applications/{applicationId}/evidence`   | scoped internal role                | F-07      | Metadata, không storageKey.                | Mới, B6 Q12/Q23                                           |
+| POST   | `/api/land/parcels/{parcelId}/evidence`             | scoped internal role                | F-07      | Nested multipart, max 10 MiB.              | Mới, người dùng xác nhận 2026-09-30                       |
+| GET    | `/api/land/parcels/{parcelId}/evidence`             | scoped internal role                | F-07      | Nested metadata, không storageKey.         | Mới, người dùng xác nhận 2026-09-30                       |
+| POST   | `/api/land/parties/{partyId}/evidence`              | scoped internal role                | F-07      | Nested multipart, max 10 MiB.              | Mới, người dùng xác nhận 2026-09-30                       |
+| GET    | `/api/land/parties/{partyId}/evidence`              | scoped internal role                | F-07      | Nested metadata, không storageKey.         | Mới, người dùng xác nhận 2026-09-30                       |
+| GET    | `/api/public/land/lookup`                           | Không cần session                   | F-05      | Chính xác một query key.                   | Mới, B6 Q12/Q24                                           |
+| GET    | `/api/identity/assignments`                         | Existing identity policy            | F-06      | Reuse route; filter LandChangeApplication. | Đã có, `src/app/api/identity/assignments/route.ts:11-25`  |
+| POST   | `/api/identity/assignments`                         | `commune_leader` sau policy mở rộng | F-06      | Reuse route; task `land_review`.           | Đã có route, role land là mới                             |
+| DELETE | `/api/identity/assignments`                         | `commune_leader` sau policy mở rộng | F-06      | Reuse route; reason bắt buộc.              | Đã có, `src/app/api/identity/assignments/route.ts:76-105` |
 
 ## Chi tiết endpoint
 
 ### GET `/api/land/parties`
 
-- Mô tả: Liệt kê party trong OrganizationUnit của actor.
+- Mô tả: Liệt kê Party đã được link qua application thuộc OrganizationUnit của actor; không liệt kê Party rời/chưa link.
 - Auth: `land_officer` hoặc `commune_leader`, capability `read_sensitive` nếu cần displayName.
 - Request: query `status: active|archived` tùy chọn, `partyType: individual|organization` tùy chọn, `limit: integer` tùy chọn default 50 max 100, `cursor: string` tùy chọn.
 - Response 200:
+
 ```json
 {
   "items": [
@@ -138,24 +138,15 @@
   "nextCursor": null
 }
 ```
+
 - Mã lỗi: `401 LAND_UNAUTHENTICATED`; `403 LAND_FORBIDDEN`; `400 LAND_INVALID_REQUEST` nếu query sai.
 - Pagination: `limit` default 50/max 100, cursor opaque, `nextCursor` nullable string.
 - Idempotency: GET không mutation.
 - Nguồn: Mới, B6 Q12/Q15/Q19.
 
-### POST `/api/land/parties`
+### Party creation boundary (D-67/D-75)
 
-- Mô tả: Tạo party giả lập và mã hóa field nhạy cảm.
-- Auth: `land_officer` hoặc `commune_leader`.
-- Request JSON: `referenceCode: string` bắt buộc, `partyType: "individual"|"organization"` bắt buộc, `displayName: string` bắt buộc, `identityNumber: string|null` tùy chọn; `Idempotency-Key` không bắt buộc cho endpoint này.
-- Response 201:
-```json
-{ "party": { "id": "party-001", "referenceCode": "PARTY-001", "partyType": "individual", "displayName": "Demo Citizen", "identityNumberMasked": "*******0001", "status": "active", "createdAt": "2026-09-30T00:00:00.000Z", "updatedAt": "2026-09-30T00:00:00.000Z" } }
-```
-- Mã lỗi: `401 LAND_UNAUTHENTICATED`; `403 LAND_FORBIDDEN`; `400 LAND_INVALID_REQUEST`; `409 LAND_DUPLICATE_CODE`.
-- Pagination: Không áp dụng.
-- Idempotency: Retry không bảo đảm nếu không gửi key; client dùng `referenceCode` unique để phát hiện duplicate.
-- Nguồn: Mới, B6 Q12/Q19.
+Không hỗ trợ `POST /api/land/parties` để tạo Party rời. Client tạo Party mới inline trong `POST /api/land/applications`; service ghi Party, `LandApplicationParty` và application trong cùng transaction. Request tạo application phải chứa một Party hiện có hoặc `newParty` cho mỗi party link; không tạo `LandRight` trước approval. `GET /api/land/parties` chỉ liệt kê Party đã link qua application thuộc OU của actor. Nếu client gọi `POST /api/land/parties`, endpoint không được tạo hoặc lưu Party.
 
 ### GET `/api/land/parcels`
 
@@ -185,6 +176,7 @@
 - Auth: `land_officer` có Assignment liên quan hoặc `commune_leader` cùng OrganizationUnit; response không public.
 - Request: Path `parcelId: string` bắt buộc; không có query/body.
 - Response 200:
+
 ```json
 {
   "parcel": {
@@ -197,7 +189,17 @@
     "address": "Demo address",
     "communeCode": "DEMO-COMMUNE",
     "organizationId": "ou-demo",
-    "geometry": { "type": "Polygon", "coordinates": [[[105, 20], [105.001, 20], [105.001, 20.001], [105, 20]]] },
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [105, 20],
+          [105.001, 20],
+          [105.001, 20.001],
+          [105, 20]
+        ]
+      ]
+    },
     "nationalRecordRef": null,
     "status": "active",
     "version": 1,
@@ -205,11 +207,22 @@
     "updatedAt": "2026-09-30T00:00:00.000Z"
   },
   "rights": [
-    { "id": "right-001", "parcelId": "parcel-001", "partyId": "party-001", "rightType": "land_use_right", "sharePercent": "100.00", "status": "active", "validFrom": "2026-09-30T00:00:00.000Z", "validTo": null, "sourceApplicationId": null }
+    {
+      "id": "right-001",
+      "parcelId": "parcel-001",
+      "partyId": "party-001",
+      "rightType": "land_use_right",
+      "sharePercent": "100.00",
+      "status": "active",
+      "validFrom": "2026-09-30T00:00:00.000Z",
+      "validTo": null,
+      "sourceApplicationId": null
+    }
   ],
   "encumbrances": []
 }
 ```
+
 - Mã lỗi: `401 LAND_UNAUTHENTICATED`; `403 LAND_FORBIDDEN`/`LAND_ASSIGNMENT_REQUIRED`; `404 LAND_PARCEL_NOT_FOUND`.
 - Pagination: Không áp dụng cho một parcel; `rights` và `encumbrances` trả đầy đủ lịch sử đã giữ trong DB demo.
 - Idempotency: GET không mutation nhưng ghi audit read nội bộ.
@@ -232,17 +245,35 @@
 - Auth: `land_officer`.
 - Request headers: `Idempotency-Key: string` bắt buộc.
 - Request JSON:
+
 ```json
 {
   "changeType": "transfer",
-  "changePayload": { "shareChanges": [{ "partyRole": "proposed_holder", "sharePercent": 100 }] },
+  "changePayload": {
+    "shareChanges": [{ "partyRole": "proposed_holder", "sharePercent": 100 }]
+  },
   "parties": [
-    { "partyId": "party-current", "partyRole": "current_holder", "sharePercent": null },
-    { "partyId": "party-new", "partyRole": "proposed_holder", "sharePercent": "100.00" }
+    {
+      "partyId": "party-current",
+      "partyRole": "current_holder",
+      "sharePercent": null
+    },
+    {
+      "newParty": {
+        "referenceCode": "PARTY-NEW-001",
+        "partyType": "individual",
+        "displayName": "Demo Citizen",
+        "identityNumber": null
+      },
+      "partyRole": "proposed_holder",
+      "sharePercent": "100.00"
+    }
   ],
   "parcels": [{ "parcelId": "parcel-001", "parcelRole": "subject" }]
 }
 ```
+
+- Mỗi phần tử `parties` nhận đúng một trong `partyId` (Party hiện có) hoặc `newParty` (`referenceCode`, `partyType`, `displayName`, `identityNumber`). Party mới và link `LandApplicationParty` được ghi cùng transaction với application; không hỗ trợ tạo Party rời và không tạo `LandRight` trước khi application được approve. PII chỉ lưu ciphertext/blind index và không được đưa vào EventRecord/AuditEvent plaintext.
 - Response 201: `{ "application": ApplicationDetail }` với `status="submitted"`, `version=1`, `completedAt=null`, `rejectionReason=null`.
 - Mã lỗi: `401 LAND_UNAUTHENTICATED`; `403 LAND_FORBIDDEN`; `400 LAND_INVALID_REQUEST`; `404 LAND_PARTY_NOT_FOUND`/`LAND_PARCEL_NOT_FOUND`; `409 LAND_IDEMPOTENCY_CONFLICT`/`LAND_DUPLICATE_CODE`.
 - Pagination: Không áp dụng.
@@ -273,14 +304,39 @@
 
 ### POST `/api/land/applications/{applicationId}/sync`
 
-- Mô tả: Gọi mock adapter sau khi application ở `in_review`.
+- Mô tả: Gọi mock adapter đồng bộ sau khi application ở `in_review`. Không persist application state trung gian `sync_pending`/`sync_succeeded`.
 - Auth: `land_officer` có Assignment `land_review` active.
 - Request headers: `If-Match-Version: integer` bắt buộc; body `{}`.
 - Response 200:
+
 ```json
-{ "application": { "id": "app-001", "status": "pending_approval", "version": 4 }, "sync": { "id": "sync-001", "applicationId": "app-001", "operation": "register_change", "requestKey": "sync-key-001", "status": "succeeded", "remoteReference": "MOCK-REMOTE-001", "requestPayload": {}, "responsePayload": { "accepted": true, "simulated": true }, "failureCode": null, "attempts": 1, "requestedAt": "2026-09-30T00:00:00.000Z", "completedAt": "2026-09-30T00:00:00.000Z", "createdAt": "2026-09-30T00:00:00.000Z", "updatedAt": "2026-09-30T00:00:00.000Z" } }
+{
+  "application": {
+    "id": "app-001",
+    "status": "pending_approval",
+    "version": 4
+  },
+  "sync": {
+    "id": "sync-001",
+    "applicationId": "app-001",
+    "operation": "register_change",
+    "requestKey": "sync-key-001",
+    "status": "succeeded",
+    "remoteReference": "MOCK-REMOTE-001",
+    "requestPayload": {},
+    "responsePayload": { "accepted": true, "simulated": true },
+    "failureCode": null,
+    "attempts": 1,
+    "requestedAt": "2026-09-30T00:00:00.000Z",
+    "completedAt": "2026-09-30T00:00:00.000Z",
+    "createdAt": "2026-09-30T00:00:00.000Z",
+    "updatedAt": "2026-09-30T00:00:00.000Z"
+  }
+}
 ```
-Nếu fixture failure, application status là `sync_failed`, sync status `failed`, `failureCode` khác null và response HTTP là `502`.
+
+Nếu fixture failure, application status là `sync_failed`, sync status `failed`, `failureCode` khác null và response HTTP là `502`. Khi thành công, application chuyển trực tiếp sang `pending_approval`; không có trạng thái application trung gian được commit.
+
 - Mã lỗi: `401 LAND_UNAUTHENTICATED`; `403 LAND_FORBIDDEN`/`LAND_ASSIGNMENT_REQUIRED`; `404 LAND_APPLICATION_NOT_FOUND`; `409 LAND_VERSION_CONFLICT`/`LAND_INVALID_TRANSITION`; `502 LAND_SYNC_FAILED`.
 - Pagination: Không áp dụng.
 - Idempotency: `requestKey` ổn định theo application/operation; retry không tạo sync row thứ hai.
@@ -291,7 +347,7 @@ Nếu fixture failure, application status là `sync_failed`, sync status `failed
 - Mô tả: Retry application đang `sync_failed`.
 - Auth: `land_officer` có Assignment `land_review` active.
 - Request headers: `If-Match-Version: integer` bắt buộc; body `{}`.
-- Response 200/502: Cùng shape `{ "application": ApplicationSummary, "sync": Sync }`; success chuyển `pending_approval`, failure giữ `sync_failed`.
+- Response 200/502: Cùng shape `{ "application": ApplicationSummary, "sync": Sync }`; retry từ `sync_failed` chuyển thẳng sang `pending_approval` nếu success, failure giữ `sync_failed`.
 - Mã lỗi: Như `/sync`, thêm `409 LAND_INVALID_TRANSITION` nếu status không phải `sync_failed`.
 - Pagination: Không áp dụng.
 - Idempotency: Cùng `requestKey`; attempts tăng và operation không nhân bản.
@@ -310,7 +366,7 @@ Nếu fixture failure, application status là `sync_failed`, sync status `failed
 
 ### POST `/api/land/applications/{applicationId}/reject`
 
-- Mô tả: Leader reject application ở `submitted`, `in_review` hoặc `pending_approval`.
+- Mô tả: Leader chỉ reject application `pending_approval`, sau khi mock sync thành công.
 - Auth: `commune_leader` cùng OrganizationUnit.
 - Request headers: `If-Match-Version: integer`; body `{ "reason": "string" }`, trim không rỗng.
 - Response 200: `{ "application": ApplicationDetail, "approval": Approval }` với `status="rejected"`, `rejectionReason` khác null, `completedAt=null`.
@@ -402,6 +458,7 @@ Nếu fixture failure, application status là `sync_failed`, sync status `failed
 - Auth: Không yêu cầu session; áp dụng rate limit 60 request/minute/IP.
 - Request: Chính xác một query param: `applicationCode: string` hoặc `parcelCode: string`; không có body.
 - Response 200:
+
 ```json
 {
   "lookup": {
@@ -417,6 +474,7 @@ Nếu fixture failure, application status là `sync_failed`, sync status `failed
   "simulated": true
 }
 ```
+
 - Mã lỗi: `400 LAND_LOOKUP_QUERY_INVALID`; `404 LAND_LOOKUP_NOT_FOUND`; `429 LAND_RATE_LIMITED`.
 - Pagination: Không áp dụng; một key trả một projection.
 - Idempotency: GET read-only; không public hóa audit detail.
@@ -432,26 +490,26 @@ Nếu fixture failure, application status là `sync_failed`, sync status `failed
 
 ## Bảng mã lỗi
 
-| Status | Code | Message tiếng Việt | Điều kiện phát sinh |
-|---:|---|---|---|
-| 401 | `LAND_UNAUTHENTICATED` | `Bạn cần đăng nhập để thực hiện thao tác này.` | Internal route thiếu session. |
-| 403 | `LAND_FORBIDDEN` | `Bạn không có quyền thực hiện thao tác này.` | Role/scope/capability không phù hợp. |
-| 403 | `LAND_ASSIGNMENT_REQUIRED` | `Bạn chưa được phân công xử lý hồ sơ này.` | Officer thiếu Assignment active. |
-| 404 | `LAND_NOT_FOUND` | `Không tìm thấy dữ liệu đất đai yêu cầu.` | Fallback resource not found. |
-| 404 | `LAND_APPLICATION_NOT_FOUND` | `Không tìm thấy hồ sơ biến động.` | Application ID không tồn tại hoặc ngoài scope. |
-| 404 | `LAND_PARTY_NOT_FOUND` | `Không tìm thấy chủ thể đất đai.` | Party link không tồn tại. |
-| 404 | `LAND_PARCEL_NOT_FOUND` | `Không tìm thấy thửa đất.` | Parcel link không tồn tại. |
-| 404 | `LAND_LOOKUP_NOT_FOUND` | `Không tìm thấy kết quả tra cứu.` | Public key không match. |
-| 400 | `LAND_INVALID_REQUEST` | `Dữ liệu yêu cầu không hợp lệ.` | Schema, relation hoặc payload invalid. |
-| 400 | `LAND_LOOKUP_QUERY_INVALID` | `Cần cung cấp chính xác một mã hồ sơ hoặc mã thửa.` | Lookup thiếu cả hai hoặc truyền cả hai. |
-| 400 | `LAND_GEOMETRY_INVALID` | `Hình học thửa đất không hợp lệ.` | Polygon invalid/SRID sai. |
-| 409 | `LAND_INVALID_TRANSITION` | `Hồ sơ không thể chuyển sang trạng thái yêu cầu.` | Transition ngoài state machine. |
-| 409 | `LAND_VERSION_CONFLICT` | `Dữ liệu đã thay đổi; hãy tải lại trước khi thử lại.` | Version header cũ. |
-| 409 | `LAND_IDEMPOTENCY_CONFLICT` | `Khóa idempotency đã được dùng cho dữ liệu khác.` | Same key, different payload. |
-| 409 | `LAND_DUPLICATE_CODE` | `Mã dữ liệu đã tồn tại.` | Unique code/hash duplicate. |
-| 502 | `LAND_SYNC_FAILED` | `Đồng bộ mô phỏng Cơ sở dữ liệu quốc gia thất bại.` | Mock adapter fixture failure. |
-| 429 | `LAND_RATE_LIMITED` | `Bạn đã vượt quá số lần tra cứu cho phép; hãy thử lại sau.` | Public IP vượt quota. |
-| 400 | `LAND_EVIDENCE_TOO_LARGE` | `Tệp Evidence vượt quá dung lượng cho phép.` | File > 10 MiB. |
-| 400 | `LAND_EVIDENCE_TYPE_UNSUPPORTED` | `Định dạng tệp Evidence không được hỗ trợ.` | MIME ngoài allowlist. |
+| Status | Code                             | Message tiếng Việt                                          | Điều kiện phát sinh                            |
+| -----: | -------------------------------- | ----------------------------------------------------------- | ---------------------------------------------- |
+|    401 | `LAND_UNAUTHENTICATED`           | `Bạn cần đăng nhập để thực hiện thao tác này.`              | Internal route thiếu session.                  |
+|    403 | `LAND_FORBIDDEN`                 | `Bạn không có quyền thực hiện thao tác này.`                | Role/scope/capability không phù hợp.           |
+|    403 | `LAND_ASSIGNMENT_REQUIRED`       | `Bạn chưa được phân công xử lý hồ sơ này.`                  | Officer thiếu Assignment active.               |
+|    404 | `LAND_NOT_FOUND`                 | `Không tìm thấy dữ liệu đất đai yêu cầu.`                   | Fallback resource not found.                   |
+|    404 | `LAND_APPLICATION_NOT_FOUND`     | `Không tìm thấy hồ sơ biến động.`                           | Application ID không tồn tại hoặc ngoài scope. |
+|    404 | `LAND_PARTY_NOT_FOUND`           | `Không tìm thấy chủ thể đất đai.`                           | Party link không tồn tại.                      |
+|    404 | `LAND_PARCEL_NOT_FOUND`          | `Không tìm thấy thửa đất.`                                  | Parcel link không tồn tại.                     |
+|    404 | `LAND_LOOKUP_NOT_FOUND`          | `Không tìm thấy kết quả tra cứu.`                           | Public key không match.                        |
+|    400 | `LAND_INVALID_REQUEST`           | `Dữ liệu yêu cầu không hợp lệ.`                             | Schema, relation hoặc payload invalid.         |
+|    400 | `LAND_LOOKUP_QUERY_INVALID`      | `Cần cung cấp chính xác một mã hồ sơ hoặc mã thửa.`         | Lookup thiếu cả hai hoặc truyền cả hai.        |
+|    400 | `LAND_GEOMETRY_INVALID`          | `Hình học thửa đất không hợp lệ.`                           | Polygon invalid/SRID sai.                      |
+|    409 | `LAND_INVALID_TRANSITION`        | `Hồ sơ không thể chuyển sang trạng thái yêu cầu.`           | Transition ngoài state machine.                |
+|    409 | `LAND_VERSION_CONFLICT`          | `Dữ liệu đã thay đổi; hãy tải lại trước khi thử lại.`       | Version header cũ.                             |
+|    409 | `LAND_IDEMPOTENCY_CONFLICT`      | `Khóa idempotency đã được dùng cho dữ liệu khác.`           | Same key, different payload.                   |
+|    409 | `LAND_DUPLICATE_CODE`            | `Mã dữ liệu đã tồn tại.`                                    | Unique code/hash duplicate.                    |
+|    502 | `LAND_SYNC_FAILED`               | `Đồng bộ mô phỏng Cơ sở dữ liệu quốc gia thất bại.`         | Mock adapter fixture failure.                  |
+|    429 | `LAND_RATE_LIMITED`              | `Bạn đã vượt quá số lần tra cứu cho phép; hãy thử lại sau.` | Public IP vượt quota.                          |
+|    400 | `LAND_EVIDENCE_TOO_LARGE`        | `Tệp Evidence vượt quá dung lượng cho phép.`                | File > 10 MiB.                                 |
+|    400 | `LAND_EVIDENCE_TYPE_UNSUPPORTED` | `Định dạng tệp Evidence không được hỗ trợ.`                 | MIME ngoài allowlist.                          |
 
 **Nguồn:** B6 Q11/Q25; status convention existing `src/app/api/establishments/[establishmentId]/route.ts:17-28`.

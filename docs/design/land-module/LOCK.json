@@ -4,13 +4,13 @@
   "stage": "full",
   "lockedAt": "2026-09-30T06:58:20.935Z",
   "files": {
-    "api-contract.md": "6c553eaedfe7",
-    "data-model.md": "724a450071b6",
-    "domain-rules.md": "80781edac2b5",
-    "edge-cases.md": "47c16611c739",
-    "glossary.md": "27d7c686afa3",
-    "integration-contracts.md": "ac8a9600d8be",
+    "api-contract.md": "1bbd189c1544",
+    "data-model.md": "276b961aebe3",
+    "domain-rules.md": "b86de9bfbcc6",
+    "edge-cases.md": "07688ea87cc0",
+    "glossary.md": "b758e0679be1",
+    "integration-contracts.md": "c3df0f810579",
     "non-functional.md": "f00aca379306",
-    "overview.md": "70f3e3b03fc7"
+    "overview.md": "56de409c90b4"
   }
 }

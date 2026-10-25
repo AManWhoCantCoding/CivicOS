@@ -34,32 +34,32 @@ Giải pháp là tạo `src/modules/land/` với `LandChangeApplication` làm ag
 
 ## Bản đồ module
 
-| Module | Trạng thái | Nguồn | Ghi chú |
-|---|---|---|---|
-| `src/modules/identity` | Đã có | `src/modules/identity/session.ts:43-52`; `src/modules/identity/authorization.ts:108-120` | Tái sử dụng session, role, capability và scope đơn vị; mở rộng catalog land. |
-| `src/modules/identity/assignments.ts` | Đã có | `src/modules/identity/assignments.ts:22-275` | Tái sử dụng Assignment; thêm task `land_review` và quyền `commune_leader`. |
-| `src/modules/eventing` | Đã có | `src/modules/eventing/event-store.ts:109-188`; `prisma/schema.prisma:82-122` | Event bất biến và outbox trong transaction. |
-| `src/modules/platform/evidence` | Đã có | `src/modules/platform/evidence/storage-adapter.ts:11-19,41-80` | Tái sử dụng storage adapter, hash và immutable metadata. |
-| `src/modules/land` | Mới | “Mới (xác nhận với người dùng ngày 2026-09-30)” | Aggregate, commands, queries, mock adapter và SQL geometry seam. |
-| `src/app/api/land` | Mới | “Mới (xác nhận với người dùng ngày 2026-09-30, B6 Q12)” | Route nội bộ theo `api-contract.md`. |
-| `src/app/api/public/land/lookup` | Mới | “Mới (xác nhận với người dùng ngày 2026-09-30, B6 Q12/Q24)” | Route read-only không session. |
-| `src/app/api/identity/assignments` | Đã có | `src/app/api/identity/assignments/route.ts:11-105` | Không tạo route Assignment mới; mở rộng policy cho land. |
-| `prisma/schema.prisma` | Đã có | `prisma/schema.prisma:5-180` | Bảng dùng lại; tám bảng mới và PostGIS theo `data-model.md`. |
-| PostgreSQL image | Đã có nhưng cần thay đổi triển khai | `docker-compose.yml:1-12` | Bổ sung PostGIS trước migration; không sửa trong design lock này. |
-| `src/components/shell/ModuleShell.tsx` và `src/components/shell/ModuleStatus.tsx` | Đã có | `src/components/shell/ModuleShell.tsx:71-330`; `src/components/shell/ModuleStatus.tsx:5-61` | Tái sử dụng navigation, breadcrumb, loading/error/empty/offline cho web land. |
-| `src/app/land/**` | Mới | “Mới (xác nhận với người dùng ngày 2026-09-30, UI route B7)” | Web workspace, applications, parcels và detail theo screen brief. |
-| `src/app/public/land/lookup/**` | Mới | “Mới (xác nhận với người dùng ngày 2026-09-30, UI route B7)” | Web public lookup, không session. |
-| `mobile/src/features/land/**` | Mới | “Mới (xác nhận với người dùng ngày 2026-09-30, mobile UI B7)” | Read-only lookup/application/parcel; tái sử dụng `StateMessage`, `OfflineBanner`, `MaskedValue`. |
+| Module                                                                            | Trạng thái                          | Nguồn                                                                                       | Ghi chú                                                                                          |
+| --------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `src/modules/identity`                                                            | Đã có                               | `src/modules/identity/session.ts:43-52`; `src/modules/identity/authorization.ts:108-120`    | Tái sử dụng session, role, capability và scope đơn vị; mở rộng catalog land.                     |
+| `src/modules/identity/assignments.ts`                                             | Đã có                               | `src/modules/identity/assignments.ts:22-275`                                                | Tái sử dụng Assignment; thêm task `land_review` và quyền `commune_leader`.                       |
+| `src/modules/eventing`                                                            | Đã có                               | `src/modules/eventing/event-store.ts:109-188`; `prisma/schema.prisma:82-122`                | Event bất biến và outbox trong transaction.                                                      |
+| `src/modules/platform/evidence`                                                   | Đã có                               | `src/modules/platform/evidence/storage-adapter.ts:11-19,41-80`                              | Tái sử dụng storage adapter, hash và immutable metadata.                                         |
+| `src/modules/land`                                                                | Mới                                 | “Mới (xác nhận với người dùng ngày 2026-09-30)”                                             | Aggregate, commands, queries, mock adapter và SQL geometry seam.                                 |
+| `src/app/api/land`                                                                | Mới                                 | “Mới (xác nhận với người dùng ngày 2026-09-30, B6 Q12)”                                     | Route nội bộ theo `api-contract.md`.                                                             |
+| `src/app/api/public/land/lookup`                                                  | Mới                                 | “Mới (xác nhận với người dùng ngày 2026-09-30, B6 Q12/Q24)”                                 | Route read-only không session.                                                                   |
+| `src/app/api/identity/assignments`                                                | Đã có                               | `src/app/api/identity/assignments/route.ts:11-105`                                          | Không tạo route Assignment mới; mở rộng policy cho land.                                         |
+| `prisma/schema.prisma`                                                            | Đã có                               | `prisma/schema.prisma:5-180`                                                                | Bảng dùng lại; tám bảng mới và PostGIS theo `data-model.md`.                                     |
+| PostgreSQL image                                                                  | Đã có nhưng cần thay đổi triển khai | `docker-compose.yml:1-12`                                                                   | Bổ sung PostGIS trước migration; không sửa trong design lock này.                                |
+| `src/components/shell/ModuleShell.tsx` và `src/components/shell/ModuleStatus.tsx` | Đã có                               | `src/components/shell/ModuleShell.tsx:71-330`; `src/components/shell/ModuleStatus.tsx:5-61` | Tái sử dụng navigation, breadcrumb, loading/error/empty/offline cho web land.                    |
+| `src/app/land/**`                                                                 | Mới                                 | “Mới (xác nhận với người dùng ngày 2026-09-30, UI route B7)”                                | Web workspace, applications, parcels và detail theo screen brief.                                |
+| `src/app/public/land/lookup/**`                                                   | Mới                                 | “Mới (xác nhận với người dùng ngày 2026-09-30, UI route B7)”                                | Web public lookup, không session.                                                                |
+| `mobile/src/features/land/**`                                                     | Mới                                 | “Mới (xác nhận với người dùng ngày 2026-09-30, mobile UI B7)”                               | Read-only lookup/application/parcel; tái sử dụng `StateMessage`, `OfflineBanner`, `MaskedValue`. |
 
 ## Luồng chính (kèm nhánh lỗi)
 
-1. `land_officer` tạo/đọc party và parcel trong `OrganizationUnit`; party được mã hóa và parcel phải là Polygon hợp lệ SRID 4326.
-2. `land_officer` tạo application với `Idempotency-Key`; hệ thống tạo `submitted`, lưu links party/parcel, event và audit.
+1. `land_officer` tạo/đọc parcel trong `OrganizationUnit`; parcel phải là Polygon hợp lệ SRID 4326. Party mới chỉ được tạo inline cùng application; không tạo Party rời.
+2. `land_officer` tạo application với `Idempotency-Key`; hệ thống tạo `submitted`, lưu links party/parcel, EventRecord và AuditEvent trong transaction.
 3. `commune_leader` dùng Assignment hiện có để giao task `land_review`; officer có Assignment active thẩm tra `submitted → in_review`.
-4. Officer gọi sync; hệ thống tạo `LandNationalSync`, gọi adapter mock đồng bộ, rồi chuyển `sync_succeeded` hoặc `sync_failed`.
+4. Officer gọi sync; hệ thống tạo `LandNationalSync`, gọi adapter mock đồng bộ, rồi chuyển application trực tiếp sang `pending_approval` hoặc `sync_failed`.
    - Nếu payload/fixture lỗi: giữ application `sync_failed`, không tạo approval và không mutate land aggregate.
    - Nếu retry: dùng cùng `requestKey`, tăng `attempts`, không tạo application hoặc sync operation trùng.
-5. Khi sync thành công, application chuyển `sync_succeeded → pending_approval`; `commune_leader` approve hoặc reject.
+5. Chỉ sau sync thành công (`pending_approval`) `commune_leader` mới được approve hoặc reject; không persist application state trung gian `sync_pending`/`sync_succeeded` và không reject khi sync chưa thành công.
    - Approve: trong một transaction chuyển `completed`, cập nhật quyền/thửa/ràng buộc và ghi Approval, EventRecord, AuditEvent.
    - Reject: bắt buộc reason, chuyển `rejected`, không cập nhật quyền/thửa/ràng buộc.
 6. Public client gọi lookup bằng đúng một mã; query chỉ đọc, không giải mã party, không trả polygon, evidence hoặc sync payload.
@@ -73,13 +73,15 @@ Giải pháp là tạo `src/modules/land/` với `LandChangeApplication` làm ag
 Các quy tắc chi tiết nằm ở `domain-rules.md` với mã DR-01 đến DR-22. Máy trạng thái chính:
 
 ```text
-submitted ──review──> in_review ──sync──> sync_pending
-    │                    │                    ├──success──> sync_succeeded ──> pending_approval
-    └────reject───────────┘                    └──failure───> sync_failed ──retry──> sync_pending
-submitted/in_review/pending_approval ──reject──> rejected
+submitted ──review──> in_review ──sync success──> pending_approval
+                            └──sync failure──> sync_failed ──retry success──> pending_approval
+                                                └──retry failure──> sync_failed
 pending_approval ──approve──> completed
+pending_approval ──reject──> rejected
 completed, rejected: terminal
 ```
+
+`LandNationalSync` may record its own `pending`/`succeeded`/`failed` status inside the synchronous command; only final application states are committed.
 
 Chỉ `completed` được mutate `LandRight`, `LandParcel` hoặc `LandEncumbrance`; mọi mutation land có EventRecord và AuditEvent cùng transaction. **Nguồn:** “Mới (xác nhận với người dùng ngày 2026-09-30)” và data model đã khóa ở B4.5.
 
@@ -95,22 +97,22 @@ Chỉ `completed` được mutate `LandRight`, `LandParcel` hoặc `LandEncumbra
 
 ## Seam kiểm thử
 
-| Seam | Assertion chính | Nguồn |
-|---|---|---|
-| `LandChangeApplication` command service | Transition ngoài máy trạng thái bị từ chối; version tăng đúng một lần. | Mới, tham chiếu `data-model.md:215-235`. |
-| `NationalLandAdapter` | Fixture success/failure; retry cùng request key; không gọi network thật. | Mới, B6 Q4/Q14. |
-| `LandGeometryRepository` | Polygon invalid/SRID sai bị từ chối; Polygon hợp lệ ghi/đọc được. | Mới, B6 Q20 và `data-model.md:75`. |
-| Party privacy seam | DB chỉ giữ ciphertext; identity index không trả plaintext; response mask identity number. | Đã có encryption seam `src/modules/identity/encryption.ts:18-50`; hành vi land mới. |
-| Assignment policy | Leader giao được `land_review`; officer không có Assignment bị 403; revoke chặn thao tác mới. | Đã có `src/modules/identity/assignments.ts:22-104,180-237`; mở rộng role land là mới. |
-| Transaction event/audit | Mutation completed/rejected/sync/approval tạo row event/audit đồng bộ; rollback không để row nửa chừng. | Đã có `src/modules/identity/audit.ts:24-77` và `src/modules/eventing/event-store.ts:109-188`. |
-| Public lookup | Một mã trả đúng 8 trường lookup và `simulated=true`; không trả PII/polygon/sync/evidence. | Mới, B6 Q6/Q24. |
-| Evidence adapter | MIME/size allowlist; hash SHA-256; immutable metadata; không lộ storageKey. | Đã có `src/modules/platform/evidence/storage-adapter.ts:11-19,46-67`; giới hạn mới B6 Q16/Q23. |
-| Web screen states | Mỗi route có loading/error/empty/forbidden/offline phù hợp; action approve/reject chỉ visible theo role. | Đã có state components; UI behavior mới B7. |
-| Mobile read-only states | Lookup/application/parcel có loading/empty/error/forbidden/masked/offline; không có mutation control. | Đã có `mobile/src/components/States.tsx:4-52`; UI flow mới B7. |
+| Seam                                    | Assertion chính                                                                                          | Nguồn                                                                                          |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `LandChangeApplication` command service | Transition ngoài máy trạng thái bị từ chối; version tăng đúng một lần.                                   | Mới, tham chiếu `data-model.md:215-235`.                                                       |
+| `NationalLandAdapter`                   | Fixture success/failure; retry cùng request key; không gọi network thật.                                 | Mới, B6 Q4/Q14.                                                                                |
+| `LandGeometryRepository`                | Polygon invalid/SRID sai bị từ chối; Polygon hợp lệ ghi/đọc được.                                        | Mới, B6 Q20 và `data-model.md:75`.                                                             |
+| Party privacy seam                      | DB chỉ giữ ciphertext; identity index không trả plaintext; response mask identity number.                | Đã có encryption seam `src/modules/identity/encryption.ts:18-50`; hành vi land mới.            |
+| Assignment policy                       | Leader giao được `land_review`; officer không có Assignment bị 403; revoke chặn thao tác mới.            | Đã có `src/modules/identity/assignments.ts:22-104,180-237`; mở rộng role land là mới.          |
+| Transaction event/audit                 | Mutation completed/rejected/sync/approval tạo row event/audit đồng bộ; rollback không để row nửa chừng.  | Đã có `src/modules/identity/audit.ts:24-77` và `src/modules/eventing/event-store.ts:109-188`.  |
+| Public lookup                           | Một mã trả đúng 8 trường lookup và `simulated=true`; không trả PII/polygon/sync/evidence.                | Mới, B6 Q6/Q24.                                                                                |
+| Evidence adapter                        | MIME/size allowlist; hash SHA-256; immutable metadata; không lộ storageKey.                              | Đã có `src/modules/platform/evidence/storage-adapter.ts:11-19,46-67`; giới hạn mới B6 Q16/Q23. |
+| Web screen states                       | Mỗi route có loading/error/empty/forbidden/offline phù hợp; action approve/reject chỉ visible theo role. | Đã có state components; UI behavior mới B7.                                                    |
+| Mobile read-only states                 | Lookup/application/parcel có loading/empty/error/forbidden/masked/offline; không có mutation control.    | Đã có `mobile/src/components/States.tsx:4-52`; UI flow mới B7.                                 |
 
 ## Nhật ký thay đổi
 
-| Ngày | Đổi gì | Lý do | Người xác nhận |
-|---|---|---|---|
-| 2026-09-30 | Tạo bộ design B6, giữ nguyên `data-model.md` đã khóa ở B4.5; bổ sung UI web/mobile và route/screen inventory. | Người dùng xác nhận cần web cán bộ, web lãnh đạo, web public, quản lý parcel/party và mobile read-only. | Người dùng |
+| Ngày       | Đổi gì                                                                                                                                                         | Lý do                                                                                                                                   | Người xác nhận                                    |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| 2026-09-30 | Tạo bộ design B6, giữ nguyên `data-model.md` đã khóa ở B4.5; bổ sung UI web/mobile và route/screen inventory.                                                  | Người dùng xác nhận cần web cán bộ, web lãnh đạo, web public, quản lý parcel/party và mobile read-only.                                 | Người dùng                                        |
 | 2026-09-30 | Bổ sung nested Evidence routes cho application, parcel và party; dùng cùng policy multipart, MIME/size, SHA-256, immutable metadata và không trả `storageKey`. | Làm rõ F-07 sau khi phát hiện feature-list/data-model đã cho phép resource polymorphic nhưng API mới chỉ có application Evidence route. | Người dùng xác nhận qua hội thoại ngày 2026-09-30 |
