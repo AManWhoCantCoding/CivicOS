@@ -1,9 +1,14 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+import { GET as managementRecordGET } from '@/app/api/residents/[subjectId]/management-records/[recordId]/route';
+import { GET as subjectDetailGET } from '@/app/api/residents/[subjectId]/route';
 
 import { prisma } from '@/lib/prisma';
 import type { IdentityUser } from '@/modules/identity';
+import { createSession, sessionCookieName } from '@/modules/identity';
+import { cookies } from 'next/headers';
 import {
   approveReport,
   assignRecord,
@@ -19,6 +24,8 @@ import {
   transferRecord,
   updateRecord,
 } from '@/modules/residents';
+
+vi.mock('next/headers', () => ({ cookies: vi.fn() }));
 
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
 const stamp = randomUUID().slice(0, 8);
@@ -87,6 +94,43 @@ describe.skipIf(!postgresEnabled)(
     });
 
     afterAll(async () => {
+      const assignmentIds = trackedRecords.length
+        ? (
+            await prisma.assignment.findMany({
+              where: {
+                resourceType: 'SubjectManagementRecord',
+                resourceId: { in: trackedRecords },
+              },
+              select: { id: true },
+            })
+          ).map(({ id }) => id)
+        : [];
+      const slaInstanceIds = trackedRecords.length
+        ? (
+            await prisma.slaInstance.findMany({
+              where: {
+                resourceType: 'SubjectManagementRecord',
+                resourceId: { in: trackedRecords },
+              },
+              select: { id: true },
+            })
+          ).map(({ id }) => id)
+        : [];
+      const auditEvents = await prisma.auditEvent.findMany({
+        where: {
+          OR: [
+            ...trackedSubjects.map((resourceId) => ({
+              resourceType: 'Subject',
+              resourceId,
+            })),
+            ...trackedRecords.map((resourceId) => ({
+              resourceType: 'SubjectManagementRecord',
+              resourceId,
+            })),
+          ],
+        },
+        select: { id: true },
+      });
       if (trackedReports.length) {
         await prisma.residentMonthlyReport.deleteMany({
           where: { id: { in: trackedReports } },
@@ -125,9 +169,33 @@ describe.skipIf(!postgresEnabled)(
               aggregateType: 'SubjectManagementRecord',
               aggregateId,
             })),
+            ...(slaInstanceIds.length
+              ? [
+                  {
+                    aggregateType: 'SlaInstance',
+                    aggregateId: { in: slaInstanceIds },
+                  },
+                ]
+              : []),
+            ...(assignmentIds.length
+              ? [
+                  {
+                    aggregateType: 'Assignment',
+                    aggregateId: { in: assignmentIds },
+                  },
+                ]
+              : []),
           ],
         },
       });
+      if (auditEvents.length) {
+        await prisma.eventRecord.deleteMany({
+          where: {
+            aggregateType: 'AuditEvent',
+            aggregateId: { in: auditEvents.map(({ id }) => id) },
+          },
+        });
+      }
       await prisma.auditEvent.deleteMany({
         where: {
           OR: [
@@ -218,6 +286,80 @@ describe.skipIf(!postgresEnabled)(
       );
       trackedRecords.push(record.id);
       await assignRecord(record.id, { assigneeUserIds: [field.id] }, commander);
+      const auditWhere = {
+        resourceType: 'SubjectManagementRecord',
+        resourceId: record.id,
+        operation: 'subject_record.read',
+      };
+      const tokens: string[] = [];
+      try {
+        const assignedSession = await createSession(field.id);
+        tokens.push(assignedSession.token);
+        vi.mocked(cookies).mockResolvedValue({
+          get: (name: string) =>
+            name === sessionCookieName
+              ? { value: assignedSession.token }
+              : undefined,
+          delete: () => {},
+        } as never);
+        const assignedResponse = await managementRecordGET(
+          new Request(
+            `http://localhost/api/residents/${subject.id}/management-records/${record.id}`,
+          ),
+          {
+            params: Promise.resolve({
+              subjectId: subject.id,
+              recordId: record.id,
+            }),
+          },
+        );
+        expect(assignedResponse.status).toBe(200);
+        const assignedBody = (await assignedResponse.json()) as {
+          record?: { subject?: { displayName?: string } };
+        };
+        expect(assignedBody.record?.subject?.displayName).not.toBe(
+          `E004 Scoped ${stamp}`,
+        );
+        const assignedAuditCount = await prisma.auditEvent.count({
+          where: { ...auditWhere, actorId: field.id },
+        });
+        expect(assignedAuditCount).toBe(1);
+
+        const outsiderSession = await createSession(outsider.id);
+        tokens.push(outsiderSession.token);
+        vi.mocked(cookies).mockResolvedValue({
+          get: (name: string) =>
+            name === sessionCookieName
+              ? { value: outsiderSession.token }
+              : undefined,
+          delete: () => {},
+        } as never);
+        const outsiderResponse = await managementRecordGET(
+          new Request(
+            `http://localhost/api/residents/${subject.id}/management-records/${record.id}`,
+          ),
+          {
+            params: Promise.resolve({
+              subjectId: subject.id,
+              recordId: record.id,
+            }),
+          },
+        );
+        expect(outsiderResponse.status).toBe(403);
+        await expect(
+          prisma.auditEvent.count({ where: auditWhere }),
+        ).resolves.toBe(assignedAuditCount);
+      } finally {
+        await prisma.session.deleteMany({
+          where: {
+            tokenHash: {
+              in: tokens.map((token) =>
+                createHash('sha256').update(token).digest('hex'),
+              ),
+            },
+          },
+        });
+      }
       const visible = await listSubjects(field, {});
       expect(visible.map((entry) => entry.id)).toContain(subject.id);
       await expect(listSubjects(outsider, {})).resolves.not.toContainEqual(
@@ -387,6 +529,91 @@ describe.skipIf(!postgresEnabled)(
         },
       });
       expect(audit?.actorId).toBe(commander.id);
+    });
+
+    it('protects sensitive subject details through the API handler', async () => {
+      const sensitiveProfile = `api-secret-${stamp}-${randomUUID()}`;
+      const subject = await registerSubject(
+        {
+          displayName: `E004 API Sensitive ${stamp}`,
+          subjectType: 'temporary_resident',
+          sensitiveProfile,
+        },
+        duty,
+      );
+      trackedSubjects.push(subject.id);
+      const record = await createManagementRecord(
+        { subjectId: subject.id, purpose: 'temporary_resident' },
+        duty,
+      );
+      trackedRecords.push(record.id);
+      await assignRecord(record.id, { assigneeUserIds: [field.id] }, commander);
+
+      const auditWhere = {
+        resourceType: 'Subject',
+        resourceId: subject.id,
+        operation: 'subject.sensitive_read',
+      };
+      const url = `http://localhost/api/residents/${subject.id}`;
+      const context = { params: Promise.resolve({ subjectId: subject.id }) };
+      vi.mocked(cookies).mockResolvedValue({ get: () => undefined } as never);
+      const anonymousResponse = await subjectDetailGET(
+        new Request(url),
+        context,
+      );
+      expect(anonymousResponse.status).toBe(401);
+      expect(await prisma.auditEvent.count({ where: auditWhere })).toBe(0);
+
+      const tokens: string[] = [];
+      try {
+        const assignedSession = await createSession(field.id);
+        tokens.push(assignedSession.token);
+        vi.mocked(cookies).mockResolvedValue({
+          get: (name: string) =>
+            name === sessionCookieName
+              ? { value: assignedSession.token }
+              : undefined,
+        } as never);
+        const assignedResponse = await subjectDetailGET(
+          new Request(url),
+          context,
+        );
+        expect(assignedResponse.status).toBe(200);
+        const assignedBody = (await assignedResponse.json()) as {
+          subject: { masked: boolean; sensitiveProfile: string | null };
+        };
+        expect(assignedBody.subject.masked).toBe(false);
+        expect(assignedBody.subject.sensitiveProfile).toBe(sensitiveProfile);
+        const auditWhereWithActor = { ...auditWhere, actorId: field.id };
+        expect(
+          await prisma.auditEvent.count({ where: auditWhereWithActor }),
+        ).toBe(1);
+
+        const outsiderSession = await createSession(outsider.id);
+        tokens.push(outsiderSession.token);
+        vi.mocked(cookies).mockResolvedValue({
+          get: (name: string) =>
+            name === sessionCookieName
+              ? { value: outsiderSession.token }
+              : undefined,
+        } as never);
+        const outsiderResponse = await subjectDetailGET(
+          new Request(url),
+          context,
+        );
+        expect(outsiderResponse.status).toBe(403);
+        expect(await prisma.auditEvent.count({ where: auditWhere })).toBe(1);
+      } finally {
+        await prisma.session.deleteMany({
+          where: {
+            tokenHash: {
+              in: tokens.map((token) =>
+                createHash('sha256').update(token).digest('hex'),
+              ),
+            },
+          },
+        });
+      }
     });
   },
 );

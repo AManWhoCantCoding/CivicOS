@@ -39,7 +39,8 @@ function actorSnapshot(actor: ResidentActor) {
 }
 
 function sameUnit(actor: ResidentActor, organizationId?: string | null) {
-  if (!actor.organizationUnitId || !organizationId) return true;
+  if (!actor.organizationUnitId?.trim() || !organizationId?.trim())
+    return false;
   return actor.organizationUnitId === organizationId;
 }
 

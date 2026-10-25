@@ -62,6 +62,14 @@ export function ActivityForm({
       }}
       className="space-y-4 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5"
     >
+      <div>
+        <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
+          Ghi nhận hoạt động theo dõi
+        </h2>
+        <p className="mt-2 text-xs leading-5 text-[var(--civicos-text-muted)]">
+          Ghi chú được gắn vào hoạt động checkup của lượt theo dõi hiện tại.
+        </p>
+      </div>
       <label className="block text-sm text-[var(--civicos-text)]">
         Nội dung theo dõi
         <textarea
@@ -69,6 +77,7 @@ export function ActivityForm({
           onChange={(event) => setContent(event.target.value)}
           required
           rows={4}
+          placeholder="Nội dung buổi gặp / đánh giá"
           className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
         />
       </label>
@@ -81,20 +90,40 @@ export function ActivityForm({
         />
       </label>
       {denied ? (
-        <p role="alert" className="text-sm text-[var(--civicos-danger)]">
+        <p
+          role="alert"
+          className="rounded-lg border border-[var(--civicos-border)] p-3 text-sm font-medium text-[var(--civicos-danger)]"
+          style={{
+            borderLeftWidth: '3px',
+            borderLeftColor: 'var(--civicos-danger)',
+          }}
+        >
+          <span aria-hidden="true">⚠ </span>
           Tài khoản không thuộc phân công của hồ sơ này.
         </p>
       ) : null}
       {error ? (
-        <p role="alert" className="text-sm text-[var(--civicos-danger)]">
+        <p
+          role="alert"
+          className="rounded-lg border border-[var(--civicos-border)] p-3 text-sm font-medium text-[var(--civicos-danger)]"
+          style={{
+            borderLeftWidth: '3px',
+            borderLeftColor: 'var(--civicos-danger)',
+          }}
+        >
+          <span aria-hidden="true">⚠ </span>
           {error}
         </p>
       ) : null}
       {saved ? (
         <p
           role="status"
-          className="text-sm text-[var(--civicos-success)]"
+          className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] p-3 text-sm font-medium text-[var(--civicos-success)]"
           aria-live="polite"
+          style={{
+            borderLeftWidth: '3px',
+            borderLeftColor: 'var(--civicos-success)',
+          }}
         >
           <span aria-hidden="true">● </span>Đã ghi nhận hoạt động theo dõi.
         </p>
@@ -102,7 +131,7 @@ export function ActivityForm({
       <button
         type="submit"
         disabled={saving}
-        className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:opacity-50"
+        className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] motion-safe:transition-colors hover:bg-[var(--civicos-accent-hover)] disabled:opacity-50"
       >
         {saving ? 'Đang lưu…' : 'Ghi nhận'}
       </button>

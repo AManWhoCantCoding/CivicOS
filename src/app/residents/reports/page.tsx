@@ -14,18 +14,18 @@ export default async function ResidentReportsPage() {
     <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
       <div className="mx-auto max-w-4xl">
         <Link
-          className="text-sm text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline"
+          className="inline-flex min-h-[44px] items-center text-sm text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)]"
           href="/residents"
         >
           ← Danh sách cư dân
         </Link>
-        <h1 className="mt-6 text-3xl font-semibold tracking-tight text-[var(--civicos-text)]">
+        <h1 className="mt-6 text-2xl font-semibold leading-tight tracking-tight text-[var(--civicos-text)] sm:text-3xl">
           Báo cáo tháng
         </h1>
         <p className="mt-4 text-base leading-7 text-[var(--civicos-text-muted)]">
           Snapshot bất biến khi phê duyệt hoặc gửi cấp trên.
         </p>
-        <div className="mt-8">
+        <div className="mt-8 sm:mt-10">
           {denied || !organizationId ? (
             <AccessDenied message="Báo cáo tháng chỉ dành cho chỉ huy hoặc cán bộ văn phòng trong đơn vị." />
           ) : (

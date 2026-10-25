@@ -300,8 +300,8 @@ export async function listReportPreviews(
   organizationId: string,
   actor: ResidentActor,
 ) {
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
   if (
-    actor.organizationUnitId &&
     actor.organizationUnitId !== organizationId &&
     !actor.roles.includes('superior_commander' as never)
   ) {

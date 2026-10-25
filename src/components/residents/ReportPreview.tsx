@@ -87,8 +87,10 @@ export function ReportPreview({ organizationId }: { organizationId: string }) {
         role="status"
         aria-label="Đang tải báo cáo tháng"
       >
-        <div className="h-24 rounded-xl bg-[var(--civicos-surface-muted)] motion-safe:animate-pulse" />
+        <div className="h-8 w-52 rounded-lg bg-[var(--civicos-surface-muted)] motion-safe:animate-pulse" />
+        <div className="h-24 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] motion-safe:animate-pulse" />
         <p className="text-sm text-[var(--civicos-info)]">
+          <span aria-hidden="true">◌ </span>
           Đang tải báo cáo tháng…
         </p>
       </div>
@@ -97,9 +99,16 @@ export function ReportPreview({ organizationId }: { organizationId: string }) {
     return (
       <p
         role="alert"
-        className="rounded-xl border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] p-4 text-sm text-[var(--civicos-danger)]"
+        className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
+        style={{
+          borderLeftWidth: '3px',
+          borderLeftColor: 'var(--civicos-danger)',
+        }}
       >
-        Tài khoản không có quyền phê duyệt báo cáo đơn vị này.
+        <span className="text-sm font-medium text-[var(--civicos-danger)]">
+          <span aria-hidden="true">⚠ </span>
+          Tài khoản không có quyền phê duyệt báo cáo đơn vị này.
+        </span>
       </p>
     );
   }
@@ -107,13 +116,20 @@ export function ReportPreview({ organizationId }: { organizationId: string }) {
     return (
       <div
         role="alert"
-        className="space-y-3 rounded-xl border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] p-4"
+        className="space-y-3 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
+        style={{
+          borderLeftWidth: '3px',
+          borderLeftColor: 'var(--civicos-danger)',
+        }}
       >
-        <p className="text-sm text-[var(--civicos-danger)]">{error}</p>
+        <p className="text-sm font-medium text-[var(--civicos-danger)]">
+          <span aria-hidden="true">⚠ </span>
+          {error}
+        </p>
         <button
           type="button"
           onClick={() => void load()}
-          className="min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-4 py-2 text-sm text-[var(--civicos-danger)] hover:opacity-80"
+          className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent)]"
         >
           Thử lại
         </button>
@@ -126,30 +142,47 @@ export function ReportPreview({ organizationId }: { organizationId: string }) {
         role="status"
         className="rounded-xl border border-dashed border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5 text-sm text-[var(--civicos-text-muted)]"
       >
+        <span aria-hidden="true">○ </span>
         Chưa đủ dữ liệu nguồn cho báo cáo tháng.
       </p>
     );
   }
   return (
     <div className="space-y-4 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5">
-      <label className="block text-sm text-[var(--civicos-text)]">
-        Đơn vị cấp trên nhận báo cáo
-        <input
-          value={targetOrganizationId}
-          onChange={(event) => setTargetOrganizationId(event.target.value)}
-          placeholder="Nhập ID đơn vị cấp trên"
-          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
-        />
-      </label>
+      <div className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] p-4">
+        <label className="block text-sm text-[var(--civicos-text)]">
+          Đơn vị cấp trên nhận báo cáo
+          <input
+            value={targetOrganizationId}
+            onChange={(event) => setTargetOrganizationId(event.target.value)}
+            placeholder="Nhập ID đơn vị cấp trên"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
+          />
+        </label>
+      </div>
       <ul className="space-y-2">
         {reports.map((report) => (
           <li
             key={report.id}
-            className="space-y-2 rounded-lg border border-[var(--civicos-border)] p-3"
+            className="space-y-2 rounded-lg border border-[var(--civicos-border)] p-4"
           >
-            <p className="text-sm text-[var(--civicos-text)]">
-              {report.period} · {report.status}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium text-[var(--civicos-text)]">
+                {report.period}
+              </p>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${
+                  report.status === 'approved'
+                    ? 'border-[var(--civicos-success)] text-[var(--civicos-success)]'
+                    : 'border-[var(--civicos-border)] text-[var(--civicos-text-muted)]'
+                }`}
+              >
+                <span aria-hidden="true">
+                  {report.status === 'approved' ? '● ' : '○ '}
+                </span>
+                {report.status}
+              </span>
+            </div>
             {report.snapshotHash ? (
               <p className="font-mono text-xs text-[var(--civicos-text-muted)]">
                 Snapshot bất biến: {report.snapshotHash.slice(0, 12)}…
