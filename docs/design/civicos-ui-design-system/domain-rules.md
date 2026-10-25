@@ -91,11 +91,11 @@ phải mở contract review mới thay vì mở rộng tài liệu này.
 
 ## Traceability
 
-| Invariant | Nguồn đã duyệt |
-|---|---|
-| Token, typography, shape, state copy | `.scratch/civicos-ui-design-system/ui/design-tokens.md` §§24–95; TS-11 |
-| Web foundation/shell/navigation | `overview.md` §§11–17; CUI-001; TS-01, TS-11 |
-| Web domain/map presentation | `overview.md` §§11–17; CUI-002; TS-02–TS-08 |
-| Mobile presentation | `overview.md` §§14–17; CUI-003; TS-09–TS-11 |
-| Cross-surface compatibility boundary | `overview.md` §§19–29; `api-contract.md` §§7–26; `data-model.md` §§7–30; CUI-004 |
-| Visual reference | Stitch project `projects/3369879313583874807`, catalog `.scratch/civicos-ui-design-system/ui/stitch-screens.md` |
+| Invariant                            | Nguồn đã duyệt                                                                                                  |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Token, typography, shape, state copy | `.scratch/civicos-ui-design-system/ui/design-tokens.md` §§24–95; TS-11                                          |
+| Web foundation/shell/navigation      | `overview.md` §§11–17; CUI-001; TS-01, TS-11                                                                    |
+| Web domain/map presentation          | `overview.md` §§11–17; CUI-002; TS-02–TS-08                                                                     |
+| Mobile presentation                  | `overview.md` §§14–17; CUI-003; TS-09–TS-11                                                                     |
+| Cross-surface compatibility boundary | `overview.md` §§19–29; `api-contract.md` §§7–26; `data-model.md` §§7–30; CUI-004                                |
+| Visual reference                     | Stitch project `projects/3369879313583874807`, catalog `.scratch/civicos-ui-design-system/ui/stitch-screens.md` |

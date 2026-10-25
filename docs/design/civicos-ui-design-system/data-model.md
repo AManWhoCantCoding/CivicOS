@@ -17,13 +17,13 @@ PostgreSQL/PostGIS qua Prisma, schema/migration hiện tại, identity, Organiza
 
 ## Gap map
 
-| Thay đổi UI đã duyệt | Kết quả data model |
-|---|---|
-| Shared Light/Blue tokens, shell và navigation | Reuse existing structures; không persistence change. |
-| Residents, Intake, Inspection và Land list/detail presentation | Reuse existing API/read models; không đổi field hoặc lifecycle. |
-| Web/mobile map states và focused parcel display | Reuse existing allowlisted projection; không đổi geometry/cache. |
-| Loading, empty, forbidden, stale, error và offline states | UI state only; không thêm database status/workflow state. |
-| Simulated/internal labels và masked values | Giữ copy và access boundary hiện có; không thêm data source. |
+| Thay đổi UI đã duyệt                                           | Kết quả data model                                               |
+| -------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Shared Light/Blue tokens, shell và navigation                  | Reuse existing structures; không persistence change.             |
+| Residents, Intake, Inspection và Land list/detail presentation | Reuse existing API/read models; không đổi field hoặc lifecycle.  |
+| Web/mobile map states và focused parcel display                | Reuse existing allowlisted projection; không đổi geometry/cache. |
+| Loading, empty, forbidden, stale, error và offline states      | UI state only; không thêm database status/workflow state.        |
+| Simulated/internal labels và masked values                     | Giữ copy và access boundary hiện có; không thêm data source.     |
 
 ## Compatibility và giới hạn
 

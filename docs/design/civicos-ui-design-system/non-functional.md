@@ -60,10 +60,10 @@ telemetry, security policy hoặc UX requirement mới.
 
 ## Traceability
 
-| Nhóm | Nguồn |
-|---|---|
-| Token và state presentation | `ui/design-tokens.md` §§24–95 |
-| Flow/state và accessibility review | `ui/prototype.md` §§46–100; `ui/test-scenarios.md` TS-01–TS-11 |
-| Canonical visual evidence | `ui/stitch-screens.md` §§3–21, §§32–46 |
-| API/data compatibility | `api-contract.md` §§7–26; `data-model.md` §§7–30 |
+| Nhóm                                 | Nguồn                                                                                |
+| ------------------------------------ | ------------------------------------------------------------------------------------ |
+| Token và state presentation          | `ui/design-tokens.md` §§24–95                                                        |
+| Flow/state và accessibility review   | `ui/prototype.md` §§46–100; `ui/test-scenarios.md` TS-01–TS-11                       |
+| Canonical visual evidence            | `ui/stitch-screens.md` §§3–21, §§32–46                                               |
+| API/data compatibility               | `api-contract.md` §§7–26; `data-model.md` §§7–30                                     |
 | Implementation/verification boundary | CUI-001, CUI-002, CUI-003, CUI-004 trong `.scratch/civicos-ui-design-system/phases/` |

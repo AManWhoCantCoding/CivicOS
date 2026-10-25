@@ -10,15 +10,15 @@ giữ, không định nghĩa endpoint hoặc payload mới.
 
 ## Các seam phải giữ nguyên
 
-| Seam | Hợp đồng cần giữ | Traceability |
-|---|---|---|
-| Web foundation/shell | Reuse Home, `ModuleShell`, sidebar, organization context, breadcrumb/back và module destination hiện có; chỉ đổi presentation. | `ui/prototype.md` §§36–53; CUI-001 |
-| Web domain surfaces | Reuse Residents, Intake, Inspection, Land list/detail, existing actions, fields, masking và state semantics; chỉ đổi token/layout/component presentation. | `ui/prototype.md` §§55–83; CUI-002 |
-| Web map | Reuse map route/projection/provider, allowlist, safe error states và no-offline-polygon behavior; không thay đổi request, projection hoặc navigation destination. | `api-contract.md` §§15–16, §§24–26; `ui/prototype.md` §§85–92; TS-06–TS-08; CUI-002 |
-| Mobile primitives/screens | Reuse `States`, `LandScreen`, `MapScreen`, Related Info, Alarm, Dispatch, Task, `AppNavigator` và read-only/offline semantics hiện có; không tạo API/config/deep-link mới. | `ui/design-tokens.md` §§96–111; `ui/prototype.md` §§85–100; TS-09–TS-10; CUI-003 |
-| Data/persistence | Reuse current database, schema, read model, identity, audit, evidence, land và map structures; không thêm table/field/relation/index/migration/seed/offline store. | `data-model.md` §§7–30; `ui/data-model-assessment.md` §§9–37 |
-| API/route | Giữ endpoint, method, path, request/response/error/status, pagination/version/idempotency semantics và route destinations hiện có. | `api-contract.md` §§7–26 |
-| Visual reference | Đối chiếu đúng 7 Stitch resources và composite board trong canonical project; không tạo resources mới. | `ui/stitch-screens.md` §§3–21, §§32–46; B8 decision trong `ui/prototype.md` §§119–125 |
+| Seam                      | Hợp đồng cần giữ                                                                                                                                                           | Traceability                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Web foundation/shell      | Reuse Home, `ModuleShell`, sidebar, organization context, breadcrumb/back và module destination hiện có; chỉ đổi presentation.                                             | `ui/prototype.md` §§36–53; CUI-001                                                    |
+| Web domain surfaces       | Reuse Residents, Intake, Inspection, Land list/detail, existing actions, fields, masking và state semantics; chỉ đổi token/layout/component presentation.                  | `ui/prototype.md` §§55–83; CUI-002                                                    |
+| Web map                   | Reuse map route/projection/provider, allowlist, safe error states và no-offline-polygon behavior; không thay đổi request, projection hoặc navigation destination.          | `api-contract.md` §§15–16, §§24–26; `ui/prototype.md` §§85–92; TS-06–TS-08; CUI-002   |
+| Mobile primitives/screens | Reuse `States`, `LandScreen`, `MapScreen`, Related Info, Alarm, Dispatch, Task, `AppNavigator` và read-only/offline semantics hiện có; không tạo API/config/deep-link mới. | `ui/design-tokens.md` §§96–111; `ui/prototype.md` §§85–100; TS-09–TS-10; CUI-003      |
+| Data/persistence          | Reuse current database, schema, read model, identity, audit, evidence, land và map structures; không thêm table/field/relation/index/migration/seed/offline store.         | `data-model.md` §§7–30; `ui/data-model-assessment.md` §§9–37                          |
+| API/route                 | Giữ endpoint, method, path, request/response/error/status, pagination/version/idempotency semantics và route destinations hiện có.                                         | `api-contract.md` §§7–26                                                              |
+| Visual reference          | Đối chiếu đúng 7 Stitch resources và composite board trong canonical project; không tạo resources mới.                                                                     | `ui/stitch-screens.md` §§3–21, §§32–46; B8 decision trong `ui/prototype.md` §§119–125 |
 
 ## Approved Stitch catalog
 

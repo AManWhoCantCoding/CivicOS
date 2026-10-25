@@ -6,14 +6,14 @@
 
 ## Invariants bắt buộc
 
-| Hạng mục | Contract |
-|---|---|
-| Endpoint, method, path | Giữ nguyên toàn bộ API hiện có; không thêm, xóa, đổi tên hoặc đổi route. |
-| Request/response | Giữ nguyên shape, field, nullability, pagination và version/idempotency semantics hiện có. |
-| Error/status | Giữ nguyên HTTP status, error code/message và state machine hiện có. UI state không tạo status API mới. |
-| Authorization | Giữ nguyên session, role, OrganizationUnit, permission, Assignment và masking policy; không thêm quyền. |
-| Map | Giữ nguyên map projection allowlist, server-side access boundary và no-offline-polygon behavior. |
-| Navigation | Giữ nguyên destination và business action; presentation migration không tạo flow nghiệp vụ mới. |
+| Hạng mục               | Contract                                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| Endpoint, method, path | Giữ nguyên toàn bộ API hiện có; không thêm, xóa, đổi tên hoặc đổi route.                                |
+| Request/response       | Giữ nguyên shape, field, nullability, pagination và version/idempotency semantics hiện có.              |
+| Error/status           | Giữ nguyên HTTP status, error code/message và state machine hiện có. UI state không tạo status API mới. |
+| Authorization          | Giữ nguyên session, role, OrganizationUnit, permission, Assignment và masking policy; không thêm quyền. |
+| Map                    | Giữ nguyên map projection allowlist, server-side access boundary và no-offline-polygon behavior.        |
+| Navigation             | Giữ nguyên destination và business action; presentation migration không tạo flow nghiệp vụ mới.         |
 
 ## Non-goals
 
