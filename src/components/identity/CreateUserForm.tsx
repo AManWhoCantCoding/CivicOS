@@ -55,15 +55,18 @@ export function CreateUserForm() {
     <form
       onSubmit={submit}
       className="rounded-2xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-6"
+      style={{ borderRadius: 'var(--civicos-radius-lg)' }}
     >
-      <p className="text-sm font-medium text-[var(--civicos-text)]">
-        Tạo User mới
-      </p>
-      <p className="mt-2 text-sm leading-6 break-words text-[var(--civicos-text-muted)]">
-        Chỉ Trưởng Công an xã được tạo User. Role được máy chủ kiểm tra lại,
-        request client không thể tự nâng quyền.
-      </p>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold text-[var(--civicos-text)]">
+          Tạo User mới
+        </h2>
+        <p className="mt-2 text-sm leading-6 break-words text-[var(--civicos-text-muted)]">
+          Chỉ Trưởng Công an xã được tạo User. Role được máy chủ kiểm tra lại,
+          request client không thể tự nâng quyền.
+        </p>
+      </div>
+      <div className="grid gap-5 sm:grid-cols-2">
         <label className="block text-sm text-[var(--civicos-text)]">
           Tên
           <input
@@ -114,17 +117,20 @@ export function CreateUserForm() {
       </div>
       {error ? (
         <p
-          className="mt-4 text-sm break-words text-[var(--civicos-danger)]"
+          className="civicos-feedback mt-4 px-3 py-2.5 text-sm break-words text-[var(--civicos-danger)]"
           role="alert"
+          style={{ borderLeft: '3px solid var(--civicos-danger)' }}
         >
           {error}
         </p>
       ) : null}
       {notice ? (
         <p
-          className="mt-4 text-sm break-words text-[var(--civicos-success)]"
+          className="civicos-feedback mt-4 px-3 py-2.5 text-sm break-words text-[var(--civicos-success)]"
           role="status"
+          style={{ borderLeft: '3px solid var(--civicos-success)' }}
         >
+          <span aria-hidden="true">● </span>
           {notice}
         </p>
       ) : null}

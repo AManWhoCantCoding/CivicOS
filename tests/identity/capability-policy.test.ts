@@ -290,6 +290,59 @@ describe('capability policy contract', () => {
     ).toBe(true);
   });
 
+  it('denies command-scope access when either organization unit is absent or blank', () => {
+    const commander = user('u-commander', ['commander']);
+    const missingUserUnit = { ...commander, organizationUnitId: undefined };
+    const blankUserUnit = { ...commander, organizationUnitId: '  ' };
+    const missingResourceUnit = { ...resource, organizationId: undefined };
+    const blankResourceUnit = { ...resource, organizationId: '  ' };
+
+    for (const action of ['read', 'assign', 'approve'] as const) {
+      for (const [actor, scopedResource] of [
+        [missingUserUnit, resource],
+        [blankUserUnit, resource],
+        [commander, missingResourceUnit],
+        [commander, blankResourceUnit],
+      ] as const) {
+        expect(
+          evaluatePolicy({
+            user: actor,
+            resource: scopedResource,
+            action,
+            assignments: [],
+          }),
+        ).toEqual({ allowed: false, reason: 'ORGANIZATION_SCOPE_DENIED' });
+      }
+    }
+  });
+
+  it('denies assignment-based reads when either organization unit is absent or blank', () => {
+    const field = user('u-field', ['field_officer']);
+    const activeAssignment = {
+      task: 'incident_verification',
+      resourceType: 'Incident',
+      resourceId: 'res-1',
+      status: 'active',
+      organizationId: 'unit-a',
+    } as const;
+
+    for (const [actor, scopedResource] of [
+      [{ ...field, organizationUnitId: undefined }, resource],
+      [{ ...field, organizationUnitId: '  ' }, resource],
+      [field, { ...resource, organizationId: undefined }],
+      [field, { ...resource, organizationId: '  ' }],
+    ] as const) {
+      expect(
+        evaluatePolicy({
+          user: actor,
+          resource: scopedResource,
+          action: 'read',
+          assignments: [activeAssignment],
+        }),
+      ).toEqual({ allowed: false, reason: 'ORGANIZATION_SCOPE_DENIED' });
+    }
+  });
+
   it('requires an active compatible assignment for commander mutate and read_sensitive', () => {
     const commander = user('u-commander', ['commander']);
     const compatible = {

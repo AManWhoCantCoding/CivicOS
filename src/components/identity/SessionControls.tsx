@@ -150,13 +150,26 @@ export function SessionControls() {
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-3">
-      <div className="text-right">
-        <p className="text-sm font-medium break-words text-[var(--civicos-text)]">
-          {user.name}
-        </p>
-        <p className="text-xs break-words text-[var(--civicos-text-muted)]">
-          {user.roles.join(' · ')} · {user.email}
-        </p>
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold"
+          style={{
+            borderColor: 'var(--civicos-border)',
+            background: 'var(--civicos-surface-muted)',
+            color: 'var(--civicos-text)',
+          }}
+        >
+          {user.name.trim().charAt(0) || '?'}
+        </span>
+        <div className="text-right">
+          <p className="text-sm font-medium break-words text-[var(--civicos-text)]">
+            {user.name}
+          </p>
+          <p className="text-xs break-words text-[var(--civicos-text-muted)]">
+            {user.roles.join(' · ')} · {user.email}
+          </p>
+        </div>
       </div>
       <button
         type="button"

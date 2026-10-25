@@ -93,7 +93,7 @@ const verifiedContainer: Pilot01ContainerIdentity = {
   imageId: 'sha256:image-id',
   running: true,
   portBindings: [
-    { hostIp: '127.0.0.1', hostPort: '55432', containerPort: '5432' },
+    { hostIp: '127.0.0.1', hostPort: '5433', containerPort: '5432' },
   ],
   mounts: [
     {
@@ -116,7 +116,7 @@ describe('NGOÀI BASELINE — D-53 Pilot 01 fixture guard', () => {
     vi.stubEnv('NODE_ENV', 'test');
     vi.stubEnv(
       'DATABASE_URL',
-      'postgresql://runtime-selected-user@127.0.0.1:55432/civicos_demo',
+      'postgresql://runtime-selected-user@127.0.0.1:5433/civicos_demo',
     );
     testPrisma.organizationUnit.upsert.mockImplementation(
       async (input: { where: { id: string } }) => ({ id: input.where.id }),
@@ -202,7 +202,7 @@ describe('NGOÀI BASELINE — D-53 Pilot 01 fixture guard', () => {
             imageId: verifiedContainer.imageId,
             running: true,
             ports: {
-              '5432/tcp': [{ HostIp: '127.0.0.1', HostPort: '55432' }],
+              '5432/tcp': [{ HostIp: '127.0.0.1', HostPort: '5433' }],
             },
             mounts: [
               {
@@ -315,7 +315,7 @@ describe('NGOÀI BASELINE — D-53 Pilot 01 fixture guard', () => {
   it('fails closed when the connected database identity cannot be read', async () => {
     vi.stubEnv(
       'DATABASE_URL',
-      'postgresql://runtime-selected-user@127.0.0.1:55432/civicos_demo',
+      'postgresql://runtime-selected-user@127.0.0.1:5433/civicos_demo',
     );
     testPrisma.$queryRaw.mockResolvedValue([]);
 
@@ -463,13 +463,14 @@ describe('NGOÀI BASELINE — D-53 Pilot 01 fixture guard', () => {
   it('accepts only the approved Pilot 01 PostgreSQL URL', () => {
     expect(
       assertPilot01DatabaseUrl(
-        'postgresql://variable-user@127.0.0.1:55432/civicos_demo',
+        'postgresql://variable-user@127.0.0.1:5433/civicos_demo',
       ).pathname,
     ).toBe('/civicos_demo');
     for (const url of [
-      'postgresql://user@localhost:55432/civicos_demo',
+      'postgresql://user@localhost:5433/civicos_demo',
       'postgresql://user@127.0.0.1:5432/civicos_demo',
-      'postgresql://user@127.0.0.1:55432/other',
+      'postgresql://user@127.0.0.1:5433/other',
+      'postgresql://user@127.0.0.1:55432/civicos_demo',
     ]) {
       expect(() => assertPilot01DatabaseUrl(url)).toThrow(
         'PILOT01_DATABASE_URL_REFUSED',
@@ -492,7 +493,7 @@ describe('NGOÀI BASELINE — D-53 Pilot 01 fixture guard', () => {
         {
           ...verifiedContainer,
           portBindings: [
-            { hostIp: '0.0.0.0', hostPort: '55432', containerPort: '5432' },
+            { hostIp: '0.0.0.0', hostPort: '5433', containerPort: '5432' },
           ],
         },
         'sha256:image-id',
@@ -509,7 +510,7 @@ describe('NGOÀI BASELINE — D-53 Pilot 01 fixture guard', () => {
       serverVersionNum: '160004',
     };
     const databaseUrl =
-      'postgresql://runtime-selected-user@127.0.0.1:55432/civicos_demo';
+      'postgresql://runtime-selected-user@127.0.0.1:5433/civicos_demo';
     expect(() =>
       verifyPilot01DatabaseIdentity(identity, verifiedContainer, databaseUrl),
     ).not.toThrow();
@@ -531,7 +532,7 @@ describe('NGOÀI BASELINE — D-53 Pilot 01 fixture guard', () => {
       serverVersionNum: '160004',
     };
     const databaseUrl =
-      'postgresql://runtime%2Bselected@127.0.0.1:55432/civicos_demo';
+      'postgresql://runtime%2Bselected@127.0.0.1:5433/civicos_demo';
 
     expect(() =>
       verifyPilot01DatabaseIdentity(identity, verifiedContainer, databaseUrl),
@@ -547,7 +548,7 @@ describe('NGOÀI BASELINE — D-53 Pilot 01 fixture guard', () => {
       verifyPilot01DatabaseIdentity(
         identity,
         verifiedContainer,
-        'postgresql://runtime%ZZ@127.0.0.1:55432/civicos_demo',
+        'postgresql://runtime%ZZ@127.0.0.1:5433/civicos_demo',
       ),
     ).toThrow('PILOT01_DATABASE_IDENTITY_UNVERIFIED');
   });

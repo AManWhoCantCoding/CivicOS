@@ -44,11 +44,11 @@ export function LoginForm() {
       className="rounded-2xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-6"
     >
       <div className="mb-6">
-        <p className="text-sm font-medium text-[var(--civicos-text)]">
+        <h2 className="text-lg font-semibold text-[var(--civicos-text)]">
           Đăng nhập nội bộ
-        </p>
+        </h2>
         <p className="mt-2 text-sm leading-6 break-words text-[var(--civicos-text-muted)]">
-          Development account: mật khẩu mặc định `civicos-dev`.
+          Development account: mật khẩu mặc định <code>civicos-dev</code>.
         </p>
       </div>
       <div className="space-y-4">
@@ -77,8 +77,9 @@ export function LoginForm() {
       </div>
       {error ? (
         <p
-          className="mt-4 text-sm break-words text-[var(--civicos-danger)]"
+          className="civicos-feedback mt-4 px-3 py-2.5 text-sm break-words text-[var(--civicos-danger)]"
           role="alert"
+          style={{ borderLeft: '3px solid var(--civicos-danger)' }}
         >
           {error}
         </p>

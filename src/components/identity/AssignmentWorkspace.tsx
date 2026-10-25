@@ -182,6 +182,9 @@ export function AssignmentWorkspace() {
   const [revokeId, setRevokeId] = useState<string | null>(null);
   const [revokeReason, setRevokeReason] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+  const [messageTone, setMessageTone] = useState<
+    'success' | 'error' | 'warning'
+  >('success');
 
   useEffect(() => {
     let active = true;
@@ -241,14 +244,17 @@ export function AssignmentWorkspace() {
   async function createAssignment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!resourceType.trim() || !resourceId.trim() || !task.trim()) {
+      setMessageTone('warning');
       setMessage('Cần nhập resource type, resource ID và task.');
       return;
     }
     if (!assigneeUserIds.length) {
+      setMessageTone('warning');
       setMessage('Chọn ít nhất một cán bộ được giao.');
       return;
     }
     setMutation('create');
+    setMessageTone('success');
     setMessage(null);
     try {
       const response = await fetch('/api/identity/assignments', {
@@ -271,10 +277,12 @@ export function AssignmentWorkspace() {
           response.status,
         );
       }
+      setMessageTone('success');
       setMessage('Đã tạo Assignment.');
       setAssigneeUserIds([]);
       await refreshAssignments();
     } catch (reason: unknown) {
+      setMessageTone('error');
       setMessage(
         reason instanceof AssignmentApiError && reason.status === 403
           ? 'Thao tác bị từ chối: tài khoản không có quyền tạo Assignment.'
@@ -291,10 +299,12 @@ export function AssignmentWorkspace() {
   ) {
     event.preventDefault();
     if (!revokeReason.trim()) {
+      setMessageTone('warning');
       setMessage('Cần nhập lý do thu hồi Assignment.');
       return;
     }
     setMutation('revoke');
+    setMessageTone('success');
     setMessage(null);
     try {
       const response = await fetch('/api/identity/assignments', {
@@ -314,11 +324,13 @@ export function AssignmentWorkspace() {
           response.status,
         );
       }
+      setMessageTone('success');
       setMessage('Đã thu hồi Assignment.');
       setRevokeId(null);
       setRevokeReason('');
       await refreshAssignments();
     } catch (reason: unknown) {
+      setMessageTone('error');
       setMessage(
         reason instanceof AssignmentApiError && reason.status === 403
           ? 'Thao tác bị từ chối: tài khoản không có quyền thu hồi Assignment.'
@@ -333,17 +345,25 @@ export function AssignmentWorkspace() {
     <div className="space-y-8">
       {denied ? <AccessDenied message={loadError ?? undefined} /> : null}
       {loadState === 'error' && !denied ? (
-        <section className="rounded-xl border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] p-5">
+        <section
+          className="rounded-xl border bg-[var(--civicos-surface)] p-5"
+          style={{
+            borderColor: 'var(--civicos-border)',
+            borderLeft: '3px solid var(--civicos-danger)',
+            borderRadius: 'var(--civicos-radius-md)',
+          }}
+        >
           <p
-            className="text-sm break-words text-[var(--civicos-danger)]"
+            className="text-sm font-medium break-words text-[var(--civicos-danger)]"
             role="alert"
           >
+            <span aria-hidden="true">⚠ </span>
             {loadError}
           </p>
           <button
             type="button"
             onClick={() => void refreshAssignments()}
-            className="mt-4 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:bg-[var(--civicos-surface-muted)]"
           >
             Thử tải lại
           </button>
@@ -486,12 +506,15 @@ export function AssignmentWorkspace() {
                       </p>
                     </div>
                     <span
-                      className={`rounded-full border px-3 py-1 text-xs ${
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${
                         assignment.status === 'active'
                           ? 'border-[var(--civicos-success)] text-[var(--civicos-success)]'
                           : 'border-[var(--civicos-border)] text-[var(--civicos-text-muted)]'
                       }`}
                     >
+                      <span aria-hidden="true">
+                        {assignment.status === 'active' ? '●' : '○'}
+                      </span>
                       {assignment.status === 'revoked'
                         ? 'revoked · đã thu hồi'
                         : assignment.status}
@@ -569,10 +592,28 @@ export function AssignmentWorkspace() {
 
       {message ? (
         <p
-          className="text-sm break-words text-[var(--civicos-text)]"
+          className="civicos-feedback inline-flex max-w-full flex-wrap items-center gap-2 px-3 py-2.5 text-sm break-words"
           role="status"
           aria-live="polite"
+          style={{
+            color:
+              messageTone === 'success'
+                ? 'var(--civicos-success)'
+                : messageTone === 'error'
+                  ? 'var(--civicos-danger)'
+                  : 'var(--civicos-warning)',
+            background: 'var(--civicos-surface)',
+            borderLeft:
+              messageTone === 'success'
+                ? '3px solid var(--civicos-success)'
+                : messageTone === 'error'
+                  ? '3px solid var(--civicos-danger)'
+                  : '3px solid var(--civicos-warning)',
+          }}
         >
+          <span aria-hidden="true">
+            {messageTone === 'success' ? '●' : messageTone === 'error' ? '⊘' : '▲'}
+          </span>
           {message}
         </p>
       ) : null}

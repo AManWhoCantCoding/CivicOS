@@ -102,8 +102,8 @@ function sameOrganizationUnit(
   resourceOrganizationId: string | undefined,
 ): boolean {
   return (
-    !userOrganizationId ||
-    !resourceOrganizationId ||
+    !!userOrganizationId?.trim() &&
+    !!resourceOrganizationId?.trim() &&
     userOrganizationId === resourceOrganizationId
   );
 }
@@ -600,8 +600,9 @@ export async function hasActiveAssignmentForRead(
   resource: ResourceRef,
   client: PrismaClient | Prisma.TransactionClient = prisma,
 ): Promise<boolean> {
+  if (!user.organizationUnitId?.trim()) return false;
   const organizationId = await mobileResourceOrganizationId(client, resource);
-  if (!user.organizationUnitId || !organizationId) return false;
+  if (!organizationId?.trim()) return false;
   if (organizationId !== user.organizationUnitId) return false;
   const assignments = await client.assignment.findMany({
     where: {

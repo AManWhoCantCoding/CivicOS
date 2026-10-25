@@ -138,6 +138,12 @@ export function UserPicker({
     >
       <legend className="text-sm break-words text-[var(--civicos-text)]">
         {label}
+        {state === 'ready' && value.length ? (
+          <span className="text-xs text-[var(--civicos-accent)]">
+            {' '}
+            · đã chọn {value.length}
+          </span>
+        ) : null}
       </legend>
       <p className="mt-2 text-xs leading-5 break-words text-[var(--civicos-text-muted)]">
         Chọn một hoặc nhiều cán bộ trong cùng OrganizationUnit.
@@ -178,28 +184,45 @@ export function UserPicker({
       ) : null}
       {state === 'ready' && users.length ? (
         <div className="mt-3 max-h-64 space-y-2 overflow-y-auto rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-2">
-          {users.map((user) => (
-            <label
-              key={user.id}
-              className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-md px-3 py-2.5 transition hover:bg-[var(--civicos-surface-muted)]"
-            >
-              <input
-                type="checkbox"
-                checked={value.includes(user.id)}
-                onChange={() => toggleUser(user.id)}
-                className="mt-1 h-4 w-4 accent-[var(--civicos-accent)]"
-              />
-              <span className="min-w-0 text-sm text-[var(--civicos-text)]">
-                <span className="block truncate font-medium">{user.name}</span>
-                <span className="mt-0.5 block truncate text-xs text-[var(--civicos-text-muted)]">
-                  {user.email} · Role: {user.roles.join(' · ')}
-                  {user.organizationUnitId
-                    ? ` · Unit: ${user.organizationUnitId}`
-                    : ''}
+          {users.map((user) => {
+            const selected = value.includes(user.id);
+            return (
+              <label
+                key={user.id}
+                className="flex min-h-[44px] cursor-pointer items-start gap-3 border px-3 py-2.5 motion-safe:transition-colors motion-safe:duration-150 hover:bg-[var(--civicos-surface-muted)]"
+                style={
+                  selected
+                    ? {
+                        borderColor:
+                          'color-mix(in srgb, var(--civicos-accent) 35%, transparent)',
+                        background:
+                          'color-mix(in srgb, var(--civicos-accent) 6%, var(--civicos-surface))',
+                        borderRadius: 'var(--civicos-radius-sm)',
+                      }
+                    : {
+                        borderColor: 'transparent',
+                        borderRadius: 'var(--civicos-radius-sm)',
+                      }
+                }
+              >
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  onChange={() => toggleUser(user.id)}
+                  className="mt-1 h-4 w-4 accent-[var(--civicos-accent)]"
+                />
+                <span className="min-w-0 text-sm text-[var(--civicos-text)]">
+                  <span className="block truncate font-medium">{user.name}</span>
+                  <span className="mt-0.5 block truncate text-xs text-[var(--civicos-text-muted)]">
+                    {user.email} · Role: {user.roles.join(' · ')}
+                    {user.organizationUnitId
+                      ? ` · Unit: ${user.organizationUnitId}`
+                      : ''}
+                  </span>
                 </span>
-              </span>
-            </label>
-          ))}
+              </label>
+            );
+          })}
         </div>
       ) : null}
     </fieldset>

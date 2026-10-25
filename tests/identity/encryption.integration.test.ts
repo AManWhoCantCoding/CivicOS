@@ -61,38 +61,60 @@ describe.skipIf(!postgresEnabled)(
   'identity encryption persistence PostgreSQL seam',
   () => {
     let reportId = '';
-    let incidentId = '';
 
     afterAll(async () => {
       if (!reportId) return;
+      const slas = await prisma.slaInstance.findMany({
+        where: { resourceType: 'IntakeReport', resourceId: reportId },
+        select: { id: true },
+      });
+      const slaIds = slas.map(({ id }) => id);
       const events = await prisma.eventRecord.findMany({
         where: {
           OR: [
             { aggregateType: 'IntakeReport', aggregateId: reportId },
-            { aggregateType: 'Incident', aggregateId: incidentId },
+            ...(slaIds.length
+              ? [{ aggregateType: 'SlaInstance', aggregateId: { in: slaIds } }]
+              : []),
           ],
         },
         select: { eventId: true },
       });
       const eventIds = events.map(({ eventId }) => eventId);
+      await prisma.notification.deleteMany({
+        where: {
+          OR: [
+            { resourceType: 'IntakeReport', resourceId: reportId },
+            ...(eventIds.length ? [{ sourceEventId: { in: eventIds } }] : []),
+          ],
+        },
+      });
+      if (slaIds.length) {
+        await prisma.slaInstance.deleteMany({ where: { id: { in: slaIds } } });
+      }
       if (eventIds.length) {
         await prisma.outboxMessage.deleteMany({
           where: { eventId: { in: eventIds } },
         });
-        await prisma.eventRecord.deleteMany({
-          where: { eventId: { in: eventIds } },
-        });
       }
       const audits = await prisma.auditEvent.findMany({
-        where: {
-          OR: [
-            { resourceType: 'IntakeReport', resourceId: reportId },
-            { resourceType: 'Incident', resourceId: incidentId },
-          ],
-        },
+        where: { resourceType: 'IntakeReport', resourceId: reportId },
         select: { id: true },
       });
       const auditIds = audits.map(({ id }) => id);
+      await prisma.projectionRecord.deleteMany({
+        where: {
+          OR: [
+            { aggregateType: 'IntakeReport', aggregateId: reportId },
+            ...(slaIds.length
+              ? [{ aggregateType: 'SlaInstance', aggregateId: { in: slaIds } }]
+              : []),
+            ...(auditIds.length
+              ? [{ aggregateType: 'AuditEvent', aggregateId: { in: auditIds } }]
+              : []),
+          ],
+        },
+      });
       if (auditIds.length) {
         const auditEvents = await prisma.eventRecord.findMany({
           where: { aggregateType: 'AuditEvent', aggregateId: { in: auditIds } },
@@ -109,16 +131,11 @@ describe.skipIf(!postgresEnabled)(
         }
         await prisma.auditEvent.deleteMany({ where: { id: { in: auditIds } } });
       }
-      await prisma.slaInstance.deleteMany({
-        where: { resourceType: 'Incident', resourceId: incidentId },
-      });
-      await prisma.approval.deleteMany({
-        where: { resourceType: 'Incident', resourceId: incidentId },
-      });
-      await prisma.projectionRecord.deleteMany({
-        where: { aggregateType: 'Incident', aggregateId: incidentId },
-      });
-      await prisma.incident.deleteMany({ where: { id: incidentId } });
+      if (eventIds.length) {
+        await prisma.eventRecord.deleteMany({
+          where: { eventId: { in: eventIds } },
+        });
+      }
       await prisma.intakeReport.deleteMany({ where: { id: reportId } });
     });
 
@@ -134,7 +151,6 @@ describe.skipIf(!postgresEnabled)(
         encryptionActor,
       );
       reportId = registered.reportId;
-      incidentId = registered.incidentId ?? '';
 
       const stored = await prisma.intakeReport.findUniqueOrThrow({
         where: { id: reportId },

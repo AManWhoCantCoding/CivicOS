@@ -45,7 +45,7 @@ async function isPilot01DatabaseTarget(): Promise<boolean> {
     throw new Error('PILOT01_DATABASE_URL_REFUSED');
   }
   const configuredForPilot01 =
-    target.hostname === '127.0.0.1' && target.port === '55432';
+    target.hostname === '127.0.0.1' && target.port === '5433';
   if (!configuredForPilot01) return false;
   if (databaseName !== 'civicos_demo') {
     throw new Error('PILOT01_SANDBOX_IDENTITY_UNVERIFIED');

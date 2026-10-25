@@ -38,6 +38,10 @@ export async function grantAssignments(
   requireRole(actor, ...effectiveRoles);
   if (!input.assigneeUserIds.length) throw new Error('ASSIGNEE_REQUIRED');
   if (!input.task.trim()) throw new Error('TASK_REQUIRED');
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
+  if (input.organizationId !== undefined && !input.organizationId.trim()) {
+    throw new Error('ORGANIZATION_SCOPE_FORBIDDEN');
+  }
   if (
     input.organizationId &&
     actor.organizationUnitId &&
@@ -194,6 +198,7 @@ export async function revokeAssignment(
 ) {
   requireRole(actor, 'commander', 'superior_commander', 'commune_leader');
   if (!reason.trim()) throw new Error('REVOKE_REASON_REQUIRED');
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
 
   return prisma.$transaction(async (tx) => {
     const existing = await tx.assignment.findUnique({
@@ -207,8 +212,7 @@ export async function revokeAssignment(
       requireRole(actor, 'commander', 'superior_commander');
     }
     if (
-      actor.organizationUnitId &&
-      existing.organizationId &&
+      !existing.organizationId?.trim() ||
       existing.organizationId !== actor.organizationUnitId
     ) {
       throw new Error('FORBIDDEN');
@@ -260,6 +264,7 @@ export async function listAssignments(input: {
   includeRevoked?: boolean;
 }) {
   const { actor, resourceType, resourceId, includeRevoked = false } = input;
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
   const managesAssignments =
     actor.roles.includes('commander' as never) ||
     actor.roles.includes('superior_commander' as never);

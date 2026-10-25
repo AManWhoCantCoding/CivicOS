@@ -12,17 +12,26 @@ export async function GET(request: Request): Promise<NextResponse> {
   const current = await getCurrentUser();
   if (!current)
     return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
-  const url = new URL(request.url);
-  const resourceType = url.searchParams.get('resourceType');
-  const resourceId = url.searchParams.get('resourceId');
-  return NextResponse.json({
-    assignments: await listAssignments({
-      actor: current,
-      resourceType: resourceType ?? undefined,
-      resourceId: resourceId ?? undefined,
-      includeRevoked: url.searchParams.get('includeRevoked') === 'true',
-    }),
-  });
+  try {
+    const url = new URL(request.url);
+    const resourceType = url.searchParams.get('resourceType');
+    const resourceId = url.searchParams.get('resourceId');
+    return NextResponse.json({
+      assignments: await listAssignments({
+        actor: current,
+        resourceType: resourceType ?? undefined,
+        resourceId: resourceId ?? undefined,
+        includeRevoked: url.searchParams.get('includeRevoked') === 'true',
+      }),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'ASSIGNMENT_FAILED';
+    return NextResponse.json(
+      { error: message },
+      { status: message === 'FORBIDDEN' ? 403 : 500 },
+    );
+  }
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
