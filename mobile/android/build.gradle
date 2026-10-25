@@ -3,3 +3,14 @@ plugins {
     id 'com.facebook.react' version '0.85.3' apply false
     id 'org.jetbrains.kotlin.android' version '2.0.21' apply false
 }
+
+gradle.beforeProject { project ->
+    if (project.path == ':react-native-mmkv-storage') {
+        project.pluginManager.apply('com.facebook.react')
+        project.extensions.configure(com.facebook.react.ReactExtension) { reactExtension ->
+            reactExtension.jsRootDir = project.file('../src/')
+            reactExtension.libraryName = 'MMKVStorage'
+            reactExtension.codegenJavaPackageName = 'com.ammarahmed.mmkv'
+        }
+    }
+}

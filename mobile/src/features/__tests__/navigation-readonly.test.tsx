@@ -31,8 +31,8 @@ describe('navigation remains read-only', () => {
   });
 });
 
-describe('CUI-003 read-only screens keep shared presentation', () => {
-  it('keeps Related Info, Alarm, Dispatch and Task read-only navigation', () => {
+describe('CUI-003 read-only screens and approved task actions', () => {
+  it('keeps shared presentation and navigation checks', () => {
     const relatedInfo = readSource('../related-info/RelatedInfoScreen.tsx');
     const detail = readSource('../related-info/RelatedInfoDetail.tsx');
     const alarm = readSource('../alarm/AlarmScreen.tsx');
@@ -42,8 +42,27 @@ describe('CUI-003 read-only screens keep shared presentation', () => {
       expect(source).toContain('mobileBaseline');
       expect(source).toContain('minWidth: 44');
       expect(source).toContain('MaskedValue');
+    }
+    for (const source of [relatedInfo, detail, alarm, dispatch]) {
       expect(source).not.toMatch(/Tạo mới|Xóa|submitOffline/i);
     }
+    expect(
+      [
+        ...new Set(
+          task.match(
+            /\b(?:resident\.record_activity|inspection\.(?:start|save_checklist|finding))\b/g,
+          ),
+        ),
+      ].sort(),
+    ).toEqual(
+      [
+        'resident.record_activity',
+        'inspection.start',
+        'inspection.save_checklist',
+        'inspection.finding',
+      ].sort(),
+    );
+    expect(task).not.toContain('submitOffline');
     expect(relatedInfo).toContain('onOpenMap');
     expect(relatedInfo).toContain('Mở bản đồ');
     expect(detail).toContain('‹ Quay lại');

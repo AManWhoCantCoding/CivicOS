@@ -158,7 +158,25 @@ export function AppNavigator({
       <SafeAreaView
         style={{ flex: 1, backgroundColor: mobileBaseline.color.canvas }}
       >
-        <View style={{ padding: mobileBaseline.space.s4 }}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: mobileBaseline.space.s2,
+            padding: mobileBaseline.space.s4,
+          }}
+        >
+          <Text
+            aria-hidden
+            style={{
+              fontFamily: mobileBaseline.font.sans,
+              fontSize: mobileBaseline.size.section,
+              color: mobileBaseline.color.info,
+            }}
+          >
+            ◌
+          </Text>
           <Text
             style={{
               fontFamily: mobileBaseline.font.sans,
@@ -177,7 +195,14 @@ export function AppNavigator({
     route === 'Map' ? (
       <View style={{ flex: 1, backgroundColor: mobileBaseline.color.canvas }}>
         {vehicleMapOrigin !== null ? (
-          <View style={{ padding: mobileBaseline.space.s2 }}>
+          <View
+            style={{
+              padding: mobileBaseline.space.s2,
+              borderBottomColor: mobileBaseline.color.border,
+              borderBottomWidth: 1,
+              backgroundColor: mobileBaseline.color.surface,
+            }}
+          >
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Quay lại"
@@ -263,42 +288,72 @@ export function AppNavigator({
           borderTopWidth: 1,
         }}
       >
-        {routes.map((item) => (
-          <Pressable
-            key={item}
-            accessibilityRole="button"
-            onPress={() => openTab(item)}
-            style={{
-              minHeight: mobileBaseline.controlMin,
-              minWidth: mobileBaseline.controlMin,
-              padding: mobileBaseline.space.s2,
-            }}
-          >
-            <Text
+        {routes.map((item) => {
+          const active = route === item;
+          return (
+            <Pressable
+              key={item}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              onPress={() => openTab(item)}
               style={{
-                fontFamily: mobileBaseline.font.sans,
-                fontSize: mobileBaseline.size.label,
-                color: mobileBaseline.color.text,
+                minHeight: mobileBaseline.controlMin,
+                minWidth: mobileBaseline.controlMin,
+                flexGrow: 1,
+                flexBasis: '18%',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 2,
+                paddingVertical: mobileBaseline.space.s2,
+                paddingHorizontal: mobileBaseline.space.s1,
+                borderTopWidth: 2,
+                borderTopColor: active
+                  ? mobileBaseline.color.accent
+                  : 'transparent',
               }}
             >
-              {item === 'Land' ? 'Đất đai' : item}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.caption,
+                  fontWeight: active ? '600' : '500',
+                  color: active
+                    ? mobileBaseline.color.accent
+                    : mobileBaseline.color.textMuted,
+                  textAlign: 'center',
+                }}
+              >
+                {item === 'Land' ? 'Đất đai' : item}
+              </Text>
+            </Pressable>
+          );
+        })}
         <Pressable
           accessibilityRole="button"
           onPress={() => void signOut()}
           style={{
             minHeight: mobileBaseline.controlMin,
             minWidth: mobileBaseline.controlMin,
-            padding: mobileBaseline.space.s2,
+            flexGrow: 1,
+            flexBasis: '18%',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 2,
+            paddingVertical: mobileBaseline.space.s2,
+            paddingHorizontal: mobileBaseline.space.s1,
+            borderLeftColor: mobileBaseline.color.border,
+            borderLeftWidth: 1,
+            borderTopWidth: 2,
+            borderTopColor: 'transparent',
           }}
         >
           <Text
             style={{
               fontFamily: mobileBaseline.font.sans,
-              fontSize: mobileBaseline.size.label,
-              color: mobileBaseline.color.text,
+              fontSize: mobileBaseline.size.caption,
+              fontWeight: '500',
+              color: mobileBaseline.color.textMuted,
+              textAlign: 'center',
             }}
           >
             Đăng xuất

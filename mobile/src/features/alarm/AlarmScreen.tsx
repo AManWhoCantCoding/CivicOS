@@ -15,6 +15,77 @@ import {
 
 type SurfaceState =
   'loading' | 'empty' | 'error' | 'forbidden' | 'masked' | 'offline' | 'ready';
+
+// Presentation-only styles from the shared Light/Blue mobile baseline.
+const backAction = {
+  minHeight: 44,
+  minWidth: 44,
+  padding: mobileBaseline.space.s2,
+  alignSelf: 'flex-start',
+  justifyContent: 'center',
+} as const;
+const primaryAction = {
+  minHeight: 44,
+  minWidth: 44,
+  padding: mobileBaseline.space.s2,
+  borderColor: mobileBaseline.color.accent,
+  borderWidth: 1,
+  borderRadius: mobileBaseline.radius.sm,
+  backgroundColor: mobileBaseline.color.accent,
+  justifyContent: 'center',
+} as const;
+const actionLabel = {
+  fontFamily: mobileBaseline.font.sans,
+  fontSize: mobileBaseline.size.label,
+  fontWeight: '600',
+  color: mobileBaseline.color.surface,
+} as const;
+const backLabel = {
+  fontFamily: mobileBaseline.font.sans,
+  fontSize: mobileBaseline.size.label,
+  color: mobileBaseline.color.accent,
+} as const;
+const listCard = {
+  minHeight: 44,
+  minWidth: 44,
+  padding: mobileBaseline.space.s3,
+  backgroundColor: mobileBaseline.color.surface,
+  borderColor: mobileBaseline.color.border,
+  borderWidth: 1,
+  borderRadius: mobileBaseline.radius.md,
+} as const;
+const detailCard = {
+  backgroundColor: mobileBaseline.color.surface,
+  borderColor: mobileBaseline.color.border,
+  borderWidth: 1,
+  borderRadius: mobileBaseline.radius.md,
+  padding: mobileBaseline.space.s3,
+  gap: mobileBaseline.space.s2,
+} as const;
+const sectionLabel = {
+  fontFamily: mobileBaseline.font.sans,
+  fontSize: mobileBaseline.size.label,
+  fontWeight: '600',
+  color: mobileBaseline.color.textMuted,
+} as const;
+const itemTitle = {
+  fontFamily: mobileBaseline.font.sans,
+  fontSize: mobileBaseline.size.body,
+  lineHeight: mobileBaseline.size.bodyLine,
+  fontWeight: '600',
+  color: mobileBaseline.color.text,
+} as const;
+const itemMeta = {
+  fontFamily: mobileBaseline.font.sans,
+  fontSize: mobileBaseline.size.label,
+  color: mobileBaseline.color.textMuted,
+} as const;
+const itemMetaMono = {
+  fontFamily: mobileBaseline.font.mono,
+  fontSize: mobileBaseline.size.label,
+  color: mobileBaseline.color.textMuted,
+} as const;
+
 export function AlarmScreen({
   onNavigate,
 }: {
@@ -53,7 +124,8 @@ export function AlarmScreen({
     return (
       <View
         style={{
-          padding: 16,
+          padding: mobileBaseline.space.s4,
+          gap: mobileBaseline.space.s2,
           backgroundColor: mobileBaseline.color.canvas,
         }}
       >
@@ -64,127 +136,97 @@ export function AlarmScreen({
   return (
     <View
       style={{
-        padding: 16,
-        gap: 8,
+        padding: mobileBaseline.space.s4,
+        gap: mobileBaseline.space.s3,
         backgroundColor: mobileBaseline.color.canvas,
       }}
     >
       {selected ? (
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: mobileBaseline.space.s2 }}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Quay lại"
             onPress={() => setSelected(null)}
-            style={{ minHeight: 44, minWidth: 44, padding: 8 }}
+            style={backAction}
           >
-            <Text
-              style={{
-                fontFamily: mobileBaseline.font.sans,
-                fontSize: mobileBaseline.size.label,
-                color: mobileBaseline.color.accent,
-              }}
-            >
-              ‹ Quay lại
-            </Text>
+            <Text style={backLabel}>‹ Quay lại</Text>
           </Pressable>
           <Text
             style={{
               fontFamily: mobileBaseline.font.sans,
               fontSize: mobileBaseline.size.title,
+              fontWeight: '600',
               color: mobileBaseline.color.text,
             }}
           >
             {selected.title}
           </Text>
-          <Text
-            style={{
-              fontFamily: mobileBaseline.font.sans,
-              fontSize: mobileBaseline.size.label,
-              color: mobileBaseline.color.textMuted,
-            }}
-          >
+          <Text style={itemMeta}>
             {selected.status} ·{' '}
-            <Text
-              style={{
-                fontFamily: mobileBaseline.font.mono,
-                fontSize: mobileBaseline.size.label,
-                color: mobileBaseline.color.textMuted,
-              }}
-            >
-              {selected.createdAt}
-            </Text>
+            <Text style={itemMetaMono}>{selected.createdAt}</Text>
           </Text>
-          {selected.assignmentSummary ? (
-            <MaskedValue value={selected.assignmentSummary.task} />
-          ) : (
-            <StateMessage state="masked" />
-          )}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              const link = deepLinkFor(selected);
-              if (link) onNavigate?.(link);
-            }}
-            style={{ minHeight: 44, minWidth: 44, padding: 8 }}
-          >
-            <Text
-              style={{
-                fontFamily: mobileBaseline.font.sans,
-                fontSize: mobileBaseline.size.label,
-                color: mobileBaseline.color.accent,
+          <View style={detailCard}>
+            {selected.assignmentSummary ? (
+              <MaskedValue value={selected.assignmentSummary.task} />
+            ) : (
+              <StateMessage state="masked" />
+            )}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                const link = deepLinkFor(selected);
+                if (link) onNavigate?.(link);
               }}
+              style={primaryAction}
             >
-              {isVehicleObservationLink(selected)
-                ? 'Mở chi tiết'
-                : 'Mở liên kết tài nguyên'}
-            </Text>
-          </Pressable>
+              <Text style={actionLabel}>
+                {isVehicleObservationLink(selected)
+                  ? 'Mở chi tiết'
+                  : 'Mở liên kết tài nguyên'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
       ) : (
         <>
           {state === 'masked' && <StateMessage state="masked" />}
+          {alarms.length > 0 && (
+            <Text style={sectionLabel}>Danh sách</Text>
+          )}
           {alarms.map((alarm) => (
             <Pressable
               key={alarm.id}
               accessibilityRole="button"
               onPress={() => setSelected(alarm)}
-              style={{
-                minHeight: 44,
-                minWidth: 44,
-                padding: 8,
-                backgroundColor: mobileBaseline.color.surface,
-                borderColor: mobileBaseline.color.border,
-                borderWidth: 1,
-                borderRadius: mobileBaseline.radius.md,
-              }}
+              style={listCard}
             >
-              <Text
+              <View
                 style={{
-                  fontFamily: mobileBaseline.font.sans,
-                  fontSize: mobileBaseline.size.body,
-                  color: mobileBaseline.color.text,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: mobileBaseline.space.s2,
                 }}
               >
-                {alarm.title}
-              </Text>
-              <Text
-                style={{
-                  fontFamily: mobileBaseline.font.sans,
-                  fontSize: mobileBaseline.size.label,
-                  color: mobileBaseline.color.textMuted,
-                }}
-              >
-                {alarm.status} ·{' '}
+                <View style={{ flex: 1, gap: mobileBaseline.space.s1 }}>
+                  <Text style={itemTitle} numberOfLines={2}>
+                    {alarm.title}
+                  </Text>
+                  <Text style={itemMeta}>
+                    {alarm.status} ·{' '}
+                    <Text style={itemMetaMono}>{alarm.createdAt}</Text>
+                  </Text>
+                </View>
                 <Text
                   style={{
-                    fontFamily: mobileBaseline.font.mono,
-                    fontSize: mobileBaseline.size.label,
+                    fontFamily: mobileBaseline.font.sans,
+                    fontSize: mobileBaseline.size.section,
                     color: mobileBaseline.color.textMuted,
                   }}
+                  accessibilityElementsHidden={true}
                 >
-                  {alarm.createdAt}
+                  ›
                 </Text>
-              </Text>
+              </View>
             </Pressable>
           ))}
         </>

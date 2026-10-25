@@ -147,6 +147,7 @@ export function StateMessage({
         backgroundColor: background,
         borderColor: color,
         borderWidth: 1,
+        borderLeftWidth: 3,
         borderRadius: mobileBaseline.radius.md,
       }}
     >
@@ -156,6 +157,7 @@ export function StateMessage({
           fontSize: mobileBaseline.size.body,
           lineHeight: mobileBaseline.size.bodyLine,
           color,
+          fontWeight: '600',
         }}
       >
         <Text>{stateIcon(state)} </Text>
@@ -207,9 +209,10 @@ export function OfflineBanner() {
       style={{
         padding: mobileBaseline.space.s2,
         gap: mobileBaseline.space.s1,
-        backgroundColor: mobileBaseline.color.surface,
+        backgroundColor: mobileBaseline.color.surfaceMuted,
         borderColor: mobileBaseline.color.info,
         borderWidth: 1,
+        borderLeftWidth: 3,
         borderRadius: mobileBaseline.radius.sm,
       }}
     >
@@ -218,6 +221,7 @@ export function OfflineBanner() {
         style={{
           fontFamily: mobileBaseline.font.sans,
           fontSize: mobileBaseline.size.label,
+          fontWeight: '600',
           color: mobileBaseline.color.info,
         }}
       >

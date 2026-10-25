@@ -8,6 +8,7 @@ export type ForceLink = {
   coordinates?: { lat: number; lng: number };
   relatedInfo?: { entityType: RelatedInfoEntityType; id: string };
   assignmentSummary?: { assignmentId: string; task: string; status: string };
+  baseVersion?: number;
 };
 export type ForceItem = ForceLink & {
   id: string;

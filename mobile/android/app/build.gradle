@@ -7,4 +7,4 @@ android { namespace 'com.civicosmobile'; compileSdk 35
     buildFeatures { buildConfig true }
 }
 
-dependencies { implementation 'com.facebook.react:react-android'; implementation 'org.jetbrains.kotlin:kotlin-stdlib:2.0.21' }
+dependencies { implementation 'com.facebook.react:react-android'; implementation 'com.facebook.react:hermes-android'; implementation 'org.jetbrains.kotlin:kotlin-stdlib:2.0.21' }

@@ -8,6 +8,7 @@ import React, {
 import { onSessionExpired } from '../api/client';
 import { getSession, logout } from '../api/session';
 import type { SessionState } from '../api/session';
+import { clearQueue } from '../features/task/activityQueue';
 
 type SessionContextValue = {
   session: SessionState;
@@ -28,14 +29,28 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const timer = setTimeout(() => void refresh(), 0);
     return () => clearTimeout(timer);
   }, [refresh]);
-  useEffect(
-    () => onSessionExpired(() => setSession({ status: 'expired' })),
-    [onSessionExpired],
-  );
+  useEffect(() => {
+    const userId = session.user?.id;
+    return onSessionExpired(() => {
+      if (userId) {
+        try {
+          clearQueue(userId);
+        } catch {
+          /* fail closed; session still expires */
+        }
+      }
+      setSession({ status: 'expired' });
+    });
+  }, [session.user?.id]);
   const signOut = useCallback(async () => {
-    await logout();
-    setSession({ status: 'unauthenticated' });
-  }, []);
+    const userId = session.user?.id;
+    try {
+      if (userId) clearQueue(userId);
+    } finally {
+      await logout();
+      setSession({ status: 'unauthenticated' });
+    }
+  }, [session.user?.id]);
   return (
     <SessionContext.Provider value={{ session, refresh, signOut }}>
       {children}

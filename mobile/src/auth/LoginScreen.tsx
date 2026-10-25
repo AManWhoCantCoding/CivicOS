@@ -76,7 +76,7 @@ export function LoginScreen() {
           accessibilityRole="button"
           onPress={() => void submit()}
           style={{
-            minHeight: mobileBaseline.controlMin,
+            minHeight: mobileBaseline.controlMin + 1,
             minWidth: mobileBaseline.controlMin,
             padding: mobileBaseline.space.s2,
             borderColor: mobileBaseline.color.accent,

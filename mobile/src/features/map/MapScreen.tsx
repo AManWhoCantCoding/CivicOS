@@ -419,12 +419,12 @@ export function MapScreen({
           top: 12,
           left: 12,
           right: 12,
-          gap: 8,
+          gap: mobileBaseline.space.s2,
           backgroundColor: mobileBaseline.color.surface,
           borderColor: mobileBaseline.color.border,
           borderWidth: 1,
           borderRadius: mobileBaseline.radius.md,
-          padding: 12,
+          padding: mobileBaseline.space.s3,
         }}
       >
         <Text
@@ -466,8 +466,58 @@ export function MapScreen({
             style={{
               minHeight: 44,
               minWidth: 44,
-              padding: 8,
-              borderColor: mobileBaseline.color.border,
+              padding: mobileBaseline.space.s2,
+              justifyContent: 'center',
+              borderColor: mobileBaseline.color.accent,
+              borderWidth: 1,
+              borderRadius: mobileBaseline.radius.sm,
+              backgroundColor: mobileBaseline.color.accent,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.label,
+                fontWeight: '600',
+                textAlign: 'center',
+                color: mobileBaseline.color.surface,
+              }}
+            >
+              Tải basemap để xem ngoại tuyến
+            </Text>
+          </Pressable>
+        ) : null}
+        {layers.length > 0 && (
+          <Text
+            style={{
+              fontFamily: mobileBaseline.font.sans,
+              fontSize: mobileBaseline.size.label,
+              fontWeight: '600',
+              color: mobileBaseline.color.textMuted,
+            }}
+          >
+            Lớp bản đồ
+          </Text>
+        )}
+        {layers.map((layer) => (
+          <Pressable
+            key={layer.id}
+            accessibilityRole="button"
+            accessibilityState={{ selected: visible[layer.id] === true }}
+            onPress={() =>
+              setVisible((current) => ({
+                ...current,
+                [layer.id]: !current[layer.id],
+              }))
+            }
+            style={{
+              minHeight: 44,
+              minWidth: 44,
+              padding: mobileBaseline.space.s2,
+              justifyContent: 'center',
+              borderColor: visible[layer.id]
+                ? mobileBaseline.color.accent
+                : mobileBaseline.color.border,
               borderWidth: 1,
               borderRadius: mobileBaseline.radius.sm,
               backgroundColor: mobileBaseline.color.surface,
@@ -477,30 +527,10 @@ export function MapScreen({
               style={{
                 fontFamily: mobileBaseline.font.sans,
                 fontSize: mobileBaseline.size.label,
-                color: mobileBaseline.color.accent,
-              }}
-            >
-              Tải basemap để xem ngoại tuyến
-            </Text>
-          </Pressable>
-        ) : null}
-        {layers.map((layer) => (
-          <Pressable
-            key={layer.id}
-            accessibilityRole="button"
-            onPress={() =>
-              setVisible((current) => ({
-                ...current,
-                [layer.id]: !current[layer.id],
-              }))
-            }
-            style={{ minHeight: 44, minWidth: 44, padding: 8 }}
-          >
-            <Text
-              style={{
-                fontFamily: mobileBaseline.font.sans,
-                fontSize: mobileBaseline.size.label,
-                color: mobileBaseline.color.text,
+                fontWeight: visible[layer.id] ? '600' : '500',
+                color: visible[layer.id]
+                  ? mobileBaseline.color.accent
+                  : mobileBaseline.color.text,
               }}
             >{`${visible[layer.id] ? 'Ẩn' : 'Hiện'} ${layer.label}`}</Text>
           </Pressable>
@@ -514,23 +544,41 @@ export function MapScreen({
             bottom: 12,
             left: 12,
             right: 12,
-            gap: 8,
+            gap: mobileBaseline.space.s3,
             backgroundColor: mobileBaseline.color.surface,
             borderColor: mobileBaseline.color.border,
             borderWidth: 1,
             borderRadius: mobileBaseline.radius.lg,
-            padding: 12,
+            padding: mobileBaseline.space.s4,
           }}
         >
-          {landState === 'loading' && <Text>Đang tải dữ liệu thửa đất…</Text>}
+          {landState === 'loading' && (
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.body,
+                lineHeight: mobileBaseline.size.bodyLine,
+                color: mobileBaseline.color.textMuted,
+              }}
+            >
+              Đang tải dữ liệu thửa đất…
+            </Text>
+          )}
           {landState === 'ready' && landParcel ? (
-            <View style={{ gap: 8 }}>
+            <View style={{ gap: mobileBaseline.space.s2 }}>
               <Text
                 style={{
                   fontFamily: mobileBaseline.font.sans,
                   fontSize: mobileBaseline.size.caption,
+                  fontWeight: '600',
+                  alignSelf: 'flex-start',
                   color: mobileBaseline.color.simulatedText,
                   backgroundColor: mobileBaseline.color.simulatedBg,
+                  borderColor: mobileBaseline.color.simulatedText,
+                  borderWidth: 1,
+                  borderRadius: mobileBaseline.radius.sm,
+                  paddingHorizontal: mobileBaseline.space.s2,
+                  paddingVertical: mobileBaseline.space.s1,
                 }}
               >
                 internal / simulated
@@ -568,6 +616,9 @@ export function MapScreen({
                   fontFamily: mobileBaseline.font.mono,
                   fontSize: mobileBaseline.size.label,
                   color: mobileBaseline.color.textMuted,
+                  borderTopWidth: 1,
+                  borderTopColor: mobileBaseline.color.border,
+                  paddingTop: mobileBaseline.space.s2,
                 }}
               >
                 Cập nhật: {landParcel.parcel.updatedAt}
@@ -576,6 +627,7 @@ export function MapScreen({
                 style={{
                   fontFamily: mobileBaseline.font.sans,
                   fontSize: mobileBaseline.size.label,
+                  lineHeight: mobileBaseline.size.bodyLine,
                   color: mobileBaseline.color.simulatedText,
                 }}
               >
@@ -589,18 +641,21 @@ export function MapScreen({
                 style={{
                   minHeight: 44,
                   minWidth: 44,
-                  padding: 8,
+                  padding: mobileBaseline.space.s2,
+                  justifyContent: 'center',
                   borderColor: mobileBaseline.color.accent,
                   borderWidth: 1,
                   borderRadius: mobileBaseline.radius.sm,
-                  backgroundColor: mobileBaseline.color.surface,
+                  backgroundColor: mobileBaseline.color.accent,
                 }}
               >
                 <Text
                   style={{
                     fontFamily: mobileBaseline.font.sans,
                     fontSize: mobileBaseline.size.label,
-                    color: mobileBaseline.color.accent,
+                    fontWeight: '600',
+                    textAlign: 'center',
+                    color: mobileBaseline.color.surface,
                   }}
                 >
                   Mở chi tiết thửa
@@ -610,12 +665,22 @@ export function MapScreen({
                 accessibilityRole="button"
                 accessibilityLabel="Tải lại dữ liệu"
                 onPress={reloadLandParcel}
-                style={{ minHeight: 44, minWidth: 44, padding: 8 }}
+                style={{
+                  minHeight: 44,
+                  minWidth: 44,
+                  padding: mobileBaseline.space.s2,
+                  justifyContent: 'center',
+                  borderColor: mobileBaseline.color.border,
+                  borderWidth: 1,
+                  borderRadius: mobileBaseline.radius.sm,
+                  backgroundColor: mobileBaseline.color.surface,
+                }}
               >
                 <Text
                   style={{
                     fontFamily: mobileBaseline.font.sans,
                     fontSize: mobileBaseline.size.label,
+                    textAlign: 'center',
                     color: mobileBaseline.color.text,
                   }}
                 >
@@ -625,49 +690,146 @@ export function MapScreen({
             </View>
           ) : null}
           {landState === 'forbidden' && (
-            <View style={{ gap: 8 }}>
-              <Text>Không được phép xem thửa đất này</Text>
+            <View style={{ gap: mobileBaseline.space.s2 }}>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.body,
+                  fontWeight: '600',
+                  color: mobileBaseline.color.text,
+                }}
+              >
+                Không được phép xem thửa đất này
+              </Text>
               <StateMessage state="forbidden" />
             </View>
           )}
           {landState === 'not-found' && (
-            <View style={{ gap: 8 }}>
-              <Text>Không tìm thấy thửa đất</Text>
-              <Text>
+            <View style={{ gap: mobileBaseline.space.s2 }}>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.body,
+                  fontWeight: '600',
+                  color: mobileBaseline.color.text,
+                }}
+              >
+                Không tìm thấy thửa đất
+              </Text>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.body,
+                  lineHeight: mobileBaseline.size.bodyLine,
+                  color: mobileBaseline.color.textMuted,
+                }}
+              >
                 Thửa đất không tồn tại hoặc không nằm trong phạm vi truy cập.
               </Text>
             </View>
           )}
           {landState === 'geometry' && (
-            <View style={{ gap: 8 }}>
-              <Text>Không thể hiển thị hình học thửa đất</Text>
-              <Text>Dữ liệu hình học hiện không sẵn sàng để hiển thị.</Text>
+            <View style={{ gap: mobileBaseline.space.s2 }}>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.body,
+                  fontWeight: '600',
+                  color: mobileBaseline.color.text,
+                }}
+              >
+                Không thể hiển thị hình học thửa đất
+              </Text>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.body,
+                  lineHeight: mobileBaseline.size.bodyLine,
+                  color: mobileBaseline.color.textMuted,
+                }}
+              >
+                Dữ liệu hình học hiện không sẵn sàng để hiển thị.
+              </Text>
             </View>
           )}
           {landState === 'provider' && (
-            <View style={{ gap: 8 }}>
-              <Text>Bản đồ nền hiện không khả dụng</Text>
+            <View style={{ gap: mobileBaseline.space.s2 }}>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.body,
+                  fontWeight: '600',
+                  color: mobileBaseline.color.text,
+                }}
+              >
+                Bản đồ nền hiện không khả dụng
+              </Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Thử lại"
                 onPress={reloadLandParcel}
-                style={{ minHeight: 44, minWidth: 44, padding: 8 }}
+                style={{
+                  minHeight: 44,
+                  minWidth: 44,
+                  padding: mobileBaseline.space.s2,
+                  justifyContent: 'center',
+                  borderColor: mobileBaseline.color.border,
+                  borderWidth: 1,
+                  borderRadius: mobileBaseline.radius.sm,
+                  backgroundColor: mobileBaseline.color.surface,
+                }}
               >
-                <Text>Thử lại</Text>
+                <Text
+                  style={{
+                    fontFamily: mobileBaseline.font.sans,
+                    fontSize: mobileBaseline.size.label,
+                    textAlign: 'center',
+                    color: mobileBaseline.color.text,
+                  }}
+                >
+                  Thử lại
+                </Text>
               </Pressable>
             </View>
           )}
           {landState === 'offline' && (
-            <View style={{ gap: 8 }}>
+            <View style={{ gap: mobileBaseline.space.s2 }}>
               <OfflineBanner />
-              <Text>Polygon thửa đất không được lưu trong bộ nhớ offline.</Text>
+              <Text
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.body,
+                  lineHeight: mobileBaseline.size.bodyLine,
+                  color: mobileBaseline.color.textMuted,
+                }}
+              >
+                Polygon thửa đất không được lưu trong bộ nhớ offline.
+              </Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Thử lại khi có kết nối"
                 onPress={reloadLandParcel}
-                style={{ minHeight: 44, minWidth: 44, padding: 8 }}
+                style={{
+                  minHeight: 44,
+                  minWidth: 44,
+                  padding: mobileBaseline.space.s2,
+                  justifyContent: 'center',
+                  borderColor: mobileBaseline.color.border,
+                  borderWidth: 1,
+                  borderRadius: mobileBaseline.radius.sm,
+                  backgroundColor: mobileBaseline.color.surface,
+                }}
               >
-                <Text>Thử lại khi có kết nối</Text>
+                <Text
+                  style={{
+                    fontFamily: mobileBaseline.font.sans,
+                    fontSize: mobileBaseline.size.label,
+                    textAlign: 'center',
+                    color: mobileBaseline.color.text,
+                  }}
+                >
+                  Thử lại khi có kết nối
+                </Text>
               </Pressable>
             </View>
           )}
@@ -678,9 +840,27 @@ export function MapScreen({
             accessibilityRole="button"
             accessibilityLabel="Quay lại bản đồ"
             onPress={dismissLandFocus}
-            style={{ minHeight: 44, minWidth: 44, padding: 8 }}
+            style={{
+              minHeight: 44,
+              minWidth: 44,
+              padding: mobileBaseline.space.s2,
+              justifyContent: 'center',
+              alignSelf: 'flex-start',
+              borderColor: mobileBaseline.color.border,
+              borderWidth: 1,
+              borderRadius: mobileBaseline.radius.sm,
+              backgroundColor: mobileBaseline.color.surface,
+            }}
           >
-            <Text>Quay lại bản đồ</Text>
+            <Text
+              style={{
+                fontFamily: mobileBaseline.font.sans,
+                fontSize: mobileBaseline.size.label,
+                color: mobileBaseline.color.text,
+              }}
+            >
+              Quay lại bản đồ
+            </Text>
           </Pressable>
         </View>
       ) : null}

@@ -41,25 +41,58 @@ export function vehicleCoordinates(
   return { lat, lng };
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+// Presentation-only styles from the shared Light/Blue mobile baseline.
+const detailCard = {
+  backgroundColor: mobileBaseline.color.surface,
+  borderColor: mobileBaseline.color.border,
+  borderWidth: 1,
+  borderRadius: mobileBaseline.radius.md,
+  padding: mobileBaseline.space.s3,
+  gap: mobileBaseline.space.s3,
+} as const;
+const fieldLabel = {
+  fontFamily: mobileBaseline.font.sans,
+  fontSize: mobileBaseline.size.caption,
+  fontWeight: '600',
+  color: mobileBaseline.color.textMuted,
+} as const;
+const fieldValue = {
+  fontFamily: mobileBaseline.font.sans,
+  fontSize: mobileBaseline.size.body,
+  lineHeight: mobileBaseline.size.bodyLine,
+  color: mobileBaseline.color.text,
+} as const;
+const backAction = {
+  minHeight: 44,
+  minWidth: 44,
+  padding: mobileBaseline.space.s2,
+  alignSelf: 'flex-start',
+  justifyContent: 'center',
+} as const;
+
+function Field({
+  label,
+  value,
+  emphasize,
+}: {
+  label: string;
+  value: string;
+  emphasize?: boolean;
+}) {
   return (
     <View style={{ gap: mobileBaseline.space.s1 }}>
+      <Text style={fieldLabel}>{label}</Text>
       <Text
-        style={{
-          fontFamily: mobileBaseline.font.sans,
-          fontSize: mobileBaseline.size.label,
-          color: mobileBaseline.color.textMuted,
-        }}
-      >
-        {label}
-      </Text>
-      <Text
-        style={{
-          fontFamily: mobileBaseline.font.sans,
-          fontSize: mobileBaseline.size.body,
-          lineHeight: mobileBaseline.size.bodyLine,
-          color: mobileBaseline.color.text,
-        }}
+        style={
+          emphasize
+            ? {
+                ...fieldValue,
+                fontSize: mobileBaseline.size.section,
+                fontWeight: '600',
+                lineHeight: mobileBaseline.size.bodyLine,
+              }
+            : fieldValue
+        }
       >
         {value}
       </Text>
@@ -104,8 +137,8 @@ export function VehicleObservationDetail({
   return (
     <View
       style={{
-        padding: 16,
-        gap: 8,
+        padding: mobileBaseline.space.s4,
+        gap: mobileBaseline.space.s3,
         backgroundColor: mobileBaseline.color.canvas,
       }}
     >
@@ -113,7 +146,7 @@ export function VehicleObservationDetail({
         accessibilityRole="button"
         accessibilityLabel="Quay lại"
         onPress={onBack}
-        style={{ minHeight: 44, minWidth: 44, padding: 8 }}
+        style={backAction}
       >
         <Text
           style={{
@@ -126,14 +159,34 @@ export function VehicleObservationDetail({
         </Text>
       </Pressable>
       {state === 'ready' && detail ? (
-        <View style={{ gap: 8 }}>
-          <Field label="Biển số" value={detail.plate} />
+        <View style={detailCard}>
+          <Field label="Biển số" value={detail.plate} emphasize={true} />
           <Field label="Trạng thái" value={detail.status} />
           <Field label="Thời điểm quan sát" value={detail.observedAt} />
-          <Field label="Vĩ độ" value={detail.latitude} />
-          <Field label="Kinh độ" value={detail.longitude} />
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: mobileBaseline.space.s3,
+            }}
+          >
+            <View style={{ flexBasis: '40%', minWidth: 44, flexGrow: 1 }}>
+              <Field label="Vĩ độ" value={detail.latitude} />
+            </View>
+            <View style={{ flexBasis: '40%', minWidth: 44, flexGrow: 1 }}>
+              <Field label="Kinh độ" value={detail.longitude} />
+            </View>
+          </View>
           {assignmentSummary ? (
-            <MaskedValue value={assignmentSummary.task} />
+            <View
+              style={{
+                borderTopWidth: 1,
+                borderTopColor: mobileBaseline.color.border,
+                paddingTop: mobileBaseline.space.s2,
+              }}
+            >
+              <MaskedValue value={assignmentSummary.task} />
+            </View>
           ) : null}
           {coordinates ? (
             <Pressable
@@ -147,13 +200,24 @@ export function VehicleObservationDetail({
                   assignmentSummary,
                 })
               }
-              style={{ minHeight: 44, minWidth: 44, padding: 8 }}
+              style={{
+                minHeight: 44,
+                minWidth: 44,
+                padding: mobileBaseline.space.s2,
+                justifyContent: 'center',
+                borderColor: mobileBaseline.color.accent,
+                borderWidth: 1,
+                borderRadius: mobileBaseline.radius.sm,
+                backgroundColor: mobileBaseline.color.accent,
+              }}
             >
               <Text
                 style={{
                   fontFamily: mobileBaseline.font.sans,
                   fontSize: mobileBaseline.size.label,
-                  color: mobileBaseline.color.accent,
+                  fontWeight: '600',
+                  textAlign: 'center',
+                  color: mobileBaseline.color.surface,
                 }}
               >
                 Mở bản đồ

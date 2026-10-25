@@ -344,6 +344,7 @@ export function LandScreen({
           style={{
             fontFamily: mobileBaseline.font.sans,
             fontSize: mobileBaseline.size.title,
+            fontWeight: '600',
             color: mobileBaseline.color.text,
           }}
         >
@@ -368,17 +369,41 @@ export function LandScreen({
           >
             Tra cứu theo
           </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: mobileBaseline.space.s1,
+            }}
+          >
             <Pressable
               accessibilityRole="button"
+              accessibilityState={{ selected: mode === 'applicationCode' }}
               onPress={() => setMode('applicationCode')}
-              style={{ minHeight: 44, minWidth: 44, padding: 8 }}
+              style={{
+                minHeight: 44,
+                minWidth: 44,
+                paddingHorizontal: mobileBaseline.space.s2,
+                paddingVertical: mobileBaseline.space.s1,
+                justifyContent: 'center',
+                borderColor:
+                  mode === 'applicationCode'
+                    ? mobileBaseline.color.accent
+                    : mobileBaseline.color.border,
+                borderWidth: 1,
+                borderRadius: mobileBaseline.radius.sm,
+                backgroundColor: mobileBaseline.color.surface,
+              }}
             >
               <Text
                 style={{
                   fontFamily: mobileBaseline.font.sans,
                   fontSize: mobileBaseline.size.label,
-                  color: mobileBaseline.color.text,
+                  fontWeight: mode === 'applicationCode' ? '600' : '500',
+                  color:
+                    mode === 'applicationCode'
+                      ? mobileBaseline.color.accent
+                      : mobileBaseline.color.text,
                 }}
               >
                 Mã hồ sơ
@@ -386,14 +411,32 @@ export function LandScreen({
             </Pressable>
             <Pressable
               accessibilityRole="button"
+              accessibilityState={{ selected: mode === 'parcelCode' }}
               onPress={() => setMode('parcelCode')}
-              style={{ minHeight: 44, minWidth: 44, padding: 8 }}
+              style={{
+                minHeight: 44,
+                minWidth: 44,
+                paddingHorizontal: mobileBaseline.space.s2,
+                paddingVertical: mobileBaseline.space.s1,
+                justifyContent: 'center',
+                borderColor:
+                  mode === 'parcelCode'
+                    ? mobileBaseline.color.accent
+                    : mobileBaseline.color.border,
+                borderWidth: 1,
+                borderRadius: mobileBaseline.radius.sm,
+                backgroundColor: mobileBaseline.color.surface,
+              }}
             >
               <Text
                 style={{
                   fontFamily: mobileBaseline.font.sans,
                   fontSize: mobileBaseline.size.label,
-                  color: mobileBaseline.color.text,
+                  fontWeight: mode === 'parcelCode' ? '600' : '500',
+                  color:
+                    mode === 'parcelCode'
+                      ? mobileBaseline.color.accent
+                      : mobileBaseline.color.text,
                 }}
               >
                 Mã thửa
@@ -422,18 +465,22 @@ export function LandScreen({
             style={{
               minHeight: 44,
               minWidth: 44,
-              padding: 8,
+              padding: mobileBaseline.space.s2,
+              justifyContent: 'center',
+              opacity: publicState === 'loading' ? 0.6 : 1,
               borderColor: mobileBaseline.color.accent,
               borderWidth: 1,
               borderRadius: mobileBaseline.radius.sm,
-              backgroundColor: mobileBaseline.color.surface,
+              backgroundColor: mobileBaseline.color.accent,
             }}
           >
             <Text
               style={{
                 fontFamily: mobileBaseline.font.sans,
                 fontSize: mobileBaseline.size.label,
-                color: mobileBaseline.color.accent,
+                fontWeight: '600',
+                textAlign: 'center',
+                color: mobileBaseline.color.surface,
               }}
             >
               Tra cứu
@@ -463,7 +510,18 @@ export function LandScreen({
         {publicState === 'error' && (
           <StateMessage state="error" retry={retry} />
         )}
-        {errorMessage && publicState !== 'ready' && <Text>{errorMessage}</Text>}
+        {errorMessage && publicState !== 'ready' && (
+          <Text
+            style={{
+              fontFamily: mobileBaseline.font.sans,
+              fontSize: mobileBaseline.size.body,
+              lineHeight: mobileBaseline.size.bodyLine,
+              color: mobileBaseline.color.danger,
+            }}
+          >
+            {errorMessage}
+          </Text>
+        )}
 
         {snapshot.lookup && hasLookupResult && (
           <View
@@ -524,6 +582,7 @@ export function LandScreen({
               style={{
                 fontFamily: mobileBaseline.font.sans,
                 fontSize: mobileBaseline.size.section,
+                fontWeight: '600',
                 color: mobileBaseline.color.text,
               }}
             >
@@ -602,18 +661,21 @@ export function LandScreen({
                     style={{
                       minHeight: 44,
                       minWidth: 44,
-                      padding: 8,
+                      padding: mobileBaseline.space.s2,
+                      justifyContent: 'center',
                       borderColor: mobileBaseline.color.accent,
                       borderWidth: 1,
                       borderRadius: mobileBaseline.radius.sm,
-                      backgroundColor: mobileBaseline.color.surface,
+                      backgroundColor: mobileBaseline.color.accent,
                     }}
                   >
                     <Text
                       style={{
                         fontFamily: mobileBaseline.font.sans,
                         fontSize: mobileBaseline.size.label,
-                        color: mobileBaseline.color.accent,
+                        fontWeight: '600',
+                        textAlign: 'center',
+                        color: mobileBaseline.color.surface,
                       }}
                     >
                       Xem trên bản đồ
@@ -640,13 +702,22 @@ export function LandScreen({
                   style={{
                     fontFamily: mobileBaseline.font.sans,
                     fontSize: mobileBaseline.size.section,
+                    fontWeight: '600',
                     color: mobileBaseline.color.text,
                   }}
                 >
                   Lịch sử xử lý
                 </Text>
                 {snapshot.timeline.map((event, index) => (
-                  <View key={`${event.eventType}:${event.occurredAt}:${index}`}>
+                  <View
+                    key={`${event.eventType}:${event.occurredAt}:${index}`}
+                    style={{
+                      gap: mobileBaseline.space.s1,
+                      borderTopWidth: index > 0 ? 1 : 0,
+                      borderTopColor: mobileBaseline.color.border,
+                      paddingTop: index > 0 ? mobileBaseline.space.s2 : 0,
+                    }}
+                  >
                     <Text style={bodyLine}>{event.eventType}</Text>
                     <Text style={metaLine}>Người thực hiện:</Text>
                     <MaskedValue {...event.actor} />

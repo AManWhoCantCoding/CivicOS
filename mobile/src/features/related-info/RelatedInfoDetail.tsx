@@ -13,6 +13,29 @@ import type { RelatedInfoItem, RelatedInfoReference } from './types';
 type DetailState =
   'loading' | 'error' | 'forbidden' | 'offline' | 'empty' | 'masked';
 
+// Presentation-only styles from the shared Light/Blue mobile baseline.
+const backAction = {
+  minHeight: 44,
+  minWidth: 44,
+  padding: mobileBaseline.space.s2,
+  alignSelf: 'flex-start',
+  justifyContent: 'center',
+} as const;
+const detailCard = {
+  backgroundColor: mobileBaseline.color.surface,
+  borderColor: mobileBaseline.color.border,
+  borderWidth: 1,
+  borderRadius: mobileBaseline.radius.md,
+  padding: mobileBaseline.space.s3,
+  gap: mobileBaseline.space.s2,
+} as const;
+const primaryAction = {
+  minHeight: 44,
+  minWidth: 44,
+  padding: mobileBaseline.space.s2,
+  justifyContent: 'center',
+} as const;
+
 export function RelatedInfoDetail({
   item,
   onBack,
@@ -58,7 +81,7 @@ export function RelatedInfoDetail({
           accessibilityRole="button"
           accessibilityLabel="Quay lại"
           onPress={onBack}
-          style={{ minHeight: 44, minWidth: 44, padding: 8 }}
+          style={backAction}
         >
           <Text
             style={{
@@ -89,71 +112,87 @@ export function RelatedInfoDetail({
               style={{
                 fontFamily: mobileBaseline.font.sans,
                 fontSize: mobileBaseline.size.title,
+                fontWeight: '600',
                 color: mobileBaseline.color.text,
               }}
             >
               {detail.title}
             </Text>
-            <Text
-              style={{
-                fontFamily: mobileBaseline.font.sans,
-                fontSize: mobileBaseline.size.label,
-                color: mobileBaseline.color.textMuted,
-              }}
-            >
-              {detail.status}
-            </Text>
-            <MaskedValue value={detail.address} masked={detail.masked} />
-            <Text
-              style={{
-                fontFamily: mobileBaseline.font.mono,
-                fontSize: mobileBaseline.size.label,
-                color: mobileBaseline.color.textMuted,
-              }}
-            >
-              {detail.updatedAt}
-            </Text>
-            {!detail.masked &&
-              (detail.geometry || detail.lat !== undefined) && (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Mở trên bản đồ"
-                  onPress={() => onOpenMap?.(detail)}
-                  style={{ minHeight: 44, minWidth: 44, padding: 8 }}
+            <View style={detailCard}>
+              <>
+                <Text
+                  style={{
+                    fontFamily: mobileBaseline.font.sans,
+                    fontSize: mobileBaseline.size.label,
+                    color: mobileBaseline.color.textMuted,
+                  }}
                 >
+                  {detail.status}
+                </Text>
+                <MaskedValue value={detail.address} masked={detail.masked} />
+                <Text
+                  style={{
+                    fontFamily: mobileBaseline.font.mono,
+                    fontSize: mobileBaseline.size.label,
+                    color: mobileBaseline.color.textMuted,
+                    borderTopWidth: 1,
+                    borderTopColor: mobileBaseline.color.border,
+                    paddingTop: mobileBaseline.space.s2,
+                  }}
+                >
+                  {detail.updatedAt}
+                </Text>
+                {!detail.masked &&
+                  (detail.geometry || detail.lat !== undefined) && (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Mở trên bản đồ"
+                      onPress={() => onOpenMap?.(detail)}
+                      style={{
+                        ...primaryAction,
+                        borderColor: mobileBaseline.color.accent,
+                        borderWidth: 1,
+                        borderRadius: mobileBaseline.radius.sm,
+                        backgroundColor: mobileBaseline.color.accent,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: mobileBaseline.font.sans,
+                          fontSize: mobileBaseline.size.label,
+                          fontWeight: '600',
+                          textAlign: 'center',
+                          color: mobileBaseline.color.surface,
+                        }}
+                      >
+                        Mở trên bản đồ
+                      </Text>
+                    </Pressable>
+                  )}
+                {!detail.masked && detail.geometry && (
                   <Text
                     style={{
                       fontFamily: mobileBaseline.font.sans,
-                      fontSize: mobileBaseline.size.label,
-                      color: mobileBaseline.color.accent,
+                      fontSize: mobileBaseline.size.caption,
+                      color: mobileBaseline.color.textMuted,
                     }}
                   >
-                    Mở trên bản đồ
+                    Polygon/geometry từ response server
                   </Text>
-                </Pressable>
-              )}
-            {!detail.masked && detail.geometry && (
-              <Text
-                style={{
-                  fontFamily: mobileBaseline.font.sans,
-                  fontSize: mobileBaseline.size.caption,
-                  color: mobileBaseline.color.textMuted,
-                }}
-              >
-                Polygon/geometry từ response server
-              </Text>
-            )}
-            {!detail.masked && detail.lat !== undefined && (
-              <Text
-                style={{
-                  fontFamily: mobileBaseline.font.mono,
-                  fontSize: mobileBaseline.size.label,
-                  color: mobileBaseline.color.textMuted,
-                }}
-              >
-                Vị trí: {detail.lat}, {detail.lng}
-              </Text>
-            )}
+                )}
+                {!detail.masked && detail.lat !== undefined && (
+                  <Text
+                    style={{
+                      fontFamily: mobileBaseline.font.mono,
+                      fontSize: mobileBaseline.size.label,
+                      color: mobileBaseline.color.textMuted,
+                    }}
+                  >
+                    Vị trí: {detail.lat}, {detail.lng}
+                  </Text>
+                )}
+              </>
+            </View>
           </>
         )}
       </View>

@@ -50,7 +50,7 @@ export async function requestJson<T>(
   const method = (init?.method ?? 'GET').toUpperCase();
   const offline =
     typeof navigator !== 'undefined' && navigator.onLine === false;
-  const blocked = assertReadOnly(method, offline, path);
+  const blocked = assertReadOnly(method, offline, path, init?.body);
   if (blocked) throw new ApiError(0, blocked.reason, blocked);
   try {
     const response = await fetch(`${apiBaseUrl()}${path}`, {

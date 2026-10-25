@@ -119,6 +119,7 @@ export function IncidentScreen({
         style={{
           fontFamily: mobileBaseline.font.sans,
           fontSize: mobileBaseline.size.title,
+          fontWeight: '600',
           color: mobileBaseline.color.text,
         }}
       >
@@ -151,7 +152,14 @@ export function IncidentScreen({
             style={{
               fontFamily: mobileBaseline.font.mono,
               fontSize: mobileBaseline.size.label,
+              alignSelf: 'flex-start',
               color: mobileBaseline.color.text,
+              backgroundColor: mobileBaseline.color.surfaceMuted,
+              borderColor: mobileBaseline.color.border,
+              borderWidth: 1,
+              borderRadius: mobileBaseline.radius.sm,
+              paddingHorizontal: mobileBaseline.space.s2,
+              paddingVertical: mobileBaseline.space.s1,
             }}
           >
             {summary.id}
@@ -170,6 +178,7 @@ export function IncidentScreen({
             style={{
               fontFamily: mobileBaseline.font.sans,
               fontSize: mobileBaseline.size.label,
+              lineHeight: mobileBaseline.size.bodyLine,
               color: mobileBaseline.color.textMuted,
             }}
           >
@@ -181,6 +190,9 @@ export function IncidentScreen({
               fontFamily: mobileBaseline.font.mono,
               fontSize: mobileBaseline.size.label,
               color: mobileBaseline.color.textMuted,
+              borderTopWidth: 1,
+              borderTopColor: mobileBaseline.color.border,
+              paddingTop: mobileBaseline.space.s2,
             }}
           >
             Cập nhật: {summary.updatedAt}
@@ -190,16 +202,23 @@ export function IncidentScreen({
             accessibilityLabel="Mở trên bản đồ"
             onPress={onOpenMap}
             style={{
-              minHeight: mobileBaseline.controlMin,
-              minWidth: mobileBaseline.controlMin,
+              minHeight: 44,
+              minWidth: 44,
               padding: mobileBaseline.space.s2,
+              justifyContent: 'center',
+              borderColor: mobileBaseline.color.accent,
+              borderWidth: 1,
+              borderRadius: mobileBaseline.radius.sm,
+              backgroundColor: mobileBaseline.color.accent,
             }}
           >
             <Text
               style={{
                 fontFamily: mobileBaseline.font.sans,
                 fontSize: mobileBaseline.size.label,
-                color: mobileBaseline.color.accent,
+                fontWeight: '600',
+                textAlign: 'center',
+                color: mobileBaseline.color.surface,
               }}
             >
               Mở trên bản đồ
