@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+import { applyInlinePartyTarget } from '@/components/land/application-view';
 
 function readSource(relativePath: string): string {
   return readFileSync(join(process.cwd(), relativePath), 'utf8');
@@ -305,6 +306,57 @@ describe('LND-09 screen-02 create covers four change types safely', () => {
     expect(formSource).toContain('Idempotency-Key');
     expect(formSource).toContain('Gửi hồ sơ');
     expect(formSource).not.toMatch(/Phê duyệt|Từ chối|Đồng bộ/);
+  });
+
+  it('emits only the currently selected inline Party target after switching roles', () => {
+    const links = [
+      {
+        partyId: 'party-current',
+        partyRole: 'current_holder',
+        sharePercent: null,
+      },
+      {
+        partyId: 'party-existing',
+        partyRole: 'proposed_holder',
+        sharePercent: '100.00',
+      },
+    ];
+    const newParty = {
+      referenceCode: 'NEW-01',
+      partyType: 'individual' as const,
+      displayName: 'New Person',
+      identityNumber: null,
+    };
+    // A stale current_holder target after changing the dropdown must be inert.
+    const afterSwitchWithoutRearming = applyInlinePartyTarget(
+      links,
+      'current_holder',
+      'proposed_holder',
+      newParty,
+    );
+    expect(afterSwitchWithoutRearming).toEqual(links);
+    expect(
+      afterSwitchWithoutRearming.every(
+        (party) => party.partyId !== undefined && !('newParty' in party),
+      ),
+    ).toBe(true);
+
+    // Re-arming the newly selected role converts only its link.
+    const output = applyInlinePartyTarget(
+      links,
+      'proposed_holder',
+      'proposed_holder',
+      newParty,
+    );
+    expect(output).toEqual([
+      links[0],
+      {
+        partyRole: 'proposed_holder',
+        sharePercent: '100.00',
+        newParty,
+      },
+    ]);
+    expect(output.some((party) => party.partyId === '__inline__')).toBe(false);
   });
 
   it('uses masked pickers, keeps input on error, blocks double submit and offline', () => {

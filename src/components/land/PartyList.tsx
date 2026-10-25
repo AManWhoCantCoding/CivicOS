@@ -98,8 +98,11 @@ export function PartyList() {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-info)] px-3 py-2 text-sm text-[var(--civicos-info)] hover:border-[var(--civicos-info)]"
+          className="civicos-control mt-3 min-h-[44px] border border-[var(--civicos-info)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-info)] hover:bg-[var(--civicos-surface-muted)]"
         >
+          <span aria-hidden="true" className="mr-2">
+            ↻
+          </span>
           Thử lại
         </button>
       </div>
@@ -112,8 +115,11 @@ export function PartyList() {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
+          className="civicos-control min-h-[44px] border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-danger)] hover:bg-[var(--civicos-surface-muted)]"
         >
+          <span aria-hidden="true" className="mr-2">
+            ↻
+          </span>
           Thử lại
         </button>
       </ParcelFeedback>
@@ -196,7 +202,7 @@ export function PartyList() {
               {items.map((item) => (
                 <tr
                   key={item.id}
-                  className="border-b border-[var(--civicos-border)] transition-colors hover:bg-[var(--civicos-surface-muted)]"
+                  className="border-b border-[var(--civicos-border)] transition-colors hover:bg-[var(--civicos-surface-muted)] motion-safe:duration-150"
                 >
                   <td className="px-4 py-3 font-mono text-[var(--civicos-text)]">
                     {item.referenceCode}
@@ -227,7 +233,7 @@ export function PartyList() {
         <button
           type="button"
           onClick={() => void load(nextCursor)}
-          className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-4 py-2 text-sm font-medium text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
+          className="civicos-control motion-safe:transition-colors min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-4 py-2 text-sm font-medium text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
         >
           Trang tiếp
         </button>

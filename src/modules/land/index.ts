@@ -8,7 +8,7 @@ export type {
   LandEncumbranceSummary,
   LandRightSummary,
 } from './projection-mappers';
-export { createParty, listParties, toPartyResponse } from './party-service';
+export { listParties, toPartyResponse } from './party-service';
 export type { PartyResponse } from './party-service';
 export {
   createApplication,

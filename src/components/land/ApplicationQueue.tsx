@@ -14,11 +14,28 @@ import {
   type ApplicationSummaryView,
 } from '@/components/land/application-view';
 import { fetchApplicationList } from '@/components/land/land-api';
+import {
+  type ParcelStatusTone,
+  ParcelFeedback,
+  ParcelStatusBadge,
+  ParcelTableViewport,
+} from '@/components/land/ParcelPilotUI';
 import { mapLandApiStatus } from '@/components/land/workspace-view';
 
 function readParam(params: URLSearchParams | null, key: string): string {
   if (!params) return '';
   return params.get(key) ?? '';
+}
+
+// Tone bổ trợ cho badge trạng thái; text vẫn giữ nguyên từ applicationStatusText.
+function applicationStatusTone(status: string): ParcelStatusTone {
+  if (status === 'sync_succeeded' || status === 'completed') return 'success';
+  if (status === 'sync_failed' || status === 'rejected') return 'danger';
+  if (status === 'sync_pending' || status === 'pending_approval') {
+    return 'warning';
+  }
+  if (status === 'submitted' || status === 'in_review') return 'info';
+  return 'neutral';
 }
 
 export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
@@ -134,27 +151,34 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
   }
 
   if (loading && !items.length && !banner) {
-    return <p role="status">Đang tải hàng đợi hồ sơ…</p>;
+    return (
+      <ParcelFeedback role="status" tone="neutral">
+        Đang tải hàng đợi hồ sơ…
+      </ParcelFeedback>
+    );
   }
   if (banner === 'denied') {
     return (
-      <p role="alert">
+      <ParcelFeedback role="alert" tone="danger">
         Tài khoản không có quyền xem hồ sơ biến động trong phạm vi này.
-      </p>
+      </ParcelFeedback>
     );
   }
   if (banner === 'offline' && !items.length) {
     return (
       <div>
-        <p role="status">
+        <ParcelFeedback role="status" tone="info">
           Đang ngoại tuyến. Bộ lọc đã nhập được giữ lại; cần kết nối để tải hàng
           đợi mới.
-        </p>
+        </ParcelFeedback>
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-info)] px-3 py-2 text-sm text-[var(--civicos-info)] hover:border-[var(--civicos-info)]"
+          className="civicos-control mt-3 min-h-[44px] border border-[var(--civicos-info)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-info)] hover:bg-[var(--civicos-surface-muted)]"
         >
+          <span aria-hidden="true" className="mr-2">
+            ↻
+          </span>
           Thử lại
         </button>
       </div>
@@ -162,16 +186,19 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
   }
   if (banner === 'error' && !items.length) {
     return (
-      <div role="alert">
+      <ParcelFeedback role="alert" tone="danger" className="space-y-3">
         <p>Không tải được hàng đợi hồ sơ. Thử lại.</p>
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
+          className="civicos-control min-h-[44px] border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-danger)] hover:bg-[var(--civicos-surface-muted)]"
         >
+          <span aria-hidden="true" className="mr-2">
+            ↻
+          </span>
           Thử lại
         </button>
-      </div>
+      </ParcelFeedback>
     );
   }
 
@@ -199,17 +226,17 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
         ) : null}
       </div>
       {!online ? (
-        <p role="status" className="text-sm text-[var(--civicos-info)]">
+        <ParcelFeedback role="status" tone="info" className="px-4 py-3">
           Đang ngoại tuyến. Hàng đợi đang hiển thị dữ liệu đã tải; thao tác tạo
           hồ sơ tạm tắt.
-        </p>
+        </ParcelFeedback>
       ) : null}
       <form
-        className="flex flex-wrap gap-3"
+        className="grid gap-3 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4 sm:grid-cols-2 lg:grid-cols-4"
         onSubmit={(event) => event.preventDefault()}
         aria-label="Bộ lọc hàng đợi hồ sơ"
       >
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
+        <label className="flex min-w-0 min-h-[44px] flex-col gap-1 text-sm font-medium text-[var(--civicos-text)]">
           Trạng thái
           <select
             aria-label="Lọc theo trạng thái"
@@ -222,7 +249,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
                 q: searchFilter,
               })
             }
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
+            className="min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
           >
             <option value="">Tất cả</option>
             <option value="submitted">Đã tiếp nhận</option>
@@ -235,7 +262,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
             <option value="completed">Đã hoàn thành</option>
           </select>
         </label>
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
+        <label className="flex min-w-0 min-h-[44px] flex-col gap-1 text-sm font-medium text-[var(--civicos-text)]">
           Loại biến động
           <select
             aria-label="Lọc theo loại biến động"
@@ -248,7 +275,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
                 q: searchFilter,
               })
             }
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
+            className="min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm text-[var(--civicos-text)]"
           >
             <option value="">Tất cả</option>
             <option value="transfer">Chuyển nhượng</option>
@@ -257,7 +284,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
             <option value="parcel_split_merge">Tách/Gộp thửa</option>
           </select>
         </label>
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
+        <label className="flex min-w-0 min-h-[44px] flex-col gap-1 text-sm font-medium text-[var(--civicos-text)]">
           Người được phân công
           <input
             aria-label="Lọc theo người được phân công"
@@ -271,10 +298,10 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
               })
             }
             placeholder="user-id"
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]"
+            className="min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]"
           />
         </label>
-        <label className="flex min-h-[44px] flex-col gap-1 text-sm text-[var(--civicos-text)]">
+        <label className="flex min-w-0 min-h-[44px] flex-col gap-1 text-sm font-medium text-[var(--civicos-text)]">
           Tìm theo mã hồ sơ
           <input
             aria-label="Tìm theo mã hồ sơ"
@@ -288,112 +315,123 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
               })
             }
             placeholder="APP-001"
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]"
+            className="min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 font-mono text-sm text-[var(--civicos-text)]"
           />
         </label>
       </form>
-      {loading ? <p role="status">Đang tải hàng đợi hồ sơ…</p> : null}
+      {loading ? (
+        <ParcelFeedback role="status" tone="neutral" className="px-4 py-3">
+          Đang tải hàng đợi hồ sơ…
+        </ParcelFeedback>
+      ) : null}
       {banner === 'error' || banner === 'offline' ? (
-        <div role="alert" className="flex flex-wrap items-center gap-3">
-          <p className="text-sm text-[var(--civicos-warning)]">
-            Không làm mới được hàng đợi; đang hiển thị nội dung đã tải. Thử lại.
+        <ParcelFeedback role="alert" tone="warning">
+          <p className="text-sm">
+            Không làm mới được hàng đợi; đang hiển thị nội dung đã tải. Thử
+            lại.
           </p>
           <button
             type="button"
             onClick={() => setReloadToken((value) => value + 1)}
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-warning)] px-3 py-2 text-sm text-[var(--civicos-warning)] hover:border-[var(--civicos-warning)]"
+            className="civicos-control mt-3 min-h-[44px] border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-warning)] hover:bg-[var(--civicos-surface-muted)]"
           >
+            <span aria-hidden="true" className="mr-2">
+              ↻
+            </span>
             Thử lại
           </button>
-        </div>
+        </ParcelFeedback>
       ) : null}
       {!visibleItems.length && !loading ? (
-        <p role="status">
+        <ParcelFeedback role="status" tone="neutral" className="px-4 py-5">
           Chưa có hồ sơ nào trong phạm vi này. Điều chỉnh bộ lọc hoặc tạo hồ sơ
           mới nếu có quyền.
-        </p>
+        </ParcelFeedback>
       ) : null}
       {visibleItems.length ? (
-        <table className="w-full border-collapse text-sm">
-          <caption className="py-2 text-left text-[var(--civicos-text-muted)]">
-            Hàng đợi hồ sơ biến động nội bộ theo phạm vi đơn vị
-          </caption>
-          <thead>
-            <tr className="text-left text-[var(--civicos-text)]">
-              <th
-                scope="col"
-                className="border-b border-[var(--civicos-border)] px-3 py-2"
-              >
-                Mã hồ sơ
-              </th>
-              <th
-                scope="col"
-                className="border-b border-[var(--civicos-border)] px-3 py-2"
-              >
-                Loại biến động
-              </th>
-              <th
-                scope="col"
-                className="border-b border-[var(--civicos-border)] px-3 py-2"
-              >
-                Trạng thái
-              </th>
-              <th
-                scope="col"
-                className="border-b border-[var(--civicos-border)] px-3 py-2"
-              >
-                Phiên bản
-              </th>
-              <th
-                scope="col"
-                className="border-b border-[var(--civicos-border)] px-3 py-2"
-              >
-                Ngày nộp
-              </th>
-              <th
-                scope="col"
-                className="border-b border-[var(--civicos-border)] px-3 py-2"
-              >
-                Ngày cập nhật
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleItems.map((item) => (
-              <tr
-                key={item.id}
-                className="border-b border-[var(--civicos-border)]"
-              >
-                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
-                  <Link
-                    href={`/land/applications/${item.id}`}
-                    className="underline-offset-4 hover:underline"
-                  >
-                    {item.applicationCode}
-                  </Link>
-                </td>
-                <td className="px-3 py-2 text-[var(--civicos-text)]">
-                  {applicationChangeTypeText(item.changeType)}
-                </td>
-                <td className="px-3 py-2">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[var(--civicos-border)] px-3 py-1 text-xs text-[var(--civicos-text)]">
-                    <span aria-hidden="true">●</span>
-                    {applicationStatusText(item.status)}
-                  </span>
-                </td>
-                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
-                  v{item.version}
-                </td>
-                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
-                  {item.submittedAt}
-                </td>
-                <td className="px-3 py-2 font-mono text-[var(--civicos-text)]">
-                  {item.updatedAt}
-                </td>
+        <ParcelTableViewport label="Bảng hàng đợi hồ sơ biến động">
+          <table className="w-full min-w-[46rem] border-collapse text-sm">
+            <caption className="px-4 py-2 text-left text-[var(--civicos-text-muted)]">
+              Hàng đợi hồ sơ biến động nội bộ theo phạm vi đơn vị
+            </caption>
+            <thead className="bg-[var(--civicos-surface-muted)]">
+              <tr className="text-left text-xs font-semibold tracking-wide text-[var(--civicos-text-muted)]">
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-4 py-3"
+                >
+                  Mã hồ sơ
+                </th>
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-4 py-3"
+                >
+                  Loại biến động
+                </th>
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-4 py-3"
+                >
+                  Trạng thái
+                </th>
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-4 py-3"
+                >
+                  Phiên bản
+                </th>
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-4 py-3"
+                >
+                  Ngày nộp
+                </th>
+                <th
+                  scope="col"
+                  className="border-b border-[var(--civicos-border)] px-4 py-3"
+                >
+                  Ngày cập nhật
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {visibleItems.map((item) => (
+                <tr
+                  key={item.id}
+                  className="border-b border-[var(--civicos-border)] transition-colors hover:bg-[var(--civicos-surface-muted)] motion-safe:duration-150"
+                >
+                  <td className="px-4 py-2.5 font-mono text-[var(--civicos-text)]">
+                    <Link
+                      href={`/land/applications/${item.id}`}
+                      className="inline-flex min-h-[44px] items-center text-[var(--civicos-accent)] underline-offset-4 hover:underline"
+                    >
+                      {item.applicationCode}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-2.5 text-[var(--civicos-text)]">
+                    {applicationChangeTypeText(item.changeType)}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <ParcelStatusBadge
+                      tone={applicationStatusTone(item.status)}
+                    >
+                      {applicationStatusText(item.status)}
+                    </ParcelStatusBadge>
+                  </td>
+                  <td className="px-4 py-2.5 font-mono text-[var(--civicos-text)]">
+                    v{item.version}
+                  </td>
+                  <td className="px-4 py-2.5 font-mono text-[var(--civicos-text)]">
+                    {item.submittedAt}
+                  </td>
+                  <td className="px-4 py-2.5 font-mono text-[var(--civicos-text)]">
+                    {item.updatedAt}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ParcelTableViewport>
       ) : null}
       <div className="flex flex-wrap gap-3">
         {history.length ? (
@@ -405,7 +443,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
               setCurrentCursor(previous);
               void load(previous);
             }}
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
+            className="civicos-control motion-safe:transition-colors min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-4 py-2 text-sm font-medium text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
           >
             Trang trước
           </button>
@@ -418,7 +456,7 @@ export function ApplicationQueue({ canCreate }: { canCreate: boolean }) {
               setCurrentCursor(nextCursor);
               void load(nextCursor);
             }}
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
+            className="civicos-control motion-safe:transition-colors min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-4 py-2 text-sm font-medium text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
           >
             Trang tiếp
           </button>

@@ -182,6 +182,9 @@ async function applyCompletedEffects(
   tx: LandDbClient,
   row: ApplicationRowWithLinks,
   now: Date,
+  actor: IdentityUser,
+  appendEventFn: NonNullable<ApprovalDeps['appendEventFn']>,
+  auditFn: NonNullable<ApprovalDeps['auditFn']>,
 ): Promise<void> {
   const partyLinks = row.applicationParties as Array<{
     partyId: string;
@@ -251,7 +254,10 @@ async function applyCompletedEffects(
       // any persistence failure is unexpected and must bubble with its
       // provider evidence intact instead of being misclassified as a
       // client input error.
-      await tx.landParcel.update({
+      const before = await tx.landParcel.findUniqueOrThrow({
+        where: { id: subjects[0].parcelId },
+      });
+      const after = await tx.landParcel.update({
         where: { id: subjects[0].parcelId },
         data: {
           ...(field === 'address'
@@ -260,6 +266,49 @@ async function applyCompletedEffects(
           version: { increment: 1 },
         },
       });
+      const eventType = 'LandParcelUpdated';
+      await appendEventFn(tx, {
+        eventId: randomUUID(),
+        eventType,
+        eventVersion: 1,
+        aggregateType: 'LandParcel',
+        aggregateId: after.id,
+        aggregateVersion: after.version,
+        occurredAt: now,
+        actor: actorSnapshot(actor),
+        payload: {
+          parcelCode: after.parcelCode,
+          organizationId: after.organizationId,
+          applicationId: row.id,
+          changeType: row.changeType,
+          changedField: field,
+          beforeStatus: before.status,
+          afterStatus: after.status,
+          beforeVersion: before.version,
+          afterVersion: after.version,
+        },
+        metadata: {},
+      });
+      await auditFn(
+        actor as LandActor,
+        {
+          resourceType: 'LandParcel',
+          resourceId: after.id,
+          operation: 'land.parcel.updated',
+          metadata: {
+            parcelCode: after.parcelCode,
+            organizationId: after.organizationId,
+            applicationId: row.id,
+            changeType: row.changeType,
+            changedField: field,
+            beforeStatus: before.status,
+            afterStatus: after.status,
+            beforeVersion: before.version,
+            afterVersion: after.version,
+          },
+        },
+        tx,
+      );
       return;
     }
     case 'mortgage': {
@@ -316,6 +365,10 @@ async function applyCompletedEffects(
       if (sources.length < 1 || results.length < 1) {
         throw new Error('INVALID_REQUEST');
       }
+      const parcelIds = [...sources, ...results].map((link) => link.parcelId);
+      const beforeParcels = await tx.landParcel.findMany({
+        where: { id: { in: parcelIds } },
+      });
       const retired = await tx.landParcel.updateMany({
         where: {
           id: { in: sources.map((l) => l.parcelId) },
@@ -335,6 +388,45 @@ async function applyCompletedEffects(
       });
       if (activated.count !== results.length) {
         throw new Error('INVALID_REQUEST');
+      }
+      const afterParcels = await tx.landParcel.findMany({
+        where: { id: { in: parcelIds } },
+      });
+      for (const after of afterParcels) {
+        const before = beforeParcels.find((parcel) => parcel.id === after.id);
+        if (!before) throw new Error('INVALID_REQUEST');
+        const metadata = {
+          parcelCode: after.parcelCode,
+          organizationId: after.organizationId,
+          applicationId: row.id,
+          changeType: row.changeType,
+          beforeStatus: before.status,
+          afterStatus: after.status,
+          beforeVersion: before.version,
+          afterVersion: after.version,
+        };
+        await appendEventFn(tx, {
+          eventId: randomUUID(),
+          eventType: 'LandParcelStatusChanged',
+          eventVersion: 1,
+          aggregateType: 'LandParcel',
+          aggregateId: after.id,
+          aggregateVersion: after.version,
+          occurredAt: now,
+          actor: actorSnapshot(actor),
+          payload: metadata,
+          metadata: {},
+        });
+        await auditFn(
+          actor as LandActor,
+          {
+            resourceType: 'LandParcel',
+            resourceId: after.id,
+            operation: 'land.parcel.status_changed',
+            metadata,
+          },
+          tx,
+        );
       }
       return;
     }
@@ -422,7 +514,7 @@ export async function approveApplication(
       throw new Error('INVALID_TRANSITION');
 
     const now = new Date();
-    await applyCompletedEffects(tx, row, now);
+    await applyCompletedEffects(tx, row, now, actor, appendEventFn, auditFn);
 
     const approval = await createDecisionApproval(tx, {
       row,
@@ -498,13 +590,9 @@ export async function approveApplication(
   });
 }
 
-const REJECTABLE_STATUSES: readonly string[] = [
-  'submitted',
-  'in_review',
-  'pending_approval',
-];
+const REJECTABLE_STATUSES: readonly string[] = ['pending_approval'];
 
-// Leader reject: submitted/in_review/pending_approval -> rejected (LND-12).
+// Leader reject: pending_approval -> rejected (LND-12).
 // Reason is mandatory trimmed non-empty (400); rejected never mutates
 // LandRight/LandParcel/LandEncumbrance (data-model 5.1). Approval, event
 // and audit share the status transaction (DR-18, DR-19).

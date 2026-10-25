@@ -19,6 +19,37 @@ export type ApplicationSummaryView = {
   rejectionReason: string | null;
 };
 
+export function applyInlinePartyTarget<
+  T extends {
+    partyId: string;
+    partyRole: string;
+    sharePercent: string | null;
+  },
+>(
+  parties: T[],
+  targetRole: string | null,
+  selectedRole: string,
+  newParty: {
+    referenceCode: string;
+    partyType: 'individual' | 'organization';
+    displayName: string;
+    identityNumber: string | null;
+  },
+): Array<
+  Omit<T, 'partyId'> & { partyId?: string; newParty?: typeof newParty }
+> {
+  if (!targetRole || targetRole !== selectedRole) return parties;
+  let replaced = false;
+  return parties.map((party) => {
+    if (replaced || party.partyRole !== targetRole) return party;
+    replaced = true;
+    const link = Object.fromEntries(
+      Object.entries(party).filter(([key]) => key !== 'partyId'),
+    ) as Omit<T, 'partyId'>;
+    return { ...link, newParty };
+  });
+}
+
 export const LAND_APPLICATIONS_URL = '/api/land/applications';
 
 export function applicationDetailUrl(applicationId: string): string {

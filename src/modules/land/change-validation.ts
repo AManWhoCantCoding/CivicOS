@@ -99,7 +99,7 @@ export function canonicalizeChangePayload(
 function assertNoDuplicateParties(input: ApplicationInput): void {
   const seen = new Set<string>();
   for (const party of input.parties) {
-    const key = `${party.partyId}\u0000${party.partyRole}`;
+    const key = `${party.partyId ?? party.newParty?.referenceCode}\u0000${party.partyRole}`;
     if (seen.has(key)) fail();
     seen.add(key);
   }

@@ -6,8 +6,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { EvidencePanel } from '@/components/land/EvidencePanel';
 import { fetchParcelDetail, fetchPartyList } from '@/components/land/land-api';
 import {
+  type ParcelStatusTone,
   ParcelFeedback,
   ParcelSection,
+  ParcelSimulatedBadge,
   ParcelStatusBadge,
   ParcelTableViewport,
 } from '@/components/land/ParcelPilotUI';
@@ -24,6 +26,23 @@ import {
 } from '@/components/land/workspace-view';
 
 type DetailBanner = 'denied' | 'error' | 'not-found' | 'offline' | null;
+
+// Tone bổ trợ cho badge trạng thái; text vẫn giữ nguyên từ các helper view.
+function parcelStatusTone(status: string): ParcelStatusTone {
+  if (status === 'active') return 'success';
+  if (status === 'proposed') return 'info';
+  return 'neutral';
+}
+
+function rightStatusTone(status: string): ParcelStatusTone {
+  if (status === 'active') return 'success';
+  return 'neutral';
+}
+
+function encumbranceStatusTone(status: string): ParcelStatusTone {
+  if (status === 'active') return 'warning';
+  return 'neutral';
+}
 
 function formatDateTime(value: string | null): string {
   if (!value) return '—';
@@ -110,8 +129,11 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-info)] px-3 py-2 text-sm text-[var(--civicos-info)] hover:border-[var(--civicos-info)]"
+          className="civicos-control mt-3 min-h-[44px] border border-[var(--civicos-info)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-info)] hover:bg-[var(--civicos-surface-muted)]"
         >
+          <span aria-hidden="true" className="mr-2">
+            ↻
+          </span>
           Thử lại
         </button>
       </div>
@@ -124,8 +146,11 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
+          className="civicos-control min-h-[44px] border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-danger)] hover:bg-[var(--civicos-surface-muted)]"
         >
+          <span aria-hidden="true" className="mr-2">
+            ↻
+          </span>
           Thử lại
         </button>
       </ParcelFeedback>
@@ -138,8 +163,11 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
+          className="civicos-control min-h-[44px] border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-danger)] hover:bg-[var(--civicos-surface-muted)]"
         >
+          <span aria-hidden="true" className="mr-2">
+            ↻
+          </span>
           Thử lại
         </button>
       </ParcelFeedback>
@@ -159,8 +187,11 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
           <button
             type="button"
             onClick={() => setReloadToken((value) => value + 1)}
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-warning)] px-3 py-2 text-sm text-[var(--civicos-warning)] hover:border-[var(--civicos-warning)]"
+            className="civicos-control min-h-[44px] border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-warning)] hover:bg-[var(--civicos-surface-muted)]"
           >
+            <span aria-hidden="true" className="mr-2">
+              ↻
+            </span>
             Thử lại
           </button>
         </ParcelFeedback>
@@ -171,9 +202,12 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
         </ParcelFeedback>
       ) : null}
       <ParcelSection labelledBy="land-parcel-heading">
-        <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
-          Thửa đất nội bộ
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
+            Thửa đất nội bộ
+          </p>
+          <ParcelSimulatedBadge />
+        </div>
         <h2
           id="land-parcel-heading"
           className="mt-2 font-mono text-2xl font-semibold tracking-tight break-words text-[var(--civicos-text)] sm:text-3xl"
@@ -190,7 +224,7 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
           <div className="min-w-0 rounded-lg bg-[var(--civicos-surface-muted)] p-3">
             <dt className="text-[var(--civicos-text-muted)]">Trạng thái</dt>
             <dd>
-              <ParcelStatusBadge>
+              <ParcelStatusBadge tone={parcelStatusTone(parcel.status)}>
                 {parcelStatusText(parcel.status)}
               </ParcelStatusBadge>
             </dd>
@@ -315,7 +349,7 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
                   return (
                     <tr
                       key={right.id}
-                      className="border-b border-[var(--civicos-border)] transition-colors hover:bg-[var(--civicos-surface-muted)]"
+                      className="border-b border-[var(--civicos-border)] transition-colors hover:bg-[var(--civicos-surface-muted)] motion-safe:duration-150"
                     >
                       <td className="px-4 py-3 font-mono text-[var(--civicos-text)]">
                         {maskedPartyLabel(
@@ -334,7 +368,7 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
                         {right.sharePercent}
                       </td>
                       <td className="px-4 py-3">
-                        <ParcelStatusBadge>
+                        <ParcelStatusBadge tone={rightStatusTone(right.status)}>
                           {rightStatusText(right.status)}
                         </ParcelStatusBadge>
                       </td>
@@ -408,7 +442,7 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
                   return (
                     <tr
                       key={item.id}
-                      className="border-b border-[var(--civicos-border)] transition-colors hover:bg-[var(--civicos-surface-muted)]"
+                      className="border-b border-[var(--civicos-border)] transition-colors hover:bg-[var(--civicos-surface-muted)] motion-safe:duration-150"
                     >
                       <td className="px-4 py-3 font-mono text-[var(--civicos-text)]">
                         {item.encumbranceType}
@@ -429,7 +463,9 @@ export function ParcelDetail({ parcelId }: { parcelId: string }) {
                           : '—'}
                       </td>
                       <td className="px-4 py-3">
-                        <ParcelStatusBadge>
+                        <ParcelStatusBadge
+                          tone={encumbranceStatusTone(item.status)}
+                        >
                           {encumbranceStatusText(item.status)}
                         </ParcelStatusBadge>
                       </td>

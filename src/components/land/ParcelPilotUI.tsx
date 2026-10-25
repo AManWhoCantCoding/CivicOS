@@ -69,18 +69,57 @@ export function ParcelTableViewport({
       role="region"
       aria-label={label}
       tabIndex={0}
-      className={`overflow-x-auto rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-accent)] ${className}`}
+      className={`overflow-x-auto rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)] ${className}`}
     >
       {children}
     </div>
   );
 }
 
-export function ParcelStatusBadge({ children }: { children: ReactNode }) {
+// Tone chỉ là màu ngữ nghĩa bổ trợ; trạng thái vẫn phân biệt bằng text + dot,
+// không truyền tải trạng thái bằng màu đơn độc.
+export type ParcelStatusTone =
+  | 'neutral'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'info';
+
+const statusToneClasses: Record<ParcelStatusTone, string> = {
+  neutral:
+    'border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] text-[var(--civicos-text)]',
+  success:
+    'border-[var(--civicos-success)] bg-[var(--civicos-surface)] text-[var(--civicos-success)]',
+  warning:
+    'border-[var(--civicos-warning)] bg-[var(--civicos-surface)] text-[var(--civicos-warning)]',
+  danger:
+    'border-[var(--civicos-danger)] bg-[var(--civicos-surface)] text-[var(--civicos-danger)]',
+  info: 'border-[var(--civicos-info)] bg-[var(--civicos-surface)] text-[var(--civicos-info)]',
+};
+
+export function ParcelStatusBadge({
+  tone = 'neutral',
+  children,
+}: {
+  tone?: ParcelStatusTone;
+  children: ReactNode;
+}) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-1 text-xs text-[var(--civicos-text)]">
+    <span
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs ${statusToneClasses[tone]}`}
+    >
       <span aria-hidden="true">●</span>
       {children}
+    </span>
+  );
+}
+
+// Điểm dữ liệu mô phỏng nội bộ; cùng khối với PublicLandLookup để nhất quán.
+export function ParcelSimulatedBadge() {
+  return (
+    <span className="inline-flex min-h-[32px] items-center gap-2 rounded-full border border-[var(--civicos-simulated-text)] bg-[var(--civicos-simulated-bg)] px-3 text-xs font-semibold text-[var(--civicos-simulated-text)]">
+      <span aria-hidden="true">◇</span>
+      Mô phỏng · simulated
     </span>
   );
 }
@@ -109,7 +148,7 @@ export function ParcelFeedback({
   return (
     <div
       role={role}
-      className={`rounded-lg border p-4 text-sm ${feedbackToneClasses[tone]} ${className}`}
+      className={`rounded-lg border p-4 text-sm leading-6 ${feedbackToneClasses[tone]} ${className}`}
     >
       {children}
     </div>

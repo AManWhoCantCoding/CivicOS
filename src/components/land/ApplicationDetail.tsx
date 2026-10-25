@@ -23,6 +23,12 @@ import {
   type TimelineEventView,
 } from '@/components/land/application-view';
 import { mapLandApiStatus } from '@/components/land/workspace-view';
+import {
+  type ParcelStatusTone,
+  ParcelFeedback,
+  ParcelSimulatedBadge,
+  ParcelStatusBadge,
+} from '@/components/land/ParcelPilotUI';
 
 type DetailBanner = 'denied' | 'error' | 'not-found' | 'offline' | null;
 type SessionView = {
@@ -31,6 +37,17 @@ type SessionView = {
   organizationUnitId: string | null;
 } | null;
 type MutationKind = 'sync' | 'retry' | 'approve' | 'reject' | null;
+
+// Tone bổ trợ cho badge trạng thái; text vẫn giữ nguyên từ applicationStatusText.
+function applicationStatusTone(status: string): ParcelStatusTone {
+  if (status === 'sync_succeeded' || status === 'completed') return 'success';
+  if (status === 'sync_failed' || status === 'rejected') return 'danger';
+  if (status === 'sync_pending' || status === 'pending_approval') {
+    return 'warning';
+  }
+  if (status === 'submitted' || status === 'in_review') return 'info';
+  return 'neutral';
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -191,7 +208,7 @@ export function ApplicationDetail({
   }
   if (banner === 'denied') {
     return (
-      <div role="alert" className="space-y-3">
+      <ParcelFeedback role="alert" tone="danger" className="space-y-3">
         <p>
           {deniedCode === 'LAND_ASSIGNMENT_REQUIRED'
             ? 'Bạn chưa được phân công xử lý hồ sơ này. Cần Assignment land_review còn hiệu lực trong phạm vi đơn vị.'
@@ -200,39 +217,48 @@ export function ApplicationDetail({
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
+          className="civicos-control min-h-[44px] border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] motion-safe:transition-colors"
         >
+          <span aria-hidden="true" className="mr-2">
+            ↻
+          </span>
           Thử lại
         </button>
-      </div>
+      </ParcelFeedback>
     );
   }
   if (banner === 'not-found') {
     return (
-      <div role="alert" className="space-y-3">
+      <ParcelFeedback role="alert" tone="danger" className="space-y-3">
         <p>Không tìm thấy hồ sơ biến động yêu cầu.</p>
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
+          className="civicos-control min-h-[44px] border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] motion-safe:transition-colors"
         >
+          <span aria-hidden="true" className="mr-2">
+            ↻
+          </span>
           Thử lại
         </button>
-      </div>
+      </ParcelFeedback>
     );
   }
   if (banner === 'offline' && !detail) {
     return (
       <div>
-        <p role="status">
+        <ParcelFeedback role="status" tone="info">
           Đang ngoại tuyến. Cần kết nối để tải chi tiết hồ sơ; dữ liệu đã tải
           trước đó được giữ nguyên.
-        </p>
+        </ParcelFeedback>
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-info)] px-3 py-2 text-sm text-[var(--civicos-info)] hover:border-[var(--civicos-info)]"
+          className="civicos-control mt-3 min-h-[44px] border border-[var(--civicos-info)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-info)] hover:bg-[var(--civicos-surface-muted)]"
         >
+          <span aria-hidden="true" className="mr-2">
+            ↻
+          </span>
           Thử lại
         </button>
       </div>
@@ -240,30 +266,36 @@ export function ApplicationDetail({
   }
   if ((banner === 'error' || banner === 'offline') && !detail) {
     return (
-      <div role="alert">
+      <ParcelFeedback role="alert" tone="danger" className="space-y-3">
         <p>Không tải được chi tiết hồ sơ. Thử lại.</p>
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
+          className="civicos-control min-h-[44px] border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-danger)] hover:bg-[var(--civicos-surface-muted)]"
         >
+          <span aria-hidden="true" className="mr-2">
+            ↻
+          </span>
           Thử lại
         </button>
-      </div>
+      </ParcelFeedback>
     );
   }
   if (!detail) {
     return (
-      <div role="alert">
+      <ParcelFeedback role="alert" tone="danger" className="space-y-3">
         <p>Không có dữ liệu hồ sơ để hiển thị.</p>
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
+          className="civicos-control min-h-[44px] border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-danger)] hover:bg-[var(--civicos-surface-muted)]"
         >
+          <span aria-hidden="true" className="mr-2">
+            ↻
+          </span>
           Thử lại
         </button>
-      </div>
+      </ParcelFeedback>
     );
   }
 
@@ -442,28 +474,26 @@ export function ApplicationDetail({
   return (
     <div className="space-y-4">
       {banner === 'error' || banner === 'offline' ? (
-        <div
-          role="alert"
-          className="space-y-2 rounded-xl border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] p-4"
-        >
-          <p className="text-sm text-[var(--civicos-warning)]">
-            Không làm mới được dữ liệu; đang hiển thị nội dung đã tải. Thử lại.
+        <ParcelFeedback role="alert" tone="warning" className="space-y-2">
+          <p className="text-sm">
+            Không làm mới được dữ liệu; đang hiển thị nội dung đã tải. Thử
+            lại.
           </p>
           <button
             type="button"
             onClick={() => setReloadToken((value) => value + 1)}
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-warning)] px-3 py-2 text-sm text-[var(--civicos-warning)] hover:border-[var(--civicos-warning)]"
+            className="civicos-control min-h-[44px] border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-warning)] hover:bg-[var(--civicos-surface-muted)]"
           >
+            <span aria-hidden="true" className="mr-2">
+              ↻
+            </span>
             Thử lại
           </button>
-        </div>
+        </ParcelFeedback>
       ) : null}
       {conflict ? (
-        <div
-          role="alert"
-          className="space-y-2 rounded-xl border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] p-4"
-        >
-          <p className="text-sm text-[var(--civicos-danger)]">
+        <ParcelFeedback role="alert" tone="danger" className="space-y-2">
+          <p className="text-sm">
             Phiên bản hồ sơ đã thay đổi, vui lòng tải lại rồi thử lại.
           </p>
           <button
@@ -472,95 +502,103 @@ export function ApplicationDetail({
               setConflict(false);
               setReloadToken((value) => value + 1);
             }}
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
+            className="civicos-control min-h-[44px] border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-danger)] hover:bg-[var(--civicos-surface-muted)]"
           >
             Tải lại chi tiết
           </button>
-        </div>
+        </ParcelFeedback>
       ) : null}
       {!online ? (
-        <p role="status" className="text-sm text-[var(--civicos-info)]">
+        <ParcelFeedback role="status" tone="info" className="px-4 py-3">
           Đang ngoại tuyến. Các thao tác xử lý tạm khóa; dữ liệu đã tải được giữ
           nguyên.
-        </p>
+        </ParcelFeedback>
       ) : null}
-      {loading ? <p role="status">Đang làm mới chi tiết hồ sơ…</p> : null}
+      {loading ? (
+        <ParcelFeedback role="status" tone="neutral" className="px-4 py-3">
+          Đang làm mới chi tiết hồ sơ…
+        </ParcelFeedback>
+      ) : null}
 
       <section
         aria-labelledby="land-application-heading"
-        className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
+        className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4 sm:p-5"
       >
-        <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
-          Hồ sơ biến động nội bộ · Mô phỏng
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
+            Hồ sơ biến động nội bộ
+          </p>
+          <ParcelSimulatedBadge />
+        </div>
         <h2
           id="land-application-heading"
-          className="mt-2 font-mono text-2xl font-semibold text-[var(--civicos-text)]"
+          className="mt-2 font-mono text-2xl font-semibold tracking-tight break-words text-[var(--civicos-text)] sm:text-3xl"
         >
           {detail.applicationCode}
         </h2>
-        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-          <div>
+        <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div className="min-w-0 rounded-lg bg-[var(--civicos-surface-muted)] p-3">
             <dt className="text-[var(--civicos-text-muted)]">Loại biến động</dt>
             <dd className="text-[var(--civicos-text)]">
               {applicationChangeTypeText(detail.changeType)}
             </dd>
           </div>
-          <div>
+          <div className="min-w-0 rounded-lg bg-[var(--civicos-surface-muted)] p-3">
             <dt className="text-[var(--civicos-text-muted)]">Trạng thái</dt>
             <dd>
-              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--civicos-border)] px-3 py-1 text-xs text-[var(--civicos-text)]">
-                <span aria-hidden="true">●</span>
+              <ParcelStatusBadge tone={applicationStatusTone(detail.status)}>
                 {applicationStatusText(detail.status)}
-              </span>
+              </ParcelStatusBadge>
             </dd>
           </div>
-          <div>
+          <div className="min-w-0 rounded-lg bg-[var(--civicos-surface-muted)] p-3">
             <dt className="text-[var(--civicos-text-muted)]">Đơn vị</dt>
-            <dd className="font-mono text-[var(--civicos-text)]">
+            <dd className="font-mono break-words text-[var(--civicos-text)]">
               {detail.organizationId}
             </dd>
           </div>
-          <div>
+          <div className="min-w-0 rounded-lg bg-[var(--civicos-surface-muted)] p-3">
             <dt className="text-[var(--civicos-text-muted)]">Phiên bản</dt>
-            <dd className="font-mono text-[var(--civicos-text)]">
+            <dd className="font-mono break-words text-[var(--civicos-text)]">
               v{detailVersion}
             </dd>
           </div>
-          <div>
+          <div className="min-w-0 rounded-lg bg-[var(--civicos-surface-muted)] p-3">
             <dt className="text-[var(--civicos-text-muted)]">Người tạo</dt>
-            <dd className="font-mono text-[var(--civicos-text)]">
+            <dd className="font-mono break-words text-[var(--civicos-text)]">
               {detail.createdById}
             </dd>
           </div>
-          <div>
+          <div className="min-w-0 rounded-lg bg-[var(--civicos-surface-muted)] p-3">
             <dt className="text-[var(--civicos-text-muted)]">Ngày nộp</dt>
-            <dd className="font-mono text-[var(--civicos-text)]">
+            <dd className="font-mono break-words text-[var(--civicos-text)]">
               {detail.submittedAt}
             </dd>
           </div>
-          <div>
+          <div className="min-w-0 rounded-lg bg-[var(--civicos-surface-muted)] p-3">
             <dt className="text-[var(--civicos-text-muted)]">Ngày cập nhật</dt>
-            <dd className="font-mono text-[var(--civicos-text)]">
+            <dd className="font-mono break-words text-[var(--civicos-text)]">
               {detail.updatedAt}
             </dd>
           </div>
-          <div>
+          <div className="min-w-0 rounded-lg bg-[var(--civicos-surface-muted)] p-3">
             <dt className="text-[var(--civicos-text-muted)]">
               Ngày hoàn thành
             </dt>
-            <dd className="font-mono text-[var(--civicos-text)]">
+            <dd className="font-mono break-words text-[var(--civicos-text)]">
               {detail.completedAt ?? '—'}
             </dd>
           </div>
         </dl>
         {detail.rejectionReason ? (
-          <p className="mt-3 text-sm text-[var(--civicos-text)]">
-            Lý do từ chối:{' '}
-            <span className="text-[var(--civicos-text)]">
-              {detail.rejectionReason}
-            </span>
-          </p>
+          <div className="mt-3">
+            <ParcelFeedback role="status" tone="danger" className="p-3">
+              Lý do từ chối:{' '}
+              <span className="font-medium">
+                {detail.rejectionReason}
+              </span>
+            </ParcelFeedback>
+          </div>
         ) : null}
         {readOnly ? (
           <p
@@ -575,7 +613,7 @@ export function ApplicationDetail({
 
       <section
         aria-labelledby="land-application-links-heading"
-        className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
+        className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4 sm:p-5"
       >
         <h3
           id="land-application-links-heading"
@@ -632,7 +670,7 @@ export function ApplicationDetail({
 
       <section
         aria-labelledby="land-application-timeline-heading"
-        className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
+        className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4 sm:p-5"
       >
         <h3
           id="land-application-timeline-heading"
@@ -682,7 +720,7 @@ export function ApplicationDetail({
 
       <section
         aria-labelledby="land-application-actions-heading"
-        className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
+        className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4 sm:p-5"
       >
         <h3
           id="land-application-actions-heading"
@@ -715,7 +753,7 @@ export function ApplicationDetail({
               type="button"
               onClick={() => void runSync()}
               disabled={controlsLocked}
-              className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2 text-sm font-semibold text-[var(--civicos-text)] hover:bg-[var(--civicos-accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="civicos-control min-h-[44px] bg-[var(--civicos-accent)] px-4 py-2 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] motion-safe:duration-150 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {mutation === 'sync' ? 'Đang đồng bộ…' : 'Đồng bộ mô phỏng'}
             </button>
@@ -725,7 +763,7 @@ export function ApplicationDetail({
               type="button"
               onClick={() => void runRetry()}
               disabled={controlsLocked}
-              className="min-h-[44px] rounded-lg border border-[var(--civicos-warning)] px-4 py-2 text-sm font-semibold text-[var(--civicos-warning)] hover:border-[var(--civicos-warning)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="civicos-control min-h-[44px] border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] px-4 py-2 text-sm font-semibold text-[var(--civicos-warning)] hover:bg-[var(--civicos-surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {mutation === 'retry' ? 'Đang thử lại…' : 'Thử lại'}
             </button>
@@ -735,7 +773,7 @@ export function ApplicationDetail({
               type="button"
               onClick={() => void runApprove()}
               disabled={controlsLocked}
-              className="min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2 text-sm font-semibold text-[var(--civicos-text)] hover:bg-[var(--civicos-accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="civicos-control min-h-[44px] bg-[var(--civicos-accent)] px-4 py-2 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] motion-safe:duration-150 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {mutation === 'approve' ? 'Đang duyệt…' : 'Duyệt'}
             </button>
@@ -748,7 +786,7 @@ export function ApplicationDetail({
                 setRejectInvalid(false);
               }}
               disabled={controlsLocked}
-              className="min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-4 py-2 text-sm font-semibold text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="civicos-control min-h-[44px] border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-4 py-2 text-sm font-semibold text-[var(--civicos-danger)] hover:bg-[var(--civicos-surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Từ chối
             </button>
@@ -788,7 +826,7 @@ export function ApplicationDetail({
                 type="button"
                 onClick={() => void runReject()}
                 disabled={controlsLocked}
-                className="min-h-[44px] rounded-lg bg-[var(--civicos-danger)] px-4 py-2 text-sm font-semibold text-[var(--civicos-text)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="civicos-control min-h-[44px] border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-4 py-2 text-sm font-semibold text-[var(--civicos-danger)] hover:bg-[var(--civicos-surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {mutation === 'reject' ? 'Đang từ chối…' : 'Xác nhận từ chối'}
               </button>
@@ -798,7 +836,7 @@ export function ApplicationDetail({
                   setRejectOpen(false);
                   setRejectInvalid(false);
                 }}
-                className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-4 py-2 text-sm text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
+                className="civicos-control motion-safe:transition-colors min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-4 py-2 text-sm font-medium text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
               >
                 Đóng
               </button>

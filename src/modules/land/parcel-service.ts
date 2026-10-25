@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma';
+import { randomUUID } from 'node:crypto';
 import type { IdentityUser } from '@/modules/identity';
+import { appendEvent } from '@/modules/eventing';
 
 import { assertLandActor, auditLandEvent } from './access';
 import {
@@ -89,6 +91,28 @@ export async function createParcel(
       toGeometryParam(input.geometry),
       tx,
     );
+    await appendEvent(tx, {
+      eventId: randomUUID(),
+      eventType: 'LandParcelCreated',
+      eventVersion: 1,
+      aggregateType: 'LandParcel',
+      aggregateId: created.id,
+      aggregateVersion: 1,
+      occurredAt: created.createdAt,
+      actor: {
+        id: actor.id,
+        name: actor.name,
+        role: actor.roles[0],
+        organizationId: actor.organizationUnitId,
+      },
+      payload: {
+        parcelCode: created.parcelCode,
+        organizationId: created.organizationId,
+        status: created.status,
+        version: created.version,
+      },
+      metadata: {},
+    });
     await auditLandEvent(
       actor,
       {

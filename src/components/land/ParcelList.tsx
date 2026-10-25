@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { fetchParcelList } from '@/components/land/land-api';
 import {
+  type ParcelStatusTone,
   ParcelFeedback,
   ParcelFilterToolbar,
   ParcelStatusBadge,
@@ -30,6 +31,13 @@ function buildQuery(filters: {
   if (filters.parcelCode) params.set('parcelCode', filters.parcelCode);
   if (filters.cursor) params.set('cursor', filters.cursor);
   return `?${params.toString()}`;
+}
+
+// Tone bổ trợ cho badge trạng thái; text vẫn giữ nguyên từ parcelStatusText.
+function parcelStatusTone(status: string): ParcelStatusTone {
+  if (status === 'active') return 'success';
+  if (status === 'proposed') return 'info';
+  return 'neutral';
 }
 
 export function ParcelList() {
@@ -122,8 +130,11 @@ export function ParcelList() {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="mt-3 min-h-[44px] rounded-lg border border-[var(--civicos-info)] px-3 py-2 text-sm text-[var(--civicos-info)] hover:border-[var(--civicos-info)]"
+          className="civicos-control mt-3 min-h-[44px] border border-[var(--civicos-info)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-info)] hover:bg-[var(--civicos-surface-muted)]"
         >
+          <span aria-hidden="true" className="mr-2">
+            ↻
+          </span>
           Thử lại
         </button>
       </div>
@@ -136,8 +147,11 @@ export function ParcelList() {
         <button
           type="button"
           onClick={() => setReloadToken((value) => value + 1)}
-          className="min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-3 py-2 text-sm text-[var(--civicos-danger)] hover:border-[var(--civicos-danger)]"
+          className="civicos-control min-h-[44px] border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-danger)] hover:bg-[var(--civicos-surface-muted)]"
         >
+          <span aria-hidden="true" className="mr-2">
+            ↻
+          </span>
           Thử lại
         </button>
       </ParcelFeedback>
@@ -239,7 +253,7 @@ export function ParcelList() {
               {items.map((item) => (
                 <tr
                   key={item.id}
-                  className="border-b border-[var(--civicos-border)] transition-colors hover:bg-[var(--civicos-surface-muted)]"
+                  className="border-b border-[var(--civicos-border)] transition-colors hover:bg-[var(--civicos-surface-muted)] motion-safe:duration-150"
                 >
                   <td className="px-4 py-2 font-mono text-[var(--civicos-text)]">
                     <Link
@@ -256,7 +270,7 @@ export function ParcelList() {
                     {item.areaSqm}
                   </td>
                   <td className="px-4 py-2">
-                    <ParcelStatusBadge>
+                    <ParcelStatusBadge tone={parcelStatusTone(item.status)}>
                       {parcelStatusText(item.status)}
                     </ParcelStatusBadge>
                   </td>
@@ -285,7 +299,7 @@ export function ParcelList() {
               setCurrentCursor(previous);
               void load(previous);
             }}
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-4 py-2 text-sm font-medium text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
+            className="civicos-control motion-safe:transition-colors min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-4 py-2 text-sm font-medium text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
           >
             Trang trước
           </button>
@@ -298,7 +312,7 @@ export function ParcelList() {
               setCurrentCursor(nextCursor);
               void load(nextCursor);
             }}
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-4 py-2 text-sm font-medium text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
+            className="civicos-control motion-safe:transition-colors min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-4 py-2 text-sm font-medium text-[var(--civicos-text)] hover:border-[var(--civicos-accent)]"
           >
             Trang tiếp
           </button>

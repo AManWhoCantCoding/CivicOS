@@ -5,12 +5,14 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { appendEvent } from '@/modules/eventing';
 import type { IdentityUser } from '@/modules/identity';
+import { blindIndex, decryptSensitive } from '@/modules/identity';
 
 import {
   assertLandActor,
   auditLandEvent,
   requireApplicationDetailAccess,
   requireLandReviewAccess,
+  assertCanViewPartySensitive,
 } from './access';
 import {
   findApplicationById,
@@ -23,6 +25,7 @@ import {
 } from './application-repository';
 import { findParcelById } from './parcel-repository';
 import { findPartyById } from './party-repository';
+import { createPartyInTransaction } from './party-service';
 import {
   canonicalizeChangePayload,
   validateApplicationChange,
@@ -130,71 +133,78 @@ function stableStringify(value: unknown): string {
     .join(',')}}`;
 }
 
-type FingerprintParties = Array<{
-  partyId: string;
-  partyRole: string;
-  sharePercent: string | null;
-}>;
-
-type FingerprintParcels = Array<{ parcelId: string; parcelRole: string }>;
-
-// Canonical fingerprint of the create payload for idempotency comparison
-// (DR-07, EC-04, EC-05). Shares normalize to DecimalString; payload transfer
-// shares canonicalize via change-validation so 100 and "100.00" match;
-// ordering is canonical so link order never causes a false conflict (LND-07).
-function fingerprintOf(input: {
-  changeType: string;
-  changePayload: unknown;
-  parties: FingerprintParties;
-  parcels: FingerprintParcels;
-}): string {
-  const parties = [...input.parties]
-    .map((party) => ({
-      partyId: party.partyId,
-      partyRole: party.partyRole,
-      sharePercent:
-        party.sharePercent === null
-          ? null
-          : toDecimalString(party.sharePercent),
-    }))
-    .sort((a, b) =>
-      `${a.partyId}${a.partyRole}`.localeCompare(`${b.partyId}${b.partyRole}`),
-    );
-  const parcels = [...input.parcels]
-    .map((parcel) => ({
-      parcelId: parcel.parcelId,
-      parcelRole: parcel.parcelRole,
-    }))
-    .sort((a, b) =>
-      `${a.parcelId}${a.parcelRole}`.localeCompare(
-        `${b.parcelId}${b.parcelRole}`,
-      ),
-    );
-  return stableStringify({
-    changeType: input.changeType,
-    changePayload: canonicalizeChangePayload(
-      input.changeType,
-      input.changePayload,
+function matchesApplicationInput(
+  row: ApplicationRowWithLinks,
+  input: ApplicationInput,
+  partyRows: Map<
+    string,
+    {
+      referenceCode: string;
+      partyType: string;
+      displayNameCiphertext: string;
+      identityNumberIndex: string | null;
+    }
+  >,
+): boolean {
+  if (
+    row.changeType !== input.changeType ||
+    stableStringify(
+      canonicalizeChangePayload(input.changeType, input.changePayload),
+    ) !==
+      stableStringify(
+        canonicalizeChangePayload(row.changeType, row.changePayload),
+      )
+  )
+    return false;
+  if (row.applicationParties.length !== input.parties.length) return false;
+  const remaining = [...row.applicationParties];
+  for (const supplied of input.parties) {
+    const linkIndex = remaining.findIndex((candidate) => {
+      if (
+        candidate.partyRole !== supplied.partyRole ||
+        toShareString(candidate.sharePercent) !==
+          (supplied.sharePercent === null
+            ? null
+            : toDecimalString(supplied.sharePercent)) ||
+        (supplied.partyId && candidate.partyId !== supplied.partyId)
+      )
+        return false;
+      if (!supplied.newParty) return true;
+      const stored = partyRows.get(candidate.partyId);
+      return Boolean(
+        stored &&
+        stored.referenceCode === supplied.newParty.referenceCode &&
+        stored.partyType === supplied.newParty.partyType &&
+        decryptSensitive(stored.displayNameCiphertext) ===
+          supplied.newParty.displayName &&
+        stored.identityNumberIndex ===
+          (supplied.newParty.identityNumber
+            ? blindIndex(supplied.newParty.identityNumber)
+            : null),
+      );
+    });
+    const link = linkIndex < 0 ? undefined : remaining.splice(linkIndex, 1)[0];
+    if (!link) return false;
+  }
+  const parcels = [...input.parcels].sort((a, b) =>
+    `${a.parcelId}${a.parcelRole}`.localeCompare(
+      `${b.parcelId}${b.parcelRole}`,
     ),
-    parties,
-    parcels,
-  });
-}
-
-function fingerprintOfRow(row: ApplicationRowWithLinks): string {
-  return fingerprintOf({
-    changeType: row.changeType,
-    changePayload: row.changePayload,
-    parties: row.applicationParties.map((link) => ({
-      partyId: link.partyId,
-      partyRole: link.partyRole,
-      sharePercent: toShareString(link.sharePercent),
-    })),
-    parcels: row.applicationParcels.map((link) => ({
-      parcelId: link.parcelId,
-      parcelRole: link.parcelRole,
-    })),
-  });
+  );
+  const storedParcels = [...row.applicationParcels].sort((a, b) =>
+    `${a.parcelId}${a.parcelRole}`.localeCompare(
+      `${b.parcelId}${b.parcelRole}`,
+    ),
+  );
+  return (
+    stableStringify(parcels) ===
+    stableStringify(
+      storedParcels.map(({ parcelId, parcelRole }) => ({
+        parcelId,
+        parcelRole,
+      })),
+    )
+  );
 }
 
 // Create a public application code without new dependencies.
@@ -226,9 +236,12 @@ export async function createApplication(
 
   // LND-06 existence/scope boundary stays before LND-07 shape validation so
   // unknown party/parcel maps to 404 and cross-OU stays 403 (DR-06, DR-09).
+  if (input.parties.some((party) => party.newParty)) {
+    await assertCanViewPartySensitive(actor, actor.organizationUnitId);
+  }
   for (const party of input.parties) {
-    const stored = await findPartyById(party.partyId);
-    if (!stored) throw new Error('PARTY_NOT_FOUND');
+    if (party.partyId && !(await findPartyById(party.partyId)))
+      throw new Error('PARTY_NOT_FOUND');
   }
   for (const parcel of input.parcels) {
     const stored = await findParcelById(parcel.parcelId);
@@ -236,8 +249,6 @@ export async function createApplication(
     if (stored.organizationId !== actor.organizationUnitId)
       throw new Error('FORBIDDEN');
   }
-
-  const wanted = fingerprintOf(input);
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const applicationCode = generateApplicationCode();
@@ -247,7 +258,27 @@ export async function createApplication(
         if (existing) {
           if (existing.organizationId !== actor.organizationUnitId)
             throw new Error('FORBIDDEN');
-          if (fingerprintOfRow(existing) !== wanted)
+          const partyRows = await tx.landParty.findMany({
+            where: {
+              id: {
+                in: existing.applicationParties.map((link) => link.partyId),
+              },
+            },
+            select: {
+              id: true,
+              referenceCode: true,
+              partyType: true,
+              displayNameCiphertext: true,
+              identityNumberIndex: true,
+            },
+          });
+          if (
+            !matchesApplicationInput(
+              existing,
+              input,
+              new Map(partyRows.map((row) => [row.id, row])),
+            )
+          )
             throw new Error(`IDEMPOTENCY_CONFLICT:${key}`);
           return {
             application: toApplicationDetail(existing),
@@ -278,6 +309,22 @@ export async function createApplication(
             }
           }
         }
+        const parties = [] as Array<{
+          partyId: string;
+          partyRole: string;
+          sharePercent: string | null;
+        }>;
+        for (const party of input.parties) {
+          const partyId = party.newParty
+            ? (await createPartyInTransaction(party.newParty, actor, tx)).id
+            : party.partyId;
+          if (!partyId) throw new Error('INVALID_REQUEST');
+          parties.push({
+            partyId,
+            partyRole: party.partyRole,
+            sharePercent: party.sharePercent,
+          });
+        }
         const created = await insertApplication(
           {
             applicationCode,
@@ -286,7 +333,7 @@ export async function createApplication(
             changePayload: input.changePayload as Prisma.InputJsonValue,
             createdById: actor.id,
             idempotencyKey: key,
-            parties: input.parties,
+            parties,
             parcels: input.parcels,
           },
           tx,
@@ -339,11 +386,29 @@ export async function createApplication(
         error.message.startsWith('IDEMPOTENCY_CONFLICT')
       ) {
         const existing = await findApplicationByIdempotencyKey(key);
-        if (
-          existing &&
-          existing.organizationId === actor.organizationUnitId &&
-          fingerprintOfRow(existing) === wanted
-        ) {
+        if (existing && existing.organizationId === actor.organizationUnitId) {
+          const rows = await prisma.landParty.findMany({
+            where: {
+              id: {
+                in: existing.applicationParties.map((link) => link.partyId),
+              },
+            },
+            select: {
+              id: true,
+              referenceCode: true,
+              partyType: true,
+              displayNameCiphertext: true,
+              identityNumberIndex: true,
+            },
+          });
+          if (
+            !matchesApplicationInput(
+              existing,
+              input,
+              new Map(rows.map((row) => [row.id, row])),
+            )
+          )
+            throw error;
           return {
             application: toApplicationDetail(existing),
             replayed: true,

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { createParcel, listParcels, toLandApiError } from '@/modules/land';
 import { requireLandActor } from '@/modules/land/access';
 import { parseLandListQuery, parseParcelInput } from '@/modules/land/schemas';
+import { readLandJsonBody } from '../json-body';
 
 // Map service errors to LAND_* bodies without leaking internals.
 function toErrorResponse(error: unknown): NextResponse {
@@ -28,7 +29,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     const actor = await requireLandActor();
-    const input = parseParcelInput(await request.json());
+    const input = parseParcelInput(await readLandJsonBody(request));
     return NextResponse.json(
       { parcel: await createParcel(input, actor) },
       { status: 201 },

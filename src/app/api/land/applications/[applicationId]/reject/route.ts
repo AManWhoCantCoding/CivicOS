@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { rejectApplication, toLandApiError } from '@/modules/land';
 import { requireLandActor } from '@/modules/land/access';
 import { parseRejectBody, parseReviewVersion } from '@/modules/land/schemas';
+import { readLandJsonBody } from '@/app/api/land/json-body';
 
 // Map service errors to LAND_* bodies without leaking internals.
 function toErrorResponse(error: unknown): NextResponse {
@@ -29,7 +30,7 @@ export async function POST(
     );
     let rawBody: unknown;
     try {
-      rawBody = await request.json();
+      rawBody = await readLandJsonBody(request);
     } catch {
       throw new Error('INVALID_REQUEST');
     }

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
-import { createParty, listParties, toLandApiError } from '@/modules/land';
+import { listParties, toLandApiError } from '@/modules/land';
 import { requireLandActor } from '@/modules/land/access';
-import { parseLandListQuery, parsePartyInput } from '@/modules/land/schemas';
+import { parseLandListQuery } from '@/modules/land/schemas';
 
 // Map service errors to LAND_* bodies without leaking internals.
 function toErrorResponse(error: unknown): NextResponse {
@@ -20,19 +20,6 @@ export async function GET(request: Request): Promise<NextResponse> {
       Object.fromEntries(new URL(request.url).searchParams),
     );
     return NextResponse.json(await listParties(query, actor));
-  } catch (error) {
-    return toErrorResponse(error);
-  }
-}
-
-export async function POST(request: Request): Promise<NextResponse> {
-  try {
-    const actor = await requireLandActor();
-    const input = parsePartyInput(await request.json());
-    return NextResponse.json(
-      { party: await createParty(input, actor) },
-      { status: 201 },
-    );
   } catch (error) {
     return toErrorResponse(error);
   }

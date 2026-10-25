@@ -147,7 +147,7 @@ export function PublicLandLookup() {
             Tra cứu theo
           </legend>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border border-[var(--civicos-border)] px-3 text-sm text-[var(--civicos-text)] has-[:checked]:border-[var(--civicos-accent)] has-[:checked]:bg-[var(--civicos-surface-muted)]">
+            <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border border-[var(--civicos-border)] px-3 text-sm text-[var(--civicos-text)] has-[:checked]:border-[var(--civicos-accent)] has-[:checked]:bg-[var(--civicos-surface-muted)] has-[:focus-visible]:outline-[3px] has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--civicos-focus)] motion-safe:transition-colors">
               <input
                 type="radio"
                 name="land-lookup-mode"
@@ -157,11 +157,11 @@ export function PublicLandLookup() {
                   setMode('applicationCode');
                   setError(null);
                 }}
-                className="h-4 w-4 accent-[var(--civicos-accent)]"
+                className="h-4 w-4 accent-[var(--civicos-accent)] outline-none"
               />
               Mã hồ sơ
             </label>
-            <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border border-[var(--civicos-border)] px-3 text-sm text-[var(--civicos-text)] has-[:checked]:border-[var(--civicos-accent)] has-[:checked]:bg-[var(--civicos-surface-muted)]">
+            <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border border-[var(--civicos-border)] px-3 text-sm text-[var(--civicos-text)] has-[:checked]:border-[var(--civicos-accent)] has-[:checked]:bg-[var(--civicos-surface-muted)] has-[:focus-visible]:outline-[3px] has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--civicos-focus)] motion-safe:transition-colors">
               <input
                 type="radio"
                 name="land-lookup-mode"
@@ -171,7 +171,7 @@ export function PublicLandLookup() {
                   setMode('parcelCode');
                   setError(null);
                 }}
-                className="h-4 w-4 accent-[var(--civicos-accent)]"
+                className="h-4 w-4 accent-[var(--civicos-accent)] outline-none"
               />
               Mã thửa
             </label>
@@ -187,7 +187,7 @@ export function PublicLandLookup() {
           </label>
           <input
             id="land-lookup-code"
-            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 font-mono text-base text-[var(--civicos-text)] transition outline-none placeholder:text-[var(--civicos-text-muted)] focus:border-[var(--civicos-accent)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 font-mono text-base text-[var(--civicos-text)] transition outline-none placeholder:text-[var(--civicos-text-muted)] focus:border-[var(--civicos-accent)] focus:ring-2 focus:ring-[var(--civicos-focus)] motion-safe:duration-150"
             value={code}
             onChange={(event) => setCode(event.target.value)}
             placeholder={
@@ -208,7 +208,7 @@ export function PublicLandLookup() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-5 min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] transition hover:bg-[var(--civicos-accent)]/90 focus-visible:outline-[var(--civicos-focus)] disabled:cursor-wait disabled:opacity-60"
+          className="mt-5 min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] transition hover:bg-[var(--civicos-accent-hover)] focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)] motion-safe:duration-150 active:translate-y-px disabled:cursor-wait disabled:opacity-60"
         >
           {loading ? 'Đang tra cứu…' : 'Tra cứu'}
         </button>
@@ -217,9 +217,14 @@ export function PublicLandLookup() {
       {!online ? (
         <p
           role="status"
-          className="rounded-lg border border-[var(--civicos-info)] bg-[var(--civicos-surface)] p-3 text-sm text-[var(--civicos-info)]"
+          className="flex items-start gap-2 rounded-lg border border-[var(--civicos-info)] bg-[var(--civicos-surface)] p-3 text-sm leading-6 text-[var(--civicos-info)]"
         >
-          Đang ngoại tuyến. Bạn có thể thử lại khi kết nối được khôi phục.
+          <span aria-hidden="true" className="font-semibold">
+            ⚠
+          </span>
+          <span>
+            Đang ngoại tuyến. Bạn có thể thử lại khi kết nối được khôi phục.
+          </span>
         </p>
       ) : null}
 
@@ -259,8 +264,11 @@ export function PublicLandLookup() {
               type="button"
               onClick={() => void submitLookup()}
               disabled={loading}
-              className="mt-4 min-h-[44px] rounded-lg border border-[var(--civicos-danger)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-danger)] transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+              className="civicos-control mt-4 min-h-[44px] border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--civicos-danger)] transition hover:bg-[var(--civicos-surface-muted)] focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)] motion-safe:duration-150 disabled:cursor-wait disabled:opacity-60"
             >
+              <span aria-hidden="true" className="mr-2">
+                ↻
+              </span>
               Thử lại
             </button>
           ) : null}
@@ -284,7 +292,8 @@ export function PublicLandLookup() {
                 Thông tin projection
               </h2>
             </div>
-            <span className="inline-flex min-h-[32px] items-center rounded-full border border-[var(--civicos-accent)] bg-[var(--civicos-surface)] px-3 text-xs font-semibold text-[var(--civicos-accent)]">
+            <span className="inline-flex min-h-[32px] items-center gap-2 rounded-full border border-[var(--civicos-simulated-text)] bg-[var(--civicos-simulated-bg)] px-3 text-xs font-semibold text-[var(--civicos-simulated-text)]">
+              <span aria-hidden="true">◇</span>
               Mô phỏng · simulated
             </span>
           </div>

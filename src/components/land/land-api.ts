@@ -441,7 +441,13 @@ export async function createLandApplication(input: {
   changeType: string;
   changePayload: Record<string, unknown>;
   parties: Array<{
-    partyId: string;
+    partyId?: string;
+    newParty?: {
+      referenceCode: string;
+      partyType: 'individual' | 'organization';
+      displayName: string;
+      identityNumber: string | null;
+    };
     partyRole: string;
     sharePercent: string | null;
   }>;

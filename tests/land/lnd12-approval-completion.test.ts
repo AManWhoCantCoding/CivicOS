@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { prisma } from '@/lib/prisma';
+import { appendEvent } from '@/modules/eventing';
 import { blindIndex, encryptSensitive } from '@/modules/identity';
 import { createAssignments } from '@/modules/identity';
 import type { IdentityUser } from '@/modules/identity';
@@ -51,7 +52,7 @@ const SQUARE = {
 describe.skipIf(!postgresEnabled)(
   'LND-12 approval/completion transaction',
   () => {
-    const stamp = randomUUID().slice(0, 8);
+    const stamp = randomUUID().replace(/-/g, '');
     const ouA = `lnd12-ou-a-${stamp}`;
     const ouB = `lnd12-ou-b-${stamp}`;
     const officerId = `lnd12-officer-${stamp}`;
@@ -73,6 +74,7 @@ describe.skipIf(!postgresEnabled)(
     const createdAppIds: string[] = [];
     const createdRightIds: string[] = [];
     const createdEncumbranceIds: string[] = [];
+    const createdRoleIds: string[] = [];
 
     function nextKey(prefix: string): string {
       keySeq += 1;
@@ -142,11 +144,16 @@ describe.skipIf(!postgresEnabled)(
         ],
       });
       for (const name of ['land_officer', 'commune_leader'] as const) {
+        const priorRole = await prisma.role.findUnique({ where: { name } });
         await prisma.role.upsert({
           where: { name },
           update: {},
           create: { name },
         });
+        if (!priorRole) {
+          const role = await prisma.role.findUniqueOrThrow({ where: { name } });
+          createdRoleIds.push(role.id);
+        }
       }
       const outLeaderId = `lnd12-out-leader-${stamp}`;
       for (const [id, role, ou] of [
@@ -209,6 +216,30 @@ describe.skipIf(!postgresEnabled)(
         toGeometryParam(SQUARE),
       );
       parcelSubject = subject.id;
+      const seedParcelHistory = (parcel: typeof subject) =>
+        appendEvent(prisma, {
+          eventId: randomUUID(),
+          eventType: 'LandParcelCreated',
+          eventVersion: 1,
+          aggregateType: 'LandParcel',
+          aggregateId: parcel.id,
+          aggregateVersion: 1,
+          occurredAt: parcel.createdAt,
+          actor: {
+            id: officerId,
+            name: officerId,
+            role: 'land_officer',
+            organizationId: ouA,
+          },
+          payload: {
+            parcelCode: parcel.parcelCode,
+            organizationId: parcel.organizationId,
+            status: parcel.status,
+            version: parcel.version,
+          },
+          metadata: {},
+        });
+      await seedParcelHistory(subject);
       const source = await insertParcel(
         {
           parcelCode: `LND12-SOURCE-${stamp}`,
@@ -223,6 +254,7 @@ describe.skipIf(!postgresEnabled)(
         toGeometryParam(SQUARE),
       );
       parcelSource = source.id;
+      await seedParcelHistory(source);
       const result = await insertParcel(
         {
           parcelCode: `LND12-RESULT-${stamp}`,
@@ -237,6 +269,7 @@ describe.skipIf(!postgresEnabled)(
         toGeometryParam(SQUARE),
       );
       parcelResult = result.id;
+      await seedParcelHistory(result);
       await prisma.landParcel.update({
         where: { id: parcelResult },
         data: { status: 'proposed' },
@@ -276,52 +309,118 @@ describe.skipIf(!postgresEnabled)(
           resourceId: { in: createdAppIds },
         },
       });
-      const eventRows = await prisma.eventRecord.findMany({
-        where: {
-          OR: [
-            {
-              aggregateType: 'LandChangeApplication',
-              aggregateId: { in: createdAppIds },
+      const actorIds = [
+        officerId,
+        leaderId,
+        outsiderId,
+        `lnd12-out-leader-${stamp}`,
+      ];
+      const auditRows =
+        createdAppIds.length || actorIds.length
+          ? await prisma.auditEvent.findMany({
+              where: {
+                OR: [
+                  ...(createdAppIds.length
+                    ? [{ resourceId: { in: createdAppIds } }]
+                    : []),
+                  ...(actorIds.length ? [{ actorId: { in: actorIds } }] : []),
+                ],
+              },
+              select: { id: true },
+            })
+          : [];
+      const auditIds = auditRows.map(({ id }) => id);
+      const applicationAssignments = createdAppIds.length
+        ? await prisma.assignment.findMany({
+            where: {
+              resourceType: 'LandChangeApplication',
+              resourceId: { in: createdAppIds },
             },
-            { aggregateType: 'AuditEvent' },
-          ],
-        },
-        select: { eventId: true, aggregateId: true },
-      });
-      const auditIds = (
-        await prisma.auditEvent.findMany({
-          where: { resourceId: { in: [...createdAppIds, '*'] } },
-          select: { id: true },
-        })
-      ).map(({ id }) => id);
-      const auditEventIds = eventRows
-        .filter(({ aggregateId }) => auditIds.includes(aggregateId))
-        .map(({ eventId }) => eventId);
-      const appEventIds = eventRows
-        .filter(({ aggregateId }) => createdAppIds.includes(aggregateId))
-        .map(({ eventId }) => eventId);
-      const outboxIds = [...new Set([...auditEventIds, ...appEventIds])];
+            select: { id: true },
+          })
+        : [];
+      const assignmentIds = applicationAssignments.map(({ id }) => id);
+      const fixtureParcelIds = [
+        parcelSubject,
+        parcelSource,
+        parcelResult,
+      ].filter((id): id is string => Boolean(id));
+      const eventRows =
+        createdAppIds.length ||
+        auditIds.length ||
+        fixtureParcelIds.length ||
+        assignmentIds.length
+          ? await prisma.eventRecord.findMany({
+              where: {
+                OR: [
+                  ...(createdAppIds.length
+                    ? [
+                        {
+                          aggregateType: 'LandChangeApplication',
+                          aggregateId: { in: createdAppIds },
+                        },
+                      ]
+                    : []),
+                  ...(fixtureParcelIds.length
+                    ? [
+                        {
+                          aggregateType: 'LandParcel',
+                          aggregateId: { in: fixtureParcelIds },
+                        },
+                      ]
+                    : []),
+                  ...(assignmentIds.length
+                    ? [
+                        {
+                          aggregateType: 'Assignment',
+                          aggregateId: { in: assignmentIds },
+                        },
+                      ]
+                    : []),
+                  ...(auditIds.length
+                    ? [
+                        {
+                          aggregateType: 'AuditEvent',
+                          aggregateId: { in: auditIds },
+                        },
+                      ]
+                    : []),
+                ],
+              },
+              select: { eventId: true, aggregateType: true, aggregateId: true },
+            })
+          : [];
+      const outboxIds = eventRows.map(({ eventId }) => eventId);
       if (outboxIds.length) {
         await prisma.outboxMessage.deleteMany({
           where: { eventId: { in: outboxIds } },
         });
       }
-      if (appEventIds.length) {
+      if (outboxIds.length)
         await prisma.eventRecord.deleteMany({
-          where: { eventId: { in: appEventIds } },
+          where: { eventId: { in: outboxIds } },
         });
-      }
-      if (auditEventIds.length) {
-        await prisma.eventRecord.deleteMany({
-          where: { eventId: { in: auditEventIds } },
+      if (outboxIds.length)
+        await prisma.projectionRecord.deleteMany({
+          where: {
+            OR: eventRows.map(({ aggregateType, aggregateId }) => ({
+              aggregateType,
+              aggregateId,
+            })),
+          },
         });
-      }
       if (auditIds.length) {
         await prisma.auditEvent.deleteMany({ where: { id: { in: auditIds } } });
       }
       if (createdAppIds.length) {
-        await prisma.assignment.deleteMany({
+        await prisma.notification.deleteMany({
           where: { resourceId: { in: createdAppIds } },
+        });
+        await prisma.assignment.deleteMany({
+          where: {
+            resourceType: 'LandChangeApplication',
+            resourceId: { in: createdAppIds },
+          },
         });
         await prisma.landApplicationParcel.deleteMany({
           where: { applicationId: { in: createdAppIds } },
@@ -358,6 +457,10 @@ describe.skipIf(!postgresEnabled)(
           id: { in: [officerId, leaderId, outsiderId, outLeaderId] },
         },
       });
+      if (createdRoleIds.length)
+        await prisma.role.deleteMany({
+          where: { id: { in: createdRoleIds }, users: { none: {} } },
+        });
       await prisma.organizationUnit.deleteMany({
         where: { id: { in: [ouA, ouB] } },
       });
@@ -475,6 +578,35 @@ describe.skipIf(!postgresEnabled)(
         where: { id: parcelSubject },
       });
       expect(parcel.address).toBe('Dia chi moi LND12');
+      const parcelEvent = await prisma.eventRecord.findFirstOrThrow({
+        where: {
+          aggregateType: 'LandParcel',
+          aggregateId: parcelSubject,
+          eventType: 'LandParcelUpdated',
+        },
+      });
+      expect(parcelEvent.aggregateVersion).toBe(parcel.version);
+      expect(parcelEvent.actorId).toBe(leaderId);
+      expect(parcelEvent.payload).toMatchObject({
+        parcelCode: parcel.parcelCode,
+        organizationId: ouA,
+        applicationId: appId,
+        changeType: 'information_update',
+        changedField: 'address',
+        beforeStatus: 'active',
+        afterStatus: 'active',
+        beforeVersion: parcel.version - 1,
+        afterVersion: parcel.version,
+      });
+      expect(
+        await prisma.auditEvent.count({
+          where: {
+            resourceType: 'LandParcel',
+            resourceId: parcelSubject,
+            operation: 'land.parcel.updated',
+          },
+        }),
+      ).toBe(1);
     });
 
     it('approve mortgage register creates active encumbrance', async () => {
@@ -567,6 +699,39 @@ describe.skipIf(!postgresEnabled)(
       });
       expect(source.status).toBe('retired');
       expect(result.status).toBe('active');
+      for (const [parcel, beforeStatus, afterStatus] of [
+        [source, 'active', 'retired'],
+        [result, 'proposed', 'active'],
+      ] as const) {
+        const event = await prisma.eventRecord.findFirstOrThrow({
+          where: {
+            aggregateType: 'LandParcel',
+            aggregateId: parcel.id,
+            eventType: 'LandParcelStatusChanged',
+          },
+        });
+        expect(event.aggregateVersion).toBe(parcel.version);
+        expect(event.actorId).toBe(leaderId);
+        expect(event.payload).toMatchObject({
+          parcelCode: parcel.parcelCode,
+          organizationId: ouA,
+          applicationId: appId,
+          changeType: 'parcel_split_merge',
+          beforeStatus,
+          afterStatus,
+          beforeVersion: parcel.version - 1,
+          afterVersion: parcel.version,
+        });
+        expect(
+          await prisma.auditEvent.count({
+            where: {
+              resourceType: 'LandParcel',
+              resourceId: parcel.id,
+              operation: 'land.parcel.status_changed',
+            },
+          }),
+        ).toBe(1);
+      }
     });
 
     it('AC-02: reject reason whitespace -> 400, app remains pending_approval, no domain rows changed', async () => {
@@ -652,6 +817,61 @@ describe.skipIf(!postgresEnabled)(
         }),
       ).toBe(1);
     });
+
+    it.each(['submitted', 'in_review', 'sync_failed'] as const)(
+      'reject from %s has no persisted side effects',
+      async (status) => {
+        const appId = await toPendingApproval(transferInput());
+        const version =
+          status === 'submitted' ? 1 : status === 'in_review' ? 2 : 4;
+        await prisma.landChangeApplication.update({
+          where: { id: appId },
+          data: { status, version },
+        });
+        const approvalsBefore = await prisma.approval.count({
+          where: { resourceType: 'LandChangeApplication', resourceId: appId },
+        });
+        const eventsBefore = await prisma.eventRecord.count({
+          where: { aggregateType: 'LandChangeApplication', aggregateId: appId },
+        });
+        const auditsBefore = await prisma.auditEvent.count({
+          where: { resourceType: 'LandChangeApplication', resourceId: appId },
+        });
+
+        await expect(
+          rejectApplication(appId, leaderA(), version, { reason: 'Reject' }),
+        ).rejects.toThrow('INVALID_TRANSITION');
+
+        const stored = await prisma.landChangeApplication.findUniqueOrThrow({
+          where: { id: appId },
+        });
+        expect(stored).toMatchObject({ status, version });
+        expect(
+          await prisma.approval.count({
+            where: {
+              resourceType: 'LandChangeApplication',
+              resourceId: appId,
+            },
+          }),
+        ).toBe(approvalsBefore);
+        expect(
+          await prisma.eventRecord.count({
+            where: {
+              aggregateType: 'LandChangeApplication',
+              aggregateId: appId,
+            },
+          }),
+        ).toBe(eventsBefore);
+        expect(
+          await prisma.auditEvent.count({
+            where: {
+              resourceType: 'LandChangeApplication',
+              resourceId: appId,
+            },
+          }),
+        ).toBe(auditsBefore);
+      },
+    );
 
     it('AC-03: injected event failure rolls back application, land mutation and Approval', async () => {
       const appId = await toPendingApproval(transferInput());

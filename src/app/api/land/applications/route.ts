@@ -10,6 +10,7 @@ import {
   parseApplicationInput,
   parseApplicationListQuery,
 } from '@/modules/land/schemas';
+import { readLandJsonBody } from '../json-body';
 
 // Map service errors to LAND_* bodies without leaking internals.
 function toErrorResponse(error: unknown): NextResponse {
@@ -38,7 +39,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     const actor = await requireLandActor();
     const idempotencyKey = request.headers.get('idempotency-key') ?? '';
-    const input = parseApplicationInput(await request.json());
+    const input = parseApplicationInput(await readLandJsonBody(request));
     const { application, replayed } = await createApplication(
       input,
       actor,

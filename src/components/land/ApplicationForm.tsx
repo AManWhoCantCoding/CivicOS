@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import {
+  applyInlinePartyTarget,
   buildInformationUpdateInput,
   buildMortgageInput,
   buildSplitMergeInput,
@@ -51,6 +52,14 @@ export function ApplicationForm() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [inlineRole, setInlineRole] = useState('proposed_holder');
+  const [inlineTarget, setInlineTarget] = useState<string | null>(null);
+  const [inlineParty, setInlineParty] = useState({
+    referenceCode: '',
+    partyType: 'individual' as 'individual' | 'organization',
+    displayName: '',
+    identityNumber: '',
+  });
   const [online, setOnline] = useState(true);
   const errorRef = useRef<HTMLDivElement>(null);
 
@@ -258,8 +267,18 @@ export function ApplicationForm() {
       });
     }
     // Gửi kèm Idempotency-Key; cùng key được tái dùng khi retry.
+    const outgoingParties = applyInlinePartyTarget(
+      payload.parties,
+      inlineTarget,
+      inlineRole,
+      {
+        ...inlineParty,
+        identityNumber: inlineParty.identityNumber.trim() || null,
+      },
+    );
     const result = await createLandApplication({
       ...payload,
+      parties: outgoingParties,
       idempotencyKey,
     });
     // 201 là tạo mới; 200 là replay cùng key+cùng payload, đều chuyển tới detail.
@@ -458,6 +477,95 @@ export function ApplicationForm() {
           </label>
         </section>
       ) : null}
+
+      <section
+        aria-label="Tạo chủ thể mới trong hồ sơ"
+        className="space-y-3 rounded-lg border border-[var(--civicos-border)] p-4"
+      >
+        <h2 className="text-lg text-[var(--civicos-text)]">
+          Tạo chủ thể mới trong hồ sơ
+        </h2>
+        <p className="text-sm text-[var(--civicos-text-muted)]">
+          Thông tin chỉ được gửi cùng hồ sơ và không lưu trong bản nháp phiên.
+        </p>
+        <label className="flex flex-col gap-1 text-sm">
+          Vai trò
+          <select
+            value={inlineRole}
+            onChange={(event) => setInlineRole(event.target.value)}
+            className="min-h-[44px] rounded-lg border bg-[var(--civicos-surface-muted)] px-3"
+          >
+            <option value="applicant">applicant</option>
+            <option value="current_holder">current_holder</option>
+            <option value="proposed_holder">proposed_holder</option>
+            <option value="secured_party">secured_party</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          Mã tham chiếu
+          <input
+            value={inlineParty.referenceCode}
+            onChange={(event) =>
+              setInlineParty({
+                ...inlineParty,
+                referenceCode: event.target.value,
+              })
+            }
+            className="min-h-[44px] rounded-lg border bg-[var(--civicos-surface-muted)] px-3"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          Loại chủ thể
+          <select
+            value={inlineParty.partyType}
+            onChange={(event) =>
+              setInlineParty({
+                ...inlineParty,
+                partyType: event.target.value as 'individual' | 'organization',
+              })
+            }
+            className="min-h-[44px] rounded-lg border bg-[var(--civicos-surface-muted)] px-3"
+          >
+            <option value="individual">individual</option>
+            <option value="organization">organization</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          Tên hiển thị
+          <input
+            value={inlineParty.displayName}
+            onChange={(event) =>
+              setInlineParty({
+                ...inlineParty,
+                displayName: event.target.value,
+              })
+            }
+            className="min-h-[44px] rounded-lg border bg-[var(--civicos-surface-muted)] px-3"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          Số định danh (tùy chọn)
+          <input
+            value={inlineParty.identityNumber}
+            onChange={(event) =>
+              setInlineParty({
+                ...inlineParty,
+                identityNumber: event.target.value,
+              })
+            }
+            className="min-h-[44px] rounded-lg border bg-[var(--civicos-surface-muted)] px-3"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={() => {
+            setInlineTarget(inlineRole);
+          }}
+          className="min-h-[44px] rounded-lg border px-3 py-2"
+        >
+          Dùng chủ thể mới cho vai trò này
+        </button>
+      </section>
 
       {changeType === 'information_update' ? (
         <section aria-labelledby="lnd-info-heading" className="space-y-4">

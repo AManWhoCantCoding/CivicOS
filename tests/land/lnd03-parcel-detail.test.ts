@@ -1,9 +1,15 @@
 import { randomUUID } from 'node:crypto';
 
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
+
+vi.mock('next/headers', () => ({ cookies: vi.fn() }));
 
 import { prisma } from '@/lib/prisma';
-import type { IdentityUser } from '@/modules/identity';
+import {
+  createSession,
+  sessionCookieName,
+  type IdentityUser,
+} from '@/modules/identity';
 import { requireParcelDetailAccess } from '@/modules/land/access';
 import { toLandApiError } from '@/modules/land/errors';
 import { toGeometryParam } from '@/modules/land/parcel-geometry';
@@ -331,6 +337,7 @@ describe.skipIf(!postgresEnabled)(
     const leaderId = `lnd03-leader-${stamp}`;
     const officerId = `lnd03-officer-${stamp}`;
     const outsiderId = `lnd03-outsider-${stamp}`;
+    const createdRoleIds: string[] = [];
 
     function actor(
       id: string,
@@ -347,7 +354,158 @@ describe.skipIf(!postgresEnabled)(
     }
 
     afterAll(async () => {
-      await prisma.$disconnect();
+      try {
+        const [parcels, parties, application, assignments] = await Promise.all([
+          prisma.landParcel.findMany({
+            where: { parcelCode: { startsWith: `LND03-PARCEL-${stamp}-` } },
+            select: { id: true },
+          }),
+          prisma.landParty.findMany({
+            where: { referenceCode: { startsWith: `LND03-PARTY-${stamp}-` } },
+            select: { id: true },
+          }),
+          prisma.landChangeApplication.findMany({
+            where: { id: `lnd03-app-${stamp}-D1` },
+            select: { id: true },
+          }),
+          prisma.assignment.findMany({
+            where: {
+              resourceType: 'LandChangeApplication',
+              resourceId: `lnd03-app-${stamp}-D1`,
+            },
+            select: { id: true },
+          }),
+        ]);
+        const parcelIds = parcels.map(({ id }) => id);
+        const partyIds = parties.map(({ id }) => id);
+        const appIds = application.map(({ id }) => id);
+        const assignmentIds = assignments.map(({ id }) => id);
+        const auditEvents = await prisma.auditEvent.findMany({
+          where: {
+            OR: [
+              { actorId: { in: [leaderId, officerId, outsiderId] } },
+              { resourceType: 'LandParcel', resourceId: { in: parcelIds } },
+              { resourceType: 'LandParty', resourceId: { in: partyIds } },
+              {
+                resourceType: 'LandChangeApplication',
+                resourceId: { in: appIds },
+              },
+            ],
+          },
+          select: { id: true },
+        });
+        const auditIds = auditEvents.map(({ id }) => id);
+        const eventWhere = {
+          OR: [
+            ...parcelIds.map((aggregateId) => ({
+              aggregateType: 'LandParcel',
+              aggregateId,
+            })),
+            ...appIds.map((aggregateId) => ({
+              aggregateType: 'LandChangeApplication',
+              aggregateId,
+            })),
+            ...assignmentIds.map((aggregateId) => ({
+              aggregateType: 'Assignment',
+              aggregateId,
+            })),
+            ...auditIds.map((aggregateId) => ({
+              aggregateType: 'AuditEvent',
+              aggregateId,
+            })),
+            { actorId: { in: [leaderId, officerId, outsiderId] } },
+          ],
+        };
+        const events = await prisma.eventRecord.findMany({
+          where: eventWhere,
+          select: {
+            id: true,
+            eventId: true,
+            aggregateType: true,
+            aggregateId: true,
+          },
+        });
+        const eventIds = events.map(({ id }) => id);
+        const eventIdsForOutbox = events.map(({ eventId }) => eventId);
+        const aggregateTuples = [
+          ...new Map(
+            events.map(({ aggregateType, aggregateId }) => [
+              `${aggregateType}\0${aggregateId}`,
+              { aggregateType, aggregateId },
+            ]),
+          ).values(),
+        ];
+        await prisma.notification.deleteMany({
+          where: {
+            OR: [
+              { userId: { in: [leaderId, officerId, outsiderId] } },
+              { resourceId: { in: [...parcelIds, ...partyIds, ...appIds] } },
+              { sourceEventId: { in: eventIdsForOutbox } },
+            ],
+          },
+        });
+        await prisma.outboxMessage.deleteMany({
+          where: { eventId: { in: eventIdsForOutbox } },
+        });
+        await prisma.landEncumbrance.deleteMany({
+          where: {
+            OR: [
+              { parcelId: { in: parcelIds } },
+              { sourceApplicationId: { in: appIds } },
+            ],
+          },
+        });
+        await prisma.landRight.deleteMany({
+          where: {
+            OR: [
+              { parcelId: { in: parcelIds } },
+              { partyId: { in: partyIds } },
+            ],
+          },
+        });
+        await prisma.landApplicationParcel.deleteMany({
+          where: {
+            OR: [
+              { parcelId: { in: parcelIds } },
+              { applicationId: { in: appIds } },
+            ],
+          },
+        });
+        await prisma.assignment.deleteMany({
+          where: { id: { in: assignmentIds } },
+        });
+        await prisma.landChangeApplication.deleteMany({
+          where: { id: { in: appIds } },
+        });
+        await prisma.auditEvent.deleteMany({ where: { id: { in: auditIds } } });
+        await prisma.eventRecord.deleteMany({
+          where: { id: { in: eventIds } },
+        });
+        for (const tuple of aggregateTuples) {
+          await prisma.projectionRecord.deleteMany({ where: tuple });
+        }
+        await prisma.session.deleteMany({
+          where: { userId: { in: [leaderId, officerId, outsiderId] } },
+        });
+        await prisma.userRole.deleteMany({
+          where: { userId: { in: [leaderId, officerId, outsiderId] } },
+        });
+        await prisma.user.deleteMany({
+          where: { id: { in: [leaderId, officerId, outsiderId] } },
+        });
+        await prisma.landParty.deleteMany({ where: { id: { in: partyIds } } });
+        await prisma.landParcel.deleteMany({
+          where: { id: { in: parcelIds } },
+        });
+        await prisma.role.deleteMany({
+          where: { id: { in: createdRoleIds }, users: { none: {} } },
+        });
+        await prisma.organizationUnit.deleteMany({
+          where: { id: { in: [ouA, ouB] } },
+        });
+      } finally {
+        await prisma.$disconnect();
+      }
     });
 
     it('returns parcel with full rights/encumbrance history for scoped leader', async () => {
@@ -358,11 +516,22 @@ describe.skipIf(!postgresEnabled)(
         ],
       });
       for (const name of ['land_officer', 'commune_leader'] as const) {
+        const existingRole = await prisma.role.findUnique({
+          where: { name },
+          select: { id: true },
+        });
         await prisma.role.upsert({
           where: { name },
           update: {},
           create: { name },
         });
+        if (!existingRole) {
+          const role = await prisma.role.findUniqueOrThrow({
+            where: { name },
+            select: { id: true },
+          });
+          createdRoleIds.push(role.id);
+        }
       }
       for (const [id, role, ou] of [
         [leaderId, 'commune_leader', ouA],
@@ -475,7 +644,9 @@ describe.skipIf(!postgresEnabled)(
         },
       });
 
-      try {
+      {
+        const leaderSession = await createSession(leaderId);
+        const outsiderSession = await createSession(outsiderId);
         const leaderActor = actor(leaderId, ['commune_leader'], ouA);
         const detail = await getParcelDetail(parcel.id, leaderActor);
         expect(detail.parcel.id).toBe(parcel.id);
@@ -527,7 +698,7 @@ describe.skipIf(!postgresEnabled)(
 
         // Grant related assignment, officer can read.
         const grantor = actor(leaderId, ['commune_leader'], ouA);
-        const assignment = await prisma.assignment.create({
+        await prisma.assignment.create({
           data: {
             resourceType: 'LandChangeApplication',
             resourceId: appId,
@@ -538,13 +709,9 @@ describe.skipIf(!postgresEnabled)(
             status: 'active',
           },
         });
-        try {
-          const officerDetail = await getParcelDetail(parcel.id, officerActor);
-          expect(officerDetail.rights).toHaveLength(2);
-          expect(officerDetail.encumbrances).toHaveLength(2);
-        } finally {
-          await prisma.assignment.delete({ where: { id: assignment.id } });
-        }
+        const officerDetail = await getParcelDetail(parcel.id, officerActor);
+        expect(officerDetail.rights).toHaveLength(2);
+        expect(officerDetail.encumbrances).toHaveLength(2);
 
         // Other OU is forbidden without parcel leak.
         const outsider = actor(outsiderId, ['land_officer'], ouB);
@@ -571,34 +738,46 @@ describe.skipIf(!postgresEnabled)(
         expect(
           audits.some((item) => item.operation === 'land.parcel.viewed'),
         ).toBe(true);
-      } finally {
-        await prisma.landEncumbrance.deleteMany({
-          where: { parcelId: parcel.id },
-        });
-        await prisma.landRight.deleteMany({ where: { parcelId: parcel.id } });
-        await prisma.landApplicationParcel.deleteMany({
-          where: { parcelId: parcel.id },
-        });
-        await prisma.landChangeApplication.deleteMany({
-          where: { id: appId },
-        });
-        await prisma.$executeRaw`DELETE FROM "LandParcel" WHERE "id" = ${parcel.id}`;
-        await prisma.landParty.delete({ where: { id: party.id } });
-        await prisma.session.deleteMany({
-          where: { userId: { in: [leaderId, officerId, outsiderId] } },
-        });
-        await prisma.userRole.deleteMany({
-          where: { userId: { in: [leaderId, officerId, outsiderId] } },
-        });
-        await prisma.user.deleteMany({
-          where: { id: { in: [leaderId, officerId, outsiderId] } },
-        });
-        await prisma.organizationUnit.deleteMany({
-          where: { id: { in: [ouA, ouB] } },
-        });
-        await prisma.auditEvent.deleteMany({
-          where: { resourceType: 'LandParcel', resourceId: parcel.id },
-        });
+
+        const countReadAudits = (userId: string) =>
+          prisma.auditEvent.count({
+            where: {
+              actorId: userId,
+              resourceType: 'LandParcel',
+              resourceId: parcel.id,
+              operation: 'land.parcel.viewed',
+            },
+          });
+        const { cookies } = await import('next/headers');
+        const { GET } = await import('@/app/api/land/parcels/[parcelId]/route');
+        const leaderAuditCount = await countReadAudits(leaderId);
+        vi.mocked(cookies).mockResolvedValue({
+          get: (name: string) =>
+            name === sessionCookieName
+              ? { value: leaderSession.token }
+              : undefined,
+        } as never);
+        const authorizedResponse = await GET(
+          new Request(`http://localhost/api/land/parcels/${parcel.id}`),
+          { params: Promise.resolve({ parcelId: parcel.id }) },
+        );
+        expect(authorizedResponse.status).toBe(200);
+        expect((await authorizedResponse.json()).parcel.id).toBe(parcel.id);
+        expect(await countReadAudits(leaderId)).toBe(leaderAuditCount + 1);
+
+        const outsiderAuditCount = await countReadAudits(outsiderId);
+        vi.mocked(cookies).mockResolvedValue({
+          get: (name: string) =>
+            name === sessionCookieName
+              ? { value: outsiderSession.token }
+              : undefined,
+        } as never);
+        const forbiddenResponse = await GET(
+          new Request(`http://localhost/api/land/parcels/${parcel.id}`),
+          { params: Promise.resolve({ parcelId: parcel.id }) },
+        );
+        expect(forbiddenResponse.status).toBe(403);
+        expect(await countReadAudits(outsiderId)).toBe(outsiderAuditCount);
       }
     });
   },

@@ -20,6 +20,7 @@ import {
   parseApplicationInput,
   parseApplicationListQuery,
 } from '@/modules/land/schemas';
+import { listParties } from '@/modules/land/party-service';
 
 // Controllable audit failure seam for DR-19 rollback regression tests.
 // recordAudit is wrapped, never replaced: flag off preserves every seam.
@@ -87,6 +88,63 @@ function transferBody(overrides?: Record<string, unknown>) {
 describe('LND-06 application input parsing follows locked contract', () => {
   it('accepts the locked transfer create shape', () => {
     expect(parseApplicationInput(transferBody())).toEqual(transferBody());
+  });
+
+  it('accepts a nested inline Party while retaining existing Party-ID links', () => {
+    const parsed = parseApplicationInput(
+      transferBody({
+        parties: [
+          {
+            partyId: 'party-current',
+            partyRole: 'current_holder',
+            sharePercent: null,
+          },
+          {
+            newParty: {
+              referenceCode: 'NEW-01',
+              partyType: 'individual',
+              displayName: 'A Name',
+              identityNumber: '12345',
+            },
+            partyRole: 'proposed_holder',
+            sharePercent: '100.00',
+          },
+        ],
+      }),
+    );
+    expect(parsed.parties[0]).toMatchObject({ partyId: 'party-current' });
+    expect(parsed.parties[1]).toMatchObject({
+      newParty: { referenceCode: 'NEW-01', identityNumber: '12345' },
+    });
+  });
+
+  it('rejects malformed or ambiguous nested Party input', () => {
+    const base = { partyRole: 'applicant', sharePercent: null };
+    expect(() =>
+      parseApplicationInput(
+        transferBody({
+          parties: [
+            { ...base, partyId: 'p', newParty: { referenceCode: 'x' } },
+          ],
+        }),
+      ),
+    ).toThrow('INVALID_REQUEST');
+    expect(() =>
+      parseApplicationInput(
+        transferBody({
+          parties: [
+            {
+              ...base,
+              newParty: {
+                referenceCode: 'x',
+                partyType: 'individual',
+                displayName: '   ',
+              },
+            },
+          ],
+        }),
+      ),
+    ).toThrow('INVALID_REQUEST');
   });
 
   it('rejects unknown change types without inventing new ones', () => {
@@ -376,7 +434,7 @@ const SQUARE = {
 };
 
 describe.skipIf(!postgresEnabled)('LND-06 application database slice', () => {
-  const stamp = randomUUID().slice(0, 8);
+  const stamp = randomUUID().replace(/-/g, '');
   const ouA = `lnd06-ou-a-${stamp}`;
   const ouB = `lnd06-ou-b-${stamp}`;
   const officerId = `lnd06-officer-${stamp}`;
@@ -406,7 +464,9 @@ describe.skipIf(!postgresEnabled)('LND-06 application database slice', () => {
   let parcelSubject = '';
   let keySeq = 0;
   const createdAppIds: string[] = [];
+  const createdInlinePartyIds: string[] = [];
   const extraOfficerIds: string[] = [];
+  const createdRoleIds: string[] = [];
   let extraOfficerSeq = 0;
 
   async function createFreshOfficer(prefix: string): Promise<IdentityUser> {
@@ -466,11 +526,16 @@ describe.skipIf(!postgresEnabled)('LND-06 application database slice', () => {
       ],
     });
     for (const name of ['land_officer', 'commune_leader'] as const) {
+      const priorRole = await prisma.role.findUnique({ where: { name } });
       await prisma.role.upsert({
         where: { name },
         update: {},
         create: { name },
       });
+      if (!priorRole) {
+        const role = await prisma.role.findUniqueOrThrow({ where: { name } });
+        createdRoleIds.push(role.id);
+      }
     }
     for (const [id, role, ou] of [
       [officerId, 'land_officer', ouA],
@@ -526,52 +591,121 @@ describe.skipIf(!postgresEnabled)('LND-06 application database slice', () => {
   });
 
   afterAll(async () => {
-    const eventRows = await prisma.eventRecord.findMany({
-      where: {
-        OR: [
-          {
-            aggregateType: 'LandChangeApplication',
-            aggregateId: { in: createdAppIds },
+    const applicationPartyLinks = createdAppIds.length
+      ? await prisma.landApplicationParty.findMany({
+          where: {
+            applicationId: { in: createdAppIds },
+            partyId: { notIn: [partyCurrent, partyNew] },
           },
-          { aggregateType: 'AuditEvent' },
-        ],
-      },
-      select: { eventId: true, aggregateId: true },
-    });
-    const auditIds = (
-      await prisma.auditEvent.findMany({
-        where: { resourceId: { in: [...createdAppIds, '*'] } },
-        select: { id: true },
-      })
-    ).map(({ id }) => id);
-    const auditEventIds = eventRows
-      .filter(({ aggregateId }) => auditIds.includes(aggregateId))
-      .map(({ eventId }) => eventId);
-    const appEventIds = eventRows
-      .filter(({ aggregateId }) => createdAppIds.includes(aggregateId))
-      .map(({ eventId }) => eventId);
-    const outboxIds = [...new Set([...auditEventIds, ...appEventIds])];
+          select: { partyId: true },
+        })
+      : [];
+    const inlinePartyIds = [
+      ...new Set([
+        ...createdInlinePartyIds,
+        ...applicationPartyLinks.map(({ partyId }) => partyId),
+      ]),
+    ];
+    const resourceIds = [...createdAppIds, ...inlinePartyIds];
+    const actorIds = [officerId, leaderId, outsiderId, ...extraOfficerIds];
+    const auditRows =
+      resourceIds.length || actorIds.length
+        ? await prisma.auditEvent.findMany({
+            where: {
+              OR: [
+                ...(resourceIds.length
+                  ? [{ resourceId: { in: resourceIds } }]
+                  : []),
+                ...(actorIds.length ? [{ actorId: { in: actorIds } }] : []),
+              ],
+            },
+            select: { id: true },
+          })
+        : [];
+    const auditIds = auditRows.map(({ id }) => id);
+    const applicationAssignments = createdAppIds.length
+      ? await prisma.assignment.findMany({
+          where: {
+            resourceType: 'LandChangeApplication',
+            resourceId: { in: createdAppIds },
+          },
+          select: { id: true },
+        })
+      : [];
+    const assignmentIds = applicationAssignments.map(({ id }) => id);
+    const eventRows =
+      resourceIds.length || auditIds.length || assignmentIds.length
+        ? await prisma.eventRecord.findMany({
+            where: {
+              OR: [
+                ...(createdAppIds.length
+                  ? [
+                      {
+                        aggregateType: 'LandChangeApplication',
+                        aggregateId: { in: createdAppIds },
+                      },
+                    ]
+                  : []),
+                ...(inlinePartyIds.length
+                  ? [
+                      {
+                        aggregateType: 'LandParty',
+                        aggregateId: { in: inlinePartyIds },
+                      },
+                    ]
+                  : []),
+                ...(assignmentIds.length
+                  ? [
+                      {
+                        aggregateType: 'Assignment',
+                        aggregateId: { in: assignmentIds },
+                      },
+                    ]
+                  : []),
+                ...(auditIds.length
+                  ? [
+                      {
+                        aggregateType: 'AuditEvent',
+                        aggregateId: { in: auditIds },
+                      },
+                    ]
+                  : []),
+              ],
+            },
+            select: { eventId: true, aggregateType: true, aggregateId: true },
+          })
+        : [];
+    const outboxIds = eventRows.map(({ eventId }) => eventId);
     if (outboxIds.length) {
       await prisma.outboxMessage.deleteMany({
         where: { eventId: { in: outboxIds } },
       });
     }
-    if (appEventIds.length) {
+    if (outboxIds.length)
       await prisma.eventRecord.deleteMany({
-        where: { eventId: { in: appEventIds } },
+        where: { eventId: { in: outboxIds } },
       });
-    }
-    if (auditEventIds.length) {
-      await prisma.eventRecord.deleteMany({
-        where: { eventId: { in: auditEventIds } },
+    if (outboxIds.length)
+      await prisma.projectionRecord.deleteMany({
+        where: {
+          OR: eventRows.map(({ aggregateType, aggregateId }) => ({
+            aggregateType,
+            aggregateId,
+          })),
+        },
       });
-    }
     if (auditIds.length) {
       await prisma.auditEvent.deleteMany({ where: { id: { in: auditIds } } });
     }
     if (createdAppIds.length) {
-      await prisma.assignment.deleteMany({
+      await prisma.notification.deleteMany({
         where: { resourceId: { in: createdAppIds } },
+      });
+      await prisma.assignment.deleteMany({
+        where: {
+          resourceType: 'LandChangeApplication',
+          resourceId: { in: createdAppIds },
+        },
       });
       await prisma.landApplicationParcel.deleteMany({
         where: { applicationId: { in: createdAppIds } },
@@ -591,6 +725,11 @@ describe.skipIf(!postgresEnabled)('LND-06 application database slice', () => {
         where: { id: { in: [partyCurrent, partyNew] } },
       });
     }
+    if (inlinePartyIds.length) {
+      await prisma.landParty.deleteMany({
+        where: { id: { in: inlinePartyIds } },
+      });
+    }
     await prisma.session.deleteMany({
       where: { userId: { in: [officerId, leaderId, outsiderId] } },
     });
@@ -605,6 +744,10 @@ describe.skipIf(!postgresEnabled)('LND-06 application database slice', () => {
     await prisma.user.deleteMany({
       where: { id: { in: [officerId, leaderId, outsiderId] } },
     });
+    if (createdRoleIds.length)
+      await prisma.role.deleteMany({
+        where: { id: { in: createdRoleIds }, users: { none: {} } },
+      });
     if (extraOfficerIds.length) {
       await prisma.user.deleteMany({
         where: { id: { in: extraOfficerIds } },
@@ -675,6 +818,148 @@ describe.skipIf(!postgresEnabled)('LND-06 application database slice', () => {
     });
     expect(audits).toHaveLength(1);
     expect(audits[0].operation).toBe('land.application.created');
+  });
+
+  it('creates an inline Party and application links atomically without a LandRight', async () => {
+    const input = parseApplicationInput({
+      ...validInput(),
+      parties: [
+        {
+          partyId: partyCurrent,
+          partyRole: 'current_holder',
+          sharePercent: null,
+        },
+        {
+          newParty: {
+            referenceCode: `LND06-INLINE-${stamp}`,
+            partyType: 'individual',
+            displayName: 'Inline Private Name',
+            identityNumber: `inline-${stamp}`,
+          },
+          partyRole: 'proposed_holder',
+          sharePercent: '100.00',
+        },
+      ],
+    });
+    const key = nextKey('inline');
+    const { application, replayed } = await createApplication(
+      input,
+      officerA(),
+      key,
+    );
+    createdAppIds.push(application.id);
+    expect(replayed).toBe(false);
+    const link = await prisma.landApplicationParty.findFirstOrThrow({
+      where: { applicationId: application.id, partyRole: 'proposed_holder' },
+    });
+    createdInlinePartyIds.push(link.partyId);
+    const retry = await createApplication(input, officerA(), key);
+    expect(retry.replayed).toBe(true);
+    expect(retry.application.id).toBe(application.id);
+    await expect(
+      createApplication(
+        {
+          ...input,
+          parties: input.parties.map((party) =>
+            party.newParty
+              ? {
+                  ...party,
+                  newParty: {
+                    ...party.newParty,
+                    displayName: 'Different Private Name',
+                  },
+                }
+              : party,
+          ),
+        },
+        officerA(),
+        key,
+      ),
+    ).rejects.toThrow('IDEMPOTENCY_CONFLICT');
+    expect(
+      (await listParties({ limit: 100 }, officerA())).items.map(({ id }) => id),
+    ).toContain(link.partyId);
+    const party = await prisma.landParty.findUniqueOrThrow({
+      where: { id: link.partyId },
+    });
+    expect(party.displayNameCiphertext).not.toContain('Inline Private Name');
+    expect(party.identityNumberCiphertext).not.toContain(`inline-${stamp}`);
+    expect(
+      await prisma.eventRecord.count({
+        where: {
+          aggregateType: 'LandParty',
+          aggregateId: link.partyId,
+          eventType: 'LandPartyCreated',
+        },
+      }),
+    ).toBe(1);
+    const partyAudit = await prisma.auditEvent.findFirstOrThrow({
+      where: {
+        resourceType: 'LandParty',
+        resourceId: link.partyId,
+        operation: 'land.party.created',
+      },
+    });
+    expect(
+      await prisma.auditEvent.count({
+        where: {
+          resourceType: 'LandParty',
+          resourceId: link.partyId,
+          operation: 'land.party.created',
+        },
+      }),
+    ).toBe(1);
+    const partyEvent = await prisma.eventRecord.findFirstOrThrow({
+      where: { aggregateType: 'LandParty', aggregateId: link.partyId },
+    });
+    expect(JSON.stringify(partyEvent.payload)).not.toContain(
+      'Inline Private Name',
+    );
+    expect(JSON.stringify(partyEvent.payload)).not.toContain(`inline-${stamp}`);
+    expect(JSON.stringify(partyAudit.metadata)).not.toContain(
+      'Inline Private Name',
+    );
+    expect(JSON.stringify(partyAudit.metadata)).not.toContain(
+      `inline-${stamp}`,
+    );
+    expect(
+      await prisma.landRight.count({ where: { parcelId: parcelSubject } }),
+    ).toBe(0);
+  });
+
+  it('rolls back an inline Party when its audit append fails', async () => {
+    const referenceCode = `LND06-INLINE-ROLLBACK-${stamp}`;
+    const input = parseApplicationInput({
+      ...validInput(),
+      parties: [
+        {
+          partyId: partyCurrent,
+          partyRole: 'current_holder',
+          sharePercent: null,
+        },
+        {
+          newParty: {
+            referenceCode,
+            partyType: 'individual',
+            displayName: 'Rollback Private Name',
+            identityNumber: null,
+          },
+          partyRole: 'proposed_holder',
+          sharePercent: '100.00',
+        },
+      ],
+    });
+    auditControl.fail = true;
+    try {
+      await expect(
+        createApplication(input, officerA(), nextKey('inline-audit-fail')),
+      ).rejects.toThrow();
+    } finally {
+      auditControl.fail = false;
+    }
+    expect(
+      await prisma.landParty.findUnique({ where: { referenceCode } }),
+    ).toBeNull();
   });
 
   it('replays the same key and payload without a duplicate row', async () => {

@@ -1,10 +1,13 @@
 import { prisma } from '@/lib/prisma';
+import { randomUUID } from 'node:crypto';
 import {
   blindIndex,
   decryptSensitive,
   encryptSensitive,
 } from '@/modules/identity';
 import type { IdentityUser } from '@/modules/identity';
+import { appendEvent } from '@/modules/eventing';
+import type { LandDbClient } from './access';
 
 import {
   assertCanViewPartySensitive,
@@ -68,46 +71,59 @@ export async function resolveDisplayName(
   return decryptSensitive(row.displayNameCiphertext);
 }
 
-// Create a party with encrypted PII and masked response.
-// Domain insert and audit share one transaction: audit failure rolls back (DR-19).
-export async function createParty(
+// Insert an inline Party and its D-68 event/audit in the caller's transaction.
+export async function createPartyInTransaction(
   input: PartyInput,
   actor: IdentityUser,
-): Promise<PartyResponse> {
+  tx: LandDbClient,
+): Promise<PartyRow> {
   assertLandActor(actor);
-  await assertCanViewPartySensitive(actor, actor.organizationUnitId);
-  const row = await prisma.$transaction(async (tx) => {
-    const created = await insertParty(
-      {
-        referenceCode: input.referenceCode,
-        partyType: input.partyType,
-        displayNameCiphertext: encryptSensitive(input.displayName),
-        identityNumberCiphertext: input.identityNumber
-          ? encryptSensitive(input.identityNumber)
-          : null,
-        identityNumberIndex: input.identityNumber
-          ? blindIndex(input.identityNumber)
-          : null,
-      },
-      tx,
-    );
-    await auditLandEvent(
-      actor,
-      {
-        resourceType: 'LandParty',
-        resourceId: created.id,
-        operation: 'land.party.created',
-        metadata: { referenceCode: created.referenceCode },
-      },
-      tx,
-    );
-    return created;
-  });
-  return toPartyResponse(
-    row,
-    decryptSensitive(row.displayNameCiphertext),
-    decryptIdentityMasked(row.identityNumberCiphertext),
+  const created = await insertParty(
+    {
+      referenceCode: input.referenceCode,
+      partyType: input.partyType,
+      displayNameCiphertext: encryptSensitive(input.displayName),
+      identityNumberCiphertext: input.identityNumber
+        ? encryptSensitive(input.identityNumber)
+        : null,
+      identityNumberIndex: input.identityNumber
+        ? blindIndex(input.identityNumber)
+        : null,
+    },
+    tx,
   );
+  await appendEvent(tx, {
+    eventId: randomUUID(),
+    eventType: 'LandPartyCreated',
+    eventVersion: 1,
+    aggregateType: 'LandParty',
+    aggregateId: created.id,
+    aggregateVersion: 1,
+    occurredAt: created.createdAt,
+    actor: {
+      id: actor.id,
+      name: actor.name,
+      role: actor.roles[0],
+      organizationId: actor.organizationUnitId,
+    },
+    payload: {
+      referenceCode: created.referenceCode,
+      partyType: created.partyType,
+      status: created.status,
+    },
+    metadata: {},
+  });
+  await auditLandEvent(
+    actor,
+    {
+      resourceType: 'LandParty',
+      resourceId: created.id,
+      operation: 'land.party.created',
+      metadata: { referenceCode: created.referenceCode },
+    },
+    tx,
+  );
+  return created;
 }
 
 // List parties scoped to the actor organization with masked identity.

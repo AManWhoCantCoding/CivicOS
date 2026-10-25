@@ -214,7 +214,8 @@ export const APPLICATION_PARCEL_ROLES: readonly string[] = [
 // Actor, organization, code, status and version always come from the
 // session/server, never from the client payload.
 export type ApplicationPartyInput = {
-  partyId: string;
+  partyId?: string;
+  newParty?: PartyInput;
   partyRole: string;
   sharePercent: string | null;
 };
@@ -252,8 +253,15 @@ function parseApplicationParty(value: unknown): ApplicationPartyInput {
   const partyRole = requiredText(input.partyRole);
   if (!APPLICATION_PARTY_ROLES.includes(partyRole))
     throw new Error('INVALID_REQUEST');
+  const partyId =
+    input.partyId === undefined ? undefined : requiredId(input.partyId);
+  const newParty =
+    input.newParty === undefined ? undefined : parsePartyInput(input.newParty);
+  if (Boolean(partyId) === Boolean(newParty))
+    throw new Error('INVALID_REQUEST');
   return {
-    partyId: requiredId(input.partyId),
+    ...(partyId ? { partyId } : {}),
+    ...(newParty ? { newParty } : {}),
     partyRole,
     sharePercent: optionalSharePercent(input.sharePercent),
   };

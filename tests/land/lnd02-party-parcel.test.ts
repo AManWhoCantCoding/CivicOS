@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { prisma } from '@/lib/prisma';
+const fixtureStamp = randomUUID().replace(/-/g, '');
 import {
   blindIndex,
   decryptSensitive,
@@ -30,7 +31,6 @@ import {
   insertParcel,
 } from '@/modules/land/parcel-repository';
 import {
-  createParty,
   listParties,
   maskIdentityNumber,
   toPartyResponse,
@@ -71,8 +71,8 @@ vi.mock('@/modules/identity', async (importOriginal) => {
 
 function officer(overrides?: Partial<IdentityUser>): IdentityUser {
   return {
-    id: 'lnd02-officer',
-    email: 'officer@demo.local',
+    id: `lnd02-officer-${fixtureStamp}`,
+    email: `lnd02-officer-${fixtureStamp}@demo.local`,
     name: 'Demo Officer',
     roles: ['land_officer'] as unknown as IdentityUser['roles'],
     organizationUnitId: 'lnd02-ou-a',
@@ -393,17 +393,6 @@ describe('LND-02 scope and sensitive gates', () => {
 
   it('rejects service calls from actors outside scope', async () => {
     const outsider: IdentityUser = { ...officer(), roles: ['commander'] };
-    await expect(
-      createParty(
-        {
-          referenceCode: 'X',
-          partyType: 'individual',
-          displayName: 'Y',
-          identityNumber: null,
-        },
-        outsider,
-      ),
-    ).rejects.toThrow('FORBIDDEN');
     await expect(listParties({ limit: 50 }, outsider)).rejects.toThrow(
       'FORBIDDEN',
     );
@@ -422,11 +411,93 @@ describe('LND-02 scope and sensitive gates', () => {
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
 
 describe.skipIf(!postgresEnabled)('LND-02 party/parcel database seam', () => {
-  const stamp = randomUUID().slice(0, 8);
+  const stamp = fixtureStamp;
   const ouA = `lnd02-ou-a-${stamp}`;
   const ouB = `lnd02-ou-b-${stamp}`;
 
   afterAll(async () => {
+    const parties = await prisma.landParty.findMany({
+      where: { referenceCode: { startsWith: `LND02-PARTY-${stamp}` } },
+      select: { id: true },
+    });
+    const parcels = await prisma.landParcel.findMany({
+      where: { parcelCode: { startsWith: `LND02-PARCEL-${stamp}` } },
+      select: { id: true },
+    });
+    const partyIds = parties.map(({ id }) => id);
+    const parcelIds = parcels.map(({ id }) => id);
+    const actorIds = [
+      officer().id,
+      `lnd02-leader-${stamp}`,
+      `lnd02-outsider-${stamp}`,
+      `lnd02-citizen-${stamp}`,
+    ];
+    const auditRows =
+      partyIds.length || parcelIds.length || actorIds.length
+        ? await prisma.auditEvent.findMany({
+            where: {
+              OR: [
+                ...(partyIds.length ? [{ resourceId: { in: partyIds } }] : []),
+                ...(parcelIds.length
+                  ? [{ resourceId: { in: parcelIds } }]
+                  : []),
+                { actorId: { in: actorIds } },
+              ],
+            },
+            select: { id: true },
+          })
+        : [];
+    const auditIds = auditRows.map(({ id }) => id);
+    const eventScopes = [
+      { actorId: { in: actorIds } },
+      ...(partyIds.length
+        ? [{ aggregateType: 'LandParty', aggregateId: { in: partyIds } }]
+        : []),
+      ...(parcelIds.length
+        ? [{ aggregateType: 'LandParcel', aggregateId: { in: parcelIds } }]
+        : []),
+      ...(auditIds.length
+        ? [{ aggregateType: 'AuditEvent', aggregateId: { in: auditIds } }]
+        : []),
+    ];
+    const events = eventScopes.length
+      ? await prisma.eventRecord.findMany({
+          where: { OR: eventScopes },
+          select: { eventId: true, aggregateType: true, aggregateId: true },
+        })
+      : [];
+    const eventIds = events.map(({ eventId }) => eventId);
+    if (eventIds.length) {
+      await prisma.outboxMessage.deleteMany({
+        where: { eventId: { in: eventIds } },
+      });
+      await prisma.eventRecord.deleteMany({
+        where: { eventId: { in: eventIds } },
+      });
+      await prisma.projectionRecord.deleteMany({
+        where: {
+          OR: events.map(({ aggregateType, aggregateId }) => ({
+            aggregateType,
+            aggregateId,
+          })),
+        },
+      });
+    }
+    if (auditIds.length)
+      await prisma.auditEvent.deleteMany({ where: { id: { in: auditIds } } });
+    if (partyIds.length || parcelIds.length)
+      await prisma.landRight.deleteMany({
+        where: {
+          OR: [
+            ...(partyIds.length ? [{ partyId: { in: partyIds } }] : []),
+            ...(parcelIds.length ? [{ parcelId: { in: parcelIds } }] : []),
+          ],
+        },
+      });
+    if (parcelIds.length)
+      await prisma.landParcel.deleteMany({ where: { id: { in: parcelIds } } });
+    if (partyIds.length)
+      await prisma.landParty.deleteMany({ where: { id: { in: partyIds } } });
     await prisma.$disconnect();
   });
 
@@ -713,129 +784,6 @@ describe.skipIf(!postgresEnabled)('LND-02 party/parcel database seam', () => {
     }
   });
 
-  it('allows same-OU party creates with masked response and no PII leakage', async () => {
-    const code = `LND02-PARTY-${stamp}-GATE`;
-    const actor = officer({ organizationUnitId: ouA });
-    const created = await createParty(
-      {
-        referenceCode: code,
-        partyType: 'individual',
-        displayName: 'Demo Citizen',
-        identityNumber: '0000000001',
-      },
-      actor,
-    );
-    try {
-      expect(created.referenceCode).toBe(code);
-      expect(created.displayName).toBe('Demo Citizen');
-      expect(created.identityNumberMasked).toBe('******0001');
-      expect(created.status).toBe('active');
-      expect(Object.keys(created).sort()).toEqual(
-        [
-          'createdAt',
-          'displayName',
-          'id',
-          'identityNumberMasked',
-          'partyType',
-          'referenceCode',
-          'status',
-          'updatedAt',
-        ].sort(),
-      );
-      expect(JSON.stringify(created)).not.toContain('ciphertext');
-      expect(JSON.stringify(created)).not.toContain('Ciphertext');
-      const stored = await prisma.$queryRawUnsafe<
-        Array<{
-          displayNameCiphertext: string;
-          identityNumberCiphertext: string | null;
-        }>
-      >(
-        `SELECT "displayNameCiphertext", "identityNumberCiphertext" FROM "LandParty" WHERE "id" = $1`,
-        created.id,
-      );
-      expect(stored[0]?.displayNameCiphertext).not.toContain('Demo Citizen');
-      expect(decryptSensitive(stored[0]?.displayNameCiphertext ?? '')).toBe(
-        'Demo Citizen',
-      );
-      expect(stored[0]?.identityNumberCiphertext).not.toContain('0000000001');
-      const linkParcel = await insertParcel(
-        {
-          parcelCode: `${code}-PARCEL`,
-          mapSheetNumber: `SHEET-${stamp}-GATE`,
-          parcelNumber: `NUM-${stamp}-GATE`,
-          areaSqm: '10.00',
-          landUseType: 'residential',
-          address: 'Dia chi demo',
-          communeCode: 'COMMUNE-01',
-          organizationId: ouA,
-        },
-        toGeometryParam(SQUARE),
-      );
-      const linkRight = await prisma.landRight.create({
-        data: {
-          parcelId: linkParcel.id,
-          partyId: created.id,
-          validFrom: new Date(),
-        },
-      });
-      const listed = await listParties({ limit: 50 }, actor);
-      expect(listed.items.map((item) => item.referenceCode)).toContain(code);
-      const listedItem = listed.items.find(
-        (item) => item.referenceCode === code,
-      );
-      expect(listedItem?.displayName).toBe('Demo Citizen');
-      expect(listedItem?.identityNumberMasked).toBe('******0001');
-      expect(JSON.stringify(listed)).not.toContain('ciphertext');
-      await prisma.landRight.delete({ where: { id: linkRight.id } });
-      await prisma.$executeRaw`DELETE FROM "LandParcel" WHERE "id" = ${linkParcel.id}`;
-      const outsider: IdentityUser = {
-        ...officer(),
-        id: `lnd02-outsider-${stamp}`,
-        roles: ['commander'] as unknown as IdentityUser['roles'],
-        organizationUnitId: ouA,
-      };
-      await expect(
-        createParty(
-          {
-            referenceCode: `${code}-OUT`,
-            partyType: 'individual',
-            displayName: 'Outsider',
-            identityNumber: null,
-          },
-          outsider,
-        ),
-      ).rejects.toThrow('FORBIDDEN');
-      await expect(listParties({ limit: 50 }, outsider)).rejects.toThrow(
-        'FORBIDDEN',
-      );
-      const citizen: IdentityUser = {
-        ...officer(),
-        id: `lnd02-citizen-${stamp}`,
-        roles: ['citizen'] as unknown as IdentityUser['roles'],
-        organizationUnitId: ouA,
-      };
-      await expect(
-        createParty(
-          {
-            referenceCode: `${code}-CIT`,
-            partyType: 'individual',
-            displayName: 'Citizen',
-            identityNumber: null,
-          },
-          citizen,
-        ),
-      ).rejects.toThrow('FORBIDDEN');
-      expect(toLandApiError(new Error('FORBIDDEN'))).toMatchObject({
-        status: 403,
-        code: 'LAND_FORBIDDEN',
-      });
-    } finally {
-      await prisma.landParty.deleteMany({
-        where: { referenceCode: { in: [code, `${code}-OUT`, `${code}-CIT`] } },
-      });
-    }
-  });
-
   it('rolls back parcel creates when audit fails (DR-19)', async () => {
     const code = `LND02-PARCEL-${stamp}-AUDIT`;
     const actor = officer({ organizationUnitId: ouA });
@@ -890,7 +838,28 @@ describe.skipIf(!postgresEnabled)('LND-02 party/parcel database seam', () => {
       const createdAudits = await prisma.auditEvent.findMany({
         where: { operation: 'land.parcel.created', resourceId: created.id },
       });
-      expect(createdAudits.length).toBeGreaterThan(0);
+      expect(createdAudits).toHaveLength(1);
+      const parcelEvents = await prisma.eventRecord.findMany({
+        where: { aggregateType: 'LandParcel', aggregateId: created.id },
+      });
+      expect(parcelEvents).toHaveLength(1);
+      expect(parcelEvents[0]).toMatchObject({
+        eventType: 'LandParcelCreated',
+        eventVersion: 1,
+        aggregateVersion: 1,
+        actorId: actor.id,
+        actorRole: 'land_officer',
+        organizationId: ouA,
+        payload: {
+          parcelCode: code,
+          organizationId: ouA,
+          status: 'active',
+          version: 1,
+        },
+      });
+      const eventPayload = JSON.stringify(parcelEvents[0]?.payload);
+      expect(eventPayload).not.toContain('Dia chi demo');
+      expect(eventPayload).not.toContain('coordinates');
       await listParcels({ limit: 50 }, actor);
       const listedAudits = await prisma.auditEvent.findMany({
         where: { operation: 'land.parcel.listed', resourceId: '*' },
