@@ -62,6 +62,20 @@ function parcelBody(overrides: Record<string, unknown> = {}) {
 // T-010 AC-1: ready renders exactly the existing focused projection and keeps
 // the existing route/back context.
 describe('T-010 map safe states', () => {
+  it('offers an independent camera fallback layer without camera data', () => {
+    const source = workspace();
+    expect(source).toContain(
+      'const [showCameras, setShowCameras] = useState(true)',
+    );
+    expect(source).toContain('checked={showCameras}');
+    expect(source).toContain('setShowCameras(event.target.checked)');
+    expect(source).toContain('Chưa kết nối nguồn camera');
+    expect(source).toContain('{showCameras ? (');
+    expect(source).toContain('aria-live="polite"');
+    expect(source).not.toContain('/api/camera');
+    expect(source).not.toContain('/api/lpr');
+  });
+
   it('renders one focused polygon only in ready state', () => {
     expect(LAND_PARCEL_FOCUS_SOURCE).toBe('land-parcel-focus');
     expect(LAND_PARCEL_FOCUS_FILL).toBe('land-parcel-focus-fill');

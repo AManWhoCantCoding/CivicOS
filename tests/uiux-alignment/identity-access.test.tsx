@@ -116,7 +116,7 @@ describe('T-004 identity/access', () => {
     expect(create).toContain("fetch('/api/identity/users'");
     expect(create).toContain("method: 'POST'");
     expect(create).toContain('JSON.stringify({ email, name, role, password })');
-    expect(create).toContain('ROLE_OPTIONS');
+    expect(create).toContain('USER_PROVISIONING_ROLES');
     expect(create).toContain('minLength={8}');
   });
 

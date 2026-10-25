@@ -2,6 +2,17 @@
 
 import { AccessDenied } from '@/components/identity/AccessDenied';
 
+// Shared notice chrome: a 3px state-accent bar on the leading edge plus the
+// token border, so every state stays readable as text/icon + color, with the
+// approved Light/Blue surfaces. Presentation only.
+function noticeStyle(color: string): React.CSSProperties {
+  return {
+    borderRadius: 'var(--civicos-radius-md)',
+    borderLeftWidth: '3px',
+    borderLeftColor: color,
+  };
+}
+
 export function ModuleLoadingState({ label }: { label: string }) {
   return (
     <div
@@ -9,8 +20,8 @@ export function ModuleLoadingState({ label }: { label: string }) {
       style={{
         background: 'var(--civicos-surface-muted)',
         borderColor: 'var(--civicos-border)',
-        borderRadius: 'var(--civicos-radius-md)',
         color: 'var(--civicos-info)',
+        ...noticeStyle('var(--civicos-info)'),
       }}
       aria-label={`Đang tải ${label}`}
       aria-busy="true"
@@ -35,13 +46,13 @@ export function ModuleErrorState({
     <div
       className="space-y-3 rounded-xl border p-4"
       style={{
-        borderColor: 'var(--civicos-danger)',
+        borderColor: 'var(--civicos-border)',
         background: 'var(--civicos-surface)',
-        borderRadius: 'var(--civicos-radius-md)',
+        ...noticeStyle('var(--civicos-danger)'),
       }}
     >
       <p
-        className="text-sm"
+        className="text-sm font-medium"
         style={{ color: 'var(--civicos-danger)' }}
         role="alert"
       >
@@ -52,13 +63,8 @@ export function ModuleErrorState({
         <button
           type="button"
           onClick={onRetry}
-          className="min-h-[44px] rounded-lg border px-3 py-2 text-sm"
-          style={{
-            borderColor: 'var(--civicos-danger)',
-            borderRadius: 'var(--civicos-radius-sm)',
-            color: 'var(--civicos-danger)',
-            background: 'var(--civicos-surface)',
-          }}
+          className="civicos-nav-tab min-h-[44px] px-3 py-2 text-sm"
+          style={{ color: 'var(--civicos-danger)' }}
         >
           {retryLabel}
         </button>
@@ -70,12 +76,12 @@ export function ModuleErrorState({
 export function ModuleEmptyState({ message }: { message: string }) {
   return (
     <div
-      className="rounded-xl border border-dashed p-5 text-sm"
+      className="min-h-[44px] rounded-xl border border-dashed p-5 text-sm"
       style={{
         borderColor: 'var(--civicos-border)',
-        borderRadius: 'var(--civicos-radius-md)',
         color: 'var(--civicos-text-muted)',
         background: 'var(--civicos-surface)',
+        borderRadius: 'var(--civicos-radius-md)',
       }}
     >
       <span aria-hidden="true">○ </span>
@@ -89,10 +95,10 @@ export function ModuleReadyState({ message }: { message: string }) {
     <p
       className="rounded-xl border p-4 text-sm"
       style={{
-        borderColor: 'var(--civicos-success)',
-        borderRadius: 'var(--civicos-radius-md)',
+        borderColor: 'var(--civicos-border)',
         color: 'var(--civicos-success)',
         background: 'var(--civicos-surface)',
+        ...noticeStyle('var(--civicos-success)'),
       }}
       role="status"
     >
@@ -115,13 +121,13 @@ export function ModuleWarningState({
     <div
       className="space-y-3 rounded-xl border p-4"
       style={{
-        borderColor: 'var(--civicos-warning)',
+        borderColor: 'var(--civicos-border)',
         background: 'var(--civicos-surface)',
-        borderRadius: 'var(--civicos-radius-md)',
+        ...noticeStyle('var(--civicos-warning)'),
       }}
     >
       <p
-        className="text-sm"
+        className="text-sm font-medium"
         style={{ color: 'var(--civicos-warning)' }}
         role="status"
       >
@@ -132,13 +138,8 @@ export function ModuleWarningState({
         <button
           type="button"
           onClick={onRetry}
-          className="min-h-[44px] rounded-lg border px-3 py-2 text-sm"
-          style={{
-            borderColor: 'var(--civicos-warning)',
-            borderRadius: 'var(--civicos-radius-sm)',
-            color: 'var(--civicos-warning)',
-            background: 'var(--civicos-surface)',
-          }}
+          className="civicos-nav-tab min-h-[44px] px-3 py-2 text-sm"
+          style={{ color: 'var(--civicos-warning)' }}
         >
           {retryLabel}
         </button>
@@ -155,7 +156,7 @@ export function ModuleSimulatedNotice() {
         borderColor: 'var(--civicos-simulated-text)',
         background: 'var(--civicos-simulated-bg)',
         color: 'var(--civicos-simulated-text)',
-        borderRadius: 'var(--civicos-radius-md)',
+        ...noticeStyle('var(--civicos-simulated-text)'),
       }}
       role="note"
     >
@@ -174,10 +175,10 @@ export function ModuleOfflineNotice() {
     <p
       className="rounded-xl border p-4 text-sm"
       style={{
-        borderColor: 'var(--civicos-info)',
-        background: 'var(--civicos-surface)',
+        borderColor: 'var(--civicos-border)',
+        background: 'var(--civicos-surface-muted)',
         color: 'var(--civicos-info)',
-        borderRadius: 'var(--civicos-radius-md)',
+        ...noticeStyle('var(--civicos-info)'),
       }}
       role="status"
     >

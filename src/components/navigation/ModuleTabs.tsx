@@ -77,24 +77,9 @@ export function ModuleTabs({
             aria-selected={active}
             aria-controls={controlsId}
             tabIndex={active ? 0 : -1}
+            data-active={active ? 'true' : undefined}
             onClick={() => onSelect(entry.module.id)}
-            className="min-h-[44px] rounded-lg border px-4 py-2 text-sm transition motion-safe:duration-150"
-            style={
-              active
-                ? {
-                    borderColor: 'var(--civicos-accent)',
-                    background: 'var(--civicos-surface)',
-                    borderRadius: 'var(--civicos-radius-md)',
-                    color: 'var(--civicos-accent)',
-                    fontWeight: 600,
-                  }
-                : {
-                    borderColor: 'var(--civicos-border)',
-                    borderRadius: 'var(--civicos-radius-md)',
-                    color: 'var(--civicos-text-muted)',
-                    background: 'var(--civicos-surface)',
-                  }
-            }
+            className="civicos-nav-tab min-h-[44px] px-4 py-2 text-sm motion-safe:transition-colors motion-safe:duration-150"
           >
             {entry.module.label}
           </button>

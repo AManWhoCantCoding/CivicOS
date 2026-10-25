@@ -53,14 +53,18 @@ describe('T-009 land application/lookup', () => {
     for (const source of pages()) {
       expect(source).toContain('bg-[var(--civicos-canvas)]');
       expect(source).toContain('text-[var(--civicos-text)]');
-      expect(source).toContain('text-[var(--civicos-accent)]');
-      expect(source).toContain('text-[var(--civicos-text-muted)]');
       expect(source).toContain('ModuleShell');
       expect(source).toContain('module="land"');
       expect(source).toContain('AccessDenied');
       expect(source).toContain('getCurrentUser');
       expect(source).toContain('canEnterEntry');
     }
+    expect([...pages(), ...components()].join('\n')).toMatch(
+      /(?:text-\[|color:\s*)var\(--civicos-accent\)/,
+    );
+    expect([...pages(), ...components()].join('\n')).toContain(
+      'var(--civicos-text-muted)',
+    );
   });
 
   it('checks change-type and version/conflict presentation', () => {

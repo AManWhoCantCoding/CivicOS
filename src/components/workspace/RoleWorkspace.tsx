@@ -62,13 +62,20 @@ export function RoleWorkspaceView({
   if (sessionState === 'loading') {
     return (
       <section data-testid="workspace-session-loading" className="mt-8">
-        <span
-          className="text-sm text-[var(--civicos-text-muted)]"
-          aria-live="polite"
+        <div
+          role="status"
           aria-busy="true"
+          className="flex min-h-[44px] items-center gap-2 rounded-xl border p-4"
+          style={{
+            background: 'var(--civicos-surface-muted)',
+            borderColor: 'var(--civicos-border)',
+            color: 'var(--civicos-info)',
+            borderRadius: 'var(--civicos-radius-md)',
+          }}
         >
-          Đang kiểm tra phiên…
-        </span>
+          <span aria-hidden="true">◌</span>
+          <span className="text-sm">Đang kiểm tra phiên…</span>
+        </div>
       </section>
     );
   }
@@ -89,14 +96,21 @@ export function RoleWorkspaceView({
     return (
       <section data-testid="workspace-login-required" className="mt-8">
         <p
-          className="rounded-xl border p-4 text-sm leading-6"
+          className="rounded-xl border p-5 text-sm leading-6 break-words"
           style={{
             borderColor: 'var(--civicos-border)',
+            borderLeft: '3px solid var(--civicos-info)',
             borderRadius: 'var(--civicos-radius-md)',
             color: 'var(--civicos-text-muted)',
             background: 'var(--civicos-surface)',
           }}
         >
+          <span
+            aria-hidden="true"
+            style={{ color: 'var(--civicos-info)' }}
+          >
+            ℹ{' '}
+          </span>
           Đăng nhập để xem điều hướng theo phạm vi được giao.
         </p>
       </section>
@@ -157,24 +171,14 @@ export function RoleWorkspaceView({
               aria-selected={active}
               aria-controls={`workspace-features-${entry.module.id}`}
               onClick={() => setSelectedId(entry.module.id)}
-              className="min-h-[44px] rounded-lg border px-4 py-2 text-sm transition motion-safe:duration-150"
-              style={
-                active
-                  ? {
-                      borderColor: 'var(--civicos-accent)',
-                      background: 'var(--civicos-surface)',
-                      borderRadius: 'var(--civicos-radius-md)',
-                      color: 'var(--civicos-accent)',
-                      fontWeight: 600,
-                    }
-                  : {
-                      borderColor: 'var(--civicos-border)',
-                      borderRadius: 'var(--civicos-radius-md)',
-                      color: 'var(--civicos-text-muted)',
-                      background: 'var(--civicos-surface)',
-                    }
-              }
+              data-active={active ? 'true' : 'false'}
+              className="civicos-nav-tab min-h-[44px] px-4 py-2 text-sm"
             >
+              {active ? (
+                <span aria-hidden="true">●</span>
+              ) : (
+                <span aria-hidden="true">○</span>
+              )}
               {entry.module.label}
             </button>
           );
@@ -196,25 +200,33 @@ export function RoleWorkspaceView({
         >
           {activeModule.module.description}
         </p>
-        <ul className="mt-4 space-y-1">
+        <ul className="mt-4 space-y-2">
           {activeModule.features.map((feature) => (
             <li key={feature.id}>
               <a
                 href={feature.href}
                 title={feature.label}
-                className="flex min-h-[44px] items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition motion-safe:duration-150"
+                className="group flex min-h-[44px] items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm motion-safe:transition-colors motion-safe:duration-150 focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)]"
                 style={{
-                  borderColor: 'transparent',
+                  borderColor: 'var(--civicos-border)',
                   borderRadius: 'var(--civicos-radius-md)',
                   color: 'var(--civicos-text)',
                 }}
               >
+                <span className="flex min-w-0 items-center gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{ background: 'var(--civicos-accent)' }}
+                  />
+                  <span className="truncate">{feature.label}</span>
+                </span>
                 <span
                   aria-hidden="true"
-                  className="h-1.5 w-1.5 shrink-0 rounded-full"
-                  style={{ background: 'var(--civicos-border)' }}
-                />
-                <span className="truncate">{feature.label}</span>
+                  className="shrink-0 text-[var(--civicos-text-muted)] motion-safe:transition-transform motion-safe:duration-150 group-hover:translate-x-0.5"
+                >
+                  ›
+                </span>
               </a>
             </li>
           ))}
@@ -224,8 +236,13 @@ export function RoleWorkspaceView({
         {activeModule.features[0]?.href ? (
           <a
             href={activeModule.features[0].href}
-            className="mt-4 inline-block min-h-[44px] text-sm font-semibold"
-            style={{ color: 'var(--civicos-accent)' }}
+            className="mt-4 inline-flex min-h-[44px] items-center rounded-lg border px-4 text-sm font-semibold underline-offset-4 hover:underline motion-safe:transition-colors motion-safe:duration-150"
+            style={{
+              borderColor: 'color-mix(in srgb, var(--civicos-accent) 40%, transparent)',
+              background: 'color-mix(in srgb, var(--civicos-accent) 8%, var(--civicos-surface))',
+              borderRadius: 'var(--civicos-radius-md)',
+              color: 'var(--civicos-accent)',
+            }}
           >
             Mở phân hệ →
           </a>

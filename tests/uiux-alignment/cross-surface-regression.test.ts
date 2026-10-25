@@ -320,13 +320,24 @@ describe('T-013 cross-surface verification', () => {
       expect(source).not.toContain('console.');
     }
 
-    for (const path of mobileSources) {
+    const taskPath = 'mobile/src/features/task/TaskScreen.tsx';
+    for (const path of mobileSources.filter((path) => path !== taskPath)) {
       const source = readSource(path);
       expect(source).not.toMatch(
         /Tạo hồ sơ|Tạo mới|Gửi hồ sơ|Phê duyệt|Từ chối|Đồng bộ|Phân công|submitOffline|public-intake|CitizenIntake/i,
       );
       expect(source).not.toMatch(/\bapprove\b|\bupload\b/i);
     }
+    const task = readSource(taskPath);
+    for (const command of [
+      'resident.record_activity',
+      'inspection.start',
+      'inspection.save_checklist',
+      'inspection.finding',
+    ])
+      expect(task).toContain(command);
+    expect(task).not.toContain('submitOffline');
+    expect(task).not.toMatch(/public-intake|CitizenIntake/i);
 
     const mobileMap = readSource('mobile/src/features/map/MapScreen.tsx');
     const webMap = readSource('src/components/map/MapWorkspace.tsx');

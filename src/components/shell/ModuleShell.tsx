@@ -328,13 +328,7 @@ export function ModuleShell({
             aria-expanded={!collapsed}
             aria-controls="module-sidebar"
             aria-label={collapsed ? 'Mở rộng điều hướng' : 'Thu gọn điều hướng'}
-            className="hidden min-h-[44px] items-center gap-2 rounded-lg border px-3 py-2 text-xs lg:inline-flex"
-            style={{
-              borderColor: 'var(--civicos-border)',
-              borderRadius: 'var(--civicos-radius-sm)',
-              color: 'var(--civicos-text-muted)',
-              background: 'var(--civicos-surface)',
-            }}
+            className="civicos-nav-tab hidden min-h-[44px] px-3 py-2 text-xs lg:inline-flex motion-safe:transition-colors motion-safe:duration-150"
           >
             {collapsed ? '»' : '«'}
             <span className={collapsed ? 'sr-only' : ''}>
@@ -359,18 +353,16 @@ export function ModuleShell({
             aria-expanded={drawerOpen}
             aria-controls="module-drawer"
             aria-label={`Mở điều hướng ${fallbackDefinition.label}`}
-            className="min-h-[44px] rounded-lg border px-4 py-2 text-sm"
-            style={{
-              borderColor: 'var(--civicos-border)',
-              borderRadius: 'var(--civicos-radius-sm)',
-              color: 'var(--civicos-accent)',
-              background: 'var(--civicos-surface)',
-            }}
+            data-active="true"
+            className="civicos-nav-tab min-h-[44px] px-4 py-2 text-sm motion-safe:transition-colors motion-safe:duration-150"
           >
             Menu
           </button>
         </div>
-        <nav aria-label="Breadcrumb">
+        <nav
+          aria-label="Breadcrumb"
+          className="border-b border-[var(--civicos-border)] pb-3"
+        >
           <ol className="flex flex-wrap items-center gap-2 text-sm">
             <li>
               <Link
@@ -439,7 +431,7 @@ export function ModuleShell({
             aria-modal="true"
             aria-label={`Điều hướng ${fallbackDefinition.label}`}
             id="module-drawer"
-            className="absolute top-0 left-0 flex h-full w-80 max-w-[85vw] flex-col gap-4 overflow-y-auto border-r p-5"
+            className="civicos-raised absolute top-0 left-0 flex h-full w-80 max-w-[85vw] flex-col gap-4 overflow-y-auto border-r p-5"
             style={{
               borderColor: 'var(--civicos-border)',
               background: 'var(--civicos-surface)',
@@ -456,13 +448,7 @@ export function ModuleShell({
                 type="button"
                 onClick={() => closeDrawer(true)}
                 aria-label="Đóng điều hướng"
-                className="min-h-[44px] min-w-[44px] rounded-lg border px-3 py-2 text-sm"
-                style={{
-                  borderColor: 'var(--civicos-border)',
-                  borderRadius: 'var(--civicos-radius-sm)',
-                  color: 'var(--civicos-text)',
-                  background: 'var(--civicos-surface)',
-                }}
+                className="civicos-nav-tab min-h-[44px] min-w-[44px] justify-center px-3 py-2 text-sm"
               >
                 ✕
               </button>

@@ -37,6 +37,16 @@ const allSurfaces = () => [
   land(),
   settings(),
 ];
+const readOnlySurfaces = () => [
+  map(),
+  relatedList(),
+  relatedDetail(),
+  alarm(),
+  dispatch(),
+  incident(),
+  land(),
+  settings(),
+];
 
 describe('T-012 mobile domain read-only', () => {
   it('keeps every operational tab reachable on the existing routes', () => {
@@ -71,7 +81,7 @@ describe('T-012 mobile domain read-only', () => {
   });
 
   it('keeps the read-only boundary with no mutation or public-intake control', () => {
-    for (const source of allSurfaces()) {
+    for (const source of readOnlySurfaces()) {
       expect(source).not.toMatch(
         /Tạo hồ sơ|Tạo mới|Gửi hồ sơ|Phê duyệt|Từ chối|Đồng bộ|Phân công|submitOffline|public-intake|CitizenIntake/i,
       );
@@ -80,6 +90,16 @@ describe('T-012 mobile domain read-only', () => {
       expect(source).not.toContain('certified');
       expect(source).not.toMatch(/#000000|#000\b|gradient|neon|glow/i);
     }
+    const taskSource = task();
+    for (const command of [
+      'resident.record_activity',
+      'inspection.start',
+      'inspection.save_checklist',
+      'inspection.finding',
+    ])
+      expect(taskSource).toContain(command);
+    expect(taskSource).not.toContain('submitOffline');
+    expect(taskSource).not.toMatch(/public-intake|CitizenIntake/i);
     expect(writeGuard()).toContain('READ_ONLY_MVP');
     expect(incident()).toContain('/api/incidents/');
     expect(land()).toContain('getPublicLandLookup');

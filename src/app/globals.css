@@ -62,6 +62,55 @@
   height: var(--civicos-icon-md);
 }
 
+/* Shell chrome primitives (navigation tabs + sidebar items).
+   Presentation only: colors come from the approved Light/Blue tokens,
+   states stay non-color-only via aria/data attributes in the components.
+   Declared inside the Tailwind `components` cascade layer so unlayered
+   display here can never defeat the `utilities` layer's `hidden` (responsive
+   visibility of the desktop-only sidebar collapse toggle). */
+@layer components {
+  .civicos-nav-tab,
+  .civicos-nav-item {
+    display: inline-flex;
+    align-items: center;
+    background: var(--civicos-surface);
+    border: 1px solid transparent;
+    border-radius: var(--civicos-radius-md);
+    color: var(--civicos-text-muted);
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .civicos-nav-tab {
+    border-color: var(--civicos-border);
+    font-weight: 500;
+    gap: var(--civicos-space-2);
+  }
+
+  .civicos-nav-tab:hover,
+  .civicos-nav-item:hover {
+    background: var(--civicos-surface-muted);
+    color: var(--civicos-text);
+  }
+
+  .civicos-nav-tab[data-active='true'],
+  .civicos-nav-tab[data-active='true']:hover,
+  .civicos-nav-item[data-active='true'],
+  .civicos-nav-item[data-active='true']:hover {
+    background: color-mix(in srgb, var(--civicos-accent) 10%, var(--civicos-surface));
+    border-color: color-mix(in srgb, var(--civicos-accent) 40%, transparent);
+    color: var(--civicos-accent);
+    font-weight: 600;
+  }
+}
+
+/* Shared hairline shadow for floating chrome (drawer). */
+.civicos-raised {
+  box-shadow: 0 12px 32px rgba(23, 32, 51, 0.18);
+}
+
 * {
   box-sizing: border-box;
 }

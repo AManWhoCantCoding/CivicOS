@@ -28,31 +28,12 @@ export function ModuleSidebar({
                 href={feature.href}
                 aria-current={active ? 'page' : undefined}
                 title={feature.label}
-                className={`flex min-h-[44px] items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition motion-safe:duration-150 ${collapsed ? 'justify-center px-2' : ''}`}
-                style={
-                  active
-                    ? {
-                        borderColor: 'var(--civicos-accent)',
-                        background: 'var(--civicos-surface)',
-                        borderRadius: 'var(--civicos-radius-md)',
-                        color: 'var(--civicos-accent)',
-                        fontWeight: 600,
-                      }
-                    : {
-                        borderColor: 'transparent',
-                        borderRadius: 'var(--civicos-radius-md)',
-                        color: 'var(--civicos-text-muted)',
-                      }
-                }
+                data-active={active ? 'true' : undefined}
+                className={`civicos-nav-item w-full flex min-h-[44px] items-center gap-3 px-3 py-2.5 text-sm motion-safe:transition-colors motion-safe:duration-150 ${collapsed ? 'justify-center px-2' : ''}`}
               >
                 <span
                   aria-hidden="true"
-                  className="h-1.5 w-1.5 shrink-0 rounded-full"
-                  style={{
-                    background: active
-                      ? 'var(--civicos-accent)'
-                      : 'var(--civicos-border)',
-                  }}
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${active ? 'bg-[var(--civicos-accent)]' : 'bg-[var(--civicos-border)]'}`}
                 />
                 <span className={collapsed ? 'sr-only' : 'truncate'}>
                   {feature.label}
