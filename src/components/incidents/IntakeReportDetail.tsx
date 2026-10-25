@@ -404,23 +404,42 @@ export function IntakeReportDetail({ reportId }: { reportId: string }) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {report.sla.overdue ? (
-              <span className="rounded-full border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-danger)]">
+              <span className="rounded-full border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-danger)]">
                 <span aria-hidden="true">⚠ </span>Quá hạn SLA
               </span>
             ) : null}
             {report.sla.warning && !report.sla.overdue ? (
-              <span className="rounded-full border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-warning)]">
+              <span className="rounded-full border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] px-3 py-2 text-sm font-medium text-[var(--civicos-warning)]">
                 <span aria-hidden="true">◷ </span>Sắp hạn SLA
               </span>
             ) : null}
-            <span className="rounded-full border border-[var(--civicos-accent)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-accent)]">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium ${
+                report.status === 'REJECTED'
+                  ? 'border-[var(--civicos-danger)] text-[var(--civicos-danger)]'
+                  : report.status === 'CLOSED'
+                    ? 'border-[var(--civicos-success)] text-[var(--civicos-success)]'
+                    : 'border-[var(--civicos-info)] text-[var(--civicos-info)]'
+              }`}
+            >
+              <span aria-hidden="true">
+                {report.status === 'REJECTED'
+                  ? '⚠ '
+                  : report.status === 'CLOSED'
+                    ? '● '
+                    : '○ '}
+              </span>
               {report.status}
             </span>
           </div>
         </div>
         <section
-          className="mt-8 rounded-xl border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] p-5"
+          className="mt-8 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5"
           aria-label="Nguồn tin"
+          style={{
+            borderLeftWidth: '3px',
+            borderLeftColor: 'var(--civicos-warning)',
+          }}
         >
           <h2 className="text-sm font-semibold text-[var(--civicos-warning)]">
             Nguồn tin

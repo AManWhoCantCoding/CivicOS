@@ -274,6 +274,7 @@ export async function listIncidents(
   actor: IdentityUser,
   input?: { status?: string; category?: string },
 ) {
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
   const holdsCommandScope =
     actor.roles.includes('commander') ||
     actor.roles.includes('superior_commander');

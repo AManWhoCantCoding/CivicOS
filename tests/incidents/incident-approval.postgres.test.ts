@@ -1,4 +1,13 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 
 import { prisma } from '@/lib/prisma';
 import { processOutboxUntilIdle } from '@/modules/eventing';
@@ -20,8 +29,9 @@ import {
 
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
 
-const ORG = 'unit-nghia-tru';
-const UPPER = 'unit-cap-tren';
+const stamp = randomUUID().slice(0, 8);
+const ORG = `approval-org-${stamp}`;
+const UPPER = `approval-upper-${stamp}`;
 
 function testUser(
   id: string,
@@ -38,24 +48,37 @@ function testUser(
 }
 
 /** Duty creates intake, field verifies, commander assigns and decides approvals. */
-const duty = testUser('approval-test-duty', ['duty_officer'], ORG);
-const field = testUser('approval-test-field', ['field_officer'], ORG);
-const commander = testUser('approval-test-commander', ['commander'], ORG);
-const crossCommander = testUser('approval-test-cross', ['commander'], UPPER);
+const duty = testUser(`approval-duty-${stamp}`, ['duty_officer'], ORG);
+const field = testUser(`approval-field-${stamp}`, ['field_officer'], ORG);
+const commander = testUser(`approval-commander-${stamp}`, ['commander'], ORG);
+const crossCommander = testUser(
+  `approval-cross-${stamp}`,
+  ['commander'],
+  UPPER,
+);
 const seededUsers = [duty, field, commander];
 
 let intakeReportId: string | undefined;
 let incidentId: string | undefined;
+const createdRoleIds: string[] = [];
+type Checkpoint = {
+  name: string;
+  updatedAt: Date;
+  lastRecordedAt: Date | null;
+  processedEventIds: unknown;
+};
+let checkpointBaseline: Checkpoint[] | undefined;
+let dispatchedEvents: Array<{ eventId: string; recordedAt: Date }> = [];
 
 async function seedTestUsers(): Promise<void> {
   await prisma.organizationUnit.upsert({
     where: { id: UPPER },
-    update: { active: true },
+    update: {},
     create: { id: UPPER, name: 'Approval upper unit', level: 'district' },
   });
   await prisma.organizationUnit.upsert({
     where: { id: ORG },
-    update: { active: true, parentId: UPPER },
+    update: {},
     create: {
       id: ORG,
       name: 'Approval test unit',
@@ -64,11 +87,18 @@ async function seedTestUsers(): Promise<void> {
     },
   });
   for (const roleName of ['commander', 'duty_officer', 'field_officer']) {
+    const existing = await prisma.role.findUnique({
+      where: { name: roleName },
+    });
     await prisma.role.upsert({
       where: { name: roleName },
       update: {},
       create: { name: roleName },
     });
+    if (!existing)
+      createdRoleIds.push(
+        (await prisma.role.findUniqueOrThrow({ where: { name: roleName } })).id,
+      );
   }
   for (const user of seededUsers) {
     await prisma.user.upsert({
@@ -99,31 +129,60 @@ async function seedTestUsers(): Promise<void> {
 }
 
 async function cleanupIncident(): Promise<void> {
-  if (!intakeReportId || !incidentId) return;
+  if (!intakeReportId && !incidentId) return;
   const currentReportId = intakeReportId;
   const currentIncidentId = incidentId;
   intakeReportId = undefined;
   incidentId = undefined;
-  const [audits, slas] = await Promise.all([
+  const resourceIds = [currentReportId, currentIncidentId].filter(
+    (id): id is string => Boolean(id),
+  );
+  const [audits, slas, assignments] = await Promise.all([
     prisma.auditEvent.findMany({
       where: {
         OR: [
-          { resourceType: 'Incident', resourceId: currentIncidentId },
-          { resourceType: 'IntakeReport', resourceId: currentReportId },
+          ...(resourceIds.length
+            ? [
+                {
+                  resourceType: { in: ['Incident', 'IntakeReport'] },
+                  resourceId: { in: resourceIds },
+                },
+              ]
+            : []),
+          { actorId: { in: seededUsers.map(({ id }) => id) } },
         ],
       },
       select: { id: true },
     }),
     prisma.slaInstance.findMany({
-      where: { resourceType: 'Incident', resourceId: currentIncidentId },
+      where: { resourceId: { in: resourceIds } },
       select: { id: true },
     }),
+    currentIncidentId
+      ? prisma.assignment.findMany({
+          where: { resourceType: 'Incident', resourceId: currentIncidentId },
+          select: { id: true },
+        })
+      : Promise.resolve([]),
   ]);
   const eventRecords = await prisma.eventRecord.findMany({
     where: {
       OR: [
-        { aggregateType: 'Incident', aggregateId: currentIncidentId },
-        { aggregateType: 'IntakeReport', aggregateId: currentReportId },
+        ...(currentIncidentId
+          ? [{ aggregateType: 'Incident', aggregateId: currentIncidentId }]
+          : []),
+        ...(currentReportId
+          ? [{ aggregateType: 'IntakeReport', aggregateId: currentReportId }]
+          : []),
+        { actorId: { in: seededUsers.map(({ id }) => id) } },
+        ...(assignments.length
+          ? [
+              {
+                aggregateType: 'Assignment',
+                aggregateId: { in: assignments.map(({ id }) => id) },
+              },
+            ]
+          : []),
         {
           aggregateType: 'AuditEvent',
           aggregateId: { in: audits.map(({ id }) => id) },
@@ -134,7 +193,7 @@ async function cleanupIncident(): Promise<void> {
         },
       ],
     },
-    select: { eventId: true },
+    select: { eventId: true, aggregateType: true, aggregateId: true },
   });
   await prisma.outboxMessage.deleteMany({
     where: { eventId: { in: eventRecords.map(({ eventId }) => eventId) } },
@@ -145,13 +204,36 @@ async function cleanupIncident(): Promise<void> {
     },
   });
   await prisma.projectionRecord.deleteMany({
-    where: { aggregateType: 'Incident', aggregateId: currentIncidentId },
+    where: {
+      OR: eventRecords.map(({ aggregateType, aggregateId }) => ({
+        aggregateType,
+        aggregateId,
+      })),
+    },
   });
-  await prisma.approval.deleteMany({
-    where: { resourceType: 'Incident', resourceId: currentIncidentId },
+  await prisma.notification.deleteMany({
+    where: {
+      OR: [
+        ...seededUsers.map(({ id }) => ({ userId: id })),
+        ...(resourceIds.length ? [{ resourceId: { in: resourceIds } }] : []),
+        ...(eventRecords.length
+          ? [
+              {
+                sourceEventId: {
+                  in: eventRecords.map(({ eventId }) => eventId),
+                },
+              },
+            ]
+          : []),
+      ],
+    },
   });
+  if (currentIncidentId)
+    await prisma.approval.deleteMany({
+      where: { resourceType: 'Incident', resourceId: currentIncidentId },
+    });
   await prisma.assignment.deleteMany({
-    where: { resourceType: 'Incident', resourceId: currentIncidentId },
+    where: { id: { in: assignments.map(({ id }) => id) } },
   });
   await prisma.auditEvent.deleteMany({
     where: { id: { in: audits.map(({ id }) => id) } },
@@ -159,8 +241,160 @@ async function cleanupIncident(): Promise<void> {
   await prisma.slaInstance.deleteMany({
     where: { id: { in: slas.map(({ id }) => id) } },
   });
-  await prisma.incident.deleteMany({ where: { id: currentIncidentId } });
-  await prisma.intakeReport.deleteMany({ where: { id: currentReportId } });
+  if (currentIncidentId)
+    await prisma.incident.deleteMany({ where: { id: currentIncidentId } });
+  if (currentReportId)
+    await prisma.intakeReport.deleteMany({ where: { id: currentReportId } });
+}
+
+async function processIncidentOutbox(registered: {
+  reportId: string;
+  incidentId: string;
+}): Promise<void> {
+  const eventRecords = await prisma.eventRecord.findMany({
+    where: { aggregateType: 'Incident', aggregateId: registered.incidentId },
+    select: { eventId: true, recordedAt: true },
+    orderBy: [{ recordedAt: 'asc' }, { eventId: 'asc' }],
+  });
+  for (const { eventId } of eventRecords) {
+    const count = await processOutboxUntilIdle({ eventId });
+    if (count > 0)
+      dispatchedEvents.push(
+        eventRecords.find((event) => event.eventId === eventId)!,
+      );
+  }
+}
+
+async function restoreCheckpoints(): Promise<void> {
+  if (!checkpointBaseline) return;
+  const ids = new Set(dispatchedEvents.map(({ eventId }) => eventId));
+  const baselineByName = new Map(
+    checkpointBaseline.map((row) => [row.name, row]),
+  );
+  const current = await prisma.projectionCheckpoint.findMany();
+  if (
+    current.length < checkpointBaseline.length ||
+    checkpointBaseline.some(
+      (row) => !current.some((candidate) => candidate.name === row.name),
+    )
+  )
+    throw new Error('Missing baseline checkpoint');
+  for (const row of current) {
+    const baseline = baselineByName.get(row.name);
+    const before = Array.isArray(baseline?.processedEventIds)
+      ? baseline.processedEventIds
+      : [];
+    const now = Array.isArray(row.processedEventIds)
+      ? row.processedEventIds
+      : [];
+    const filteredBefore = before.filter(
+      (id): id is string => typeof id === 'string',
+    );
+    const prefix = now.slice(0, filteredBefore.length);
+    const appended = now.slice(filteredBefore.length);
+    const baselineUnchanged =
+      JSON.stringify(row.processedEventIds) ===
+      JSON.stringify(baseline?.processedEventIds);
+    if (
+      prefix.length !== filteredBefore.length ||
+      prefix.some((id, i) => id !== filteredBefore[i]) ||
+      appended.some((id) => typeof id !== 'string' || !ids.has(id)) ||
+      now.length !== filteredBefore.length + appended.length
+    )
+      throw new Error(`Unexpected checkpoint drift: ${row.name}`);
+    const owned = dispatchedEvents.filter(({ eventId }) =>
+      appended.includes(eventId),
+    );
+    if (owned.length !== appended.length)
+      throw new Error(`Unowned checkpoint events: ${row.name}`);
+    if (
+      baseline &&
+      appended.length === 0 &&
+      (!baselineUnchanged ||
+        row.lastRecordedAt?.getTime() !== baseline.lastRecordedAt?.getTime() ||
+        row.updatedAt.getTime() !== baseline.updatedAt.getTime())
+    )
+      throw new Error(`Unexpected checkpoint drift: ${row.name}`);
+    const expectedLast =
+      [
+        ...owned.map(({ recordedAt }) => recordedAt),
+        ...(baseline?.lastRecordedAt ? [baseline.lastRecordedAt] : []),
+      ].sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+    if (row.lastRecordedAt?.getTime() !== expectedLast?.getTime())
+      throw new Error(`Unexpected checkpoint timestamp: ${row.name}`);
+    const changed =
+      !baseline ||
+      !baselineUnchanged ||
+      row.lastRecordedAt?.getTime() !== baseline.lastRecordedAt?.getTime();
+    if (baseline && changed && row.updatedAt < baseline.updatedAt)
+      throw new Error(`Unexpected checkpoint updatedAt: ${row.name}`);
+    if (
+      baseline &&
+      !changed &&
+      row.updatedAt.getTime() !== baseline.updatedAt.getTime()
+    )
+      throw new Error(`Unexpected checkpoint updatedAt: ${row.name}`);
+    if (
+      !baseline &&
+      (appended.length === 0 ||
+        !appended.some((id) => typeof id === 'string' && ids.has(id)))
+    )
+      throw new Error(`Unowned new checkpoint: ${row.name}`);
+  }
+  const changedNames = current.filter(
+    (row) =>
+      !baselineByName.has(row.name) ||
+      JSON.stringify(row.processedEventIds) !==
+        JSON.stringify(baselineByName.get(row.name)?.processedEventIds) ||
+      row.lastRecordedAt?.getTime() !==
+        baselineByName.get(row.name)?.lastRecordedAt?.getTime() ||
+      row.updatedAt.getTime() !==
+        baselineByName.get(row.name)?.updatedAt.getTime(),
+  );
+  for (const row of changedNames) {
+    const baseline = baselineByName.get(row.name);
+    if (baseline)
+      await prisma.projectionCheckpoint.update({
+        where: { name: row.name },
+        data: {
+          lastRecordedAt: baseline.lastRecordedAt,
+          processedEventIds: baseline.processedEventIds as never,
+          updatedAt: baseline.updatedAt,
+        },
+      });
+    else {
+      const now = Array.isArray(row.processedEventIds)
+        ? row.processedEventIds
+        : [];
+      if (!now.some((id) => typeof id === 'string' && ids.has(id)))
+        throw new Error(`Refusing to delete unowned checkpoint: ${row.name}`);
+      await prisma.projectionCheckpoint.delete({ where: { name: row.name } });
+    }
+  }
+  const restored = await prisma.projectionCheckpoint.findMany();
+  if (
+    JSON.stringify(
+      restored
+        .map((r) => [
+          r.name,
+          r.updatedAt.toISOString(),
+          r.lastRecordedAt?.toISOString() ?? null,
+          r.processedEventIds,
+        ])
+        .sort(),
+    ) !==
+    JSON.stringify(
+      checkpointBaseline
+        .map((r) => [
+          r.name,
+          r.updatedAt.toISOString(),
+          r.lastRecordedAt?.toISOString() ?? null,
+          r.processedEventIds,
+        ])
+        .sort(),
+    )
+  )
+    throw new Error('Checkpoint baseline restore mismatch');
 }
 
 async function registerProbe(tag: string) {
@@ -173,6 +407,7 @@ async function registerProbe(tag: string) {
     },
     duty,
   );
+  intakeReportId = registered.reportId;
   await verifyIntakeReport(registered.reportId, duty, {
     classification: 'sufficient',
     verificationNote: 'Approval test verification.',
@@ -180,7 +415,6 @@ async function registerProbe(tag: string) {
   await confirmIntakeReport(registered.reportId, duty);
   const converted = await convertIntakeToIncident(registered.reportId, duty);
   if (!converted.incidentId) throw new Error('APPROVAL_CONVERT_FAILED');
-  intakeReportId = registered.reportId;
   incidentId = converted.incidentId;
   return { reportId: registered.reportId, incidentId: converted.incidentId };
 }
@@ -199,8 +433,23 @@ describe.skipIf(!postgresEnabled)('Incident Approval PostgreSQL seam', () => {
     await seedTestUsers();
   });
 
+  beforeEach(async () => {
+    checkpointBaseline = undefined;
+    dispatchedEvents = [];
+    checkpointBaseline = await prisma.projectionCheckpoint.findMany();
+  });
+
   afterEach(async () => {
-    await cleanupIncident();
+    try {
+      await cleanupIncident();
+    } finally {
+      try {
+        await restoreCheckpoints();
+      } finally {
+        checkpointBaseline = undefined;
+        dispatchedEvents = [];
+      }
+    }
   });
 
   afterAll(async () => {
@@ -209,6 +458,12 @@ describe.skipIf(!postgresEnabled)('Incident Approval PostgreSQL seam', () => {
     });
     await prisma.user.deleteMany({
       where: { id: { in: seededUsers.map(({ id }) => id) } },
+    });
+    await prisma.role.deleteMany({
+      where: { id: { in: createdRoleIds }, users: { none: {} } },
+    });
+    await prisma.organizationUnit.deleteMany({
+      where: { id: { in: [ORG, UPPER] } },
     });
   });
 
@@ -272,7 +527,7 @@ describe.skipIf(!postgresEnabled)('Incident Approval PostgreSQL seam', () => {
         ]),
       );
 
-      await processOutboxUntilIdle();
+      await processIncidentOutbox(registered);
       const detail = await getIncident(registered.incidentId, commander);
       expect(detail.incident).toMatchObject({
         id: registered.incidentId,
@@ -304,7 +559,7 @@ describe.skipIf(!postgresEnabled)('Incident Approval PostgreSQL seam', () => {
         resolution.approval.id,
         commander,
       );
-      await processOutboxUntilIdle();
+      await processIncidentOutbox(registered);
 
       const closure = await closeIncident(registered.incidentId, field);
       const closed = await approveIncident(

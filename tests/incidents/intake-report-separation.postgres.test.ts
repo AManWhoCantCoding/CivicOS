@@ -1,10 +1,17 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+import { GET as intakeReportGET } from '@/app/api/intake-reports/[reportId]/route';
 
 import { prisma } from '@/lib/prisma';
 import type { IdentityUser } from '@/modules/identity';
-import { createAssignments } from '@/modules/identity';
+import {
+  createAssignments,
+  createSession,
+  sessionCookieName,
+} from '@/modules/identity';
+import { cookies } from 'next/headers';
 import { createEvidence, LocalEvidenceStorage } from '@/modules/platform';
 import {
   closeIntakeReport,
@@ -21,10 +28,14 @@ import {
   verifyIntakeReport,
 } from '@/modules/incidents';
 
+vi.mock('next/headers', () => ({ cookies: vi.fn() }));
+
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
-const stamp = randomUUID().slice(0, 8);
+const stamp = randomUUID().replace(/-/g, '');
 const ORG = `unit-intake-${stamp}`;
 const UPPER = `unit-intake-upper-${stamp}`;
+const SIBLING = `unit-intake-sibling-${stamp}`;
+const CHILD = `unit-intake-child-${stamp}`;
 
 function userRef(
   id: string,
@@ -49,6 +60,7 @@ const crossCommander = userRef(`intake-cross-${stamp}`, ['commander'], UPPER);
 const trackedReportIds: string[] = [];
 const trackedIncidentIds: string[] = [];
 const trackedEvidenceIds: string[] = [];
+const createdRoleIds: string[] = [];
 
 const validIntake = (overrides: Record<string, unknown> = {}) => ({
   sourceChannel: 'direct' as const,
@@ -86,6 +98,17 @@ async function cleanupTracked(): Promise<void> {
           resourceType: 'Incident',
           resourceId,
         })),
+        {
+          actorId: {
+            in: [
+              duty.id,
+              commander.id,
+              approver.id,
+              fieldOfficer.id,
+              crossCommander.id,
+            ],
+          },
+        },
       ],
     },
     select: { id: true },
@@ -107,9 +130,37 @@ async function cleanupTracked(): Promise<void> {
     select: { id: true },
   });
   const slaIds = slas.map(({ id }) => id);
+  const assignmentScopes = [
+    ...trackedReportIds.map((resourceId) => ({
+      resourceType: 'IntakeReport',
+      resourceId,
+    })),
+    ...trackedIncidentIds.map((resourceId) => ({
+      resourceType: 'Incident',
+      resourceId,
+    })),
+  ];
+  const assignments = assignmentScopes.length
+    ? await prisma.assignment.findMany({
+        where: { OR: assignmentScopes },
+        select: { id: true },
+      })
+    : [];
+  const assignmentIds = assignments.map(({ id }) => id);
   const events = await prisma.eventRecord.findMany({
     where: {
       OR: [
+        {
+          actorId: {
+            in: [
+              duty.id,
+              commander.id,
+              approver.id,
+              fieldOfficer.id,
+              crossCommander.id,
+            ],
+          },
+        },
         ...trackedReportIds.map((aggregateId) => ({
           aggregateType: 'IntakeReport',
           aggregateId,
@@ -124,9 +175,17 @@ async function cleanupTracked(): Promise<void> {
         ...(slaIds.length
           ? [{ aggregateType: 'SlaInstance', aggregateId: { in: slaIds } }]
           : []),
+        ...(assignmentIds.length
+          ? [
+              {
+                aggregateType: 'Assignment',
+                aggregateId: { in: assignmentIds },
+              },
+            ]
+          : []),
       ],
     },
-    select: { eventId: true },
+    select: { eventId: true, aggregateType: true, aggregateId: true },
   });
   const eventIds = events.map(({ eventId }) => eventId);
   if (eventIds.length) {
@@ -135,6 +194,14 @@ async function cleanupTracked(): Promise<void> {
     });
     await prisma.eventRecord.deleteMany({
       where: { eventId: { in: eventIds } },
+    });
+    await prisma.projectionRecord.deleteMany({
+      where: {
+        OR: events.map(({ aggregateType, aggregateId }) => ({
+          aggregateType,
+          aggregateId,
+        })),
+      },
     });
   }
   if (auditIds.length) {
@@ -147,52 +214,56 @@ async function cleanupTracked(): Promise<void> {
       where: { id: { in: slaIds } },
     });
   }
-  await prisma.notification.deleteMany({
-    where: {
-      OR: [
-        ...trackedReportIds.map((resourceId) => ({
-          resourceType: 'IntakeReport',
-          resourceId,
-        })),
-        ...trackedIncidentIds.map((resourceId) => ({
-          resourceType: 'Incident',
-          resourceId,
-        })),
-      ],
-    },
-  });
-  await prisma.approval.deleteMany({
-    where: {
-      OR: [
-        ...trackedReportIds.map((resourceId) => ({
-          resourceType: 'IntakeReport',
-          resourceId,
-        })),
-        ...trackedIncidentIds.map((resourceId) => ({
-          resourceType: 'Incident',
-          resourceId,
-        })),
-      ],
-    },
-  });
-  await prisma.assignment.deleteMany({
-    where: {
-      OR: [
-        ...trackedIncidentIds.map((resourceId) => ({
-          resourceType: 'Incident',
-          resourceId,
-        })),
-        ...trackedReportIds.map((resourceId) => ({
-          resourceType: 'IntakeReport',
-          resourceId,
-        })),
-      ],
-    },
-  });
-  if (trackedIncidentIds.length) {
-    await prisma.projectionRecord.deleteMany({
-      where: { aggregateId: { in: trackedIncidentIds } },
+  if (trackedReportIds.length || trackedIncidentIds.length)
+    await prisma.notification.deleteMany({
+      where: {
+        OR: [
+          ...trackedReportIds.map((resourceId) => ({
+            resourceType: 'IntakeReport',
+            resourceId,
+          })),
+          ...trackedIncidentIds.map((resourceId) => ({
+            resourceType: 'Incident',
+            resourceId,
+          })),
+        ],
+      },
     });
+  if (trackedReportIds.length || trackedIncidentIds.length)
+    await prisma.approval.deleteMany({
+      where: {
+        OR: [
+          ...trackedReportIds.map((resourceId) => ({
+            resourceType: 'IntakeReport',
+            resourceId,
+          })),
+          ...trackedIncidentIds.map((resourceId) => ({
+            resourceType: 'Incident',
+            resourceId,
+          })),
+        ],
+      },
+    });
+  if (trackedReportIds.length || trackedIncidentIds.length)
+    await prisma.assignment.deleteMany({
+      where: {
+        OR: [
+          ...trackedIncidentIds.map((resourceId) => ({
+            resourceType: 'Incident',
+            resourceId,
+          })),
+          ...trackedReportIds.map((resourceId) => ({
+            resourceType: 'IntakeReport',
+            resourceId,
+          })),
+        ],
+      },
+    });
+  if (trackedReportIds.length)
+    await prisma.intakeCommand.deleteMany({
+      where: { reportId: { in: trackedReportIds } },
+    });
+  if (trackedIncidentIds.length) {
     await prisma.incident.deleteMany({
       where: { id: { in: trackedIncidentIds } },
     });
@@ -232,19 +303,39 @@ describe.skipIf(!postgresEnabled)(
     beforeAll(async () => {
       await prisma.organizationUnit.createMany({
         data: [
-          { id: ORG, name: 'Intake test unit', level: 'commune' },
-          { id: UPPER, name: 'Intake upper unit', level: 'district' },
+          // D-02 regression: ORG.parentId = UPPER makes UPPER the direct
+          // parent of the report's owning unit, and it is deliberately NOT
+          // 'district' level, so passing would prove no level check remains
+          // in transferIntakeReport.
+          { id: UPPER, name: 'Intake upper unit', level: 'province' },
+          { id: SIBLING, name: 'Intake unrelated unit', level: 'commune' },
+          // CHILD points UP at ORG (child, not parent) and must be rejected.
+          { id: CHILD, name: 'Intake child unit', level: 'district' },
         ],
+      });
+      await prisma.organizationUnit.create({
+        data: {
+          id: ORG,
+          name: 'Intake test unit',
+          level: 'commune',
+          parentId: UPPER,
+        },
+      });
+      await prisma.organizationUnit.update({
+        where: { id: CHILD },
+        data: { parentId: ORG },
       });
       const roles = ['duty_officer', 'commander', 'field_officer'] as const;
       const roleIds: Record<string, string> = {};
       for (const name of roles) {
+        const priorRole = await prisma.role.findUnique({ where: { name } });
         const role = await prisma.role.upsert({
           where: { name },
           update: {},
           create: { name },
         });
         roleIds[name] = role.id;
+        if (!priorRole) createdRoleIds.push(role.id);
       }
       const seeds = [
         { user: duty, role: 'duty_officer' },
@@ -287,8 +378,15 @@ describe.skipIf(!postgresEnabled)(
           },
         },
       });
+      if (createdRoleIds.length)
+        await prisma.role.deleteMany({
+          where: {
+            id: { in: createdRoleIds },
+            users: { none: {} },
+          },
+        });
       await prisma.organizationUnit.deleteMany({
-        where: { id: { in: [ORG, UPPER] } },
+        where: { id: { in: [ORG, UPPER, SIBLING, CHILD] } },
       });
     });
 
@@ -831,6 +929,55 @@ describe.skipIf(!postgresEnabled)(
       ).rejects.toThrow('RECEIVING_ORGANIZATION_INVALID');
     });
 
+    it('accepts a non-district direct parent and rejects unrelated or inactive receivers (D-02)', async () => {
+      const { reportId } = await registerProbe(commander);
+      const upperRow = await prisma.organizationUnit.findUniqueOrThrow({
+        where: { id: UPPER },
+      });
+      expect(upperRow.level).not.toBe('district');
+      expect(upperRow.parentId).toBeNull();
+
+      await expect(
+        transferIntakeReport(reportId, commander, { organizationId: SIBLING }),
+      ).rejects.toThrow('RECEIVING_ORGANIZATION_INVALID');
+      // A 'district'-level CHILD of ORG is still rejected: only the OU
+      // referenced by ORG.parentId qualifies as the receiver.
+      await expect(
+        transferIntakeReport(reportId, commander, { organizationId: CHILD }),
+      ).rejects.toThrow('RECEIVING_ORGANIZATION_INVALID');
+      await expect(
+        transferIntakeReport(reportId, commander, { organizationId: ORG }),
+      ).rejects.toThrow('RECEIVING_ORGANIZATION_INVALID');
+
+      const requested = await transferIntakeReport(reportId, commander, {
+        organizationId: UPPER,
+        reason: 'Chuyen len cap tren.',
+      });
+      expect(requested.approval.status).toBe('pending');
+      await expect(
+        approveIntakeTransfer(reportId, requested.approval.id, commander),
+      ).rejects.toThrow('SELF_APPROVAL_FORBIDDEN');
+
+      // An inactive direct parent is rejected fail-closed.
+      await prisma.organizationUnit.update({
+        where: { id: UPPER },
+        data: { active: false },
+      });
+      try {
+        const { reportId: inactiveProbe } = await registerProbe(commander);
+        await expect(
+          transferIntakeReport(inactiveProbe, commander, {
+            organizationId: UPPER,
+          }),
+        ).rejects.toThrow('RECEIVING_ORGANIZATION_INVALID');
+      } finally {
+        await prisma.organizationUnit.update({
+          where: { id: UPPER },
+          data: { active: true },
+        });
+      }
+    });
+
     it('denies reveal to a commander without a read_sensitive grant', async () => {
       const marker = `INTAKE-PII-${stamp}`;
       const { reportId } = await registerProbe(duty, {
@@ -895,6 +1042,91 @@ describe.skipIf(!postgresEnabled)(
       const asDuty = await getIntakeReport(reportId, duty);
       expect(asDuty.report.revealed).toBe(false);
       expect(JSON.stringify(asDuty)).not.toContain(marker);
+
+      const auditWhere = {
+        resourceType: 'IntakeReport',
+        resourceId: reportId,
+        operation: 'intake.sensitive_reveal',
+      };
+      const auditCountBeforeRoute = await prisma.auditEvent.count({
+        where: auditWhere,
+      });
+      const tokens: string[] = [];
+      try {
+        const commanderSession = await createSession(commander.id);
+        tokens.push(commanderSession.token);
+        vi.mocked(cookies).mockResolvedValue({
+          get: (name: string) =>
+            name === sessionCookieName
+              ? { value: commanderSession.token }
+              : undefined,
+          delete: () => {},
+        } as never);
+        const commanderResponse = await intakeReportGET(
+          new Request(`http://localhost/api/intake-reports/${reportId}`),
+          { params: Promise.resolve({ reportId }) },
+        );
+        expect(commanderResponse.status).toBe(200);
+        const commanderBody = (await commanderResponse.json()) as {
+          report: { revealed: boolean; sourceName: string | null };
+        };
+        expect(commanderBody.report).toMatchObject({
+          revealed: true,
+          sourceName: marker,
+        });
+        expect(await prisma.auditEvent.count({ where: auditWhere })).toBe(
+          auditCountBeforeRoute + 1,
+        );
+
+        const dutySession = await createSession(duty.id);
+        tokens.push(dutySession.token);
+        vi.mocked(cookies).mockResolvedValue({
+          get: (name: string) =>
+            name === sessionCookieName
+              ? { value: dutySession.token }
+              : undefined,
+          delete: () => {},
+        } as never);
+        const dutyResponse = await intakeReportGET(
+          new Request(`http://localhost/api/intake-reports/${reportId}`),
+          { params: Promise.resolve({ reportId }) },
+        );
+        expect(dutyResponse.status).toBe(200);
+        const dutyBody = await dutyResponse.json();
+        expect(dutyBody.report.revealed).toBe(false);
+        expect(JSON.stringify(dutyBody)).not.toContain(marker);
+        expect(await prisma.auditEvent.count({ where: auditWhere })).toBe(
+          auditCountBeforeRoute + 1,
+        );
+
+        const crossSession = await createSession(crossCommander.id);
+        tokens.push(crossSession.token);
+        vi.mocked(cookies).mockResolvedValue({
+          get: (name: string) =>
+            name === sessionCookieName
+              ? { value: crossSession.token }
+              : undefined,
+          delete: () => {},
+        } as never);
+        const crossResponse = await intakeReportGET(
+          new Request(`http://localhost/api/intake-reports/${reportId}`),
+          { params: Promise.resolve({ reportId }) },
+        );
+        expect(crossResponse.status).toBe(403);
+        expect(await prisma.auditEvent.count({ where: auditWhere })).toBe(
+          auditCountBeforeRoute + 1,
+        );
+      } finally {
+        await prisma.session.deleteMany({
+          where: {
+            tokenHash: {
+              in: tokens.map((token) =>
+                createHash('sha256').update(token).digest('hex'),
+              ),
+            },
+          },
+        });
+      }
     });
 
     it('denies cross-unit intake reads', async () => {

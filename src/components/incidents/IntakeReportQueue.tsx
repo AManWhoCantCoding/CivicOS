@@ -106,23 +106,44 @@ function formatDate(value: string) {
 function slaBadge(item: IntakeQueueItem) {
   if (item.sla.overdue) {
     return (
-      <span className="rounded-full border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-1 text-xs text-[var(--civicos-danger)]">
+      <span className="rounded-full border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] px-3 py-1 text-xs font-medium text-[var(--civicos-danger)]">
         <span aria-hidden="true">⚠ </span>Quá hạn SLA
       </span>
     );
   }
   if (item.sla.warning) {
     return (
-      <span className="rounded-full border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] px-3 py-1 text-xs text-[var(--civicos-warning)]">
+      <span className="rounded-full border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] px-3 py-1 text-xs font-medium text-[var(--civicos-warning)]">
         <span aria-hidden="true">◷ </span>Sắp hạn SLA
       </span>
     );
   }
   return (
-    <span className="rounded-full border border-[var(--civicos-success)] bg-[var(--civicos-surface)] px-3 py-1 text-xs text-[var(--civicos-success)]">
+    <span className="rounded-full border border-[var(--civicos-success)] bg-[var(--civicos-surface)] px-3 py-1 text-xs font-medium text-[var(--civicos-success)]">
       <span aria-hidden="true">● </span>Trong hạn
     </span>
   );
+}
+
+// Presentation-only status tone mapping: state stays text, color only
+// reinforces the same meaning per the shared Light/Blue semantic contract.
+function statusBadgeClass(status: string): string {
+  if (status === 'REJECTED')
+    return 'border-[var(--civicos-danger)] text-[var(--civicos-danger)]';
+  if (status === 'CLOSED')
+    return 'border-[var(--civicos-success)] text-[var(--civicos-success)]';
+  if (status === 'PROCESSED')
+    return 'border-[var(--civicos-warning)] text-[var(--civicos-warning)]';
+  if (status === 'RECEIVED' || status === 'VERIFIED')
+    return 'border-[var(--civicos-info)] text-[var(--civicos-info)]';
+  return 'border-[var(--civicos-border)] text-[var(--civicos-text-muted)]';
+}
+
+function statusIcon(status: string): string {
+  if (status === 'REJECTED') return '⚠';
+  if (status === 'CLOSED') return '●';
+  if (status === 'PROCESSED') return '▲';
+  return '○';
 }
 
 export function IntakeReportQueue() {
@@ -201,7 +222,11 @@ export function IntakeReportQueue() {
 
   return (
     <section aria-label="Hàng đợi IntakeReport" className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <fieldset className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4">
+        <legend className="px-1 text-sm font-medium text-[var(--civicos-text)]">
+          Bộ lọc
+        </legend>
+        <div className="grid gap-3 sm:grid-cols-3">
         <label className="block text-sm text-[var(--civicos-text)]">
           Trạng thái
           <select
@@ -243,7 +268,8 @@ export function IntakeReportQueue() {
             <option value="overdue">Quá hạn</option>
           </select>
         </label>
-      </div>
+        </div>
+      </fieldset>
       {state === 'error' ? (
         <div className="space-y-4">
           {denied ? (
@@ -271,13 +297,13 @@ export function IntakeReportQueue() {
         </div>
       ) : null}
       {state === 'ready' && reports.length ? (
-        <div className="overflow-hidden rounded-xl border border-[var(--civicos-border)]">
+        <div className="overflow-hidden rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)]">
           <div className="divide-y divide-[var(--civicos-border)]">
             {reports.map((item) => (
               <Link
                 key={item.id}
                 href={`/intake/${item.id}`}
-                className="block p-5 transition hover:bg-[var(--civicos-surface-muted)]"
+                className="block min-h-[44px] p-5 motion-safe:transition-colors hover:bg-[var(--civicos-surface-muted)]"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <span className="font-mono text-xs text-[var(--civicos-text-muted)]">
@@ -285,7 +311,10 @@ export function IntakeReportQueue() {
                   </span>
                   <span className="flex flex-wrap items-center gap-2">
                     {slaBadge(item)}
-                    <span className="rounded-full border border-[var(--civicos-accent)] bg-[var(--civicos-surface)] px-3 py-1 text-xs text-[var(--civicos-accent)]">
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${statusBadgeClass(item.status)}`}
+                    >
+                      <span aria-hidden="true">{statusIcon(item.status)} </span>
                       {item.status}
                     </span>
                   </span>
@@ -293,7 +322,7 @@ export function IntakeReportQueue() {
                 <p className="mt-3 text-sm leading-6 text-[var(--civicos-text)]">
                   {item.content}
                 </p>
-                <p className="mt-3 text-xs text-[var(--civicos-text-muted)]">
+                <p className="mt-3 text-xs leading-5 text-[var(--civicos-text-muted)]">
                   Nguồn tin: {item.sourceName ?? 'Không ghi nhận'} ·{' '}
                   {item.incidentId ? 'Đã chuyển Incident' : 'Chưa tạo Incident'}{' '}
                   · {formatDate(item.receivedAt)}

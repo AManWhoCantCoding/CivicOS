@@ -85,9 +85,11 @@ const intakeInput = (tag: string) => ({
 
 const trackedIncidents: string[] = [];
 const trackedReports: string[] = [];
+const createdRoleIds: string[] = [];
 
 async function registerProbe(actor: IdentityUser, tag: string) {
   const registered = await registerIntakeReport(intakeInput(tag), actor);
+  trackedReports.push(registered.reportId);
   await verifyIntakeReport(registered.reportId, actor, {
     classification: 'sufficient',
     verificationNote: `T03 probe verification ${tag}.`,
@@ -96,7 +98,6 @@ async function registerProbe(actor: IdentityUser, tag: string) {
   const converted = await convertIntakeToIncident(registered.reportId, actor);
   if (!converted.incidentId) throw new Error('T03_CONVERT_FAILED');
   trackedIncidents.push(converted.incidentId);
-  trackedReports.push(registered.reportId);
   return { reportId: registered.reportId, incidentId: converted.incidentId };
 }
 
@@ -127,11 +128,22 @@ describe.skipIf(!postgresEnabled)(
         'superior_commander',
         'system_operator',
       ]) {
+        const existingRole = await prisma.role.findUnique({
+          where: { name: roleName },
+          select: { id: true },
+        });
         await prisma.role.upsert({
           where: { name: roleName },
           update: {},
           create: { name: roleName },
         });
+        if (!existingRole) {
+          const createdRole = await prisma.role.findUniqueOrThrow({
+            where: { name: roleName },
+            select: { id: true },
+          });
+          createdRoleIds.push(createdRole.id);
+        }
       }
       for (const user of dbUsers) {
         await prisma.user.create({
@@ -153,17 +165,33 @@ describe.skipIf(!postgresEnabled)(
     });
 
     afterAll(async () => {
+      const resourceIds = [...trackedIncidents, ...trackedReports];
+      const assignments = await prisma.assignment.findMany({
+        where: { resourceId: { in: resourceIds } },
+        select: { id: true },
+      });
+      const assignmentIds = assignments.map(({ id }) => id);
+      const slas = await prisma.slaInstance.findMany({
+        where: { resourceId: { in: resourceIds } },
+        select: { id: true },
+      });
+      const slaIds = slas.map(({ id }) => id);
       const audits = await prisma.auditEvent.findMany({
         where: {
           OR: [
-            ...trackedIncidents.map((resourceId) => ({
-              resourceType: 'Incident',
-              resourceId,
-            })),
-            ...trackedReports.map((resourceId) => ({
-              resourceType: 'IntakeReport',
-              resourceId,
-            })),
+            { actorId: { in: dbUsers.map(({ id }) => id) } },
+            {
+              OR: [
+                ...trackedIncidents.map((resourceId) => ({
+                  resourceType: 'Incident',
+                  resourceId,
+                })),
+                ...trackedReports.map((resourceId) => ({
+                  resourceType: 'IntakeReport',
+                  resourceId,
+                })),
+              ],
+            },
           ],
         },
         select: { id: true },
@@ -172,6 +200,7 @@ describe.skipIf(!postgresEnabled)(
       const events = await prisma.eventRecord.findMany({
         where: {
           OR: [
+            { actorId: { in: dbUsers.map(({ id }) => id) } },
             ...trackedIncidents.map((aggregateId) => ({
               aggregateType: 'Incident',
               aggregateId,
@@ -180,6 +209,17 @@ describe.skipIf(!postgresEnabled)(
               aggregateType: 'IntakeReport',
               aggregateId,
             })),
+            ...(assignmentIds.length
+              ? [
+                  {
+                    aggregateType: 'Assignment',
+                    aggregateId: { in: assignmentIds },
+                  },
+                ]
+              : []),
+            ...(slaIds.length
+              ? [{ aggregateType: 'SlaInstance', aggregateId: { in: slaIds } }]
+              : []),
             ...(auditIds.length
               ? [{ aggregateType: 'AuditEvent', aggregateId: { in: auditIds } }]
               : []),
@@ -199,19 +239,32 @@ describe.skipIf(!postgresEnabled)(
       if (auditIds.length) {
         await prisma.auditEvent.deleteMany({ where: { id: { in: auditIds } } });
       }
+      await prisma.notification.deleteMany({
+        where: {
+          OR: [
+            { userId: { in: dbUsers.map(({ id }) => id) } },
+            { resourceId: { in: resourceIds } },
+            ...(eventIds.length ? [{ sourceEventId: { in: eventIds } }] : []),
+          ],
+        },
+      });
       await prisma.assignment.deleteMany({
         where: {
-          resourceId: { in: [...trackedIncidents, ...trackedReports] },
+          id: { in: assignmentIds },
         },
       });
       await prisma.approval.deleteMany({
         where: { resourceId: { in: trackedIncidents } },
       });
       await prisma.slaInstance.deleteMany({
-        where: { resourceId: { in: trackedIncidents } },
+        where: { id: { in: slaIds } },
       });
       await prisma.projectionRecord.deleteMany({
-        where: { aggregateId: { in: trackedIncidents } },
+        where: {
+          aggregateId: {
+            in: [...resourceIds, ...assignmentIds, ...slaIds, ...auditIds],
+          },
+        },
       });
       if (trackedIncidents.length) {
         await prisma.incident.deleteMany({
@@ -229,11 +282,20 @@ describe.skipIf(!postgresEnabled)(
       await prisma.user.deleteMany({
         where: { id: { in: dbUsers.map(({ id }) => id) } },
       });
+      if (createdRoleIds.length) {
+        await prisma.role.deleteMany({
+          where: {
+            id: { in: createdRoleIds },
+            users: { none: {} },
+          },
+        });
+      }
       await prisma.organizationUnit.deleteMany({
         where: { id: { in: [ORG, UPPER] } },
       });
       trackedIncidents.length = 0;
       trackedReports.length = 0;
+      createdRoleIds.length = 0;
     });
 
     it('lets duty officers and commanders create IntakeReport entries', async () => {
@@ -450,18 +512,16 @@ describe.skipIf(!postgresEnabled)(
         },
         duty,
       );
+      trackedReports.push(created.reportId);
       await verifyIntakeReport(created.reportId, duty, {
         classification: 'sufficient',
         verificationNote: 'T03 informant verification.',
       });
       await confirmIntakeReport(created.reportId, duty);
-      const registered = {
-        ...created,
-        incidentId: (await convertIntakeToIncident(created.reportId, duty))
-          .incidentId as string,
-      };
-      trackedIncidents.push(registered.incidentId);
-      trackedReports.push(registered.reportId);
+      const converted = await convertIntakeToIncident(created.reportId, duty);
+      const incidentId = converted.incidentId as string;
+      trackedIncidents.push(incidentId);
+      const registered = { ...created, incidentId };
       await assignTask(registered.incidentId, field);
       await createAssignments(
         {

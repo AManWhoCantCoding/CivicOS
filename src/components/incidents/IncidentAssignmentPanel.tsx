@@ -263,12 +263,15 @@ export function IncidentAssignmentPanel({
                       {assignment.assigneeUserId}
                     </p>
                     <span
-                      className={`shrink-0 rounded-full px-2 py-1 text-[11px] ${
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${
                         assignment.status === 'active'
-                          ? 'bg-[var(--civicos-surface)] text-[var(--civicos-success)]'
-                          : 'bg-[var(--civicos-surface-muted)] text-[var(--civicos-text-muted)]'
+                          ? 'border-[var(--civicos-success)] bg-[var(--civicos-surface)] text-[var(--civicos-success)]'
+                          : 'border-[var(--civicos-border)] bg-[var(--civicos-surface)] text-[var(--civicos-text-muted)]'
                       }`}
                     >
+                      <span aria-hidden="true">
+                        {assignment.status === 'active' ? '● ' : '○ '}
+                      </span>
                       {assignment.status}
                     </span>
                   </div>
@@ -300,7 +303,7 @@ export function IncidentAssignmentPanel({
                   type="button"
                   onClick={() => void assign()}
                   disabled={loading || !assigneeUserIds.length}
-                  className="mt-4 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] px-3 py-2.5 text-sm font-semibold text-[var(--civicos-text)] hover:border-[var(--civicos-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="min-h-[44px] w-full rounded-lg bg-[var(--civicos-accent)] px-3 py-2.5 text-sm font-semibold text-[var(--civicos-accent-contrast)] motion-safe:transition-colors hover:bg-[var(--civicos-accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading ? 'Đang gửi…' : 'Gửi phân công'}
                 </button>

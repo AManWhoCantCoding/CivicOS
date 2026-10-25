@@ -99,7 +99,14 @@ export function IntakeReportForm() {
       noValidate
       className="space-y-6 rounded-2xl border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] p-5 sm:p-7"
     >
-      <p className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] p-4 text-xs leading-5 text-[var(--civicos-text-muted)]">
+      <p
+        className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4 text-xs leading-5 text-[var(--civicos-text-muted)]"
+        style={{
+          borderLeftWidth: '3px',
+          borderLeftColor: 'var(--civicos-info)',
+        }}
+      >
+        <span aria-hidden="true">ℹ </span>
         Biểu mẫu tiếp nhận thuộc trách nhiệm cán bộ trực ban. Tin mới chỉ tạo
         IntakeReport chờ phân loại; Incident chỉ tạo khi cán bộ xác nhận chuyển.
         Tài khoản khác gửi tin sẽ nhận trạng thái từ chối từ API.

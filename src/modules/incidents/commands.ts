@@ -67,6 +67,31 @@ type IncidentTransaction = Parameters<
 >[0];
 type IncidentApprovalAction = 'transfer' | 'resolve' | 'close';
 
+type OwningUnitRef = {
+  id: string;
+  parentId: string | null;
+};
+
+/**
+ * D-02 (PO-approved): an IntakeReport may only be transferred to the direct
+ * parent OrganizationUnit of the unit owning the report. The parent link is
+ * carried by the SOURCE unit's `parentId` field, so the receiver is valid
+ * when `owningUnit.parentId === receiving.id`. The parent's `level` string
+ * is not significant; the receiving unit must be active and must not be the
+ * owning unit itself. Fails closed when the source unit is unknown.
+ */
+export function isDirectParentReceiver(
+  receiving: { id: string; active: boolean } | null,
+  owningUnit: OwningUnitRef | null,
+): receiving is { id: string; active: boolean } {
+  return Boolean(
+    receiving?.active &&
+    owningUnit &&
+    receiving.id !== owningUnit.id &&
+    owningUnit.parentId === receiving.id,
+  );
+}
+
 const approvalNextStatus: Record<IncidentApprovalAction, IncidentStatus> = {
   transfer: 'transferred',
   resolve: 'resolved',
@@ -815,11 +840,8 @@ function assertIntakeReadScope(
     'superior_officer',
     'superior_commander',
   );
-  if (
-    row.organizationId &&
-    actor.organizationUnitId &&
-    row.organizationId !== actor.organizationUnitId
-  ) {
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
+  if (row.organizationId && row.organizationId !== actor.organizationUnitId) {
     throw new Error('FORBIDDEN');
   }
 }
@@ -1375,21 +1397,22 @@ export async function transferIntakeReport(
 ) {
   requireRole(actor, 'commander', 'superior_commander');
   if (!input.organizationId.trim()) throw new Error('ORGANIZATION_REQUIRED');
-  const receiving = await prisma.organizationUnit.findUnique({
-    where: { id: input.organizationId },
-  });
-  if (!receiving || !receiving.active) {
-    throw new Error('RECEIVING_ORGANIZATION_INVALID');
-  }
-  if (receiving.level !== 'district') {
-    throw new Error('RECEIVING_ORGANIZATION_INVALID');
-  }
-  if (actor.organizationUnitId && receiving.id === actor.organizationUnitId) {
-    throw new Error('RECEIVING_ORGANIZATION_INVALID');
-  }
   return prisma.$transaction(async (tx) => {
     const report = await loadIntakeReport(tx, reportId);
     assertIntakeReadScope(report, actor);
+    // D-02: the receiver is verified against the report's own owning unit,
+    // loaded from the database, never from a client-provided value.
+    const owningUnit = report.organizationId
+      ? await tx.organizationUnit.findUnique({
+          where: { id: report.organizationId },
+        })
+      : null;
+    const receiving = await tx.organizationUnit.findUnique({
+      where: { id: input.organizationId },
+    });
+    if (!isDirectParentReceiver(receiving, owningUnit)) {
+      throw new Error('RECEIVING_ORGANIZATION_INVALID');
+    }
     const approval = await tx.approval.create({
       data: {
         resourceType: 'IntakeReport',
@@ -1498,6 +1521,7 @@ export async function listIntakeReports(
     'superior_officer',
     'superior_commander',
   );
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
   const rows = (await prisma.intakeReport.findMany({
     where: {
       ...(actor.organizationUnitId
@@ -1532,6 +1556,7 @@ export async function listIntakeReports(
 }
 
 export async function getIntakeReport(reportId: string, actor: IncidentActor) {
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
   const row = (await prisma.intakeReport.findUnique({
     where: { id: reportId },
   })) as IntakeReportRow | null;

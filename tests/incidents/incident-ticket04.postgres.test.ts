@@ -53,13 +53,7 @@ const duty = userRef(`t04-duty-${stamp}`, ['duty_officer'], ORG);
 const fieldOfficer = userRef(`t04-field-${stamp}`, ['field_officer'], ORG);
 const unassigned = userRef(`t04-unassigned-${stamp}`, ['field_officer'], ORG);
 const crossCommander = userRef(`t04-cross-${stamp}`, ['commander'], UPPER);
-const seededAssignee: IdentityUser = {
-  id: 'dev-field',
-  email: 'field@civicos.local',
-  name: 'Field workflow fixture',
-  roles: ['field_officer'],
-  organizationUnitId: ORG,
-};
+const seededAssignee = userRef(`t04-assignee-${stamp}`, ['field_officer'], ORG);
 
 const validIntake = (overrides: Record<string, unknown> = {}) => ({
   channel: 'in_person' as const,
@@ -224,6 +218,8 @@ describe('Ticket 04 public incident module boundary', () => {
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
 const tracked: Array<{ incidentId: string; reportId: string }> = [];
 const trackedAssignmentIds: string[] = [];
+const createdRoleIds: string[] = [];
+const createdOrganizationUnitIds: string[] = [];
 const fixtureIds = [
   commander.id,
   approver.id,
@@ -231,35 +227,66 @@ const fixtureIds = [
   fieldOfficer.id,
   unassigned.id,
   crossCommander.id,
+  seededAssignee.id,
 ];
 
 async function cleanupTracked(): Promise<void> {
   for (const { incidentId, reportId } of tracked) {
-    const [audits, slas] = await Promise.all([
+    const resourceIds = [incidentId, reportId].filter(Boolean);
+    const [audits, slas, assignments] = await Promise.all([
       prisma.auditEvent.findMany({
         where: {
           OR: [
-            { resourceType: 'Incident', resourceId: incidentId },
+            ...(incidentId
+              ? [{ resourceType: 'Incident', resourceId: incidentId }]
+              : []),
             { resourceType: 'IntakeReport', resourceId: reportId },
+            { actorId: { in: fixtureIds } },
           ],
         },
         select: { id: true },
       }),
       prisma.slaInstance.findMany({
-        where: { resourceType: 'Incident', resourceId: incidentId },
+        where: { resourceId: { in: resourceIds } },
         select: { id: true },
       }),
+      resourceIds.length
+        ? prisma.assignment.findMany({
+            where: {
+              resourceType: 'Incident',
+              resourceId: { in: resourceIds },
+            },
+            select: { id: true },
+          })
+        : Promise.resolve([]),
     ]);
     const events = await prisma.eventRecord.findMany({
       where: {
         OR: [
-          { aggregateType: 'Incident', aggregateId: incidentId },
+          ...(incidentId
+            ? [{ aggregateType: 'Incident', aggregateId: incidentId }]
+            : []),
           { aggregateType: 'IntakeReport', aggregateId: reportId },
-          ...(trackedAssignmentIds.length
+          { actorId: { in: fixtureIds } },
+          ...(resourceIds.length
+            ? [
+                { aggregateType: 'Incident', aggregateId: { in: resourceIds } },
+                {
+                  aggregateType: 'IntakeReport',
+                  aggregateId: { in: resourceIds },
+                },
+              ]
+            : []),
+          ...(assignments.length || trackedAssignmentIds.length
             ? [
                 {
                   aggregateType: 'Assignment',
-                  aggregateId: { in: trackedAssignmentIds },
+                  aggregateId: {
+                    in: [
+                      ...trackedAssignmentIds,
+                      ...assignments.map(({ id }) => id),
+                    ],
+                  },
                 },
               ]
             : []),
@@ -281,7 +308,7 @@ async function cleanupTracked(): Promise<void> {
             : []),
         ],
       },
-      select: { eventId: true },
+      select: { eventId: true, aggregateType: true, aggregateId: true },
     });
     const eventIds = events.map(({ eventId }) => eventId);
     if (eventIds.length) {
@@ -293,7 +320,16 @@ async function cleanupTracked(): Promise<void> {
       });
     }
     await prisma.projectionRecord.deleteMany({
-      where: { aggregateType: 'Incident', aggregateId: incidentId },
+      where: {
+        OR: [
+          ...events.map(({ aggregateType, aggregateId }) => ({
+            aggregateType,
+            aggregateId,
+          })),
+          { aggregateType: 'Incident', aggregateId: incidentId },
+          { aggregateType: 'IntakeReport', aggregateId: reportId },
+        ],
+      },
     });
     await prisma.approval.deleteMany({
       where: { resourceType: 'Incident', resourceId: incidentId },
@@ -308,11 +344,21 @@ async function cleanupTracked(): Promise<void> {
         where: { id: { in: slas.map(({ id }) => id) } },
       });
     }
-    await prisma.assignment.deleteMany({
-      where: { resourceType: 'Incident', resourceId: incidentId },
-    });
+    if (assignments.length)
+      await prisma.assignment.deleteMany({
+        where: { id: { in: assignments.map(({ id }) => id) } },
+      });
     await prisma.incident.deleteMany({ where: { id: incidentId } });
     await prisma.intakeReport.deleteMany({ where: { id: reportId } });
+    await prisma.notification.deleteMany({
+      where: {
+        OR: [
+          { userId: { in: fixtureIds } },
+          ...(resourceIds.length ? [{ resourceId: { in: resourceIds } }] : []),
+          ...(eventIds.length ? [{ sourceEventId: { in: eventIds } }] : []),
+        ],
+      },
+    });
   }
   await prisma.auditEvent.deleteMany({
     where: {
@@ -337,6 +383,7 @@ async function registerProbe(
     },
     actor,
   );
+  tracked.push({ incidentId: '', reportId: registered.reportId });
   await verifyIntakeReport(registered.reportId, actor, {
     classification: 'sufficient',
     verificationNote: 'T04 probe verification.',
@@ -344,15 +391,16 @@ async function registerProbe(
   await confirmIntakeReport(registered.reportId, actor);
   const converted = await convertIntakeToIncident(registered.reportId, actor);
   if (!converted.incidentId) throw new Error('T04_CONVERT_FAILED');
-  tracked.push({
-    incidentId: converted.incidentId,
-    reportId: registered.reportId,
-  });
+  tracked[tracked.length - 1].incidentId = converted.incidentId;
   return { reportId: registered.reportId, incidentId: converted.incidentId };
 }
 
 describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
   beforeAll(async () => {
+    for (const id of [ORG, UPPER]) {
+      if (!(await prisma.organizationUnit.findUnique({ where: { id } })))
+        createdOrganizationUnitIds.push(id);
+    }
     await prisma.organizationUnit.upsert({
       where: { id: ORG },
       update: {},
@@ -366,12 +414,14 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
     const roleNames = ['commander', 'duty_officer', 'field_officer'] as const;
     const roleIds: Record<string, string> = {};
     for (const name of roleNames) {
+      const existed = await prisma.role.findUnique({ where: { name } });
       const role = await prisma.role.upsert({
         where: { name },
         update: {},
         create: { name },
       });
       roleIds[name] = role.id;
+      if (!existed) createdRoleIds.push(role.id);
     }
     const seeds = [
       { user: commander, role: 'commander' },
@@ -402,21 +452,34 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
   });
 
   afterAll(async () => {
-    await cleanupTracked();
-    await prisma.user.deleteMany({
-      where: {
-        id: {
-          in: [
-            commander.id,
-            approver.id,
-            duty.id,
-            fieldOfficer.id,
-            unassigned.id,
-            crossCommander.id,
-          ],
-        },
-      },
-    });
+    try {
+      await cleanupTracked();
+    } finally {
+      try {
+        await prisma.user.deleteMany({
+          where: {
+            id: {
+              in: [
+                commander.id,
+                approver.id,
+                duty.id,
+                fieldOfficer.id,
+                unassigned.id,
+                crossCommander.id,
+                seededAssignee.id,
+              ],
+            },
+          },
+        });
+        await prisma.role.deleteMany({
+          where: { id: { in: createdRoleIds }, users: { none: {} } },
+        });
+      } finally {
+        await prisma.organizationUnit.deleteMany({
+          where: { id: { in: createdOrganizationUnitIds } },
+        });
+      }
+    }
   });
 
   it('validates channel, time, content, location, and role server-side', async () => {
@@ -502,6 +565,8 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
 
   it('rolls back the convert operation atomically on mid-transaction failure', async () => {
     const sentinel = `T04 rollback sentinel ${stamp}`;
+    const triggerName = `t04_abort_${stamp}`;
+    const functionName = `t04_abort_${stamp}`;
     const created = await registerIntakeReport(
       {
         ...validIntake({ content: sentinel }),
@@ -515,18 +580,13 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
       verificationNote: 'T04 rollback verification.',
     });
     await confirmIntakeReport(created.reportId, commander);
-    await prisma.$executeRawUnsafe(
-      "CREATE OR REPLACE FUNCTION t04_abort_sentinel() RETURNS trigger AS $$ BEGIN IF NEW.description = '" +
-        sentinel +
-        "' THEN RAISE EXCEPTION 'T04_INJECTED_FAILURE'; END IF; RETURN NEW; END; $$ LANGUAGE plpgsql;",
-    );
-    await prisma.$executeRawUnsafe(
-      'DROP TRIGGER IF EXISTS t04_abort_incident ON "Incident";',
-    );
-    await prisma.$executeRawUnsafe(
-      'CREATE TRIGGER t04_abort_incident BEFORE INSERT ON "Incident" FOR EACH ROW EXECUTE FUNCTION t04_abort_sentinel();',
-    );
     try {
+      await prisma.$executeRawUnsafe(
+        `CREATE FUNCTION ${functionName}() RETURNS trigger AS $$ BEGIN IF NEW.description = '${sentinel}' THEN RAISE EXCEPTION 'T04_INJECTED_FAILURE'; END IF; RETURN NEW; END; $$ LANGUAGE plpgsql;`,
+      );
+      await prisma.$executeRawUnsafe(
+        `CREATE TRIGGER ${triggerName} BEFORE INSERT ON "Incident" FOR EACH ROW EXECUTE FUNCTION ${functionName}();`,
+      );
       await expect(
         convertIntakeToIncident(created.reportId, commander),
       ).rejects.toThrow('T04_INJECTED_FAILURE');
@@ -549,10 +609,10 @@ describe.skipIf(!postgresEnabled)('Ticket 04 PostgreSQL seam', () => {
       ).resolves.toBe(0);
     } finally {
       await prisma.$executeRawUnsafe(
-        'DROP TRIGGER IF EXISTS t04_abort_incident ON "Incident";',
+        `DROP TRIGGER IF EXISTS ${triggerName} ON "Incident";`,
       );
       await prisma.$executeRawUnsafe(
-        'DROP FUNCTION IF EXISTS t04_abort_sentinel();',
+        `DROP FUNCTION IF EXISTS ${functionName}();`,
       );
     }
   });

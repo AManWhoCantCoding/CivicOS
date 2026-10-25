@@ -73,6 +73,24 @@ function formatDate(value: string) {
     : date.toLocaleString('vi-VN');
 }
 
+// Presentation-only status tone mapping: state stays text + icon, color only
+// reinforces the same meaning per the shared Light/Blue semantic contract.
+function statusBadgeClass(status: string): string {
+  if (status === 'resolved' || status === 'closed')
+    return 'border-[var(--civicos-success)] text-[var(--civicos-success)]';
+  if (status === 'verifying' || status === 'transferred')
+    return 'border-[var(--civicos-warning)] text-[var(--civicos-warning)]';
+  if (status === 'received' || status === 'classified')
+    return 'border-[var(--civicos-info)] text-[var(--civicos-info)]';
+  return 'border-[var(--civicos-border)] text-[var(--civicos-text-muted)]';
+}
+
+function statusIcon(status: string): string {
+  if (status === 'resolved' || status === 'closed') return '●';
+  if (status === 'verifying' || status === 'transferred') return '▲';
+  return '○';
+}
+
 export function IncidentTable() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -123,10 +141,20 @@ export function IncidentTable() {
   if (state === 'loading') {
     return (
       <div
-        className="h-40 rounded-xl bg-[var(--civicos-surface-muted)] motion-safe:animate-pulse"
         aria-label="Đang tải hàng đợi Incident"
         role="status"
-      />
+      >
+        <div className="space-y-3">
+          <div className="h-8 w-52 rounded-lg bg-[var(--civicos-surface-muted)] motion-safe:animate-pulse" />
+          <div className="overflow-hidden rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)]">
+            <div className="divide-y divide-[var(--civicos-border)]">
+              <div className="h-28 motion-safe:animate-pulse" />
+              <div className="h-28 motion-safe:animate-pulse" />
+              <div className="h-28 motion-safe:animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
   if (state === 'error') {
@@ -136,9 +164,14 @@ export function IncidentTable() {
           <AccessDenied message={error ?? undefined} />
         ) : (
           <p
-            className="rounded-xl border border-[var(--civicos-danger)] bg-[var(--civicos-surface)] p-5 text-sm text-[var(--civicos-danger)]"
+            className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5 text-sm font-medium text-[var(--civicos-danger)]"
             role="alert"
+            style={{
+              borderLeftWidth: '3px',
+              borderLeftColor: 'var(--civicos-danger)',
+            }}
           >
+            <span aria-hidden="true">⚠ </span>
             {error}
           </p>
         )}
@@ -154,33 +187,37 @@ export function IncidentTable() {
   }
   if (!incidents.length) {
     return (
-      <div className="rounded-xl border border-dashed border-[var(--civicos-border)] p-8 text-sm text-[var(--civicos-text-muted)]">
+      <div className="rounded-xl border border-dashed border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-8 text-sm text-[var(--civicos-text-muted)]">
+        <span aria-hidden="true">○ </span>
         Chưa có Incident trong phạm vi hiển thị.
       </div>
     );
   }
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--civicos-border)]">
+    <div className="overflow-hidden rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)]">
       <div className="divide-y divide-[var(--civicos-border)]">
         {incidents.map((incident) => (
           <Link
             key={incident.id}
             href={`/incidents/${incident.id}`}
-            className="block p-5 transition hover:bg-[var(--civicos-surface-muted)]"
+            className="block min-h-[44px] p-5 motion-safe:transition-colors hover:bg-[var(--civicos-surface-muted)]"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="font-mono text-xs text-[var(--civicos-text-muted)]">
                 {incident.id.slice(0, 8)}
               </span>
-              <span className="rounded-full border border-[var(--civicos-accent)] bg-[var(--civicos-surface)] px-3 py-1 text-xs text-[var(--civicos-accent)]">
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${statusBadgeClass(incident.status)}`}
+              >
+                <span aria-hidden="true">{statusIcon(incident.status)}</span>
                 {incident.status}
               </span>
             </div>
             <p className="mt-3 text-sm leading-6 text-[var(--civicos-text)]">
               {incident.description}
             </p>
-            <p className="mt-3 text-xs text-[var(--civicos-text-muted)]">
-              {incident.category ?? 'Chưa phân loại'} ·{' '}
+            <p className="mt-3 text-xs leading-5 text-[var(--civicos-text-muted)]">
+              Phân loại: {incident.category ?? 'Chưa phân loại'} · Mức độ:{' '}
               {incident.severity ?? 'Chưa đánh giá'} ·{' '}
               {formatDate(incident.updatedAt)}
             </p>

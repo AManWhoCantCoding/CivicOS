@@ -24,13 +24,21 @@ export async function GET(request: Request): Promise<NextResponse> {
   const user = await getCurrentUser();
   if (!user)
     return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
-  const url = new URL(request.url);
-  return NextResponse.json({
-    incidents: await listIncidents(user, {
-      status: url.searchParams.get('status') ?? undefined,
-      category: url.searchParams.get('category') ?? undefined,
-    }),
-  });
+  try {
+    const url = new URL(request.url);
+    return NextResponse.json({
+      incidents: await listIncidents(user, {
+        status: url.searchParams.get('status') ?? undefined,
+        category: url.searchParams.get('category') ?? undefined,
+      }),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'INCIDENT_FAILED';
+    return NextResponse.json(
+      { error: message },
+      { status: incidentErrorStatus(message) },
+    );
+  }
 }
 
 export async function POST(request: Request): Promise<NextResponse> {

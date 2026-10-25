@@ -328,7 +328,24 @@ export function IncidentDetail({ incidentId }: { incidentId: string }) {
             >
               {refreshing ? 'Đang làm mới…' : 'Làm mới'}
             </button>
-            <span className="rounded-full border border-[var(--civicos-accent)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-accent)]">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium ${
+                incident.status === 'resolved' || incident.status === 'closed'
+                  ? 'border-[var(--civicos-success)] text-[var(--civicos-success)]'
+                  : incident.status === 'verifying' ||
+                      incident.status === 'transferred'
+                    ? 'border-[var(--civicos-warning)] text-[var(--civicos-warning)]'
+                    : 'border-[var(--civicos-info)] text-[var(--civicos-info)]'
+              }`}
+            >
+              <span aria-hidden="true">
+                {incident.status === 'resolved' || incident.status === 'closed'
+                  ? '● '
+                  : incident.status === 'verifying' ||
+                      incident.status === 'transferred'
+                    ? '▲ '
+                    : '○ '}
+              </span>
               {incident.status}
             </span>
           </div>
@@ -366,8 +383,12 @@ export function IncidentDetail({ incidentId }: { incidentId: string }) {
         </section>
         {currentDetail.incident.informant ? (
           <section
-            className="mt-6 rounded-xl border border-[var(--civicos-warning)] bg-[var(--civicos-surface)] p-5"
+            className="mt-6 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5"
             aria-label="Nguồn tin"
+            style={{
+              borderLeftWidth: '3px',
+              borderLeftColor: 'var(--civicos-warning)',
+            }}
           >
             <h2 className="text-sm font-semibold text-[var(--civicos-warning)]">
               Nguồn tin

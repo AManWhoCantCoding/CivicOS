@@ -525,16 +525,18 @@ export function IncidentStatusActions({
         </div>
       ) : null}
       {error ? (
-        <p className="mt-4 text-sm text-[var(--civicos-danger)]" role="alert">
+        <p className="mt-4 text-sm font-medium text-[var(--civicos-danger)]" role="alert">
+          <span aria-hidden="true">⚠ </span>
           {error}
         </p>
       ) : null}
       {message ? (
         <p
-          className="mt-4 text-sm text-[var(--civicos-success)]"
+          className="mt-4 text-sm font-medium text-[var(--civicos-success)]"
           role="status"
           aria-live="polite"
         >
+          <span aria-hidden="true">● </span>
           {message}
         </p>
       ) : null}
