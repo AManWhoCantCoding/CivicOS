@@ -20,6 +20,10 @@ import {
   type FocusParcel,
   type FocusStatus,
 } from './land-parcel-focus';
+import {
+  createMarkerPopupContent,
+  createParcelPopupContent,
+} from './marker-popup';
 
 type MapAreaPoint = {
   latitude: number;
@@ -48,7 +52,7 @@ type MapProviderView = {
 type LoadState = 'loading' | 'ready' | 'error';
 
 const ACTION_FOCUS_CLASS =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)]';
+  'focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)]';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -294,6 +298,7 @@ export function MapWorkspace({
   const [showIncidents, setShowIncidents] = useState(true);
   const [showInspections, setShowInspections] = useState(true);
   const [showAreas, setShowAreas] = useState(true);
+  const [showCameras, setShowCameras] = useState(true);
 
   useEffect(() => {
     function sync() {
@@ -762,7 +767,7 @@ export function MapWorkspace({
     let active = true;
     async function render(providerConfig: MapProviderView) {
       try {
-        const { default: maplibregl } = await import('maplibre-gl');
+        const maplibregl = await import('maplibre-gl');
         if (!active) return;
         mapRef.current?.remove();
         const bounds = providerConfig.bounds;
@@ -789,9 +794,21 @@ export function MapWorkspace({
         });
         map.addControl(new maplibregl.NavigationControl());
         for (const marker of visible) {
-          new maplibregl.Marker()
+          const mapMarker = new maplibregl.Marker()
             .setLngLat([marker.longitude, marker.latitude])
             .addTo(map);
+          const markerElement = mapMarker.getElement();
+          markerElement.tabIndex = 0;
+          markerElement.setAttribute('role', 'button');
+          markerElement.setAttribute(
+            'aria-label',
+            `${marker.title}. Trạng thái: ${marker.status}`,
+          );
+          const popup = new maplibregl.Popup()
+            .setLngLat([marker.longitude, marker.latitude])
+            .setDOMContent(createMarkerPopupContent(marker));
+          // MapLibre setPopup supplies marker semantics and keyboard activation.
+          mapMarker.setPopup(popup);
         }
         const areas = toMapAreaGeoJson(
           visible.map((marker) => ({
@@ -920,6 +937,35 @@ export function MapWorkspace({
               });
             }
           }
+          const showPolygonPopup = (
+            layer: string,
+            lookup: (id: string) => HTMLElement | null,
+          ) => {
+            map.on('click', layer, (event) => {
+              const id = event.features?.[0]?.properties?.id;
+              if (typeof id !== 'string') return;
+              const content = lookup(id);
+              if (!content) return;
+              new maplibregl.Popup()
+                .setLngLat([event.lngLat.lng, event.lngLat.lat])
+                .setDOMContent(content)
+                .addTo(map);
+            });
+          };
+          showPolygonPopup('map-areas-fill', (id) => {
+            const marker = visible.find((item) => item.id === id);
+            return marker ? createMarkerPopupContent(marker) : null;
+          });
+          if (focusParcel)
+            showPolygonPopup(LAND_PARCEL_FOCUS_FILL, (id) =>
+              focusParcel.id === id
+                ? createParcelPopupContent(focusParcel)
+                : null,
+            );
+          showPolygonPopup(DISCOVERY_FILL, (id) => {
+            const parcel = discoveryItems.find((item) => item.id === id);
+            return parcel ? createParcelPopupContent(parcel) : null;
+          });
         });
         if (active) mapRef.current = map;
       } catch {
@@ -1096,7 +1142,7 @@ export function MapWorkspace({
           Chưa đăng nhập nên lớp nghiệp vụ bị che; basemap vẫn xem được.
         </p>
       ) : null}
-      <fieldset className="flex flex-wrap gap-4 rounded-xl border border-[var(--civicos-border)] p-4 text-sm text-[var(--civicos-text)]">
+      <fieldset className="flex flex-wrap gap-4 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4 text-sm text-[var(--civicos-text)]">
         <legend className="px-2 text-xs text-[var(--civicos-text-muted)]">
           Lớp dữ liệu
         </legend>
@@ -1127,7 +1173,25 @@ export function MapWorkspace({
           />
           Vùng polygon
         </label>
+        <label className="flex min-h-[44px] items-center gap-2">
+          <input
+            type="checkbox"
+            checked={showCameras}
+            onChange={(event) => setShowCameras(event.target.checked)}
+            className={ACTION_FOCUS_CLASS}
+          />
+          Camera
+        </label>
       </fieldset>
+      {showCameras ? (
+        <p
+          className="text-sm text-[var(--civicos-text-muted)]"
+          role="status"
+          aria-live="polite"
+        >
+          Chưa kết nối nguồn camera.
+        </p>
+      ) : null}
       {focusParcelId ? (
         <section
           aria-labelledby="land-parcel-focus-heading"

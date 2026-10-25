@@ -23,19 +23,19 @@ export default async function MapPage({
       : null;
   return (
     <main className="min-h-dvh bg-[var(--civicos-canvas)] px-4 py-8 text-[var(--civicos-text)] sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-6xl">
-        <div>
+      <div className="mx-auto max-w-7xl">
+        <header className="border-b border-[var(--civicos-border)] pb-6">
           <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
             Workspace
           </p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[var(--civicos-text)]">
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[var(--civicos-text)] sm:mt-3 sm:text-4xl">
             {focusParcelId ? 'Bản đồ thửa đất' : 'Bản đồ nghiệp vụ'}
           </h1>
-          <p className="mt-4 text-base leading-7 text-[var(--civicos-text-muted)]">
+          <p className="mt-3 text-base leading-7 text-[var(--civicos-text-muted)] sm:mt-4">
             Điểm GeoPoint và vùng GeoArea trong phạm vi đơn vị hiện tại.
           </p>
-        </div>
-        <div className="mt-10">
+        </header>
+        <div className="mt-6 sm:mt-10">
           {denied ? (
             <AccessDenied message="Bản đồ nghiệp vụ không thuộc nhiệm vụ hoặc phạm vi của tài khoản hiện tại." />
           ) : (

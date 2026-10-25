@@ -23,17 +23,19 @@ export async function GET(): Promise<NextResponse> {
       { status: 403 },
     );
   }
+  if (!user.organizationUnitId?.trim()) {
+    return NextResponse.json(
+      { error: MAP_ERRORS.permissionDenied },
+      { status: 403 },
+    );
+  }
   const rows = await prisma.projectionRecord.findMany({
     where: {
       aggregateType: { in: [...MAP_PROJECTION_SOURCE_AGGREGATES] },
-      ...(user.organizationUnitId
-        ? {
-            state: {
-              path: ['organizationId'],
-              equals: user.organizationUnitId,
-            },
-          }
-        : {}),
+      state: {
+        path: ['organizationId'],
+        equals: user.organizationUnitId,
+      },
     },
     orderBy: { updatedAt: 'desc' },
     take: 200,
