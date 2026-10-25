@@ -88,7 +88,10 @@ export type AlarmReadItem = {
 };
 
 export type DispatchReadItem = AlarmReadItem;
-export type TaskReadItem = AlarmReadItem & { dispatchId?: string };
+export type TaskReadItem = AlarmReadItem & {
+  dispatchId?: string;
+  baseVersion?: number;
+};
 
 export type MobileListQuery = {
   page?: number;

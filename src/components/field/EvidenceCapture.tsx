@@ -161,7 +161,7 @@ export function EvidenceCapture({
           Tệp được gửi multipart lên hồ sơ này và giữ thời gian, vị trí nếu có.
         </span>
         <input
-          className="mt-4 block min-h-[44px] w-full text-xs text-[var(--civicos-text-muted)] file:mr-3 file:min-h-[44px] file:rounded-md file:border file:border-[var(--civicos-border)] file:bg-[var(--civicos-surface-muted)] file:px-3 file:py-2 file:font-semibold file:text-[var(--civicos-accent)]"
+          className="civicos-control mt-4 block w-full cursor-pointer text-xs text-[var(--civicos-text-muted)] file:mr-3 file:min-h-[44px] file:rounded-md file:border file:border-[var(--civicos-border)] file:bg-[var(--civicos-surface-muted)] file:px-3 file:py-2 file:font-semibold file:text-[var(--civicos-accent)] file:outline-none hover:file:border-[var(--civicos-accent)] focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)]"
           type="file"
           accept="image/*"
           capture="environment"
@@ -170,21 +170,32 @@ export function EvidenceCapture({
           aria-label="Chọn ảnh bằng chứng"
         />
       </label>
-      {file ? (
-        <p className="mt-3 text-xs text-[var(--civicos-text-muted)]">
-          Đã chọn: {file.name}
-        </p>
-      ) : null}
-      <p className="mt-2 text-xs text-[var(--civicos-text-muted)]">
-        GPS: {location}
-      </p>
-      <p className="mt-1 text-xs text-[var(--civicos-text-muted)]">
-        Trạng thái mạng: {online ? 'online' : 'offline'}
-      </p>
+      <dl className="mt-3 space-y-1 rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-2 text-xs">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <dt className="font-medium text-[var(--civicos-text-muted)]">
+            Tệp đã chọn
+          </dt>
+          <dd className="break-all font-mono text-[var(--civicos-text)]">
+            {file ? file.name : 'Chưa có'}
+          </dd>
+        </div>
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <dt className="font-medium text-[var(--civicos-text-muted)]">GPS</dt>
+          <dd className="font-mono text-[var(--civicos-text)]">{location}</dd>
+        </div>
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <dt className="font-medium text-[var(--civicos-text-muted)]">
+            Trạng thái mạng
+          </dt>
+          <dd className="font-mono text-[var(--civicos-text)]">
+            {online ? 'online' : 'offline'}
+          </dd>
+        </div>
+      </dl>
       {file && !uploaded ? (
         <button
           type="button"
-          className="mt-3 min-h-[44px] rounded-md border border-[var(--civicos-border)] px-3 py-2 text-xs text-[var(--civicos-accent)] hover:border-[var(--civicos-accent)] disabled:opacity-60"
+          className="civicos-control mt-3 min-h-[44px] border border-[var(--civicos-accent)] bg-[var(--civicos-surface)] px-3 py-2 text-xs font-semibold text-[var(--civicos-accent)] hover:bg-[var(--civicos-surface-muted)] focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)] motion-safe:transition-colors disabled:cursor-not-allowed disabled:opacity-60"
           disabled={disabled || uploading}
           onClick={() => void uploadEvidence(file, coordinates)}
         >

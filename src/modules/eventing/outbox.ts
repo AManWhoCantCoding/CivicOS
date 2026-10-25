@@ -58,11 +58,12 @@ function toDomainEvent(record: {
   };
 }
 
-async function releaseStaleClaims(): Promise<void> {
+async function releaseStaleClaims(eventId?: string): Promise<void> {
   await prisma.outboxMessage.updateMany({
     where: {
       status: 'processing',
       claimedAt: { lt: new Date(Date.now() - processingLeaseMs) },
+      ...(eventId !== undefined ? { eventId } : {}),
     },
     data: {
       status: 'pending',
@@ -165,12 +166,12 @@ async function dispatchConsumer(
 export async function processOneOutboxMessage(filter?: {
   eventId?: string;
 }): Promise<boolean> {
-  await releaseStaleClaims();
+  await releaseStaleClaims(filter?.eventId);
   const message = await prisma.outboxMessage.findFirst({
     where: {
       status: 'pending',
       availableAt: { lte: new Date() },
-      ...(filter?.eventId ? { eventId: filter.eventId } : {}),
+      ...(filter?.eventId !== undefined ? { eventId: filter.eventId } : {}),
     },
     orderBy: {
       createdAt: process.env.CIVICOS_E2E_RUN === '1' ? 'desc' : 'asc',

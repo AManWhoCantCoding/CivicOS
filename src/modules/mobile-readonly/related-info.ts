@@ -143,7 +143,7 @@ async function candidatesForType(
   entityType: RelatedInfoEntityType,
 ): Promise<Candidate[]> {
   const organizationId = user.organizationUnitId;
-  if (!organizationId) return [];
+  if (!organizationId?.trim()) return [];
   if (entityType === 'RESIDENT') {
     const records = await prisma.subjectManagementRecord.findMany({
       where: { assignedOrganizationId: organizationId },

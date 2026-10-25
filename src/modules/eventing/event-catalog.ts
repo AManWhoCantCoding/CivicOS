@@ -47,6 +47,8 @@ const observation = (type: string) =>
     'vehicle-observation-read-model',
     'event-history-projection',
   ]);
+const parkingWatch = (type: string) =>
+  define(type, 'vehicles', 'VehicleParkingWatch', ['event-history-projection']);
 
 export const EVENT_CATALOG: readonly EventCatalogEntry[] = [
   define('IntakeReportReceived', 'incidents', 'IntakeReport', [
@@ -100,6 +102,8 @@ export const EVENT_CATALOG: readonly EventCatalogEntry[] = [
   observation('SuspiciousVehicleMatchConfirmed'),
   observation('VehicleVerificationRecorded'),
   observation('VehicleEscalated'),
+  parkingWatch('VehicleParkingWatchStarted'),
+  parkingWatch('VehicleParkingWatchCompleted'),
   define('SlaStarted', 'platform-sla', 'SlaInstance', [
     'event-history-projection',
   ]),

@@ -62,6 +62,15 @@ async function getResourceVersion(
           })
         )?.version ?? null
       );
+    case 'SubjectManagementRecord':
+      return (
+        (
+          await prisma.subjectManagementRecord.findUnique({
+            where: { id: resourceId },
+            select: { version: true },
+          })
+        )?.version ?? null
+      );
     default:
       return undefined;
   }

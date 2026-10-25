@@ -13,6 +13,7 @@ import {
 
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
 const commandIds: string[] = [];
+const subjectSeedIds: string[] = [];
 
 describe('offline command contract', () => {
   it('requires a stable client command id for idempotency', () => {
@@ -162,10 +163,59 @@ describe('offline command contract', () => {
     },
   );
 
+  it.skipIf(!postgresEnabled)(
+    'checks SubjectManagementRecord baseVersion before accepting resident.record_activity',
+    async () => {
+      // D-53: gated Postgres case, only executes with RUN_DB_TESTS=1 on a verified safe test DB.
+      const subject = await prisma.subject.create({
+        data: {
+          displayName: 'Offline record_activity test subject',
+          subjectType: 'reintegration',
+        },
+      });
+      subjectSeedIds.push(subject.id);
+      const record = await prisma.subjectManagementRecord.create({
+        data: { subjectId: subject.id, purpose: 'reintegration' },
+      });
+
+      const input = {
+        clientCommandId: `test-device:${randomUUID()}`,
+        actorId: 'offline-test-actor',
+        commandType: 'resident.record_activity',
+        resourceType: 'SubjectManagementRecord',
+        resourceId: record.id,
+        occurredAt: new Date('2026-10-22T01:00:00.000Z'),
+        payload: { activityType: 'visit', content: 'offline note' },
+        payloadVersion: 1,
+        baseVersion: 2,
+      };
+      commandIds.push(input.clientCommandId);
+
+      // Record is created at version 1: baseVersion 2 must reject before any activity mutation.
+      await expect(acceptOfflineCommand(input)).rejects.toThrow(
+        'STALE_OFFLINE_COMMAND',
+      );
+      expect(
+        await prisma.subjectManagementActivity.count({
+          where: { recordId: record.id },
+        }),
+      ).toBe(0);
+
+      const accepted = await acceptOfflineCommand({ ...input, baseVersion: 1 });
+      expect(accepted.status).toBe('pending');
+      expect(accepted.baseVersion).toBe(1);
+      expect(accepted.commandType).toBe('resident.record_activity');
+    },
+  );
+
   afterAll(async () => {
     if (!postgresEnabled || !commandIds.length) return;
     await prisma.offlineCommand.deleteMany({
       where: { clientCommandId: { in: commandIds } },
     });
+    for (const subjectId of subjectSeedIds) {
+      // Cascades to the seeded SubjectManagementRecord and activities.
+      await prisma.subject.deleteMany({ where: { id: subjectId } });
+    }
   });
 });

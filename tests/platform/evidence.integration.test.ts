@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { rm } from 'node:fs/promises';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
@@ -88,7 +89,17 @@ describe('evidence contract', () => {
   );
 
   afterAll(async () => {
-    if (!postgresEnabled || !evidenceIds.length) return;
-    await prisma.evidence.deleteMany({ where: { id: { in: evidenceIds } } });
+    try {
+      if (postgresEnabled && evidenceIds.length) {
+        await prisma.evidence.deleteMany({
+          where: { id: { in: evidenceIds } },
+        });
+      }
+    } finally {
+      await Promise.all([
+        rm(storageRoot, { recursive: true, force: true }),
+        rm(`${storageRoot}-validation`, { recursive: true, force: true }),
+      ]);
+    }
   });
 });

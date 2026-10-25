@@ -46,6 +46,23 @@ describe('mobile forces read contract', () => {
         ]),
       }),
     );
+    const residentTask = result[2].data.find(
+      (item) => item.assignmentSummary?.task === 'resident_followup',
+    );
+    expect(residentTask).toEqual(
+      expect.objectContaining({
+        resourceType: 'SubjectManagementRecord',
+        relatedInfo: { entityType: 'RESIDENT', id: mobileEntityIds.residentId },
+        baseVersion: expect.any(Number),
+        assignmentSummary: expect.objectContaining({ status: 'active' }),
+      }),
+    );
+    expect(result[1].data.every((item) => !('baseVersion' in item))).toBe(true);
+    expect(
+      result[2].data
+        .filter((item) => item.assignmentSummary?.task !== 'resident_followup')
+        .every((item) => !('baseVersion' in item)),
+    ).toBe(true);
     for (const envelope of [result[1], result[2]]) {
       expect(envelope.data).not.toHaveLength(0);
       for (const item of envelope.data) {

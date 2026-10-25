@@ -59,6 +59,7 @@ function relatedInfo(row: AssignmentRow) {
 
 type ResourceLink = {
   coordinates?: { lat: number; lng: number };
+  baseVersion?: number;
 };
 
 function dispatchItem(
@@ -89,15 +90,23 @@ function taskItem(
   row: AssignmentRow,
   resourceLink?: ResourceLink,
 ): TaskReadItem {
+  const eligible =
+    ((row.task === 'resident_followup' &&
+      row.resourceType === 'SubjectManagementRecord') ||
+      (row.task === 'inspection_fieldwork' &&
+        row.resourceType === 'Inspection')) &&
+    row.status === 'active' &&
+    resourceLink?.baseVersion !== undefined;
   return {
     ...dispatchItem(row, resourceLink),
+    ...(eligible ? { baseVersion: resourceLink.baseVersion } : {}),
     id: `task:${row.id}`,
     dispatchId: `dispatch:${row.id}`,
   };
 }
 
 async function activeAssignments(user: IdentityUser): Promise<AssignmentRow[]> {
-  if (!user.organizationUnitId) return [];
+  if (!user.organizationUnitId?.trim()) return [];
   const rows = await prisma.assignment.findMany({
     where: {
       assigneeUserId: user.id,
@@ -152,6 +161,7 @@ async function resourceLinks(
     resourceType: string | null;
     resourceId: string | null;
   }>,
+  includeResidentVersion = false,
 ): Promise<Map<string, AlarmResourceLink>> {
   const links = new Map<string, AlarmResourceLink>();
   const idsByType = new Map<string, string[]>();
@@ -206,6 +216,7 @@ async function resourceLinks(
     select: {
       id: true,
       subject: { select: { latitude: true, longitude: true } },
+      ...(includeResidentVersion ? { version: true } : {}),
     },
   });
   for (const record of records) {
@@ -222,7 +233,21 @@ async function resourceLinks(
             },
           }
         : {}),
+      ...(includeResidentVersion && 'version' in record
+        ? { baseVersion: record.version }
+        : {}),
     });
+  }
+  if (includeResidentVersion) {
+    const inspectionRows = await prisma.inspection.findMany({
+      where: { id: { in: idsByType.get('Inspection') ?? [] } },
+      select: { id: true, version: true },
+    });
+    for (const inspection of inspectionRows) {
+      links.set(`Inspection:${inspection.id}`, {
+        baseVersion: inspection.version,
+      });
+    }
   }
   const findings = await prisma.inspectionFinding.findMany({
     where: { id: { in: idsByType.get('InspectionFinding') ?? [] } },
@@ -300,13 +325,18 @@ async function resourceLinks(
 export async function listAlarms(
   user: IdentityUser,
 ): Promise<{ alarms: AlarmReadItem[] }> {
+  if (!user.organizationUnitId?.trim()) return { alarms: [] };
   const notifications = await prisma.notification.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: 'desc' },
     take: 100,
   });
-  const links = await resourceLinks(notifications);
-  const alarms: AlarmReadItem[] = [];
+  const authorizedNotifications: Array<
+    (typeof notifications)[number] & {
+      resourceType: string;
+      resourceId: string;
+    }
+  > = [];
   for (const notification of notifications) {
     if (
       notification.readAt ||
@@ -321,7 +351,17 @@ export async function listAlarms(
       }))
     )
       continue;
-    alarms.push({
+    authorizedNotifications.push({
+      ...notification,
+      resourceType: notification.resourceType,
+      resourceId: notification.resourceId,
+    });
+  }
+  const links = authorizedNotifications.length
+    ? await resourceLinks(authorizedNotifications)
+    : new Map<string, AlarmResourceLink>();
+  const alarms: AlarmReadItem[] = authorizedNotifications.map(
+    (notification) => ({
       id: notification.id,
       title: 'Cảnh báo cần chú ý',
       status: 'unread',
@@ -339,8 +379,8 @@ export async function listAlarms(
         task: 'mobile_read',
         status: 'active',
       },
-    });
-  }
+    }),
+  );
   return { alarms };
 }
 
@@ -377,7 +417,7 @@ export async function getDispatch(user: IdentityUser, id: string) {
 /** Build task read views from active assignments and retain dispatch links. */
 export async function listTasks(user: IdentityUser, query: MobileListQuery) {
   const rows = filterAssignments(await activeAssignments(user), query);
-  const links = await resourceLinks(rows);
+  const links = await resourceLinks(rows, true);
   return envelope(
     rows.map((row) =>
       taskItem(row, links.get(`${row.resourceType}:${row.resourceId}`)),
@@ -397,7 +437,7 @@ export async function getTask(user: IdentityUser, id: string) {
     resourceType: row.resourceType,
     resourceId: row.resourceId,
   });
-  const links = await resourceLinks([row]);
+  const links = await resourceLinks([row], true);
   return taskItem(row, links.get(`${row.resourceType}:${row.resourceId}`));
 }
 

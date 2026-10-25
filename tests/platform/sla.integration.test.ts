@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { Prisma } from '@prisma/client';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
@@ -21,6 +22,94 @@ import {
 
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
 const slaIds: string[] = [];
+
+type CheckpointSnapshot = Awaited<
+  ReturnType<typeof prisma.projectionCheckpoint.findMany>
+>;
+const same = (left: unknown, right: unknown) =>
+  JSON.stringify(left) === JSON.stringify(right);
+
+async function restoreCheckpoints(
+  baseline: CheckpointSnapshot,
+  ownedEventIds: string[],
+): Promise<void> {
+  const allowed = new Set(ownedEventIds);
+  const current = await prisma.projectionCheckpoint.findMany({
+    orderBy: { name: 'asc' },
+  });
+  const currentNames = new Set(current.map(({ name }) => name));
+  if (baseline.some(({ name }) => !currentNames.has(name)))
+    throw new Error('SLA_CHECKPOINT_BASELINE_MISSING');
+  for (const row of current) {
+    const prior = baseline.find(({ name }) => name === row.name);
+    const priorIds = Array.isArray(prior?.processedEventIds)
+      ? prior.processedEventIds.filter(
+          (id): id is string => typeof id === 'string',
+        )
+      : [];
+    const currentIds = Array.isArray(row.processedEventIds)
+      ? row.processedEventIds.filter(
+          (id): id is string => typeof id === 'string',
+        )
+      : [];
+    if (!prior) {
+      if (!currentIds.length || currentIds.some((id) => !allowed.has(id)))
+        throw new Error(`SLA_CHECKPOINT_UNOWNED:${row.name}`);
+      continue;
+    }
+    if (
+      currentIds.length < priorIds.length ||
+      priorIds.some((id, index) => currentIds[index] !== id) ||
+      currentIds.slice(priorIds.length).some((id) => !allowed.has(id))
+    )
+      throw new Error(`SLA_CHECKPOINT_DRIFT:${row.name}`);
+    const appendedIds = currentIds.slice(priorIds.length);
+    if (!appendedIds.length) {
+      if (!same(row, prior))
+        throw new Error(`SLA_CHECKPOINT_DRIFT:${row.name}`);
+    } else {
+      const appendedEvents = await prisma.eventRecord.findMany({
+        where: { eventId: { in: appendedIds } },
+        select: { eventId: true, recordedAt: true },
+      });
+      if (appendedEvents.length !== appendedIds.length)
+        throw new Error(`SLA_CHECKPOINT_EVENT_MISSING:${row.name}`);
+      const latestRecordedAt =
+        [
+          ...appendedEvents.map(({ recordedAt }) => recordedAt),
+          ...(prior.lastRecordedAt ? [prior.lastRecordedAt] : []),
+        ].sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+      if (
+        row.lastRecordedAt?.getTime() !== latestRecordedAt?.getTime() ||
+        row.updatedAt < prior.updatedAt
+      )
+        throw new Error(`SLA_CHECKPOINT_TIMESTAMP_DRIFT:${row.name}`);
+    }
+  }
+  await prisma.$transaction(async (tx) => {
+    for (const row of current) {
+      const prior = baseline.find(({ name }) => name === row.name);
+      if (!prior)
+        await tx.projectionCheckpoint.delete({ where: { name: row.name } });
+      else if (!same(row, prior))
+        await tx.projectionCheckpoint.update({
+          where: { name: row.name },
+          data: {
+            updatedAt: prior.updatedAt,
+            lastRecordedAt: prior.lastRecordedAt,
+            processedEventIds: prior.processedEventIds as Prisma.InputJsonValue,
+          },
+        });
+    }
+  });
+  if (
+    !same(
+      await prisma.projectionCheckpoint.findMany({ orderBy: { name: 'asc' } }),
+      baseline,
+    )
+  )
+    throw new Error('SLA_CHECKPOINT_RESTORE_MISMATCH');
+}
 
 describe('continuous SLA clock', () => {
   it('continues through weekends and holidays', () => {
@@ -66,6 +155,9 @@ describe('continuous SLA clock', () => {
     async () => {
       const resourceId = randomUUID();
       const userId = `sla-test-user-${randomUUID()}`;
+      const checkpointBaseline = await prisma.projectionCheckpoint.findMany({
+        orderBy: { name: 'asc' },
+      });
       const sla = await createSla({
         resourceType: 'SlaTest',
         resourceId,
@@ -85,33 +177,55 @@ describe('continuous SLA clock', () => {
       expect(persisted.overdueEventId).toBeTruthy();
       expect(await prisma.notification.count({ where: { userId } })).toBe(0);
 
-      expect(
-        await processOneOutboxMessage({
-          eventId: persisted.overdueEventId ?? '',
-        }),
-      ).toBe(true);
-      const notifications = await listNotifications(userId);
-      expect(notifications).toHaveLength(1);
-      expect(
-        await createInAppNotification({
-          userId,
-          type: notifications[0].type,
-          title: notifications[0].title,
-          body: notifications[0].body,
-          sourceEventId: persisted.overdueEventId ?? undefined,
-        }),
-      ).toMatchObject({ id: notifications[0].id });
-      expect(
-        await markNotificationRead(userId, notifications[0].id),
-      ).toMatchObject({
-        count: 1,
-      });
-      expect(
-        await processOneOutboxMessage({
-          eventId: persisted.overdueEventId ?? '',
-        }),
-      ).toBe(false);
-      expect(await prisma.notification.count({ where: { userId } })).toBe(1);
+      try {
+        expect(
+          await processOneOutboxMessage({
+            eventId: persisted.overdueEventId ?? '',
+          }),
+        ).toBe(true);
+        const notifications = await listNotifications(userId);
+        expect(notifications).toHaveLength(1);
+        expect(
+          await createInAppNotification({
+            userId,
+            type: notifications[0].type,
+            title: notifications[0].title,
+            body: notifications[0].body,
+            sourceEventId: persisted.overdueEventId ?? undefined,
+          }),
+        ).toMatchObject({ id: notifications[0].id });
+        expect(
+          await markNotificationRead(userId, notifications[0].id),
+        ).toMatchObject({
+          count: 1,
+        });
+        expect(
+          await processOneOutboxMessage({
+            eventId: persisted.overdueEventId ?? '',
+          }),
+        ).toBe(false);
+        expect(await prisma.notification.count({ where: { userId } })).toBe(1);
+      } finally {
+        try {
+          await restoreCheckpoints(
+            checkpointBaseline,
+            persisted.overdueEventId ? [persisted.overdueEventId] : [],
+          );
+        } finally {
+          const eventId = persisted.overdueEventId;
+          if (eventId) {
+            await prisma.notification.deleteMany({
+              where: { OR: [{ userId }, { sourceEventId: eventId }] },
+            });
+            await prisma.outboxMessage.deleteMany({ where: { eventId } });
+            await prisma.projectionRecord.deleteMany({
+              where: { aggregateType: 'SlaInstance', aggregateId: sla.id },
+            });
+            await prisma.eventRecord.deleteMany({ where: { eventId } });
+          }
+          await prisma.slaInstance.deleteMany({ where: { id: sla.id } });
+        }
+      }
     },
   );
 
@@ -121,7 +235,13 @@ describe('continuous SLA clock', () => {
       const nonce = randomUUID();
       const eventType = `SlaTestProbe-${nonce}`;
       const eventId = randomUUID();
+      const unrelatedEventId = randomUUID();
       const aggregateId = randomUUID();
+      const unrelatedAggregateId = randomUUID();
+      const checkpointName = `${eventType}:probe-${nonce}`;
+      const checkpointBaseline = await prisma.projectionCheckpoint.findMany({
+        orderBy: { name: 'asc' },
+      });
       let failures = 0;
       let successes = 0;
       const unregister = registerEventConsumer(
@@ -148,7 +268,35 @@ describe('continuous SLA clock', () => {
           payload: { nonce },
           metadata: {},
         });
+        await appendEvent(prisma, {
+          eventId: unrelatedEventId,
+          eventType: `${eventType}-unrelated`,
+          eventVersion: 1,
+          aggregateType: 'SlaTestProbe',
+          aggregateId: unrelatedAggregateId,
+          aggregateVersion: 1,
+          occurredAt: new Date(),
+          actor: {},
+          payload: { nonce },
+          metadata: {},
+        });
+        const staleClaimedAt = new Date(Date.now() - 6 * 60 * 1000);
+        await prisma.outboxMessage.update({
+          where: { eventId: unrelatedEventId },
+          data: { status: 'processing', claimedAt: staleClaimedAt },
+        });
+        expect(await processOneOutboxMessage({ eventId: '' })).toBe(false);
+        const stillStale = await prisma.outboxMessage.findUniqueOrThrow({
+          where: { eventId: unrelatedEventId },
+        });
+        expect(stillStale.status).toBe('processing');
+        expect(stillStale.claimedAt).toEqual(staleClaimedAt);
         expect(await processOneOutboxMessage({ eventId })).toBe(true);
+        expect(
+          await prisma.outboxMessage.findUniqueOrThrow({
+            where: { eventId: unrelatedEventId },
+          }),
+        ).toMatchObject({ status: 'processing', claimedAt: staleClaimedAt });
         const failed = await prisma.outboxMessage.findUniqueOrThrow({
           where: { eventId },
         });
@@ -172,7 +320,7 @@ describe('continuous SLA clock', () => {
         expect(await processOneOutboxMessage({ eventId })).toBe(false);
         expect(successes).toBe(1);
         const checkpoint = await prisma.projectionCheckpoint.findUniqueOrThrow({
-          where: { name: `${eventType}:probe-${nonce}` },
+          where: { name: checkpointName },
         });
         expect(checkpoint.processedEventIds).toContain(eventId);
 
@@ -184,13 +332,22 @@ describe('continuous SLA clock', () => {
         expect(typeof health.oldestPendingAgeMs).toBe('number');
       } finally {
         unregister();
-        await prisma.projectionCheckpoint.deleteMany({
-          where: { name: `${eventType}:probe-${nonce}` },
-        });
-        await prisma.outboxMessage.deleteMany({ where: { eventId } });
-        await prisma.eventRecord.deleteMany({
-          where: { aggregateId },
-        });
+        try {
+          await restoreCheckpoints(checkpointBaseline, [eventId]);
+        } finally {
+          await prisma.projectionRecord.deleteMany({
+            where: {
+              aggregateType: 'SlaTestProbe',
+              aggregateId: { in: [aggregateId, unrelatedAggregateId] },
+            },
+          });
+          await prisma.outboxMessage.deleteMany({
+            where: { eventId: { in: [eventId, unrelatedEventId] } },
+          });
+          await prisma.eventRecord.deleteMany({
+            where: { eventId: { in: [eventId, unrelatedEventId] } },
+          });
+        }
       }
     },
   );
@@ -199,7 +356,7 @@ describe('continuous SLA clock', () => {
     if (!postgresEnabled || !slaIds.length) return;
     const events = await prisma.eventRecord.findMany({
       where: { aggregateType: 'SlaInstance', aggregateId: { in: slaIds } },
-      select: { eventId: true },
+      select: { eventId: true, aggregateType: true, aggregateId: true },
     });
     await prisma.notification.deleteMany({
       where: { sourceEventId: { in: events.map(({ eventId }) => eventId) } },
@@ -208,7 +365,15 @@ describe('continuous SLA clock', () => {
       where: { eventId: { in: events.map(({ eventId }) => eventId) } },
     });
     await prisma.eventRecord.deleteMany({
-      where: { aggregateId: { in: slaIds } },
+      where: { aggregateType: 'SlaInstance', aggregateId: { in: slaIds } },
+    });
+    await prisma.projectionRecord.deleteMany({
+      where: {
+        OR: events.map(({ aggregateType, aggregateId }) => ({
+          aggregateType,
+          aggregateId,
+        })),
+      },
     });
     await prisma.slaInstance.deleteMany({ where: { id: { in: slaIds } } });
   });

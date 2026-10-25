@@ -14,6 +14,7 @@ import {
   saveChecklistResponses,
   startInspection,
 } from '@/modules/inspections';
+import { recordActivity } from '@/modules/residents';
 import { recordVehicleObservation } from '@/modules/vehicles';
 
 function payloadValue(payload: Record<string, unknown>, key: string): unknown {
@@ -135,6 +136,29 @@ async function dispatchOfflineCommand(
         evidenceIds: finding.evidenceIds,
       };
     }
+    case 'resident.record_activity': {
+      const latitude = numberPayload(payload, 'latitude');
+      const longitude = numberPayload(payload, 'longitude');
+      const activity = await recordActivity(
+        {
+          recordId: resourceId(command),
+          activityType: stringPayload(payload, 'activityType'),
+          occurredAt: command.occurredAt.toISOString(),
+          content: stringPayload(payload, 'content'),
+          evaluation: stringPayload(payload, 'evaluation') || undefined,
+          latitude: Number.isNaN(latitude) ? undefined : latitude,
+          longitude: Number.isNaN(longitude) ? undefined : longitude,
+          evidenceIds: Array.isArray(payload.evidenceIds)
+            ? payload.evidenceIds.filter(
+                (value): value is string => typeof value === 'string',
+              )
+            : undefined,
+          idempotencyKey: command.clientCommandId,
+        },
+        actor,
+      );
+      return { activityId: activity.id };
+    }
     default:
       throw new Error('UNSUPPORTED_OFFLINE_COMMAND');
   }
@@ -169,6 +193,20 @@ export async function POST(request: Request): Promise<NextResponse> {
   ) {
     return NextResponse.json(
       { error: 'INVALID_OFFLINE_COMMAND' },
+      { status: 400 },
+    );
+  }
+  if (
+    [
+      'resident.record_activity',
+      'inspection.start',
+      'inspection.save_checklist',
+      'inspection.finding',
+    ].includes(body.commandType) &&
+    (!Number.isInteger(body.baseVersion) || (body.baseVersion as number) < 0)
+  ) {
+    return NextResponse.json(
+      { error: 'INVALID_BASE_VERSION' },
       { status: 400 },
     );
   }
@@ -212,7 +250,9 @@ export async function POST(request: Request): Promise<NextResponse> {
         commandError === 'UNSUPPORTED_OFFLINE_COMMAND' ||
         commandError === 'STALE_OFFLINE_COMMAND' ||
         commandError === 'FORBIDDEN' ||
+        commandError === 'GEOPOINT_INCOMPLETE' ||
         commandError.endsWith('_NOT_FOUND') ||
+        commandError.endsWith('_LOCKED') ||
         commandError.startsWith('INVALID_') ||
         commandError.startsWith('CHECKLIST_') ||
         commandError.endsWith('_REQUIRED')

@@ -27,7 +27,7 @@ async function hasLayerAssignment(
   entityTypes: MapLayerItem['entityTypes'],
 ): Promise<boolean> {
   const organizationId = user.organizationUnitId;
-  if (!organizationId) return false;
+  if (!organizationId?.trim()) return false;
   for (const entityType of entityTypes) {
     const resourceType =
       entityType === 'RESIDENT'
