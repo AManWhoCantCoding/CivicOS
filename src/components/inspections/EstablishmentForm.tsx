@@ -7,6 +7,10 @@ import {
   readResponseError,
   useOnlineStatus,
 } from '@/components/field/client-state';
+import {
+  INSPECTION_CATEGORIES,
+  SECURITY_VARIANTS,
+} from '@/modules/inspections/checklist-catalog';
 
 export type EstablishmentRecord = {
   id: string;
@@ -59,6 +63,12 @@ export function EstablishmentForm({
         ? String(form.get('licenseRef') ?? '').trim()
         : String(form.get('licenseRef') ?? '').trim() || undefined,
     };
+    if (!String(payload.type).trim()) {
+      setTone('error');
+      setMessage('Chọn loại hình cơ sở trước khi lưu.');
+      setLoading(false);
+      return;
+    }
     if (latitudeValue || longitudeValue) {
       const latitude = Number(latitudeValue);
       const longitude = Number(longitudeValue);
@@ -196,13 +206,39 @@ export function EstablishmentForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm text-[var(--civicos-text)]">
           Loại hình
-          <input
+          <select
             id="establishment-type"
             name="type"
             required
-            defaultValue={initial?.type}
+            defaultValue={initial?.type ?? ''}
             className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)]"
-          />
+          >
+            <option value="" disabled>
+              Chọn loại hình cơ sở
+            </option>
+            {initial &&
+            !INSPECTION_CATEGORIES.some(
+              ({ label }) =>
+                initial.type === label || initial.type.startsWith(`${label} —`),
+            ) &&
+            !SECURITY_VARIANTS.some(({ value }) => value === initial.type) ? (
+              <option value={initial.type}>
+                Lưu loại hình hiện có: {initial.type}
+              </option>
+            ) : null}
+            {INSPECTION_CATEGORIES.map((category) =>
+              category.id === 'security' && !initial ? null : (
+                <option key={category.id} value={category.label}>
+                  {category.label}
+                </option>
+              ),
+            )}
+            {SECURITY_VARIANTS.map((variant) => (
+              <option key={variant.value} value={variant.value}>
+                {variant.label}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="block text-sm text-[var(--civicos-text)]">
           Mã giấy phép{' '}
@@ -215,6 +251,11 @@ export function EstablishmentForm({
           />
         </label>
       </div>
+      <p className="text-sm text-[var(--civicos-text-muted)]">
+        LOCAL/DEMO: chỉ nhập dữ liệu giả lập. Checklist là bản nháp một phần,
+        không đầy đủ; không phải checklist chính thức hay đánh giá tuân thủ pháp
+        luật.
+      </p>
       <div>
         <p className="text-sm text-[var(--civicos-text)]">
           Tọa độ{' '}

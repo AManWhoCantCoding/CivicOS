@@ -34,6 +34,7 @@ export type InspectionStats = {
     string,
     {
       total: number;
+      completed: number;
       passRate: number;
       reminderRate: number;
       needsActionRate: number;
@@ -43,6 +44,7 @@ export type InspectionStats = {
   totalInspections: number;
   results: Record<InspectionResult, number>;
   recommendations: Record<EnforcementRecommendationStatus, number>;
+  recommendationSla: { active: number; overdue: number; completed: number };
 };
 
 export type EnforcementRecommendationRecord = {

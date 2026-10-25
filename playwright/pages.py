@@ -289,7 +289,9 @@ class CivicApp:
         self.page.get_by_label("Tên cơ sở", exact=True).fill(name)
         self.page.get_by_label("Chủ cơ sở", exact=True).fill(f"Chủ E2E {marker}")
         self.page.get_by_label("Địa chỉ", exact=True).fill(f"Địa chỉ E2E {marker}")
-        self.page.get_by_label("Loại hình", exact=True).fill("Karaoke")
+        self.page.get_by_label("Loại hình", exact=True).select_option(
+            label="Karaoke — Đ3 khoản 21(a)"
+        )
         self.page.get_by_label(re.compile(r"^Mã giấy phép")).fill(f"GP-{marker}")
         self.page.get_by_role("button", name="Tạo cơ sở", exact=True).click()
         expect(self.page.get_by_text("Đã tạo cơ sở.", exact=True)).to_be_visible()
@@ -352,8 +354,8 @@ class CivicApp:
 
     def fill_required_checklist(self, marker: str) -> None:
         for label, value in (
-            (r"Giấy phép kinh doanh hợp lệ", f"Hồ sơ hợp lệ {marker}"),
-            (r"Điều kiện an ninh và kiểm soát ra vào", f"An ninh đạt {marker}"),
+            (r"Cơ sở có đăng ký, giấy phép", f"Đăng ký giả lập {marker}"),
+            (r"Nội quy ANTT, phòng chống tệ nạn xã hội", f"Nội quy giả lập {marker}"),
         ):
             expect(self.page.get_by_label(re.compile(rf"^{label}")).first).to_be_visible()
             self.page.get_by_label(re.compile(rf"^{label}")).first.fill(value)
@@ -402,7 +404,9 @@ class CivicApp:
         expect(self.page.get_by_text(re.compile(r"Đã lưu checklist|Đã lưu cục bộ"))).to_be_visible()
 
     def record_finding(self, description: str = "Phát hiện E2E cần theo dõi.") -> None:
-        self.page.locator("#inspection-finding-checklist").select_option("license")
+        self.page.locator("#inspection-finding-checklist").select_option(
+            "karaoke-house-rules"
+        )
         self.page.get_by_label("Mô tả phát hiện", exact=True).fill(description)
         self.page.locator("#inspection-finding-result").select_option("needs_action")
         self.page.get_by_role("button", name="Lưu phát hiện", exact=True).click()
@@ -418,7 +422,9 @@ class CivicApp:
         ).to_be_visible()
 
     def submit_recommendation(self, action: str, reason: str) -> None:
-        checkbox = self.page.get_by_role("checkbox", name=re.compile("license")).first
+        checkbox = self.page.get_by_role(
+            "checkbox", name=re.compile("karaoke-house-rules")
+        ).first
         expect(checkbox).to_be_visible()
         checkbox.check()
         self.page.get_by_label("Hành động đề xuất", exact=True).fill(action)

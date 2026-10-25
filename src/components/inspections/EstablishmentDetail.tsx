@@ -136,10 +136,10 @@ export function EstablishmentDetail({
           <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
             Cơ sở
           </p>
-          <h1 className="mt-3 text-3xl font-semibold text-[var(--civicos-text)]">
+          <h1 className="mt-3 break-words text-3xl font-semibold tracking-tight text-[var(--civicos-text)]">
             {item.name}
           </h1>
-          <p className="mt-3 text-sm text-[var(--civicos-text-muted)]">
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--civicos-text-muted)]">
             Chỉnh sửa hồ sơ hoặc lập lịch kiểm tra cho cơ sở này.
           </p>
         </div>

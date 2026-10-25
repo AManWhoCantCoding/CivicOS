@@ -86,6 +86,41 @@ function statusLabel(status: string) {
   );
 }
 
+// Presentation-only badge helpers: state keeps text + icon, color only
+// reinforces the same meaning per the shared Light/Blue semantic contract.
+function statusBadgeClass(status: string) {
+  if (status === 'completed')
+    return 'border-[var(--civicos-success)] text-[var(--civicos-success)]';
+  if (status === 'in_progress')
+    return 'border-[var(--civicos-warning)] text-[var(--civicos-warning)]';
+  if (status === 'scheduled')
+    return 'border-[var(--civicos-info)] text-[var(--civicos-info)]';
+  return 'border-[var(--civicos-border)] text-[var(--civicos-text-muted)]';
+}
+
+function statusIcon(status: string) {
+  if (status === 'completed') return '●';
+  if (status === 'in_progress') return '▲';
+  return '○';
+}
+
+function resultBadgeClass(result: string) {
+  if (result === 'pass')
+    return 'border-[var(--civicos-success)] text-[var(--civicos-success)]';
+  if (result === 'reminder')
+    return 'border-[var(--civicos-warning)] text-[var(--civicos-warning)]';
+  if (result === 'needs_action')
+    return 'border-[var(--civicos-danger)] text-[var(--civicos-danger)]';
+  return 'border-[var(--civicos-border)] text-[var(--civicos-text-muted)]';
+}
+
+function resultIcon(result: string) {
+  if (result === 'needs_action') return '⚠';
+  if (result === 'reminder') return '▲';
+  if (result === 'pass') return '●';
+  return '○';
+}
+
 export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
   const online = useOnlineStatus();
   const [data, setData] = useState<InspectionData | null>(null);
@@ -264,7 +299,7 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
             <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
               Inspection
             </p>
-            <h1 className="mt-3 text-3xl font-semibold break-all text-[var(--civicos-text)]">
+            <h1 className="mt-3 text-3xl font-semibold break-all tracking-tight text-[var(--civicos-text)]">
               {inspection.id}
             </h1>
             <p className="mt-3 text-sm text-[var(--civicos-text-muted)]">
@@ -274,8 +309,9 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
           </div>
           <span
             data-testid="inspection-status"
-            className="rounded-full bg-[var(--civicos-surface-raised)] px-3 py-1 text-xs text-[var(--civicos-accent)]"
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${statusBadgeClass(inspection.status)}`}
           >
+            <span aria-hidden="true">{statusIcon(inspection.status)}</span>
             {statusLabel(inspection.status)}
           </span>
         </div>
@@ -350,7 +386,7 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="font-mono text-xs text-[var(--civicos-accent)]">
+                        <p className="break-all font-mono text-xs text-[var(--civicos-accent)]">
                           {finding.checklistKey}
                         </p>
                         <p className="mt-2 text-sm text-[var(--civicos-text)]">
@@ -361,7 +397,12 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
                           {finding.severity ?? 'medium'}
                         </p>
                       </div>
-                      <span className="rounded-full bg-[var(--civicos-surface-raised)] px-3 py-1 text-xs text-[var(--civicos-text)]">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${resultBadgeClass(finding.result)}`}
+                      >
+                        <span aria-hidden="true">
+                          {resultIcon(finding.result)}
+                        </span>
                         {finding.result}
                       </span>
                     </div>
@@ -372,9 +413,10 @@ export function InspectionDetail({ inspectionId }: { inspectionId: string }) {
                 ))}
               </div>
             ) : (
-              <p className="mt-3 text-sm text-[var(--civicos-text-muted)]">
+              <div className="civicos-feedback mt-3 rounded-lg border-dashed px-3 py-3 text-sm text-[var(--civicos-text-muted)]">
+                <span aria-hidden="true">○ </span>
                 Chưa có phát hiện.
-              </p>
+              </div>
             )}
           </section>
           {canFieldwork ? (

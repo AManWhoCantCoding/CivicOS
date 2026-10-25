@@ -32,6 +32,7 @@ const recommendationIds = [
   `inspection-stats-rejected-${stamp}`,
   `inspection-stats-transferred-${stamp}`,
 ];
+const auditIds: string[] = [];
 
 const commander: IdentityUser = {
   id: `inspection-stats-commander-${stamp}`,
@@ -162,9 +163,24 @@ describe.skipIf(!postgresEnabled)(
     });
 
     afterAll(async () => {
-      await prisma.auditEvent.deleteMany({
-        where: { actorId: { in: [commander.id, otherOrgCommander.id] } },
+      const audits = await prisma.auditEvent.findMany({
+        where: { id: { in: auditIds } },
+        select: { id: true },
       });
+      const events = await prisma.eventRecord.findMany({
+        where: {
+          aggregateType: 'AuditEvent',
+          aggregateId: { in: audits.map(({ id }) => id) },
+        },
+        select: { eventId: true },
+      });
+      await prisma.outboxMessage.deleteMany({
+        where: { eventId: { in: events.map(({ eventId }) => eventId) } },
+      });
+      await prisma.eventRecord.deleteMany({
+        where: { eventId: { in: events.map(({ eventId }) => eventId) } },
+      });
+      await prisma.auditEvent.deleteMany({ where: { id: { in: auditIds } } });
       await prisma.enforcementRecommendation.deleteMany({
         where: { id: { in: recommendationIds } },
       });
@@ -193,6 +209,22 @@ describe.skipIf(!postgresEnabled)(
         const to = '2026-09-30T23:59:59.999Z';
         const before = Date.now();
         const stats = await inspectionStats(commander, { from, to });
+        const audit = await prisma.auditEvent.findFirst({
+          where: {
+            actorId: commander.id,
+            resourceType: 'InspectionStats',
+            resourceId: '*',
+            operation: 'inspection.stats.read',
+          },
+        });
+        expect(audit).toMatchObject({
+          actorId: commander.id,
+          resourceType: 'InspectionStats',
+          resourceId: '*',
+          operation: 'inspection.stats.read',
+          metadata: {},
+        });
+        if (audit) auditIds.push(audit.id);
         const after = Date.now();
 
         expect(stats).toMatchObject({
@@ -245,6 +277,15 @@ describe.skipIf(!postgresEnabled)(
         expect(Object.keys(karaokeStats.ratesByType ?? {})).toEqual([
           karaokeType,
         ]);
+        const audits = await prisma.auditEvent.findMany({
+          where: {
+            actorId: commander.id,
+            resourceType: 'InspectionStats',
+            operation: 'inspection.stats.read',
+          },
+          select: { id: true },
+        });
+        auditIds.push(...audits.map(({ id }) => id));
       },
       databaseTestTimeoutMs,
     );
@@ -268,6 +309,17 @@ describe.skipIf(!postgresEnabled)(
             transferred: 0,
           },
         });
+        const audit = await prisma.auditEvent.findFirst({
+          where: {
+            actorId: otherOrgCommander.id,
+            resourceType: 'InspectionStats',
+            resourceId: '*',
+            operation: 'inspection.stats.read',
+          },
+          select: { id: true, metadata: true },
+        });
+        expect(audit).toMatchObject({ metadata: {} });
+        if (audit) auditIds.push(audit.id);
       },
       databaseTestTimeoutMs,
     );

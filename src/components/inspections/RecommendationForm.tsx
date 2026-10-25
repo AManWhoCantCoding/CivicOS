@@ -117,6 +117,7 @@ export function RecommendationForm({
       ) : null}
       {!findings.length ? (
         <p className="civicos-feedback rounded-lg border-dashed px-3 py-4 text-sm text-[var(--civicos-text-muted)]">
+          <span aria-hidden="true">○ </span>
           Chưa có phát hiện để làm căn cứ.
         </p>
       ) : (
@@ -128,7 +129,7 @@ export function RecommendationForm({
             {findings.map((finding) => (
               <label
                 key={finding.id}
-                className="flex gap-3 rounded-lg border border-[var(--civicos-border)] px-3 py-3 text-sm text-[var(--civicos-text-muted)]"
+                className="flex gap-3 rounded-lg border border-[var(--civicos-border)] px-3 py-3 text-sm text-[var(--civicos-text-muted)] motion-safe:transition-colors hover:bg-[var(--civicos-surface-muted)] has-checked:border-[var(--civicos-accent)]"
               >
                 <input
                   type="checkbox"

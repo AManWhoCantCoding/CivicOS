@@ -439,6 +439,84 @@ export async function listDueInspections(
   );
 }
 
+export function inspectionRatesByType(
+  inspections: {
+    establishmentId: string;
+    status: string;
+    result: string | null;
+  }[],
+  typesByEstablishment: Map<string, string>,
+) {
+  const grouped = new Map<
+    string,
+    {
+      total: number;
+      completed: number;
+      passed: number;
+      reminded: number;
+      needsAction: number;
+    }
+  >();
+  for (const inspection of inspections) {
+    const type =
+      typesByEstablishment.get(inspection.establishmentId) ?? 'unknown';
+    const group = grouped.get(type) ?? {
+      total: 0,
+      completed: 0,
+      passed: 0,
+      reminded: 0,
+      needsAction: 0,
+    };
+    group.total++;
+    if (inspection.status === 'completed') {
+      group.completed++;
+      if (inspection.result === 'pass') group.passed++;
+      if (inspection.result === 'reminder') group.reminded++;
+      if (inspection.result === 'needs_action') group.needsAction++;
+    }
+    grouped.set(type, group);
+  }
+  return Object.fromEntries(
+    [...grouped].map(([type, group]) => [
+      type,
+      {
+        total: group.total,
+        completed: group.completed,
+        passRate: group.completed ? group.passed / group.completed : 0,
+        reminderRate: group.completed ? group.reminded / group.completed : 0,
+        needsActionRate: group.completed
+          ? group.needsAction / group.completed
+          : 0,
+      },
+    ]),
+  );
+}
+
+export function recommendationSlaSummary(
+  rows: {
+    status: string;
+    dueAt: Date | string;
+    completedAt: Date | string | null;
+  }[],
+  now = new Date(),
+) {
+  const summary = { active: 0, overdue: 0, completed: 0 };
+  for (const row of rows) {
+    if (row.completedAt) {
+      summary.completed++;
+    } else if (
+      row.status === 'overdue' ||
+      (row.status === 'active' &&
+        new Date(row.dueAt).getTime() <= now.getTime())
+    ) {
+      summary.overdue++;
+    } else if (row.status === 'active') {
+      summary.active++;
+    }
+  }
+  return summary;
+}
+
 export async function inspectionStats(
   actor: InspectionActor,
   filters: { from?: string; to?: string; establishmentType?: string } = {},
@@ -447,15 +525,23 @@ export async function inspectionStats(
   requireRole(actor, 'commander', 'office_officer');
   const from = filters.from ? new Date(filters.from) : undefined;
   const to = filters.to ? new Date(filters.to) : undefined;
+  const typeFilter = filters.establishmentType?.includes('Dịch vụ bảo vệ')
+    ? {
+        OR: [
+          { type: filters.establishmentType },
+          { type: { startsWith: `${filters.establishmentType} —` } },
+        ],
+      }
+    : filters.establishmentType
+      ? { type: filters.establishmentType }
+      : {};
   const establishmentIds = (
     await prisma.establishment.findMany({
       where: {
         ...(actor.organizationUnitId
           ? { organizationId: actor.organizationUnitId }
           : {}),
-        ...(filters.establishmentType
-          ? { type: filters.establishmentType }
-          : {}),
+        ...typeFilter,
       },
       select: { id: true },
     })
@@ -479,7 +565,7 @@ export async function inspectionStats(
       ...(actor.organizationUnitId
         ? { organizationId: actor.organizationUnitId }
         : {}),
-      ...(filters.establishmentType ? { type: filters.establishmentType } : {}),
+      ...typeFilter,
       active: true,
     },
   });
@@ -488,7 +574,11 @@ export async function inspectionStats(
     number
   >;
   for (const inspection of scoped)
-    if (inspection.result && inspection.result in results)
+    if (
+      inspection.status === 'completed' &&
+      inspection.result &&
+      inspection.result in results
+    )
       results[inspection.result as keyof typeof results] += 1;
   const recommendations = {
     pending_approval: 0,
@@ -504,36 +594,35 @@ export async function inspectionStats(
     if (recommendation.status in recommendations)
       recommendations[recommendation.status as keyof typeof recommendations] +=
         1;
-  const grouped = new Map<string, { total: number; results: typeof results }>();
-  for (const inspection of scoped) {
-    const type = await prisma.establishment
-      .findUnique({
-        where: { id: inspection.establishmentId },
-        select: { type: true },
+  const establishmentTypes = new Map(
+    (
+      await prisma.establishment.findMany({
+        where: { id: { in: establishmentIds } },
+        select: { id: true, type: true },
       })
-      .then((establishment) => establishment?.type ?? 'unknown');
-    const group = grouped.get(type) ?? {
-      total: 0,
-      results: { pass: 0, reminder: 0, needs_action: 0 },
-    };
-    group.total += 1;
-    if (inspection.result && inspection.result in group.results)
-      group.results[inspection.result as keyof typeof group.results] += 1;
-    grouped.set(type, group);
-  }
-  const ratesByType = Object.fromEntries(
-    [...grouped.entries()].map(([type, group]) => [
-      type,
-      {
-        total: group.total,
-        passRate: group.total ? group.results.pass / group.total : 0,
-        reminderRate: group.total ? group.results.reminder / group.total : 0,
-        needsActionRate: group.total
-          ? group.results.needs_action / group.total
-          : 0,
-      },
-    ]),
+    ).map(({ id, type }) => [id, type]),
   );
+  const ratesByType = inspectionRatesByType(scoped, establishmentTypes);
+  const recommendationIds = (
+    await prisma.enforcementRecommendation.findMany({
+      where: { inspectionId: { in: scoped.map(({ id }) => id) } },
+      select: { id: true },
+    })
+  ).map(({ id }) => id);
+  const slaRows = await prisma.slaInstance.findMany({
+    where: {
+      resourceType: 'EnforcementRecommendation',
+      resourceId: { in: recommendationIds },
+    },
+    select: { status: true, dueAt: true, completedAt: true },
+  });
+  const recommendationSla = recommendationSlaSummary(slaRows);
+  await recordAudit({
+    actor,
+    resourceType: 'InspectionStats',
+    resourceId: '*',
+    operation: 'inspection.stats.read',
+  });
   return {
     generatedAt: new Date().toISOString(),
     ...filters,
@@ -541,6 +630,7 @@ export async function inspectionStats(
     totalInspections: scoped.length,
     results,
     recommendations,
+    recommendationSla,
     ratesByType,
   };
 }

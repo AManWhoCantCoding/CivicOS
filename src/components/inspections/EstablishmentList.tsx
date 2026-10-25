@@ -20,6 +20,38 @@ type Establishment = {
   status?: string;
 };
 
+// Presentation-only badge helpers: state keeps text + icon, color only
+// reinforces the same meaning per the shared Light/Blue semantic contract.
+function riskLabel(risk: string) {
+  return (
+    { low: 'Thấp', medium: 'Trung bình', high: 'Cao' }[risk] ?? risk
+  );
+}
+
+function riskIcon(risk: string) {
+  if (risk === 'high') return '⚠';
+  if (risk === 'medium') return '▲';
+  if (risk === 'low') return '●';
+  return '○';
+}
+
+function riskBadgeClass(risk: string) {
+  if (risk === 'high')
+    return 'border-[var(--civicos-danger)] text-[var(--civicos-danger)]';
+  if (risk === 'medium')
+    return 'border-[var(--civicos-warning)] text-[var(--civicos-warning)]';
+  if (risk === 'low')
+    return 'border-[var(--civicos-success)] text-[var(--civicos-success)]';
+  return 'border-[var(--civicos-border)] text-[var(--civicos-text-muted)]';
+}
+
+function statusMeta(status?: string) {
+  return (
+    { active: 'Đang hoạt động', archived: 'Đã lưu trữ' }[status ?? 'active'] ??
+    (status ?? 'active')
+  );
+}
+
 export function EstablishmentList() {
   const online = useOnlineStatus();
   const [items, setItems] = useState<Establishment[]>([]);
@@ -111,6 +143,7 @@ export function EstablishmentList() {
   if (!items.length)
     return (
       <div className="civicos-feedback rounded-xl border-dashed p-8 text-sm text-[var(--civicos-text-muted)]">
+        <span aria-hidden="true">○ </span>
         Chưa có cơ sở kinh doanh trong danh mục.
       </div>
     );
@@ -200,15 +233,33 @@ export function EstablishmentList() {
             <li key={item.id}>
               <a
                 href={`/inspections/establishments/${item.id}`}
-                className="civicos-surface block rounded-xl p-5 motion-reduce:transition-none"
+                className="civicos-surface block rounded-xl p-5 motion-safe:transition-colors hover:bg-[var(--civicos-surface-muted)]"
               >
-                <p className="text-lg font-semibold text-[var(--civicos-text)]">
-                  {item.name}
-                </p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <p className="min-w-0 break-words text-lg font-semibold leading-6 text-[var(--civicos-text)]">
+                    {item.name}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {item.risk ? (
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${riskBadgeClass(item.risk)}`}
+                      >
+                        <span aria-hidden="true">{riskIcon(item.risk)}</span>
+                        {riskLabel(item.risk)}
+                      </span>
+                    ) : null}
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--civicos-border)] px-3 py-1 text-xs font-medium text-[var(--civicos-text-muted)]">
+                      <span aria-hidden="true">
+                        {(item.status ?? 'active') === 'active' ? '● ' : '○ '}
+                      </span>
+                      {statusMeta(item.status)}
+                    </span>
+                  </div>
+                </div>
                 <p className="mt-2 text-sm text-[var(--civicos-text-muted)]">
                   {item.type} · {item.ownerName}
                 </p>
-                <p className="mt-3 text-sm leading-6 text-[var(--civicos-text)]">
+                <p className="mt-3 break-words text-sm leading-6 text-[var(--civicos-text)]">
                   {item.address}
                 </p>
               </a>

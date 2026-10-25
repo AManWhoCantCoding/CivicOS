@@ -15,6 +15,25 @@ type OrganizationUnit = {
   parentId: string | null;
 };
 
+// Presentation-only badge helpers: state keeps text + icon, color only
+// reinforces the same meaning per the shared Light/Blue semantic contract.
+function recommendationBadgeClass(status: string) {
+  if (status === 'approved')
+    return 'border-[var(--civicos-success)] text-[var(--civicos-success)]';
+  if (status === 'rejected')
+    return 'border-[var(--civicos-danger)] text-[var(--civicos-danger)]';
+  if (status === 'pending_approval' || status === 'pending')
+    return 'border-[var(--civicos-warning)] text-[var(--civicos-warning)]';
+  return 'border-[var(--civicos-border)] text-[var(--civicos-text-muted)]';
+}
+
+function recommendationIcon(status: string) {
+  if (status === 'approved') return '●';
+  if (status === 'rejected') return '⚠';
+  if (status === 'pending_approval' || status === 'pending') return '▲';
+  return '○';
+}
+
 export function EnforcementApprovalPanel({
   inspectionId,
   recommendations,
@@ -215,7 +234,12 @@ export function EnforcementApprovalPanel({
                       </p>
                     ) : null}
                   </div>
-                  <span className="rounded-full bg-[var(--civicos-surface-raised)] px-3 py-1 text-xs text-[var(--civicos-text)]">
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${recommendationBadgeClass(recommendation.status)}`}
+                  >
+                    <span aria-hidden="true">
+                      {recommendationIcon(recommendation.status)}
+                    </span>
                     {recommendation.status}
                   </span>
                 </div>
@@ -310,6 +334,7 @@ export function EnforcementApprovalPanel({
         </div>
       ) : (
         <p className="mt-4 text-sm text-[var(--civicos-text-muted)]">
+          <span aria-hidden="true">○ </span>
           Chưa có đề xuất.
         </p>
       )}

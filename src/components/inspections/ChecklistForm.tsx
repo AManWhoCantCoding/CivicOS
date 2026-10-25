@@ -4,15 +4,19 @@ import { FormEvent, useEffect, useState } from 'react';
 
 import {
   FeedbackMessage,
+  readResponseError,
   useOnlineStatus,
 } from '@/components/field/client-state';
 import { submitOfflineCommand } from '@/components/field/offline-queue';
+import { SECURITY_CHECKLIST_CAVEAT } from '@/modules/inspections/checklist-catalog';
 
 export type ChecklistItem = {
   key: string;
   label: string;
   required: boolean;
   evidenceRequired?: boolean;
+  source?: string;
+  sourceUrl?: string;
 };
 
 const defaultChecklistItems: ChecklistItem[] = [
@@ -85,6 +89,46 @@ export function ChecklistForm({
     setLoadingCommand(commandName);
     setMessage(null);
     try {
+      if (commandName === 'complete') {
+        if (!online) {
+          setTone('warning');
+          setMessage('Đang ngoại tuyến. Kết nối mạng để hoàn tất inspection.');
+          return;
+        }
+        const response = await fetch(
+          `/api/inspections/${inspectionId}/commands`,
+          {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ command: 'complete', result: body.result }),
+          },
+        );
+        if (!response.ok) {
+          setTone('error');
+          setMessage(
+            await readResponseError(response, 'Không thể hoàn tất inspection.'),
+          );
+          return;
+        }
+        const result = (await response.json()) as {
+          inspection?: { version?: number; status?: string };
+        };
+        if (
+          result.inspection?.version === undefined ||
+          !result.inspection.status
+        ) {
+          setTone('error');
+          setMessage('Máy chủ không trả về inspection đã cập nhật.');
+          return;
+        }
+        onStateChange?.({
+          version: result.inspection.version,
+          status: result.inspection.status,
+        });
+        setTone('success');
+        setMessage('Đã hoàn tất inspection.');
+        return;
+      }
       const item = await submitOfflineCommand({
         id: globalThis.crypto.randomUUID(),
         commandType: `inspection.${commandName}`,
@@ -101,11 +145,7 @@ export function ChecklistForm({
       if (accepted) {
         const nextVersion = result?.version ?? initialVersion + 1;
         const nextStatus =
-          commandName === 'start'
-            ? 'in_progress'
-            : commandName === 'complete'
-              ? 'completed'
-              : (result?.status ?? status);
+          commandName === 'start' ? 'in_progress' : (result?.status ?? status);
         onStateChange?.({ version: nextVersion, status: nextStatus });
       }
       setTone(accepted ? 'success' : 'error');
@@ -113,9 +153,7 @@ export function ChecklistForm({
         item.status === 'synced'
           ? commandName === 'start'
             ? 'Đã bắt đầu inspection.'
-            : commandName === 'complete'
-              ? 'Đã hoàn tất inspection.'
-              : 'Đã lưu checklist.'
+            : 'Đã lưu checklist.'
           : item.status === 'pending' || item.status === 'syncing'
             ? 'Đã lưu cục bộ, chờ đồng bộ.'
             : (item.error ?? 'Thao tác chưa được chấp nhận.'),
@@ -164,41 +202,70 @@ export function ChecklistForm({
           {statusLabel(status)}
         </span>
       </div>
+      <p className="mt-3 rounded-lg bg-[var(--civicos-surface-raised)] px-3 py-2 text-xs leading-5 text-[var(--civicos-text-muted)]">
+        Mẫu checklist nội bộ/dùng thử; không phải checklist pháp lý chính thức
+        và không chứng minh việc tuân thủ pháp luật.
+      </p>
+      {items.some(({ key }) => key.startsWith('security-')) ? (
+        <p className="mt-3 rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-xs leading-5 text-[var(--civicos-text-muted)]">
+          {SECURITY_CHECKLIST_CAVEAT}
+        </p>
+      ) : null}
       {!online ? (
         <div className="mt-4">
           <FeedbackMessage
-            message="Offline: bắt đầu, lưu và hoàn tất sẽ chờ đồng bộ."
+            message="Offline: bắt đầu và lưu checklist có thể chờ đồng bộ; cần kết nối mạng để hoàn tất inspection."
             tone="warning"
           />
         </div>
       ) : null}
       <form onSubmit={saveChecklist} className="mt-5 space-y-4">
-        {items.map(({ key, label, required, evidenceRequired }) => (
-          <label key={key} className="block text-sm text-[var(--civicos-text)]">
-            {label}
-            {required ? (
-              <span className="ml-1 text-[var(--civicos-accent)]">*</span>
-            ) : null}
-            {evidenceRequired ? (
-              <span className="ml-2 text-xs text-[var(--civicos-warning)]">
-                cần Evidence
-              </span>
-            ) : null}
-            <textarea
-              value={responses[key] ?? ''}
-              onChange={(event) => {
-                setResponses((current) => ({
-                  ...current,
-                  [key]: event.target.value,
-                }));
-                setDirty(true);
-              }}
-              disabled={!editable || loadingCommand !== null}
-              rows={2}
-              className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-2 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] disabled:opacity-60"
-            />
-          </label>
-        ))}
+        {items.map(
+          ({ key, label, required, evidenceRequired, source, sourceUrl }) => (
+            <label
+              key={key}
+              className="block text-sm text-[var(--civicos-text)]"
+            >
+              {label}
+              {required ? (
+                <span className="ml-1 text-[var(--civicos-accent)]">*</span>
+              ) : null}
+              {evidenceRequired ? (
+                <span className="ml-2 text-xs text-[var(--civicos-warning)]">
+                  cần Evidence
+                </span>
+              ) : null}
+              {source ? (
+                <span className="mt-1 block text-xs text-[var(--civicos-text-muted)]">
+                  Nguồn dự thảo: {source}{' '}
+                  {sourceUrl ? (
+                    <a
+                      href={sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline"
+                    >
+                      Công báo chính thức
+                    </a>
+                  ) : null}
+                </span>
+              ) : null}
+              <textarea
+                value={responses[key] ?? ''}
+                onChange={(event) => {
+                  setResponses((current) => ({
+                    ...current,
+                    [key]: event.target.value,
+                  }));
+                  setDirty(true);
+                }}
+                disabled={!editable || loadingCommand !== null}
+                rows={2}
+                className="civicos-control mt-2 w-full border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-2 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-accent)] disabled:opacity-60"
+              />
+            </label>
+          ),
+        )}
         <p className="text-xs text-[var(--civicos-text-muted)]" role="status">
           Tiến độ: {items.filter(({ key }) => responses[key]?.trim()).length}/
           {items.length} mục đã trả lời
@@ -256,7 +323,7 @@ export function ChecklistForm({
           </label>
           <button
             type="button"
-            disabled={!completionResult || loadingCommand !== null}
+            disabled={!online || !completionResult || loadingCommand !== null}
             onClick={() =>
               void command('complete', { result: completionResult })
             }

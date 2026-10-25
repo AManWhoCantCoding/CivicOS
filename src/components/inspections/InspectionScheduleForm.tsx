@@ -130,9 +130,9 @@ export function InspectionScheduleForm({
         />
       ) : null}
       {establishmentId ? (
-        <div className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-sm text-[var(--civicos-text)]">
+        <div className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 break-words text-sm text-[var(--civicos-text)]">
           Cơ sở:{' '}
-          <span className="font-medium text-[var(--civicos-text)]">
+          <span className="break-all font-medium text-[var(--civicos-text)]">
             {establishments.find((item) => item.id === establishmentId)?.name ??
               establishmentId}
           </span>

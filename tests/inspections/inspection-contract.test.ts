@@ -166,4 +166,20 @@ describe('PS-E1-007 slices 1-3 inspection contract', () => {
     expect(detail).not.toMatch(/changePayload|storageKey|syncPayload/i);
     expect(detail).toContain('min-h-[44px]');
   });
+
+  it('clearly identifies displayed checklist templates as local/demo, not legal guidance', () => {
+    const checklist = readFileSync(
+      path.join(
+        process.cwd(),
+        'src',
+        'components',
+        'inspections',
+        'ChecklistForm.tsx',
+      ),
+      'utf8',
+    );
+    expect(checklist).toContain('Mẫu checklist nội bộ/dùng thử');
+    expect(checklist).toContain('không phải checklist pháp lý chính thức');
+    expect(checklist).toContain('không chứng minh việc tuân thủ pháp luật');
+  });
 });

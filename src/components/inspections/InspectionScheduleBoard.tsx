@@ -40,6 +40,27 @@ function statusLabel(value: string) {
   );
 }
 
+// Presentation-only badge helpers: state keeps text + icon, color only
+// reinforces the same meaning per the shared Light/Blue semantic contract.
+function scheduleBadgeClass(value: string) {
+  if (value === 'overdue')
+    return 'border-[var(--civicos-danger)] text-[var(--civicos-danger)]';
+  if (value === 'upcoming')
+    return 'border-[var(--civicos-info)] text-[var(--civicos-info)]';
+  if (value === 'in_progress')
+    return 'border-[var(--civicos-warning)] text-[var(--civicos-warning)]';
+  if (value === 'completed')
+    return 'border-[var(--civicos-success)] text-[var(--civicos-success)]';
+  return 'border-[var(--civicos-border)] text-[var(--civicos-text-muted)]';
+}
+
+function scheduleIcon(value: string) {
+  if (value === 'overdue') return '⚠';
+  if (value === 'in_progress') return '▲';
+  if (value === 'completed') return '●';
+  return '○';
+}
+
 export function InspectionScheduleBoard() {
   const online = useOnlineStatus();
   const [establishments, setEstablishments] = useState<EstablishmentRecord[]>(
@@ -126,7 +147,7 @@ export function InspectionScheduleBoard() {
             <p className="font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
               Schedule
             </p>
-            <h2 className="mt-2 text-xl font-semibold text-[var(--civicos-text)]">
+            <h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--civicos-text)]">
               Lịch kiểm tra
             </h2>
           </div>
@@ -179,6 +200,7 @@ export function InspectionScheduleBoard() {
         ) : null}
         {loadState === 'ready' && !inspections.length ? (
           <div className="civicos-feedback rounded-xl border-dashed p-6 text-sm text-[var(--civicos-text-muted)]">
+            <span aria-hidden="true">○ </span>
             Chưa có lịch kiểm tra.
           </div>
         ) : null}
@@ -204,10 +226,10 @@ export function InspectionScheduleBoard() {
                     className="civicos-surface rounded-xl p-4"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
+                      <div className="min-w-0">
                         <Link
                           href={`/inspections/${inspection.id}`}
-                          className="font-medium text-[var(--civicos-text)] hover:text-[var(--civicos-accent)]"
+                          className="break-words font-medium text-[var(--civicos-text)] hover:text-[var(--civicos-accent)]"
                         >
                           {establishment?.name ?? inspection.establishmentId}
                         </Link>
@@ -217,7 +239,12 @@ export function InspectionScheduleBoard() {
                           )}
                         </p>
                       </div>
-                      <span className="rounded-full bg-[var(--civicos-surface-raised)] px-3 py-1 text-xs text-[var(--civicos-accent)]">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${scheduleBadgeClass(scheduleState)}`}
+                      >
+                        <span aria-hidden="true">
+                          {scheduleIcon(scheduleState)}
+                        </span>
                         {statusLabel(scheduleState)}
                       </span>
                     </div>

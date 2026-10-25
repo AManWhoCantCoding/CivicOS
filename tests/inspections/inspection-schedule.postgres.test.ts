@@ -17,11 +17,11 @@ import {
 
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
 const databaseTestTimeoutMs = 15_000;
-const fixtureStamp = randomUUID().slice(0, 8);
+const fixtureStamp = randomUUID();
 const recurringEstablishmentType = `nhà nghỉ-${fixtureStamp}`;
 
 const actor: IdentityUser = {
-  id: 'inspection-schedule-test-actor',
+  id: `inspection-schedule-test-actor-${fixtureStamp}`,
   email: 'inspection-schedule-test@civicos.local',
   name: 'Inspection schedule test actor',
   roles: ['commander'],
@@ -29,14 +29,15 @@ const actor: IdentityUser = {
 };
 
 const fieldActor: IdentityUser = {
-  id: 'inspection-schedule-test-field',
-  email: 'inspection-schedule-test-field@civicos.local',
+  id: `inspection-schedule-test-field-${fixtureStamp}`,
+  email: `inspection-schedule-test-field-${fixtureStamp}@civicos.local`,
   name: 'Inspection schedule test field officer',
   roles: ['field_officer'],
   organizationUnitId: 'unit-nghia-tru',
 };
 
 let establishmentId: string | undefined;
+let ownedRoleId: string | undefined;
 
 describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
   afterEach(async () => {
@@ -46,12 +47,13 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
       select: { id: true },
     });
     const inspectionIds = inspections.map(({ id }) => id);
-    const [audits, slas] = await Promise.all([
+    const [audits, slas, assignments] = await Promise.all([
       prisma.auditEvent.findMany({
         where: {
           OR: [
             { resourceType: 'Establishment', resourceId: establishmentId },
             { resourceType: 'Inspection', resourceId: { in: inspectionIds } },
+            { actorId: { in: [actor.id, fieldActor.id] } },
           ],
         },
         select: { id: true },
@@ -63,12 +65,24 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
         },
         select: { id: true },
       }),
+      prisma.assignment.findMany({
+        where: {
+          resourceType: 'Inspection',
+          resourceId: { in: inspectionIds },
+          assigneeUserId: fieldActor.id,
+        },
+        select: { id: true },
+      }),
     ]);
     const eventRecords = await prisma.eventRecord.findMany({
       where: {
         OR: [
           { aggregateType: 'Establishment', aggregateId: establishmentId },
           { aggregateType: 'Inspection', aggregateId: { in: inspectionIds } },
+          {
+            aggregateType: 'Assignment',
+            aggregateId: { in: assignments.map(({ id }) => id) },
+          },
           {
             aggregateType: 'AuditEvent',
             aggregateId: { in: audits.map(({ id }) => id) },
@@ -86,6 +100,9 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
     });
     await prisma.eventRecord.deleteMany({
       where: { eventId: { in: eventRecords.map(({ eventId }) => eventId) } },
+    });
+    await prisma.assignment.deleteMany({
+      where: { id: { in: assignments.map(({ id }) => id) } },
     });
     await prisma.projectionRecord.deleteMany({
       where: {
@@ -118,34 +135,48 @@ describe.skipIf(!postgresEnabled)('Inspection schedule PostgreSQL seam', () => {
   });
 
   beforeAll(async () => {
-    await prisma.assignment.deleteMany({
-      where: { assigneeUserId: fieldActor.id },
-    });
-    await prisma.user.deleteMany({ where: { id: fieldActor.id } });
-    await prisma.user.create({
-      data: {
-        id: fieldActor.id,
-        email: fieldActor.email,
-        name: fieldActor.name,
-        passwordHash: 'inspection-schedule-test-hash',
-        organizationUnitId: fieldActor.organizationUnitId,
-      },
-    });
-    const role = await prisma.role.upsert({
+    let role = await prisma.role.findUnique({
       where: { name: 'field_officer' },
-      update: {},
-      create: { name: 'field_officer' },
     });
-    await prisma.userRole.create({
-      data: { userId: fieldActor.id, roleId: role.id },
-    });
+    if (!role) {
+      role = await prisma.role.create({ data: { name: 'field_officer' } });
+      ownedRoleId = role.id;
+    }
+
+    try {
+      await prisma.user.create({
+        data: {
+          id: fieldActor.id,
+          email: fieldActor.email,
+          name: fieldActor.name,
+          passwordHash: 'inspection-schedule-test-hash',
+          organizationUnitId: fieldActor.organizationUnitId,
+        },
+      });
+      await prisma.userRole.create({
+        data: { userId: fieldActor.id, roleId: role.id },
+      });
+    } catch (error) {
+      await prisma.userRole.deleteMany({ where: { userId: fieldActor.id } });
+      await prisma.user.deleteMany({ where: { id: fieldActor.id } });
+      if (ownedRoleId) {
+        await prisma.role.deleteMany({ where: { id: ownedRoleId } });
+        ownedRoleId = undefined;
+      }
+      throw error;
+    }
   });
 
   afterAll(async () => {
     await prisma.assignment.deleteMany({
       where: { assigneeUserId: fieldActor.id },
     });
-    await prisma.user.delete({ where: { id: fieldActor.id } });
+    await prisma.userRole.deleteMany({ where: { userId: fieldActor.id } });
+    await prisma.user.deleteMany({ where: { id: fieldActor.id } });
+    if (ownedRoleId) {
+      await prisma.role.deleteMany({ where: { id: ownedRoleId } });
+      ownedRoleId = undefined;
+    }
   });
 
   it(

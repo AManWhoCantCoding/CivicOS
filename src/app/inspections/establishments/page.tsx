@@ -35,6 +35,12 @@ export default async function EstablishmentsPage() {
           <p className="mt-4 text-base leading-7 text-[var(--civicos-text-muted)]">
             Danh mục cơ sở và lịch kiểm tra theo loại hình.
           </p>
+          <Link
+            href="/inspections/reports"
+            className="mt-3 inline-block underline"
+          >
+            Mở báo cáo inspections
+          </Link>
         </div>
         {denied ? (
           <div className="mt-10">

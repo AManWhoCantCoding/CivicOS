@@ -28,6 +28,7 @@ import {
 } from './domain';
 import { establishmentState, inspectionState } from './projection';
 import { INSPECTION_SLA } from './config';
+import { checklistForType } from './checklist-catalog';
 
 function actorSnapshot(actor: InspectionActor) {
   return {
@@ -98,6 +99,21 @@ async function ensureTemplate(
   type: string,
   client: Prisma.TransactionClient | typeof prisma,
 ) {
+  const selectedItems = checklistForType(type);
+  if (selectedItems) {
+    return client.checklistTemplate.upsert({
+      where: {
+        establishmentType_version: { establishmentType: type, version: 2 },
+      },
+      update: {},
+      create: {
+        establishmentType: type,
+        version: 2,
+        title: `LOCAL/DEMO — ${type} (bản dự thảo không đầy đủ)`,
+        items: selectedItems as Prisma.InputJsonValue,
+      },
+    });
+  }
   const normalizedType = type.trim().toLowerCase();
   const items =
     normalizedType.includes('nhà nghỉ') || normalizedType.includes('khách sạn')
@@ -1208,6 +1224,14 @@ export async function transferRecommendation(
       },
       tx,
     );
+    await tx.slaInstance.updateMany({
+      where: {
+        resourceType: 'EnforcementRecommendation',
+        resourceId: recommendationId,
+        status: { in: ['active', 'overdue'] },
+      },
+      data: { status: 'completed', completedAt: new Date() },
+    });
     return { ...updated, inspectionVersion: updatedInspection.version };
   });
 }

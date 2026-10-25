@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { rm } from 'node:fs/promises';
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
@@ -30,7 +31,7 @@ import {
 
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
 const databaseTestTimeoutMs = 15_000;
-const stamp = randomUUID().slice(0, 8);
+const stamp = randomUUID().replace(/-/g, '');
 const orgId = `unit-commune-${stamp}`;
 const districtOrgId = `unit-district-${stamp}`;
 const storageRoot = `/tmp/civicos-inspection-s46-${stamp}`;
@@ -79,6 +80,13 @@ const establishmentIds: string[] = [];
 const clientCommandIds: string[] = [];
 const evidenceIds: string[] = [];
 const templateTypes: string[] = [];
+const createdRoleIds: string[] = [];
+const databaseActors = [
+  commander,
+  approvalCommander,
+  fieldOfficer,
+  unassignedOfficer,
+];
 
 function trackEstablishment(id: string): string {
   establishmentIds.push(id);
@@ -177,11 +185,15 @@ describe.skipIf(!postgresEnabled)(
           },
         });
         for (const roleName of user.roles) {
+          const priorRole = await prisma.role.findUnique({
+            where: { name: roleName },
+          });
           const role = await prisma.role.upsert({
             where: { name: roleName },
             update: {},
             create: { name: roleName },
           });
+          if (!priorRole) createdRoleIds.push(role.id);
           await prisma.userRole.create({
             data: { userId: user.id, roleId: role.id },
           });
@@ -214,12 +226,15 @@ describe.skipIf(!postgresEnabled)(
           },
         },
       });
+      if (createdRoleIds.length)
+        await prisma.role.deleteMany({
+          where: { id: { in: createdRoleIds }, users: { none: {} } },
+        });
       await prisma.organizationUnit.delete({ where: { id: orgId } });
       await prisma.organizationUnit.delete({ where: { id: districtOrgId } });
     });
 
     afterEach(async () => {
-      if (!establishmentIds.length) return;
       const inspections = await prisma.inspection.findMany({
         where: { establishmentId: { in: establishmentIds } },
         select: { id: true },
@@ -232,19 +247,35 @@ describe.skipIf(!postgresEnabled)(
           })
         : [];
       const recommendationIds = recommendations.map(({ id }) => id);
-      const [audits, assignments, slas] = await Promise.all([
-        prisma.auditEvent.findMany({
-          where: {
-            OR: [
+      const auditScopes = [
+        { actorId: { in: databaseActors.map(({ id }) => id) } },
+        ...(establishmentIds.length
+          ? [
               {
                 resourceType: 'Establishment',
                 resourceId: { in: establishmentIds },
               },
-              { resourceType: 'Inspection', resourceId: { in: inspectionIds } },
-            ],
-          },
-          select: { id: true },
-        }),
+            ]
+          : []),
+        ...(inspectionIds.length
+          ? [{ resourceType: 'Inspection', resourceId: { in: inspectionIds } }]
+          : []),
+        ...(recommendationIds.length
+          ? [
+              {
+                resourceType: 'EnforcementRecommendation',
+                resourceId: { in: recommendationIds },
+              },
+            ]
+          : []),
+      ];
+      const [audits, assignments, slas] = await Promise.all([
+        auditScopes.length
+          ? prisma.auditEvent.findMany({
+              where: { OR: auditScopes },
+              select: { id: true },
+            })
+          : Promise.resolve([]),
         inspectionIds.length
           ? prisma.assignment.findMany({
               where: {
@@ -275,32 +306,55 @@ describe.skipIf(!postgresEnabled)(
       const auditIds = audits.map(({ id }) => id);
       const assignmentIds = assignments.map(({ id }) => id);
       const slaIds = slas.map(({ id }) => id);
-      const eventRecords = await prisma.eventRecord.findMany({
-        where: {
-          OR: [
-            {
-              aggregateType: 'Establishment',
-              aggregateId: { in: establishmentIds },
+      const eventScopes = [
+        { actorId: { in: databaseActors.map(({ id }) => id) } },
+        ...(establishmentIds.length
+          ? [
+              {
+                aggregateType: 'Establishment',
+                aggregateId: { in: establishmentIds },
+              },
+            ]
+          : []),
+        ...(inspectionIds.length
+          ? [
+              {
+                aggregateType: 'Inspection',
+                aggregateId: { in: inspectionIds },
+              },
+            ]
+          : []),
+        ...(recommendationIds.length
+          ? [
+              {
+                aggregateType: 'EnforcementRecommendation',
+                aggregateId: { in: recommendationIds },
+              },
+            ]
+          : []),
+        ...(assignmentIds.length
+          ? [
+              {
+                aggregateType: 'Assignment',
+                aggregateId: { in: assignmentIds },
+              },
+            ]
+          : []),
+        ...(slaIds.length
+          ? [{ aggregateType: 'SlaInstance', aggregateId: { in: slaIds } }]
+          : []),
+        ...(auditIds.length
+          ? [{ aggregateType: 'AuditEvent', aggregateId: { in: auditIds } }]
+          : []),
+      ];
+      const eventRecords = eventScopes.length
+        ? await prisma.eventRecord.findMany({
+            where: {
+              OR: eventScopes,
             },
-            { aggregateType: 'Inspection', aggregateId: { in: inspectionIds } },
-            ...(assignmentIds.length
-              ? [
-                  {
-                    aggregateType: 'Assignment',
-                    aggregateId: { in: assignmentIds },
-                  },
-                ]
-              : []),
-            ...(slaIds.length
-              ? [{ aggregateType: 'SlaInstance', aggregateId: { in: slaIds } }]
-              : []),
-            ...(auditIds.length
-              ? [{ aggregateType: 'AuditEvent', aggregateId: { in: auditIds } }]
-              : []),
-          ],
-        },
-        select: { eventId: true },
-      });
+            select: { eventId: true, aggregateType: true, aggregateId: true },
+          })
+        : [];
       const eventIds = eventRecords.map(({ eventId }) => eventId);
       if (eventIds.length) {
         await prisma.outboxMessage.deleteMany({
@@ -310,21 +364,26 @@ describe.skipIf(!postgresEnabled)(
           where: { eventId: { in: eventIds } },
         });
       }
-      await prisma.projectionRecord.deleteMany({
-        where: {
-          OR: [
-            {
-              aggregateType: 'Establishment',
-              aggregateId: { in: establishmentIds },
-            },
-            { aggregateType: 'Inspection', aggregateId: { in: inspectionIds } },
-          ],
-        },
-      });
+      if (eventIds.length)
+        await prisma.projectionRecord.deleteMany({
+          where: {
+            OR: eventRecords.map(({ aggregateType, aggregateId }) => ({
+              aggregateType,
+              aggregateId,
+            })),
+          },
+        });
       if (inspectionIds.length) {
         await prisma.inspectionFinding.deleteMany({
           where: { inspectionId: { in: inspectionIds } },
         });
+        if (recommendationIds.length)
+          await prisma.approval.deleteMany({
+            where: {
+              resourceType: 'EnforcementRecommendation',
+              resourceId: { in: recommendationIds },
+            },
+          });
         await prisma.enforcementRecommendation.deleteMany({
           where: { inspectionId: { in: inspectionIds } },
         });
@@ -366,6 +425,7 @@ describe.skipIf(!postgresEnabled)(
         where: { id: { in: establishmentIds } },
       });
       establishmentIds.length = 0;
+      await rm(storageRoot, { recursive: true, force: true });
     });
 
     it('validates catalog fields and GeoPoint, blocking duplicate active records', async () => {
@@ -736,6 +796,17 @@ describe.skipIf(!postgresEnabled)(
         longitude: 105.8,
       });
       evidenceIds.push(evidence.id);
+      const persistedEvidence = await prisma.evidence.findUniqueOrThrow({
+        where: { id: evidence.id },
+      });
+      expect(persistedEvidence).toMatchObject({
+        resourceType: 'Inspection',
+        resourceId: inspection.id,
+        actorId: commander.id,
+        capturedAt: new Date('2026-11-05T09:00:00.000Z'),
+      });
+      expect(persistedEvidence.latitude?.toNumber()).toBe(20.9);
+      expect(persistedEvidence.longitude?.toNumber()).toBe(105.8);
       const evidenceFinding = await recordFinding(
         {
           inspectionId: inspection.id,
@@ -1088,6 +1159,16 @@ describe.skipIf(!postgresEnabled)(
         commander,
       );
       expect(transferred).toMatchObject({ status: 'transferred' });
+      const transferredSla = await prisma.slaInstance.findFirstOrThrow({
+        where: {
+          resourceType: 'EnforcementRecommendation',
+          resourceId: transferCandidate.id,
+        },
+      });
+      expect(transferredSla).toMatchObject({
+        status: 'completed',
+        completedAt: expect.any(Date),
+      });
     });
 
     it('preserves rejected and revised recommendation history', async () => {
