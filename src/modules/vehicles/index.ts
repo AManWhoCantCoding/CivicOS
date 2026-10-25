@@ -11,6 +11,10 @@ export {
 } from './contracts';
 export {
   VEHICLE_ESCALATION_SLA,
+  shouldStartVehicleEscalationSla,
+  VEHICLE_PARKING_WATCH_SLA,
+  vehicleParkingWatchDueAt,
+  canStartVehicleParkingWatch,
   VEHICLE_REGISTRY_STATUSES,
   assertRegistryStatus,
   canVerifyVehicle,
@@ -31,6 +35,7 @@ export {
 } from './mock-camera-adapter';
 export {
   confirmVehicleMatch,
+  confirmVehicleParkingWatch,
   attachVehicleObservationEvidence,
   createVehicleObservationEvidence,
   assertVehicleObservationAccess,
@@ -42,8 +47,14 @@ export {
 } from './commands';
 export {
   getObservation,
+  getVehicleStatistics,
   listObservations,
   listRegistry,
   rebuildVehicleProjection,
   registerVehicleProjections,
 } from './projection';
+export { aggregateVehicleStatistics } from './statistics';
+export type {
+  VehicleStatistics,
+  VehicleStatisticsObservation,
+} from './statistics';

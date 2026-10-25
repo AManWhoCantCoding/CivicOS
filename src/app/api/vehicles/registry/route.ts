@@ -11,7 +11,15 @@ export async function GET(): Promise<NextResponse> {
   const user = await getCurrentUser();
   if (!user)
     return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
-  return NextResponse.json({ registry: await listRegistry(user) });
+  try {
+    return NextResponse.json({ registry: await listRegistry(user) });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'REGISTRY_FAILED';
+    return NextResponse.json(
+      { error: message },
+      { status: message === 'FORBIDDEN' ? 403 : 500 },
+    );
+  }
 }
 
 export async function PATCH(request: Request): Promise<NextResponse> {

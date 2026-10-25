@@ -118,7 +118,7 @@ export function VehicleEscalationForm({
   }
 
   return (
-    <section className="space-y-5 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5">
+    <section className="civicos-surface space-y-5 rounded-xl p-5">
       <div>
         <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
           Chuyển OrganizationUnit
@@ -134,7 +134,7 @@ export function VehicleEscalationForm({
         />
       ) : null}
       {!enabled ? (
-        <p className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-text-muted)]">
+        <p className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm leading-6 text-[var(--civicos-text-muted)]">
           {status === 'match_suggested'
             ? 'Xác nhận match trước khi chuyển đơn vị.'
             : 'Quan sát đã được chuyển đơn vị.'}
@@ -151,7 +151,7 @@ export function VehicleEscalationForm({
             value={organizationId}
             onChange={(event) => setOrganizationId(event.target.value)}
             disabled={!enabled || loading}
-            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] disabled:opacity-60"
+            className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)] disabled:opacity-60"
           >
             <option value="" disabled>
               Chọn đơn vị
@@ -169,12 +169,12 @@ export function VehicleEscalationForm({
             onChange={(event) => setOrganizationId(event.target.value)}
             disabled={!enabled || loading}
             placeholder="Mã OrganizationUnit"
-            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] disabled:opacity-60"
+            className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)] disabled:opacity-60"
           />
         )}
       </label>
       {unitMessage ? (
-        <p className="text-xs text-[var(--civicos-text-muted)]" role="status">
+        <p className="text-xs leading-5 text-[var(--civicos-text-muted)]" role="status">
           {unitMessage}
         </p>
       ) : null}
@@ -183,7 +183,7 @@ export function VehicleEscalationForm({
         type="button"
         onClick={() => void submit()}
         disabled={!enabled || loading || !online}
-        className="min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] px-4 py-3 text-sm font-semibold text-[var(--civicos-accent)] hover:border-[var(--civicos-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-4 py-3 text-sm font-semibold text-[var(--civicos-accent)] hover:border-[var(--civicos-accent)] hover:bg-[var(--civicos-surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? 'Đang chuyển…' : 'Chuyển đơn vị'}
       </button>

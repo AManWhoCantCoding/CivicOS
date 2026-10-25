@@ -17,6 +17,7 @@ import {
 } from '@/modules/identity';
 
 import type { VehicleActor } from './contracts';
+import { aggregateVehicleStatistics } from './statistics';
 
 const registryProjectionName = 'vehicle-registry-read-model';
 const observationProjectionName = 'vehicle-observation-read-model';
@@ -227,6 +228,7 @@ export async function rebuildVehicleProjection(
 
 export async function listRegistry(actor: VehicleActor) {
   requireRole(actor, 'commander', 'superior_commander');
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
   const projected = await readModels(
     registryProjectionName,
     'SuspiciousVehicleRegistry',
@@ -266,6 +268,7 @@ export async function listRegistry(actor: VehicleActor) {
 }
 
 export async function listObservations(actor: VehicleActor) {
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
   const assignedResourceIds =
     actor.roles.includes('commander') ||
     actor.roles.includes('superior_commander')
@@ -336,10 +339,77 @@ export async function listObservations(actor: VehicleActor) {
   return observations;
 }
 
+export async function getVehicleStatistics(actor: VehicleActor) {
+  const broadViewer =
+    actor.roles.includes('commander') ||
+    actor.roles.includes('superior_commander');
+  let observations: {
+    observedAt: Date;
+    latitude: unknown;
+    longitude: unknown;
+  }[];
+
+  if (broadViewer) {
+    if (!actor.organizationUnitId)
+      throw new Error('ORGANIZATION_SCOPE_FORBIDDEN');
+    const users = await prisma.user.findMany({
+      where: { organizationUnitId: actor.organizationUnitId },
+      select: { id: true },
+    });
+    observations = users.length
+      ? await prisma.vehicleObservation.findMany({
+          where: { observedById: { in: users.map(({ id }) => id) } },
+          select: { observedAt: true, latitude: true, longitude: true },
+        })
+      : [];
+  } else {
+    const assignments = await prisma.assignment.findMany({
+      where: {
+        resourceType: 'VehicleObservation',
+        assigneeUserId: actor.id,
+        status: 'active',
+        ...(actor.organizationUnitId
+          ? { organizationId: actor.organizationUnitId }
+          : {}),
+      },
+      select: { resourceId: true },
+    });
+    observations = assignments.length
+      ? await prisma.vehicleObservation.findMany({
+          where: {
+            id: { in: assignments.map(({ resourceId }) => resourceId) },
+          },
+          select: { observedAt: true, latitude: true, longitude: true },
+        })
+      : [];
+  }
+
+  const statistics = aggregateVehicleStatistics(
+    observations.map(({ observedAt, latitude, longitude }) => ({
+      observedAt,
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+    })),
+  );
+  await recordAudit({
+    actor,
+    resourceType: 'VehicleObservation',
+    resourceId: '*',
+    operation: 'vehicle_observation.statistics_read',
+    metadata: {
+      observationCount: observations.length,
+      monthGroupCount: statistics.monthlyFrequency.length,
+      locationGroupCount: statistics.locationFrequency.length,
+    },
+  });
+  return statistics;
+}
+
 export async function getObservation(
   observationId: string,
   actor: VehicleActor,
 ) {
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
   const observation = await loadObservationState(observationId);
   if (!observation) throw new Error('OBSERVATION_NOT_FOUND');
   const observer = await prisma.vehicleObservation.findUnique({
@@ -352,6 +422,11 @@ export async function getObservation(
         select: { organizationUnitId: true },
       })
     : null;
+  if (
+    !observerUser?.organizationUnitId?.trim() ||
+    actor.organizationUnitId !== observerUser.organizationUnitId
+  )
+    throw new Error('FORBIDDEN');
   const assignment = await prisma.assignment.findFirst({
     where: {
       resourceType: 'VehicleObservation',
@@ -377,9 +452,8 @@ export async function getObservation(
     },
   });
   const allowed =
-    (!actor.organizationUnitId ||
-      !observerUser?.organizationUnitId ||
-      actor.organizationUnitId === observerUser.organizationUnitId) &&
+    Boolean(observerUser?.organizationUnitId?.trim()) &&
+    actor.organizationUnitId === observerUser?.organizationUnitId &&
     (Boolean(assignment) ||
       actor.roles.includes('commander') ||
       actor.roles.includes('superior_commander'));
@@ -396,12 +470,23 @@ export async function getObservation(
       orderBy: { verifiedAt: 'asc' },
     }),
   ]);
+  const parkingWatchRecord = await prisma.vehicleParkingWatch.findUnique({
+    where: { observationId },
+    select: { status: true, confirmedAt: true, completedAt: true },
+  });
   const isFieldOfficer = actor.roles.includes('field_officer');
   const hasAssignment = Boolean(assignment);
   const hasVerificationAssignment = Boolean(verificationAssignment);
   return {
     observation: observation.state,
     verifications,
+    parkingWatch: parkingWatchRecord
+      ? {
+          status: parkingWatchRecord.status,
+          confirmedAt: parkingWatchRecord.confirmedAt.toISOString(),
+          completedAt: parkingWatchRecord.completedAt?.toISOString() ?? null,
+        }
+      : null,
     permissions: {
       canConfirm: isFieldOfficer && hasAssignment,
       canVerify: isFieldOfficer && hasVerificationAssignment,

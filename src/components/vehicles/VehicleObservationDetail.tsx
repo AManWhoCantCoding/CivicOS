@@ -45,6 +45,11 @@ type Verification = {
 type ObservationData = {
   observation: Observation | null;
   verifications: Verification[];
+  parkingWatch: {
+    status: string;
+    confirmedAt: string;
+    completedAt: string | null;
+  } | null;
   permissions: {
     canConfirm: boolean;
     canVerify: boolean;
@@ -82,6 +87,8 @@ export function VehicleObservationDetail({
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [tone, setTone] = useState<'success' | 'error' | 'warning'>('success');
+  const [parkingWatchAcknowledged, setParkingWatchAcknowledged] =
+    useState(false);
 
   useEffect(() => {
     if (!online) return;
@@ -179,6 +186,65 @@ export function VehicleObservationDetail({
     }
   }
 
+  async function confirmParkingWatch() {
+    if (!online || !data?.observation) return;
+    if (!parkingWatchAcknowledged) {
+      setTone('warning');
+      setMessage('Cần xác nhận đầy đủ điều kiện parking watch.');
+      return;
+    }
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      const response = await fetch(
+        `/api/vehicles/observations/${observationId}`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            command: 'confirm_parking_watch',
+            acknowledged: true,
+          }),
+        },
+      );
+      if (!response.ok) {
+        const reason = await readResponseError(
+          response,
+          'PARKING_WATCH_FAILED',
+        );
+        setTone(
+          response.status === 401 || response.status === 403
+            ? 'warning'
+            : 'error',
+        );
+        setMessage(describeVehicleCommandError(reason, response.status));
+        return;
+      }
+      const body = (await response.json()) as {
+        parkingWatch?: ObservationData['parkingWatch'];
+      };
+      if (!body.parkingWatch) {
+        setTone('error');
+        setMessage('Máy chủ không trả về parking watch đã cập nhật.');
+        return;
+      }
+      setData((current) =>
+        current
+          ? { ...current, parkingWatch: body.parkingWatch ?? null }
+          : current,
+      );
+      setTone('success');
+      setMessage(
+        'Đã xác nhận parking watch; thời hạn kiểm tra 4 giờ bắt đầu từ thời điểm máy chủ ghi nhận.',
+      );
+    } catch {
+      setTone('error');
+      setMessage('Không thể kết nối để xác nhận parking watch.');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   if (!online && !data)
     return (
       <section className="space-y-5">
@@ -199,7 +265,7 @@ export function VehicleObservationDetail({
       <section className="space-y-5">
         <Link
           href="/field/vehicles"
-          className="text-sm text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline"
+          className="inline-flex min-h-[44px] items-center text-sm text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)]"
         >
           ← Hiện trường
         </Link>
@@ -236,14 +302,14 @@ export function VehicleObservationDetail({
         <div>
           <Link
             href="/field/vehicles"
-            className="text-sm text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline"
+            className="inline-flex min-h-[44px] items-center text-sm text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)]"
           >
             ← Hiện trường
           </Link>
           <p className="mt-8 font-mono text-xs tracking-[0.16em] text-[var(--civicos-accent)] uppercase">
             VehicleObservation
           </p>
-          <h1 className="mt-3 font-mono text-3xl font-semibold text-[var(--civicos-text)]">
+          <h1 className="mt-3 font-mono text-2xl font-semibold break-all text-[var(--civicos-text)] sm:text-3xl">
             {observation.plate}
           </h1>
         </div>
@@ -284,7 +350,7 @@ export function VehicleObservationDetail({
           </div>
           <div>
             <dt className="text-[var(--civicos-text-muted)]">Xác nhận match</dt>
-            <dd className="mt-1 text-[var(--civicos-text)]">
+            <dd className="mt-1 break-all text-[var(--civicos-text)]">
               {observation.matchConfirmedAt
                 ? `${new Date(observation.matchConfirmedAt).toLocaleString('vi-VN')}${observation.matchConfirmedById ? ` · ${observation.matchConfirmedById}` : ''}`
                 : 'Chưa xác nhận'}
@@ -313,13 +379,62 @@ export function VehicleObservationDetail({
               type="button"
               onClick={() => void confirmMatch()}
               disabled={actionLoading || !online}
-              className="mt-3 min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:opacity-50"
+              className="mt-3 min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2 text-sm font-semibold text-[var(--civicos-accent-contrast)] hover:bg-[var(--civicos-accent-hover)] disabled:opacity-50 focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)]"
             >
               {actionLoading ? 'Đang xác nhận…' : 'Xác nhận match'}
             </button>
           </div>
         ) : null}
       </div>
+      {data.parkingWatch ? (
+        <section className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5">
+          <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
+            Parking watch ·{' '}
+            {data.parkingWatch.status === 'completed'
+              ? 'Đã hoàn tất'
+              : 'Đang hoạt động'}
+          </h2>
+          <p className="mt-2 text-sm text-[var(--civicos-text-muted)]">
+            Xác nhận lúc{' '}
+            {new Date(data.parkingWatch.confirmedAt).toLocaleString('vi-VN')}
+            {data.parkingWatch.completedAt
+              ? ` · Hoàn tất lúc ${new Date(data.parkingWatch.completedAt).toLocaleString('vi-VN')}`
+              : ''}
+          </p>
+        </section>
+      ) : null}
+      {data.permissions.canVerify &&
+      !data.parkingWatch &&
+      ['recorded', 'match_confirmed'].includes(observation.status) ? (
+        <section className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5">
+          <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
+            Xác nhận phương tiện lưu trú quá 48 giờ
+          </h2>
+          <label className="mt-3 flex min-h-[44px] items-start gap-3 text-sm text-[var(--civicos-text)]">
+            <input
+              type="checkbox"
+              className="focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)]"
+              checked={parkingWatchAcknowledged}
+              onChange={(event) =>
+                setParkingWatchAcknowledged(event.target.checked)
+              }
+              disabled={!online || actionLoading}
+            />
+            Tôi xác nhận phương tiện đã đỗ liên tục trên 48 giờ và hiện chưa
+            khai báo/đăng ký.
+          </label>
+          <button
+            type="button"
+            onClick={() => void confirmParkingWatch()}
+            disabled={!online || actionLoading || !parkingWatchAcknowledged}
+            className="mt-3 min-h-[44px] rounded-lg bg-[var(--civicos-accent)] px-4 py-2 text-sm font-semibold text-[var(--civicos-accent-contrast)] disabled:opacity-50 focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-focus)]"
+          >
+            {actionLoading
+              ? 'Đang xác nhận…'
+              : 'Bắt đầu thời hạn kiểm tra 4 giờ'}
+          </button>
+        </section>
+      ) : null}
       {data.permissions.canVerify ? (
         <VehicleVerificationForm
           observationId={observationId}
@@ -334,6 +449,15 @@ export function VehicleObservationDetail({
                       ...current.verifications,
                       verification as Verification,
                     ],
+                    parkingWatch:
+                      current.parkingWatch?.status === 'active' &&
+                      typeof verification.verifiedAt === 'string'
+                        ? {
+                            ...current.parkingWatch,
+                            status: 'completed',
+                            completedAt: verification.verifiedAt,
+                          }
+                        : current.parkingWatch,
                   }
                 : current,
             );
@@ -374,7 +498,7 @@ export function VehicleObservationDetail({
                   {verification.notes}
                 </p>
                 {verification.verifiedById ? (
-                  <p className="mt-2 text-xs text-[var(--civicos-text-muted)]">
+                  <p className="mt-2 break-all text-xs text-[var(--civicos-text-muted)]">
                     Người xác minh: {verification.verifiedById}
                   </p>
                 ) : null}

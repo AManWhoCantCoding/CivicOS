@@ -432,9 +432,23 @@ model VehicleObservation {
   matchConfirmedById String?
   escalatedAt        DateTime?
   createdAt          DateTime  @default(now())
+  parkingWatch       VehicleParkingWatch?
 
   @@index([plate, observedAt])
   @@index([status, observedAt])
+}
+
+model VehicleParkingWatch {
+  id            String   @id @default(cuid())
+  observationId String   @unique
+  confirmedAt   DateTime @default(now())
+  confirmedById String
+  status        String   @default("active")
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  observation   VehicleObservation @relation(fields: [observationId], references: [id], onDelete: Cascade)
+
+  @@index([status, confirmedAt])
 }
 
 model VehicleVerification {

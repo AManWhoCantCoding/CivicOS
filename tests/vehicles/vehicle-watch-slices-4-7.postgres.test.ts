@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { rm } from 'node:fs/promises';
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { prisma } from '@/lib/prisma';
 import {
+  getEventConsumers,
   processOutboxUntilIdle,
   readAggregateEvents,
 } from '@/modules/eventing';
@@ -17,9 +19,12 @@ import {
 } from '@/modules/platform';
 import {
   confirmVehicleMatch,
+  confirmVehicleParkingWatch,
   createVehicleObservationEvidence,
   createRegistryEntry,
   escalateVehicleObservation,
+  getObservation,
+  getVehicleStatistics,
   recordVehicleObservation,
   updateRegistryEntry,
   verifyVehicleObservation,
@@ -29,8 +34,10 @@ import { normalizePlate } from '@/modules/vehicles';
 
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
 const databaseTestTimeoutMs = 15_000;
-const stamp = randomUUID().slice(0, 8);
-const orgId = 'unit-nghia-tru';
+const stamp = randomUUID().replace(/-/g, '');
+const orgId = `ps009-s47-${stamp}-org`;
+const parentOrgId = `ps009-s47-${stamp}-parent`;
+const peerOrgId = `ps009-s47-${stamp}-peer`;
 const storageRoot = `/tmp/civicos-vehicle-s47-${stamp}`;
 
 class TrackingStorage {
@@ -86,6 +93,15 @@ const observationIds: string[] = [];
 const evidenceIds: string[] = [];
 const clientCommandIds: string[] = [];
 const slaIds: string[] = [];
+const organizationUnitIds: string[] = [];
+const createdUserIds: string[] = [];
+const checkpointSnapshots: {
+  name: string;
+  existed: boolean;
+  processedEventIds: string[];
+  lastRecordedAt: Date | null;
+  updatedAt?: Date;
+}[] = [];
 
 function trackRegistry(id: string): string {
   registryIds.push(id);
@@ -98,7 +114,7 @@ function trackObservation(id: string): string {
 }
 
 function plateFor(marker: string): string {
-  return `89${marker}${stamp.slice(0, 2).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`;
+  return `89${marker}${stamp.slice(0, 12).toUpperCase()}`;
 }
 
 async function createRegistry(
@@ -141,15 +157,14 @@ describe.skipIf(!postgresEnabled)(
   () => {
     beforeAll(async () => {
       for (const [id, name, parentId] of [
-        ['unit-cap-tren', 'Cap tren', null],
-        [orgId, 'Nghia Tru', 'unit-cap-tren'],
-        ['unit-peer', 'Don vi ngang cap', 'unit-cap-tren'],
+        [parentOrgId, 'Cap tren', null],
+        [orgId, 'Nghia Tru', parentOrgId],
+        [peerOrgId, 'Don vi ngang cap', parentOrgId],
       ] as const) {
-        await prisma.organizationUnit.upsert({
-          where: { id },
-          update: { active: true },
-          create: { id, name, level: 'unit', parentId },
+        await prisma.organizationUnit.create({
+          data: { id, name, level: 'unit', parentId },
         });
+        organizationUnitIds.push(id);
       }
       for (const user of [commander, fieldOfficer, unassignedOfficer]) {
         await prisma.user.create({
@@ -161,53 +176,73 @@ describe.skipIf(!postgresEnabled)(
             organizationUnitId: user.organizationUnitId,
           },
         });
+        createdUserIds.push(user.id);
       }
     });
 
     afterAll(async () => {
-      await prisma.assignment.deleteMany({
-        where: {
-          assigneeUserId: {
-            in: [commander.id, fieldOfficer.id, unassignedOfficer.id],
-          },
-        },
-      });
-      await prisma.notification.deleteMany({
-        where: {
-          userId: { in: [commander.id, fieldOfficer.id, unassignedOfficer.id] },
-        },
-      });
-      await prisma.session.deleteMany({
-        where: {
-          userId: { in: [commander.id, fieldOfficer.id, unassignedOfficer.id] },
-        },
-      });
-      await prisma.user.deleteMany({
-        where: {
-          id: { in: [commander.id, fieldOfficer.id, unassignedOfficer.id] },
-        },
-      });
-      await prisma.organizationUnit.deleteMany({
-        where: { id: { in: [orgId, 'unit-cap-tren', 'unit-peer'] } },
-      });
+      if (createdUserIds.length) {
+        await prisma.assignment.deleteMany({
+          where: { assigneeUserId: { in: createdUserIds } },
+        });
+        await prisma.notification.deleteMany({
+          where: { userId: { in: createdUserIds } },
+        });
+        await prisma.session.deleteMany({
+          where: { userId: { in: createdUserIds } },
+        });
+        await prisma.user.deleteMany({
+          where: { id: { in: createdUserIds } },
+        });
+      }
+      if (organizationUnitIds.length)
+        await prisma.organizationUnit.deleteMany({
+          where: { id: { in: organizationUnitIds } },
+        });
     });
 
     afterEach(async () => {
-      const events = observationIds.length
+      const parkingWatches = observationIds.length
+        ? await prisma.vehicleParkingWatch.findMany({
+            where: { observationId: { in: observationIds } },
+            select: { id: true },
+          })
+        : [];
+      const parkingWatchIds = parkingWatches.map(({ id }) => id);
+      const eventAggregateScopes = [
+        ...(observationIds.length
+          ? [
+              {
+                aggregateType: 'VehicleObservation',
+                aggregateId: { in: observationIds },
+              },
+            ]
+          : []),
+        ...(registryIds.length
+          ? [
+              {
+                aggregateType: 'SuspiciousVehicleRegistry',
+                aggregateId: { in: registryIds },
+              },
+            ]
+          : []),
+        ...(parkingWatchIds.length
+          ? [
+              {
+                aggregateType: 'VehicleParkingWatch',
+                aggregateId: { in: parkingWatchIds },
+              },
+            ]
+          : []),
+      ];
+      const eventScopes = [
+        ...eventAggregateScopes,
+        ...(createdUserIds.length ? [{ actorId: { in: createdUserIds } }] : []),
+      ];
+      const events = eventScopes.length
         ? await prisma.eventRecord.findMany({
-            where: {
-              OR: [
-                {
-                  aggregateType: 'VehicleObservation',
-                  aggregateId: { in: observationIds },
-                },
-                {
-                  aggregateType: 'SuspiciousVehicleRegistry',
-                  aggregateId: { in: registryIds },
-                },
-              ],
-            },
-            select: { eventId: true },
+            where: { OR: eventScopes },
+            select: { eventId: true, aggregateType: true, aggregateId: true },
           })
         : [];
       const eventIds = events.map(({ eventId }) => eventId);
@@ -228,6 +263,14 @@ describe.skipIf(!postgresEnabled)(
                     resourceType: 'VehicleObservation',
                     resourceId: { in: observationIds },
                   },
+                  ...(parkingWatchIds.length
+                    ? [
+                        {
+                          resourceType: 'VehicleParkingWatch',
+                          resourceId: { in: parkingWatchIds },
+                        },
+                      ]
+                    : []),
                   ...(slaIds.length ? [{ id: { in: slaIds } }] : []),
                 ],
               },
@@ -246,6 +289,75 @@ describe.skipIf(!postgresEnabled)(
               })
             ).map(({ eventId }) => eventId)
           : [];
+      const ownedEventIds = [...new Set([...eventIds, ...slaEventIds])];
+      if (ownedEventIds.length) {
+        const checkpoints = await prisma.projectionCheckpoint.findMany({
+          select: { name: true, processedEventIds: true },
+        });
+        for (const checkpoint of checkpoints) {
+          const processedEventIds = Array.isArray(checkpoint.processedEventIds)
+            ? checkpoint.processedEventIds.filter(
+                (eventId): eventId is string => typeof eventId === 'string',
+              )
+            : [];
+          const remainingEventIds = processedEventIds.filter(
+            (eventId) => !ownedEventIds.includes(eventId),
+          );
+          if (remainingEventIds.length !== processedEventIds.length)
+            await prisma.projectionCheckpoint.update({
+              where: { name: checkpoint.name },
+              data: { processedEventIds: remainingEventIds },
+            });
+        }
+      }
+      for (const snapshot of checkpointSnapshots) {
+        const current = await prisma.projectionCheckpoint.findUnique({
+          where: { name: snapshot.name },
+          select: { processedEventIds: true },
+        });
+        if (!snapshot.existed) {
+          if (!current) continue;
+          const remaining = Array.isArray(current.processedEventIds)
+            ? current.processedEventIds.filter(
+                (eventId): eventId is string =>
+                  typeof eventId === 'string' &&
+                  !ownedEventIds.includes(eventId),
+              )
+            : [];
+          expect(remaining).toEqual([]);
+          await prisma.projectionCheckpoint.delete({
+            where: { name: snapshot.name },
+          });
+          continue;
+        }
+        expect(current).not.toBeNull();
+        const currentIds = Array.isArray(current?.processedEventIds)
+          ? current.processedEventIds.filter(
+              (eventId): eventId is string => typeof eventId === 'string',
+            )
+          : [];
+        const withoutOwned = currentIds.filter(
+          (eventId) => !ownedEventIds.includes(eventId),
+        );
+        expect(withoutOwned).toEqual(snapshot.processedEventIds);
+        await prisma.projectionCheckpoint.update({
+          where: { name: snapshot.name },
+          data: {
+            processedEventIds: snapshot.processedEventIds,
+            lastRecordedAt: snapshot.lastRecordedAt,
+            updatedAt: snapshot.updatedAt,
+          },
+        });
+      }
+      checkpointSnapshots.length = 0;
+      const slaProjectionScopes = slas.length
+        ? [
+            {
+              aggregateType: 'SlaInstance',
+              aggregateId: { in: slas.map(({ id }) => id) },
+            },
+          ]
+        : [];
       if (slaEventIds.length) {
         await prisma.outboxMessage.deleteMany({
           where: { eventId: { in: slaEventIds } },
@@ -260,23 +372,101 @@ describe.skipIf(!postgresEnabled)(
         });
         slaIds.length = 0;
       }
-      await prisma.projectionRecord.deleteMany({
-        where: {
-          OR: [
-            { aggregateType: 'VehicleObservation' },
-            { aggregateType: 'SuspiciousVehicleRegistry' },
-          ],
-        },
-      });
+      const auditCleanupScopes = [
+        ...(registryIds.length
+          ? [
+              {
+                resourceType: 'SuspiciousVehicleRegistry',
+                resourceId: { in: registryIds },
+              },
+            ]
+          : []),
+        ...(observationIds.length
+          ? [
+              {
+                resourceType: 'VehicleObservation',
+                resourceId: { in: observationIds },
+              },
+            ]
+          : []),
+        ...(parkingWatchIds.length
+          ? [
+              {
+                resourceType: 'VehicleParkingWatch',
+                resourceId: { in: parkingWatchIds },
+              },
+            ]
+          : []),
+        ...(createdUserIds.length
+          ? [
+              {
+                resourceType: 'VehicleObservation',
+                resourceId: '*',
+                operation: 'vehicle_observation.statistics_read',
+                actorId: { in: createdUserIds },
+              },
+            ]
+          : []),
+        ...(slas.length
+          ? [
+              {
+                resourceType: 'SlaInstance',
+                resourceId: { in: slas.map(({ id }) => id) },
+              },
+            ]
+          : []),
+      ];
+      if (auditCleanupScopes.length)
+        await prisma.auditEvent.deleteMany({
+          where: { OR: auditCleanupScopes },
+        });
+      if (parkingWatchIds.length) {
+        await prisma.vehicleParkingWatch.deleteMany({
+          where: { id: { in: parkingWatchIds } },
+        });
+      }
+      const projectionScopes = [
+        ...events.map(({ aggregateType, aggregateId }) => ({
+          aggregateType,
+          aggregateId,
+        })),
+        ...(observationIds.length
+          ? [
+              {
+                aggregateType: 'VehicleObservation',
+                aggregateId: { in: observationIds },
+              },
+            ]
+          : []),
+        ...(registryIds.length
+          ? [
+              {
+                aggregateType: 'SuspiciousVehicleRegistry',
+                aggregateId: { in: registryIds },
+              },
+            ]
+          : []),
+        ...(parkingWatchIds.length
+          ? [
+              {
+                aggregateType: 'VehicleParkingWatch',
+                aggregateId: { in: parkingWatchIds },
+              },
+            ]
+          : []),
+        ...slaProjectionScopes,
+      ];
+      if (projectionScopes.length)
+        await prisma.projectionRecord.deleteMany({
+          where: { OR: projectionScopes },
+        });
       if (observationIds.length) {
         await prisma.notification.deleteMany({
           where: { resourceId: { in: observationIds } },
         });
         await prisma.notification.deleteMany({
           where: {
-            userId: {
-              in: [commander.id, fieldOfficer.id, unassignedOfficer.id],
-            },
+            userId: { in: createdUserIds },
           },
         });
         await prisma.vehicleVerification.deleteMany({
@@ -293,13 +483,10 @@ describe.skipIf(!postgresEnabled)(
         });
         observationIds.length = 0;
       }
-      await prisma.assignment.deleteMany({
-        where: {
-          assigneeUserId: {
-            in: [commander.id, fieldOfficer.id, unassignedOfficer.id],
-          },
-        },
-      });
+      if (createdUserIds.length)
+        await prisma.assignment.deleteMany({
+          where: { assigneeUserId: { in: createdUserIds } },
+        });
       if (registryIds.length) {
         await prisma.suspiciousVehicleEntry.deleteMany({
           where: { id: { in: registryIds } },
@@ -318,11 +505,213 @@ describe.skipIf(!postgresEnabled)(
         });
         evidenceIds.length = 0;
       }
+      await rm(storageRoot, { recursive: true, force: true });
     });
 
     it('validates plates without over-normalizing local conventions', () => {
       expect(normalizePlate(' 89A-123.45 ')).toBe('89A12345');
       expect(normalizePlate('29a 456.78')).toBe('29A45678');
+    });
+
+    it('confirms one parking watch concurrently, atomically, and completes only its SLA on verification', async () => {
+      const { observation } = await recordVehicleObservation(
+        {
+          plate: plateFor('W'),
+          observedAt: '2026-09-19T01:00:00.000Z',
+          latitude: 20.96,
+          longitude: 105.93,
+        },
+        fieldOfficer,
+      );
+      trackObservation(observation.id);
+      await expect(
+        confirmVehicleParkingWatch(observation.id, unassignedOfficer),
+      ).rejects.toThrow('FORBIDDEN');
+      const [watch, replay] = await Promise.all([
+        confirmVehicleParkingWatch(observation.id, fieldOfficer),
+        confirmVehicleParkingWatch(observation.id, fieldOfficer),
+      ]);
+      expect(replay.id).toBe(watch.id);
+      expect(
+        await prisma.vehicleParkingWatch.count({
+          where: { observationId: observation.id },
+        }),
+      ).toBe(1);
+      expect(watch.confirmedAt.getTime()).toBeGreaterThan(Date.now() - 30_000);
+      expect(watch.confirmedAt.getTime()).toBeLessThanOrEqual(Date.now());
+      const sla = await prisma.slaInstance.findUniqueOrThrow({
+        where: {
+          resourceType_resourceId_kind: {
+            resourceType: 'VehicleParkingWatch',
+            resourceId: watch.id,
+            kind: 'vehicle_parking_inspection_4h',
+          },
+        },
+      });
+      expect(
+        await prisma.slaInstance.count({
+          where: {
+            resourceType: 'VehicleParkingWatch',
+            resourceId: watch.id,
+            kind: 'vehicle_parking_inspection_4h',
+          },
+        }),
+      ).toBe(1);
+      expect(sla.dueAt.getTime() - watch.confirmedAt.getTime()).toBe(
+        4 * 60 * 60 * 1000,
+      );
+      expect(
+        await prisma.eventRecord.count({
+          where: {
+            aggregateType: 'VehicleParkingWatch',
+            aggregateId: watch.id,
+            eventType: 'VehicleParkingWatchStarted',
+          },
+        }),
+      ).toBe(1);
+      const startEvent = await prisma.eventRecord.findFirstOrThrow({
+        where: {
+          aggregateType: 'VehicleParkingWatch',
+          aggregateId: watch.id,
+          eventType: 'VehicleParkingWatchStarted',
+        },
+      });
+      expect(startEvent.payload).toMatchObject({
+        continuousParkingOver48Hours: true,
+        declarationOrRegistrationMissing: true,
+      });
+      expect(startEvent.payload).not.toHaveProperty('plate');
+      expect(startEvent.payload).not.toHaveProperty('latitude');
+      const detail = await getObservation(observation.id, fieldOfficer);
+      expect(detail.parkingWatch).toMatchObject({
+        status: 'active',
+        confirmedAt: watch.confirmedAt.toISOString(),
+        completedAt: null,
+      });
+      expect(Object.keys(detail.parkingWatch ?? {}).sort()).toEqual([
+        'completedAt',
+        'confirmedAt',
+        'status',
+      ]);
+      expect(
+        await prisma.auditEvent.count({
+          where: {
+            resourceType: 'VehicleParkingWatch',
+            resourceId: watch.id,
+            operation: 'vehicle_parking_watch.confirmed',
+          },
+        }),
+      ).toBe(1);
+
+      await verifyVehicleObservation(
+        {
+          observationId: observation.id,
+          result: 'Inspected',
+          notes: 'Inspection complete.',
+        },
+        fieldOfficer,
+      );
+      await expect(
+        prisma.vehicleParkingWatch.findUniqueOrThrow({
+          where: { id: watch.id },
+        }),
+      ).resolves.toMatchObject({ status: 'completed' });
+      await expect(
+        prisma.slaInstance.findUniqueOrThrow({ where: { id: sla.id } }),
+      ).resolves.toMatchObject({ status: 'completed' });
+      expect(
+        await prisma.eventRecord.count({
+          where: {
+            aggregateType: 'VehicleParkingWatch',
+            aggregateId: watch.id,
+            eventType: 'VehicleParkingWatchCompleted',
+          },
+        }),
+      ).toBe(1);
+      expect(
+        await prisma.auditEvent.count({
+          where: {
+            resourceType: 'VehicleParkingWatch',
+            resourceId: watch.id,
+            operation: 'vehicle_parking_watch.completed',
+          },
+        }),
+      ).toBe(1);
+      expect(
+        (await confirmVehicleParkingWatch(observation.id, fieldOfficer)).id,
+      ).toBe(watch.id);
+    });
+
+    it('rejects parking-watch starts for match-suggested, verified, or escalated observations', async () => {
+      const { observation } = await recordVehicleObservation(
+        {
+          plate: plateFor('Q'),
+          observedAt: '2026-09-19T01:00:00.000Z',
+          latitude: 20.96,
+          longitude: 105.93,
+        },
+        fieldOfficer,
+      );
+      trackObservation(observation.id);
+      for (const status of ['match_suggested', 'verified', 'escalated']) {
+        await prisma.vehicleObservation.update({
+          where: { id: observation.id },
+          data: { status },
+        });
+        await expect(
+          confirmVehicleParkingWatch(observation.id, fieldOfficer),
+        ).rejects.toThrow('PARKING_WATCH_NOT_ALLOWED');
+      }
+    });
+
+    it('scopes statistics to active vehicle assignments or the commander organization', async () => {
+      const { observation } = await recordVehicleObservation(
+        {
+          plate: plateFor('Z'),
+          observedAt: '2026-01-31T17:30:00.000Z',
+          latitude: 20.9602,
+          longitude: 105.9304,
+        },
+        fieldOfficer,
+      );
+      trackObservation(observation.id);
+
+      const assignedStats = await getVehicleStatistics(fieldOfficer);
+      expect(assignedStats.monthlyFrequency).toEqual([
+        { month: '2026-02', count: 1 },
+      ]);
+      expect(assignedStats.locationFrequency).toEqual([
+        { cellId: '20960:105930', count: 1 },
+      ]);
+      expect(Object.keys(assignedStats.locationFrequency[0]).sort()).toEqual([
+        'cellId',
+        'count',
+      ]);
+      await expect(getVehicleStatistics(unassignedOfficer)).resolves.toEqual({
+        monthlyFrequency: [],
+        locationFrequency: [],
+      });
+
+      const commanderStats = await getVehicleStatistics(commander);
+      expect(commanderStats.monthlyFrequency).toContainEqual({
+        month: '2026-02',
+        count: expect.any(Number),
+      });
+      const audit = await prisma.auditEvent.findFirstOrThrow({
+        where: {
+          resourceType: 'VehicleObservation',
+          resourceId: '*',
+          operation: 'vehicle_observation.statistics_read',
+          actorId: fieldOfficer.id,
+        },
+      });
+      expect(audit.metadata).toMatchObject({
+        observationCount: 1,
+        monthGroupCount: 1,
+        locationGroupCount: 1,
+      });
+      expect(audit.metadata).not.toHaveProperty('latitude');
+      expect(audit.metadata).not.toHaveProperty('cellId');
     });
 
     it('runs the registry lifecycle with history and single active identity', async () => {
@@ -380,16 +769,15 @@ describe.skipIf(!postgresEnabled)(
           commander,
         ),
       ]);
+      for (const outcome of raced) {
+        if (outcome.status === 'fulfilled') trackRegistry(outcome.value.id);
+      }
       expect(raced.filter(({ status }) => status === 'fulfilled')).toHaveLength(
         1,
       );
       expect(raced.filter(({ status }) => status === 'rejected')).toHaveLength(
         1,
       );
-      for (const outcome of raced) {
-        if (outcome.status === 'fulfilled') trackRegistry(outcome.value.id);
-      }
-
       await expect(
         updateRegistryEntry({ entryId, status: 'archived' }, commander),
       ).rejects.toThrow('INVALID_REGISTRY_STATUS');
@@ -915,9 +1303,11 @@ describe.skipIf(!postgresEnabled)(
       async () => {
         const saturday = new Date('2026-09-19T01:00:00.000Z');
         expect(saturday.getUTCDay()).toBe(6);
+        const suspiciousPlate = plateFor('S');
+        await createRegistry(suspiciousPlate);
         const { observation } = await recordVehicleObservation(
           {
-            plate: plateFor('S'),
+            plate: suspiciousPlate,
             observedAt: saturday.toISOString(),
             latitude: 20.96,
             longitude: 105.93,
@@ -925,6 +1315,26 @@ describe.skipIf(!postgresEnabled)(
           fieldOfficer,
         );
         trackObservation(observation.id);
+
+        const nonMatch = await recordVehicleObservation(
+          {
+            plate: plateFor('N'),
+            observedAt: saturday.toISOString(),
+            latitude: 20.96,
+            longitude: 105.93,
+          },
+          fieldOfficer,
+        );
+        trackObservation(nonMatch.observation.id);
+        expect(
+          await prisma.slaInstance.count({
+            where: {
+              resourceType: 'VehicleObservation',
+              resourceId: nonMatch.observation.id,
+              kind: 'vehicle_escalation_2h',
+            },
+          }),
+        ).toBe(0);
 
         const sla = await prisma.slaInstance.findFirstOrThrow({
           where: {
@@ -935,6 +1345,19 @@ describe.skipIf(!postgresEnabled)(
         });
         expect(sla.dueAt.toISOString()).toBe('2026-09-19T03:00:00.000Z');
         expect(sla.dueAt.getUTCDay()).toBe(6);
+
+        await confirmVehicleMatch(observation.id, fieldOfficer);
+        await verifyVehicleObservation(
+          {
+            observationId: observation.id,
+            result: 'Verified',
+            notes: 'Registry match checked.',
+          },
+          fieldOfficer,
+        );
+        await expect(
+          prisma.slaInstance.findUniqueOrThrow({ where: { id: sla.id } }),
+        ).resolves.toMatchObject({ status: 'active', completedAt: null });
 
         await markOverdue(new Date('2026-09-19T03:00:01.000Z'));
         await markOverdue(new Date('2026-09-19T03:00:01.000Z'));
@@ -953,8 +1376,6 @@ describe.skipIf(!postgresEnabled)(
           }),
         ).toBe(1);
 
-        await processOutboxUntilIdle();
-        await processOutboxUntilIdle();
         const overdueEvent = await prisma.eventRecord.findFirstOrThrow({
           where: {
             aggregateType: 'SlaInstance',
@@ -962,6 +1383,38 @@ describe.skipIf(!postgresEnabled)(
             eventType: 'SlaOverdue',
           },
         });
+        const unrelatedStaleClaims = await prisma.outboxMessage.count({
+          where: {
+            status: 'processing',
+            claimedAt: { lt: new Date(Date.now() - 5 * 60 * 1000) },
+            eventId: { not: overdueEvent.eventId },
+          },
+        });
+        expect(unrelatedStaleClaims).toBe(0);
+        for (const consumer of getEventConsumers(overdueEvent.eventType)) {
+          const name = `${overdueEvent.eventType}:${consumer.name}`;
+          const checkpoint = await prisma.projectionCheckpoint.findUnique({
+            where: { name },
+            select: {
+              processedEventIds: true,
+              lastRecordedAt: true,
+              updatedAt: true,
+            },
+          });
+          checkpointSnapshots.push({
+            name,
+            existed: checkpoint !== null,
+            processedEventIds: Array.isArray(checkpoint?.processedEventIds)
+              ? checkpoint.processedEventIds.filter(
+                  (eventId): eventId is string => typeof eventId === 'string',
+                )
+              : [],
+            lastRecordedAt: checkpoint?.lastRecordedAt ?? null,
+            ...(checkpoint ? { updatedAt: checkpoint.updatedAt } : {}),
+          });
+        }
+        await processOutboxUntilIdle({ eventId: overdueEvent.eventId });
+        await processOutboxUntilIdle({ eventId: overdueEvent.eventId });
         await expect(
           prisma.auditEvent.findFirst({
             where: {
@@ -994,6 +1447,19 @@ describe.skipIf(!postgresEnabled)(
           sourceEventId: overdueEvent.eventId,
         });
         expect(duplicate.id).toBe(replayed.id);
+
+        const escalated = await escalateVehicleObservation(
+          observation.id,
+          fieldOfficer,
+          parentOrgId,
+        );
+        const completedSla = await prisma.slaInstance.findUniqueOrThrow({
+          where: { id: sla.id },
+        });
+        expect(completedSla.status).toBe('completed');
+        expect(completedSla.completedAt?.toISOString()).toBe(
+          escalated.escalatedAt?.toISOString(),
+        );
 
         const clientCommandId = `s47-${stamp}-${randomUUID().slice(0, 8)}`;
         clientCommandIds.push(clientCommandId);
@@ -1079,18 +1545,18 @@ describe.skipIf(!postgresEnabled)(
       await confirmVehicleMatch(observation.id, fieldOfficer);
 
       await expect(
-        escalateVehicleObservation(observation.id, fieldOfficer, 'unit-peer'),
+        escalateVehicleObservation(observation.id, fieldOfficer, peerOrgId),
       ).rejects.toThrow('ORGANIZATION_SCOPE_FORBIDDEN');
 
       const first = await escalateVehicleObservation(
         observation.id,
         fieldOfficer,
-        'unit-cap-tren',
+        parentOrgId,
       );
       const second = await escalateVehicleObservation(
         observation.id,
         fieldOfficer,
-        'unit-cap-tren',
+        parentOrgId,
       );
       expect(second.id).toBe(first.id);
       expect(

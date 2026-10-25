@@ -16,6 +16,20 @@ import {
 
 type LoadState = 'loading' | 'ready' | 'error' | 'denied' | 'offline';
 
+// Presentation-only status tone mapping: the raw status key stays the visible
+// text and the icon keeps state readable without color alone. Unknown status
+// values stay neutral (muted) — no success styling by default.
+function statusBadgeClass(status: string): string {
+  if (status === 'active')
+    return 'border-[var(--civicos-success)] text-[var(--civicos-success)]';
+  return 'border-[var(--civicos-border)] text-[var(--civicos-text-muted)]';
+}
+
+function statusIcon(status: string): string {
+  if (status === 'active') return '●';
+  return '○';
+}
+
 export function RegistryList() {
   const online = useOnlineStatus();
   const [items, setItems] = useState<RegistryEntry[]>([]);
@@ -110,33 +124,36 @@ export function RegistryList() {
       {items.map((item) => (
         <article
           key={item.id}
-          className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5"
+          className="civicos-surface rounded-xl p-5"
         >
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="font-mono text-lg text-[var(--civicos-text)]">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="font-mono text-lg break-all text-[var(--civicos-text)]">
                 {item.plate}
               </p>
-              <p className="mt-1 text-xs text-[var(--civicos-text-muted)]">
+              <p className="mt-1 text-xs leading-5 text-[var(--civicos-text-muted)]">
                 Nguồn: {item.source} · Có hiệu lực:{' '}
                 {new Date(item.validFrom).toLocaleDateString('vi-VN')}
               </p>
             </div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--civicos-border)] px-3 py-1 text-xs text-[var(--civicos-text)]">
+            <span
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border bg-[var(--civicos-surface)] px-3 py-1 text-xs font-medium ${statusBadgeClass(item.status)}`}
+            >
+              <span aria-hidden="true">{statusIcon(item.status)} </span>
               {item.status}
             </span>
           </div>
-          <p className="mt-4 text-sm text-[var(--civicos-text)]">
+          <p className="mt-4 text-sm leading-6 text-[var(--civicos-text)]">
             {item.reason}
           </p>
-          <p className="mt-2 text-xs text-[var(--civicos-text-muted)]">
+          <p className="mt-2 text-xs leading-5 text-[var(--civicos-text-muted)]">
             Hết hạn:{' '}
             {item.validUntil
               ? new Date(item.validUntil).toLocaleString('vi-VN')
               : 'chưa đặt'}
           </p>
           <details className="mt-5 border-t border-[var(--civicos-border)] pt-4">
-            <summary className="cursor-pointer text-sm text-[var(--civicos-accent)] underline-offset-4 hover:underline">
+            <summary className="inline-flex min-h-[44px] cursor-pointer items-center text-sm text-[var(--civicos-accent)] underline-offset-4 hover:underline">
               Chỉnh sửa trạng thái
             </summary>
             <div className="mt-4">

@@ -1,5 +1,6 @@
 export type VehicleDomainEventOwnership = {
-  aggregateType: 'VehicleObservation' | 'SuspiciousVehicleRegistry';
+  aggregateType:
+    'VehicleObservation' | 'SuspiciousVehicleRegistry' | 'VehicleParkingWatch';
   eventVersion: 1;
 };
 
@@ -10,6 +11,8 @@ export const VEHICLE_DOMAIN_EVENTS: Record<
   | 'SuspiciousVehicleMatchConfirmed'
   | 'VehicleVerificationRecorded'
   | 'VehicleEscalated'
+  | 'VehicleParkingWatchStarted'
+  | 'VehicleParkingWatchCompleted'
   | 'SuspiciousVehicleRegistered'
   | 'SuspiciousVehicleRegistryUpdated',
   VehicleDomainEventOwnership
@@ -35,6 +38,14 @@ export const VEHICLE_DOMAIN_EVENTS: Record<
     eventVersion: 1,
   },
   VehicleEscalated: { aggregateType: 'VehicleObservation', eventVersion: 1 },
+  VehicleParkingWatchStarted: {
+    aggregateType: 'VehicleParkingWatch',
+    eventVersion: 1,
+  },
+  VehicleParkingWatchCompleted: {
+    aggregateType: 'VehicleParkingWatch',
+    eventVersion: 1,
+  },
   SuspiciousVehicleRegistered: {
     aggregateType: 'SuspiciousVehicleRegistry',
     eventVersion: 1,
@@ -49,6 +60,25 @@ export const VEHICLE_ESCALATION_SLA = {
   kind: 'vehicle_escalation_2h',
   durationMs: 2 * 60 * 60 * 1000,
 };
+
+export function shouldStartVehicleEscalationSla(
+  registryMatch: { id: string } | null,
+): boolean {
+  return registryMatch !== null;
+}
+
+export const VEHICLE_PARKING_WATCH_SLA = {
+  kind: 'vehicle_parking_inspection_4h',
+  durationMs: 4 * 60 * 60 * 1000,
+};
+
+export function vehicleParkingWatchDueAt(confirmedAt: Date): Date {
+  return new Date(confirmedAt.getTime() + VEHICLE_PARKING_WATCH_SLA.durationMs);
+}
+
+export function canStartVehicleParkingWatch(status: string): boolean {
+  return status === 'recorded' || status === 'match_confirmed';
+}
 
 export const VEHICLE_REGISTRY_STATUSES = [
   'active',

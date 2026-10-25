@@ -111,7 +111,7 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
     <form
       onSubmit={submit}
       noValidate
-      className="space-y-5 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5"
+      className="civicos-surface space-y-5 rounded-xl p-5"
     >
       <div>
         <h2 className="text-base font-semibold text-[var(--civicos-text)]">
@@ -134,7 +134,7 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
           name="plate"
           required
           autoCapitalize="characters"
-          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 font-mono text-lg text-[var(--civicos-text)] uppercase outline-none focus:border-[var(--civicos-focus)]"
+          className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 font-mono text-lg uppercase text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
         />
       </label>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -147,7 +147,7 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
             step="any"
             value={latitude}
             onChange={(event) => setLatitude(event.target.value)}
-            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
+            className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
           />
         </label>
         <label className="block text-sm text-[var(--civicos-text)]">
@@ -159,7 +159,7 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
             step="any"
             value={longitude}
             onChange={(event) => setLongitude(event.target.value)}
-            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
+            className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
           />
         </label>
       </div>
@@ -167,36 +167,38 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
         <button
           type="button"
           onClick={getLocation}
-          className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-sm text-[var(--civicos-accent)] hover:border-[var(--civicos-accent)]"
+          className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-accent)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent-hover)]"
         >
           Lấy vị trí hiện tại
         </button>
         <span
-          className="text-xs text-[var(--civicos-text-muted)]"
+          className="min-w-0 text-xs leading-5 text-[var(--civicos-text-muted)]"
           role="status"
         >
           {locationMessage}
         </span>
       </div>
-      <p
-        className="text-xs leading-5 text-[var(--civicos-text-muted)]"
-        role="status"
-      >
-        GPS chỉ hỗ trợ điền nhanh; nếu không có GPS, luôn nhập tay được tọa độ.
-      </p>
-      <p
-        className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-xs leading-5 text-[var(--civicos-text-muted)]"
-        role="status"
-      >
-        Quan sát chỉ được coi là hoàn tất sau khi ảnh bằng chứng được tải lên.
-        Khi offline, quan sát chỉ ở trạng thái chờ đồng bộ.
-      </p>
+      <div className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-3">
+        <p
+          className="text-xs leading-5 text-[var(--civicos-text-muted)]"
+          role="status"
+        >
+          GPS chỉ hỗ trợ điền nhanh; nếu không có GPS, luôn nhập tay được tọa độ.
+        </p>
+        <p
+          className="mt-2 text-xs leading-5 text-[var(--civicos-text-muted)]"
+          role="status"
+        >
+          Quan sát chỉ được coi là hoàn tất sau khi ảnh bằng chứng được tải lên.
+          Khi offline, quan sát chỉ ở trạng thái chờ đồng bộ.
+        </p>
+      </div>
       <label className="block text-sm text-[var(--civicos-text)]">
         Mô tả
         <textarea
           name="description"
           rows={4}
-          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
+          className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
         />
       </label>
       {message ? <FeedbackMessage message={message} tone={tone} /> : null}
@@ -204,7 +206,7 @@ export function VehicleObservationForm({ onSaved }: { onSaved?: () => void }) {
         <>
           <Link
             href={`/field/vehicles/${observationId}`}
-            className="block text-sm text-[var(--civicos-accent)] underline-offset-4 hover:underline"
+            className="inline-flex min-h-[44px] min-w-0 items-center text-sm text-[var(--civicos-accent)] underline-offset-4 hover:underline"
           >
             Mở chi tiết quan sát →
           </Link>

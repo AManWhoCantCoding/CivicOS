@@ -9,7 +9,12 @@ import {
   isRegistryActive,
   normalizePlate,
   VEHICLE_DOMAIN_EVENTS,
+  VEHICLE_PARKING_WATCH_SLA,
+  vehicleParkingWatchDueAt,
+  canStartVehicleParkingWatch,
+  shouldStartVehicleEscalationSla,
 } from '@/modules/vehicles';
+import { EVENT_CATALOG } from '@/modules/eventing';
 
 function readSchema(): string {
   return readFileSync(
@@ -44,7 +49,177 @@ function readObservationForm(): string {
   );
 }
 
+function readParkingWatchUi(): string {
+  return readFileSync(
+    path.join(
+      process.cwd(),
+      'src',
+      'components',
+      'vehicles',
+      'VehicleObservationDetail.tsx',
+    ),
+    'utf8',
+  );
+}
+
 describe('PS-E1-009 slices 1-3 vehicle watch contract', () => {
+  it('uses unique organization fixtures and ID-bounded projection cleanup', () => {
+    const postgresTest = readFileSync(
+      path.join(
+        process.cwd(),
+        'tests',
+        'vehicles',
+        'vehicle-watch-slices-4-7.postgres.test.ts',
+      ),
+      'utf8',
+    );
+    expect(postgresTest).toContain('const orgId = `ps009-s47-${stamp}-org`');
+    expect(postgresTest).toContain(
+      "const stamp = randomUUID().replace(/-/g, '')",
+    );
+    expect(postgresTest).toContain(
+      'return `89${marker}${stamp.slice(0, 12).toUpperCase()}`',
+    );
+    expect(postgresTest).toContain('auditCleanupScopes');
+    expect(postgresTest).toContain('resourceId: { in: registryIds }');
+    expect(postgresTest).toContain('resourceId: { in: observationIds }');
+    expect(postgresTest).toContain('resourceId: { in: parkingWatchIds }');
+    expect(postgresTest).toContain(
+      "operation: 'vehicle_observation.statistics_read'",
+    );
+    expect(postgresTest).toContain('actorId: { in: createdUserIds }');
+    expect(postgresTest).toContain('if (auditCleanupScopes.length)');
+    const registryRaceStart = postgresTest.indexOf(
+      'const raced = await Promise.allSettled([',
+    );
+    const registryRaceEnd = postgresTest.indexOf(
+      "updateRegistryEntry({ entryId, status: 'archived' }, commander)",
+      registryRaceStart,
+    );
+    const registryRace = postgresTest.slice(registryRaceStart, registryRaceEnd);
+    const registryTrackIndex = registryRace.indexOf(
+      'trackRegistry(outcome.value.id)',
+    );
+    expect(registryTrackIndex).toBeGreaterThan(-1);
+    expect(registryTrackIndex).toBeLessThan(
+      registryRace.indexOf("status === 'fulfilled')).toHaveLength"),
+    );
+    expect(registryTrackIndex).toBeLessThan(
+      registryRace.indexOf("status === 'rejected')).toHaveLength"),
+    );
+    expect(postgresTest).toContain('createdUserIds.push(user.id)');
+    expect(postgresTest).toContain('in: createdUserIds');
+    expect(postgresTest).not.toMatch(
+      /afterAll\(async \(\) => \{[\s\S]*?in: \[commander\.id, fieldOfficer\.id, unassignedOfficer\.id\]/,
+    );
+    expect(postgresTest).toContain('organizationUnitIds.push(id)');
+    expect(postgresTest).toContain(
+      'where: { id: { in: organizationUnitIds } }',
+    );
+    expect(postgresTest).toContain('aggregateId: { in: observationIds }');
+    expect(postgresTest).toContain('aggregateId: { in: registryIds }');
+    expect(postgresTest).toContain('aggregateId: { in: parkingWatchIds }');
+    expect(postgresTest).toContain('const events = eventScopes.length');
+    expect(postgresTest).toContain('where: { OR: eventScopes }');
+    expect(postgresTest).toContain('actorId: { in: createdUserIds }');
+    expect(postgresTest).toContain(
+      'select: { eventId: true, aggregateType: true, aggregateId: true }',
+    );
+    expect(postgresTest).toContain('where: { OR: projectionScopes }');
+    expect(postgresTest).toContain(
+      'await processOutboxUntilIdle({ eventId: overdueEvent.eventId })',
+    );
+    expect(postgresTest).toContain(
+      'const unrelatedStaleClaims = await prisma.outboxMessage.count',
+    );
+    expect(postgresTest).toContain("status: 'processing'");
+    expect(postgresTest).toContain(
+      'claimedAt: { lt: new Date(Date.now() - 5 * 60 * 1000) }',
+    );
+    expect(postgresTest).toContain('eventId: { not: overdueEvent.eventId }');
+    expect(postgresTest).toContain(
+      'const ownedEventIds = [...new Set([...eventIds, ...slaEventIds])]',
+    );
+    expect(postgresTest).toContain('!ownedEventIds.includes(eventId)');
+    expect(postgresTest).toContain(
+      'data: { processedEventIds: remainingEventIds }',
+    );
+    expect(postgresTest).toContain('getEventConsumers(overdueEvent.eventType)');
+    expect(postgresTest).toContain('checkpointSnapshots.push({');
+    expect(postgresTest).toContain(
+      'expect(withoutOwned).toEqual(snapshot.processedEventIds)',
+    );
+    expect(postgresTest).toContain('lastRecordedAt: snapshot.lastRecordedAt');
+    expect(postgresTest).toContain('updatedAt: snapshot.updatedAt');
+    expect(postgresTest).toContain('expect(remaining).toEqual([])');
+    expect(postgresTest).toContain("import { rm } from 'node:fs/promises'");
+    expect(postgresTest).toContain(
+      'await rm(storageRoot, { recursive: true, force: true })',
+    );
+    expect(postgresTest).not.toMatch(
+      /projectionRecord\.deleteMany\([\s\S]*?where:\s*\{\s*OR:\s*\[[\s\S]*?aggregateType:\s*'VehicleObservation'[\s\S]*?aggregateType:\s*'SuspiciousVehicleRegistry'/,
+    );
+  });
+
+  it('starts the two-hour escalation SLA only for an active registry match', () => {
+    expect(shouldStartVehicleEscalationSla({ id: 'registry-entry-1' })).toBe(
+      true,
+    );
+    expect(shouldStartVehicleEscalationSla(null)).toBe(false);
+  });
+
+  it('allows parking-watch attestation only before verification or escalation', () => {
+    expect(canStartVehicleParkingWatch('recorded')).toBe(true);
+    expect(canStartVehicleParkingWatch('match_confirmed')).toBe(true);
+    expect(canStartVehicleParkingWatch('match_suggested')).toBe(false);
+    expect(canStartVehicleParkingWatch('verified')).toBe(false);
+    expect(canStartVehicleParkingWatch('escalated')).toBe(false);
+  });
+
+  it('starts a confirmed parking-watch inspection SLA at server confirmation time', () => {
+    const confirmedAt = new Date('2026-10-24T02:00:00.000Z');
+    expect(VEHICLE_PARKING_WATCH_SLA).toEqual({
+      kind: 'vehicle_parking_inspection_4h',
+      durationMs: 4 * 60 * 60 * 1000,
+    });
+    expect(vehicleParkingWatchDueAt(confirmedAt).toISOString()).toBe(
+      '2026-10-24T06:00:00.000Z',
+    );
+    expect(VEHICLE_DOMAIN_EVENTS.VehicleParkingWatchStarted).toEqual({
+      aggregateType: 'VehicleParkingWatch',
+      eventVersion: 1,
+    });
+    expect(
+      EVENT_CATALOG.filter(
+        ({ aggregateType }) => aggregateType === 'VehicleParkingWatch',
+      )
+        .map(({ eventType }) => eventType)
+        .sort(),
+    ).toEqual(['VehicleParkingWatchCompleted', 'VehicleParkingWatchStarted']);
+    expect(
+      vehicleParkingWatchDueAt(confirmedAt).getTime() - confirmedAt.getTime(),
+    ).toBe(4 * 60 * 60 * 1000);
+  });
+
+  it('stores one watch per observation and requires explicit online attestation', () => {
+    const schema = readSchema();
+    const ui = readParkingWatchUi();
+    expect(schema).toMatch(
+      /model VehicleParkingWatch[\s\S]*observationId String\s+@unique/,
+    );
+    expect(schema).toMatch(
+      /VehicleObservation\s+@relation\(fields: \[observationId\]/,
+    );
+    expect(ui).toContain('đỗ liên tục trên 48 giờ');
+    expect(ui).toContain('khai báo/đăng ký.');
+    expect(ui).toContain("command: 'confirm_parking_watch'");
+    expect(ui).toContain("parkingWatch?: ObservationData['parkingWatch']");
+    expect(ui).toContain('!data.parkingWatch');
+    expect(ui).toContain(
+      'disabled={!online || actionLoading || !parkingWatchAcknowledged}',
+    );
+  });
+
   it('keeps registry active only inside its validity window', () => {
     const at = new Date('2026-09-19T01:00:00.000Z');
     expect(
@@ -122,6 +297,8 @@ describe('PS-E1-009 slices 1-3 vehicle watch contract', () => {
         'SuspiciousVehicleMatchConfirmed',
         'VehicleVerificationRecorded',
         'VehicleEscalated',
+        'VehicleParkingWatchCompleted',
+        'VehicleParkingWatchStarted',
         'SuspiciousVehicleRegistered',
         'SuspiciousVehicleRegistryUpdated',
       ].sort(),

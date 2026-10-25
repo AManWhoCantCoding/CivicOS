@@ -156,7 +156,7 @@ export function VehicleVerificationForm({
   return (
     <form
       onSubmit={submit}
-      className="space-y-5 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5"
+      className="civicos-surface space-y-5 rounded-xl p-5"
     >
       <div>
         <h2 className="text-sm font-semibold text-[var(--civicos-text)]">
@@ -173,7 +173,7 @@ export function VehicleVerificationForm({
         />
       ) : null}
       {!enabled ? (
-        <p className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-sm text-[var(--civicos-text-muted)]">
+        <p className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-2 text-sm leading-6 text-[var(--civicos-text-muted)]">
           {status === 'match_suggested'
             ? 'Xác nhận match trước khi mở xác minh.'
             : 'Quan sát này đã xác minh.'}
@@ -185,7 +185,7 @@ export function VehicleVerificationForm({
           name="result"
           required
           disabled={!enabled || loading}
-          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] disabled:opacity-60"
+          className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)] disabled:opacity-60"
         />
       </label>
       <label className="block text-sm text-[var(--civicos-text)]">
@@ -194,7 +194,7 @@ export function VehicleVerificationForm({
           name="ownerLookup"
           disabled={!enabled || loading}
           placeholder="Kết quả tra cứu chủ xe"
-          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] disabled:opacity-60"
+          className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)] disabled:opacity-60"
         />
       </label>
       <label className="block text-sm text-[var(--civicos-text)]">
@@ -204,7 +204,7 @@ export function VehicleVerificationForm({
           required
           rows={4}
           disabled={!enabled || loading}
-          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] disabled:opacity-60"
+          className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)] disabled:opacity-60"
         />
       </label>
       <div>
@@ -219,7 +219,7 @@ export function VehicleVerificationForm({
               value={latitude}
               onChange={(event) => setLatitude(event.target.value)}
               disabled={!enabled || loading}
-              className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] disabled:opacity-60"
+              className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)] disabled:opacity-60"
             />
           </label>
           <label className="block text-xs text-[var(--civicos-text-muted)]">
@@ -231,7 +231,7 @@ export function VehicleVerificationForm({
               value={longitude}
               onChange={(event) => setLongitude(event.target.value)}
               disabled={!enabled || loading}
-              className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] disabled:opacity-60"
+              className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)] disabled:opacity-60"
             />
           </label>
         </div>
@@ -240,12 +240,12 @@ export function VehicleVerificationForm({
             type="button"
             onClick={getLocation}
             disabled={!enabled || loading}
-            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] px-3 py-2 text-xs text-[var(--civicos-accent)] hover:border-[var(--civicos-accent)] disabled:opacity-50"
+            className="min-h-[44px] rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-2 text-xs text-[var(--civicos-accent)] hover:border-[var(--civicos-accent)] hover:text-[var(--civicos-accent-hover)] disabled:opacity-50"
           >
             Lấy vị trí hiện tại
           </button>
           <span
-            className="text-xs text-[var(--civicos-text-muted)]"
+            className="min-w-0 text-xs leading-5 text-[var(--civicos-text-muted)]"
             role="status"
           >
             {locationMessage}

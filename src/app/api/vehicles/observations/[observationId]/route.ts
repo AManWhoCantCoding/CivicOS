@@ -6,6 +6,7 @@ import {
   getObservation,
   confirmVehicleMatch,
   verifyVehicleObservation,
+  confirmVehicleParkingWatch,
 } from '@/modules/vehicles';
 import { getMobileObservation } from '@/modules/vehicles/projection';
 
@@ -73,6 +74,16 @@ export async function POST(
           user,
         ),
       });
+    if (body.command === 'confirm_parking_watch') {
+      if (body.acknowledged !== true)
+        return NextResponse.json(
+          { error: 'PARKING_WATCH_ACK_REQUIRED' },
+          { status: 400 },
+        );
+      return NextResponse.json({
+        parkingWatch: await confirmVehicleParkingWatch(observationId, user),
+      });
+    }
     if (body.command === 'confirm_match')
       return NextResponse.json({
         observation: await confirmVehicleMatch(observationId, user, {

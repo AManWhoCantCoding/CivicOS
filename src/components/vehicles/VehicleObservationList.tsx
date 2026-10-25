@@ -34,6 +34,26 @@ function statusLabel(status: string) {
   );
 }
 
+// Presentation-only status tone mapping: the Vietnamese label above stays the
+// source of truth and the icon keeps state readable without color alone.
+// Unknown status values stay neutral (muted) — no success styling by default.
+function statusBadgeClass(status: string): string {
+  if (status === 'verified')
+    return 'border-[var(--civicos-success)] text-[var(--civicos-success)]';
+  if (status === 'match_suggested')
+    return 'border-[var(--civicos-warning)] text-[var(--civicos-warning)]';
+  if (status === 'match_confirmed' || status === 'escalated')
+    return 'border-[var(--civicos-info)] text-[var(--civicos-info)]';
+  return 'border-[var(--civicos-border)] text-[var(--civicos-text-muted)]';
+}
+
+function statusIcon(status: string): string {
+  if (status === 'verified') return '●';
+  if (status === 'match_suggested') return '▲';
+  if (status === 'escalated') return '↗';
+  return '○';
+}
+
 export function VehicleObservationList({
   refreshKey = 0,
 }: {
@@ -91,7 +111,7 @@ export function VehicleObservationList({
         </div>
         <Link
           href="/field/offline"
-          className="text-xs text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline"
+          className="inline-flex min-h-[44px] items-center text-xs text-[var(--civicos-text-muted)] underline-offset-4 hover:text-[var(--civicos-accent)] hover:underline"
         >
           Xem hàng đợi offline
         </Link>
@@ -120,7 +140,7 @@ export function VehicleObservationList({
         />
       ) : null}
       {loadState === 'ready' && !items.length ? (
-        <div className="rounded-xl border border-dashed border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-6 text-sm text-[var(--civicos-text-muted)]">
+        <div className="rounded-xl border border-dashed border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-8 text-sm leading-6 text-[var(--civicos-text-muted)]">
           Chưa có quan sát phương tiện.
         </div>
       ) : null}
@@ -129,33 +149,42 @@ export function VehicleObservationList({
           {items.map((item) => (
             <article
               key={item.id}
-              className="rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-4"
+              className="civicos-surface rounded-xl p-4"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
+              <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
                   <Link
                     href={`/field/vehicles/${item.id}`}
-                    className="font-mono text-lg text-[var(--civicos-accent)] underline-offset-4 hover:underline"
+                    className="inline-flex min-h-[44px] min-w-0 items-center font-mono text-lg text-[var(--civicos-accent)] underline-offset-4 hover:underline"
                   >
-                    {item.plate}
+                    <span className="break-all">{item.plate}</span>
                   </Link>
-                  <p className="mt-1 text-xs text-[var(--civicos-text-muted)]">
+                  <p className="mt-1 text-xs leading-5 text-[var(--civicos-text-muted)]">
                     {new Date(item.observedAt).toLocaleString('vi-VN')}
                   </p>
                 </div>
-                <span className="inline-flex items-center gap-2 rounded-full border border-[var(--civicos-border)] px-3 py-1 text-xs text-[var(--civicos-text)]">
+                <span
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border bg-[var(--civicos-surface)] px-3 py-1 text-xs font-medium ${statusBadgeClass(item.status)}`}
+                >
+                  <span aria-hidden="true">{statusIcon(item.status)} </span>
                   {statusLabel(item.status)}
                 </span>
               </div>
-              <p className="mt-3 text-sm text-[var(--civicos-text)]">
+              <p className="mt-3 text-sm leading-6 text-[var(--civicos-text)]">
                 {item.description ?? 'Không có mô tả.'}
               </p>
-              <p className="mt-3 text-xs text-[var(--civicos-text-muted)]">
-                Vị trí: {item.latitude}, {item.longitude}
+              <p className="mt-3 text-xs leading-5 text-[var(--civicos-text-muted)]">
+                Vị trí:{' '}
+                <span className="font-mono break-all">
+                  {item.latitude}, {item.longitude}
+                </span>
               </p>
               {item.matchedRegistryId ? (
-                <p className="mt-2 text-xs text-[var(--civicos-text-muted)]">
-                  Match registry: {item.matchedRegistryId}
+                <p className="mt-2 text-xs leading-5 text-[var(--civicos-text-muted)]">
+                  Match registry:{' '}
+                  <span className="font-mono break-all">
+                    {item.matchedRegistryId}
+                  </span>
                 </p>
               ) : null}
             </article>

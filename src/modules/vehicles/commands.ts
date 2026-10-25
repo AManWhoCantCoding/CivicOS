@@ -25,6 +25,9 @@ import {
   canVerifyVehicle,
   isRegistryActive,
   VEHICLE_ESCALATION_SLA,
+  VEHICLE_PARKING_WATCH_SLA,
+  canStartVehicleParkingWatch,
+  shouldStartVehicleEscalationSla,
 } from './domain';
 import { observationState, registryState } from './projection';
 
@@ -102,13 +105,13 @@ async function assertObservationAccess(
   actor: VehicleActor,
   action: 'read' | 'mutate',
 ) {
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
   const observer = await prisma.user.findUnique({
     where: { id: observedById },
     select: { organizationUnitId: true },
   });
   if (
-    actor.organizationUnitId &&
-    observer?.organizationUnitId &&
+    !observer?.organizationUnitId?.trim() ||
     actor.organizationUnitId !== observer.organizationUnitId
   )
     throw new Error('FORBIDDEN');
@@ -182,6 +185,7 @@ export async function assertVehicleObservationAccess(
   actor: VehicleActor,
   action: 'read' | 'mutate',
 ) {
+  if (!actor.organizationUnitId?.trim()) throw new Error('FORBIDDEN');
   const observation = await prisma.vehicleObservation.findUnique({
     where: { id: observationId },
     select: { observedById: true },
@@ -495,16 +499,17 @@ export async function recordVehicleObservation(
           actor,
           'vehicle_verification',
         );
-      await createSla(
-        {
-          resourceType: 'VehicleObservation',
-          resourceId: observation.id,
-          rule: VEHICLE_ESCALATION_SLA,
-          startedAt: observedAt,
-          assigneeUserId: actor.id,
-        },
-        tx,
-      );
+      if (shouldStartVehicleEscalationSla(match ?? null))
+        await createSla(
+          {
+            resourceType: 'VehicleObservation',
+            resourceId: observation.id,
+            rule: VEHICLE_ESCALATION_SLA,
+            startedAt: observedAt,
+            assigneeUserId: actor.id,
+          },
+          tx,
+        );
       const creationAudit = await recordAudit(
         {
           actor,
@@ -870,9 +875,51 @@ export async function verifyVehicleObservation(
           resourceType: 'VehicleObservation',
           resourceId: input.observationId,
           status: 'active',
+          kind: { not: VEHICLE_ESCALATION_SLA.kind },
         },
         data: { status: 'completed', completedAt: new Date() },
       });
+      const parkingWatch = await tx.vehicleParkingWatch.findUnique({
+        where: { observationId: input.observationId },
+      });
+      if (parkingWatch?.status === 'active') {
+        const completedAt = verification.verifiedAt;
+        const completed = await tx.vehicleParkingWatch.update({
+          where: { id: parkingWatch.id, status: 'active' },
+          data: { status: 'completed', completedAt },
+        });
+        await appendEvent(tx, {
+          eventId: randomUUID(),
+          eventType: 'VehicleParkingWatchCompleted',
+          eventVersion: 1,
+          aggregateType: 'VehicleParkingWatch',
+          aggregateId: completed.id,
+          aggregateVersion: 2,
+          occurredAt: completedAt,
+          actor: actorSnapshot(actor),
+          payload: { observationId: input.observationId, status: 'completed' },
+          metadata: {},
+        });
+        await tx.slaInstance.updateMany({
+          where: {
+            resourceType: 'VehicleParkingWatch',
+            resourceId: completed.id,
+            kind: VEHICLE_PARKING_WATCH_SLA.kind,
+            status: { in: ['active', 'overdue'] },
+          },
+          data: { status: 'completed', completedAt },
+        });
+        await recordAudit(
+          {
+            actor,
+            resourceType: 'VehicleParkingWatch',
+            resourceId: completed.id,
+            operation: 'vehicle_parking_watch.completed',
+            metadata: { verificationId: verification.id },
+          },
+          tx,
+        );
+      }
       await recordAudit(
         {
           actor,
@@ -891,6 +938,89 @@ export async function verifyVehicleObservation(
     });
   } catch (error) {
     if (isRecordNotFound(error)) throw new Error('STALE_OBSERVATION');
+    throw error;
+  }
+}
+
+export async function confirmVehicleParkingWatch(
+  observationId: string,
+  actor: VehicleActor,
+) {
+  requireRole(actor, 'field_officer');
+  const observation = await prisma.vehicleObservation.findUnique({
+    where: { id: observationId },
+    select: { id: true, observedById: true },
+  });
+  if (!observation) throw new Error('OBSERVATION_NOT_FOUND');
+  await assertObservationAccess(
+    observationId,
+    observation.observedById,
+    actor,
+    'mutate',
+  );
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const existing = await tx.vehicleParkingWatch.findUnique({
+        where: { observationId },
+      });
+      if (existing) return existing;
+      const current = await tx.vehicleObservation.findUnique({
+        where: { id: observationId },
+        select: { status: true },
+      });
+      if (!current) throw new Error('OBSERVATION_NOT_FOUND');
+      if (!canStartVehicleParkingWatch(current.status))
+        throw new Error('PARKING_WATCH_NOT_ALLOWED');
+      const confirmedAt = new Date();
+      const watch = await tx.vehicleParkingWatch.create({
+        data: { observationId, confirmedAt, confirmedById: actor.id },
+      });
+      await appendEvent(tx, {
+        eventId: randomUUID(),
+        eventType: 'VehicleParkingWatchStarted',
+        eventVersion: 1,
+        aggregateType: 'VehicleParkingWatch',
+        aggregateId: watch.id,
+        aggregateVersion: 1,
+        occurredAt: confirmedAt,
+        actor: actorSnapshot(actor),
+        payload: {
+          observationId,
+          status: 'active',
+          continuousParkingOver48Hours: true,
+          declarationOrRegistrationMissing: true,
+        },
+        metadata: {},
+      });
+      await createSla(
+        {
+          resourceType: 'VehicleParkingWatch',
+          resourceId: watch.id,
+          rule: VEHICLE_PARKING_WATCH_SLA,
+          startedAt: confirmedAt,
+          assigneeUserId: actor.id,
+        },
+        tx,
+      );
+      await recordAudit(
+        {
+          actor,
+          resourceType: 'VehicleParkingWatch',
+          resourceId: watch.id,
+          operation: 'vehicle_parking_watch.confirmed',
+          metadata: { observationId },
+        },
+        tx,
+      );
+      return watch;
+    });
+  } catch (error) {
+    if (isUniqueConflict(error)) {
+      const existing = await prisma.vehicleParkingWatch.findUnique({
+        where: { observationId },
+      });
+      if (existing) return existing;
+    }
     throw error;
   }
 }
@@ -966,6 +1096,18 @@ export async function escalateVehicleObservation(
         actor: actorSnapshot(actor),
         payload: { organizationId, state: observationState(updated) },
         metadata: {},
+      });
+      await tx.slaInstance.updateMany({
+        where: {
+          resourceType: 'VehicleObservation',
+          resourceId: observationId,
+          kind: VEHICLE_ESCALATION_SLA.kind,
+          status: { in: ['active', 'overdue'] },
+        },
+        data: {
+          status: 'completed',
+          completedAt: updated.escalatedAt ?? new Date(),
+        },
       });
       await createInAppNotification(
         {

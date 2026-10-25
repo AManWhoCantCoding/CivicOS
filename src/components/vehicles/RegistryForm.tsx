@@ -132,7 +132,7 @@ export function RegistryForm({
     <form
       onSubmit={submit}
       noValidate
-      className="space-y-5 rounded-xl border border-[var(--civicos-border)] bg-[var(--civicos-surface)] p-5"
+      className="civicos-surface space-y-5 rounded-xl p-5"
     >
       <div>
         <h2 className="text-base font-semibold text-[var(--civicos-text)]">
@@ -149,7 +149,7 @@ export function RegistryForm({
         />
       ) : null}
       {initial ? (
-        <div className="rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-3 font-mono text-lg text-[var(--civicos-text)]">
+        <div className="min-w-0 rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface-muted)] px-3 py-3 font-mono text-lg break-all text-[var(--civicos-text)]">
           {initial.plate}
         </div>
       ) : (
@@ -158,18 +158,18 @@ export function RegistryForm({
           <input
             name="plate"
             required
-            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 font-mono text-lg text-[var(--civicos-text)] uppercase outline-none focus:border-[var(--civicos-focus)]"
+            className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 font-mono text-lg uppercase text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
           />
         </label>
       )}
       {!initial ? (
-        <>
+        <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm text-[var(--civicos-text)]">
             Nguồn
             <input
               name="source"
               required
-              className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
+              className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
             />
           </label>
           <label className="block text-sm text-[var(--civicos-text)]">
@@ -178,17 +178,17 @@ export function RegistryForm({
               name="validFrom"
               required
               type="datetime-local"
-              className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
+              className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
             />
           </label>
-        </>
+        </div>
       ) : (
         <label className="block text-sm text-[var(--civicos-text)]">
           Trạng thái
           <select
             name="status"
             defaultValue={initial.status}
-            className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
+            className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
           >
             {Array.from(new Set([...statusChoices, initial.status])).map(
               (status) => (
@@ -207,7 +207,7 @@ export function RegistryForm({
           required
           defaultValue={initial?.reason}
           rows={4}
-          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
+          className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
         />
       </label>
       <label className="block text-sm text-[var(--civicos-text)]">
@@ -217,7 +217,7 @@ export function RegistryForm({
           name="validUntil"
           type="datetime-local"
           defaultValue={toLocalDateTime(initial?.validUntil)}
-          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)]"
+          className="civicos-control mt-2 w-full border border-[var(--civicos-border)] bg-[var(--civicos-canvas)] px-3 py-2.5 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
         />
       </label>
       {message ? <FeedbackMessage message={message} tone={tone} /> : null}
