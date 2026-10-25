@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 
 import { DemoTargetStatus } from '@/components/demo/DemoTargetStatus';
 import {
@@ -191,6 +192,34 @@ export function startDemoFlow(input: {
 const CONTROL_CLASS =
   'min-h-[44px] rounded-lg border px-4 py-2 text-sm font-semibold transition motion-safe:duration-150 focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-accent)] disabled:cursor-not-allowed disabled:opacity-50';
 
+// Run-state badge chrome: text + icon (never color alone), token colors only.
+// The live-narrated status region stays the single source of truth for
+// state announcements; this badge is visual-only chrome.
+const DEMO_STATE_BADGES: Record<DemoRunState, { glyph: string; color: string }> =
+  {
+    idle: { glyph: '●', color: 'var(--civicos-success)' },
+    preflight: { glyph: '◌', color: 'var(--civicos-info)' },
+    authenticating: { glyph: '◌', color: 'var(--civicos-info)' },
+    running: { glyph: '◌', color: 'var(--civicos-info)' },
+    paused: { glyph: '▲', color: 'var(--civicos-warning)' },
+    blocked: { glyph: '⊘', color: 'var(--civicos-danger)' },
+    failed: { glyph: '⊘', color: 'var(--civicos-danger)' },
+    stopping: { glyph: '◌', color: 'var(--civicos-info)' },
+    cancelled: { glyph: '○', color: 'var(--civicos-text-muted)' },
+    completed: { glyph: '●', color: 'var(--civicos-success)' },
+    'completed-with-cleanup-pending': {
+      glyph: '▲',
+      color: 'var(--civicos-warning)',
+    },
+  };
+
+function demoRunBadgeStyle(): CSSProperties {
+  return {
+    background: 'var(--civicos-surface)',
+    borderColor: 'var(--civicos-border)',
+  };
+}
+
 export function DemoCenter(props: DemoCenterProps) {
   const { target } = props;
   const manifest = props.manifest ?? DEMO_DEFAULT_MANIFEST;
@@ -290,6 +319,7 @@ export function DemoCenter(props: DemoCenterProps) {
     canStartTarget: ready && target.canStart && bridgeReady,
     busy,
   });
+  const badge = DEMO_STATE_BADGES[runState];
   const total = manifest.steps.length;
   const currentStep =
     total === 0 ? null : (manifest.steps[Math.min(cursor, total - 1)] ?? null);
@@ -387,28 +417,43 @@ export function DemoCenter(props: DemoCenterProps) {
     <section
       data-testid="demo-center"
       aria-labelledby="demo-center-status"
-      className="mt-8 rounded-2xl border p-5"
+      className="mt-8 rounded-2xl border p-5 sm:p-6"
       style={{
         background: 'var(--civicos-surface)',
         borderColor: 'var(--civicos-border)',
         borderRadius: 'var(--civicos-radius-lg)',
       }}
     >
-      <h2
-        id="demo-center-status"
-        ref={statusRef}
-        tabIndex={-1}
-        className="text-lg font-semibold focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-accent)]"
-        style={{ color: 'var(--civicos-text)' }}
-      >
-        Demo Center
-      </h2>
-      <p
-        className="mt-1 font-mono text-xs tracking-[0.18em] uppercase"
-        style={{ color: 'var(--civicos-accent)' }}
-      >
-        LIVE_DEMO
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2
+            id="demo-center-status"
+            ref={statusRef}
+            tabIndex={-1}
+            className="text-lg font-semibold focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--civicos-accent)]"
+            style={{ color: 'var(--civicos-text)' }}
+          >
+            Demo Center
+          </h2>
+          <p
+            className="mt-1 font-mono text-xs tracking-[0.18em] uppercase"
+            style={{ color: 'var(--civicos-accent)' }}
+          >
+            LIVE_DEMO
+          </p>
+        </div>
+        <p
+          data-testid="demo-run-state-badge"
+          className="inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1 font-mono text-xs"
+          style={{
+            ...demoRunBadgeStyle(),
+            color: badge.color,
+          }}
+        >
+          <span aria-hidden="true">{badge.glyph}</span>
+          <span>{runState}</span>
+        </p>
+      </div>
 
       <div className="mt-4">
         <DemoTargetStatus
@@ -441,19 +486,42 @@ export function DemoCenter(props: DemoCenterProps) {
                   ] as const
                 ).map(([key, label]) => (
                   <p key={key}>
+                    <span aria-hidden="true">
+                      {props.bridgeReadiness?.dependencies[key] === 'ready'
+                        ? '● '
+                        : props.bridgeReadiness?.dependencies[key] ===
+                            'unavailable'
+                          ? '○ '
+                          : '◌ '}
+                    </span>
                     {label}:{' '}
-                    {props.bridgeReadiness?.dependencies[key] === 'ready'
-                      ? 'sẵn sàng'
-                      : props.bridgeReadiness?.dependencies[key] ===
-                          'unavailable'
-                        ? 'chưa sẵn sàng'
-                        : 'chưa xác định'}
+                    <span
+                      style={{
+                        color:
+                          props.bridgeReadiness?.dependencies[key] === 'ready'
+                            ? 'var(--civicos-success)'
+                            : props.bridgeReadiness?.dependencies[key] ===
+                                'unavailable'
+                              ? 'var(--civicos-danger)'
+                              : 'var(--civicos-text-muted)',
+                      }}
+                    >
+                      {props.bridgeReadiness?.dependencies[key] === 'ready'
+                        ? 'sẵn sàng'
+                        : props.bridgeReadiness?.dependencies[key] ===
+                            'unavailable'
+                          ? 'chưa sẵn sàng'
+                          : 'chưa xác định'}
+                    </span>
                   </p>
                 ))}
               </div>
               {!bridgeReady ? (
                 <>
-                  <p className="mt-2 font-semibold">Chưa thể bắt đầu demo.</p>
+                  <p className="mt-2 font-semibold text-[var(--civicos-danger)]">
+                    <span aria-hidden="true">⊘ </span>
+                    Chưa thể bắt đầu demo.
+                  </p>
                   {props.bridgeReadiness.reasons.map((reason) => (
                     <p key={reason}>{reason}</p>
                   ))}
@@ -472,7 +540,7 @@ export function DemoCenter(props: DemoCenterProps) {
       {ready ? (
         <>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <div
+            <dl
               className="rounded-xl border p-4 text-sm leading-6"
               style={{
                 borderColor: 'var(--civicos-border)',
@@ -480,27 +548,65 @@ export function DemoCenter(props: DemoCenterProps) {
                 color: 'var(--civicos-text)',
               }}
             >
-              <p>
-                Target: <strong>civicos_demo</strong>
-              </p>
-              <p>Phiên bản manifest: {manifest.version}</p>
-              <p>Persona: {manifest.personaAlias}</p>
-              <p>Bề mặt: Web và Mobile (chỉ đọc)</p>
-              <p>
-                Web: {target.web === 'ready' ? 'sẵn sàng' : 'không sẵn sàng'}
-              </p>
-              <p>Trạng thái: {runState}</p>
-              <p>
-                Bước hiện tại:{' '}
-                {runState === 'idle'
-                  ? 'chưa bắt đầu'
-                  : (currentStep?.id ?? '—')}
-              </p>
-              <p>
-                Tiến độ {Math.min(cursor, total)}/{total} bước
-              </p>
-              {personaAlias ? <p>Đã xác thực persona: {personaAlias}</p> : null}
-            </div>
+              {(
+                [
+                  ['Target:', 'civicos_demo', null],
+                  ['Phiên bản manifest:', manifest.version, null],
+                  ['Persona:', manifest.personaAlias, null],
+                ] as const
+              ).map(([label, value]) => (
+                <div key={label} className="flex justify-between gap-3">
+                  <dt className="shrink-0 text-[var(--civicos-text-muted)]">
+                    {label}
+                  </dt>
+                  <dd className="min-w-0 truncate font-medium">{value}</dd>
+                </div>
+              ))}
+              <div className="flex justify-between gap-3">
+                <dt className="shrink-0 text-[var(--civicos-text-muted)]">
+                  Bề mặt:
+                </dt>
+                <dd className="min-w-0 font-medium">Web và Mobile (chỉ đọc)</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="shrink-0 text-[var(--civicos-text-muted)]">
+                  Web:
+                </dt>
+                <dd className="min-w-0 font-medium">
+                  {target.web === 'ready' ? 'sẵn sàng' : 'không sẵn sàng'}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="shrink-0 text-[var(--civicos-text-muted)]">
+                  Trạng thái:
+                </dt>
+                <dd className="min-w-0 font-mono text-xs">{runState}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="shrink-0 text-[var(--civicos-text-muted)]">
+                  Bước hiện tại:
+                </dt>
+                <dd className="min-w-0 truncate font-mono text-xs">
+                  {runState === 'idle' ? 'chưa bắt đầu' : (currentStep?.id ?? '—')}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="shrink-0 text-[var(--civicos-text-muted)]">
+                  Tiến độ
+                </dt>
+                <dd className="min-w-0 font-medium">
+                  {Math.min(cursor, total)}/{total} bước
+                </dd>
+              </div>
+              {personaAlias ? (
+                <div className="flex justify-between gap-3">
+                  <dt className="shrink-0 text-[var(--civicos-text-muted)]">
+                    Đã xác thực persona:
+                  </dt>
+                  <dd className="min-w-0 truncate font-medium">{personaAlias}</dd>
+                </div>
+              ) : null}
+            </dl>
             <div
               className="rounded-xl border p-4"
               style={{
@@ -508,11 +614,17 @@ export function DemoCenter(props: DemoCenterProps) {
                 borderRadius: 'var(--civicos-radius-md)',
               }}
             >
+              <p
+                className="font-mono text-xs tracking-[0.16em] uppercase"
+                style={{ color: 'var(--civicos-text-muted)' }}
+              >
+                Tường thuật demo
+              </p>
               <div
                 role="status"
                 aria-live="polite"
                 aria-label="Tường thuật demo"
-                className="text-sm leading-6 motion-safe:transition-opacity motion-safe:duration-150"
+                className="mt-2 text-sm leading-6 motion-safe:transition-opacity motion-safe:duration-150"
                 style={{ color: 'var(--civicos-text)' }}
               >
                 {narration}
@@ -545,8 +657,9 @@ export function DemoCenter(props: DemoCenterProps) {
                 <p
                   data-testid="demo-cleanup-pending"
                   className="mt-2 text-sm leading-6 font-semibold"
-                  style={{ color: 'var(--civicos-text)' }}
+                  style={{ color: 'var(--civicos-warning)' }}
                 >
+                  <span aria-hidden="true">▲ </span>
                   Đã hoàn tất mutation, còn thao tác dọn dẹp chờ operator. Liên
                   hệ operator để xác nhận và dọn dẹp, không tự reset dữ liệu
                   demo.
@@ -555,7 +668,7 @@ export function DemoCenter(props: DemoCenterProps) {
               {safeEvidence ? (
                 <pre
                   data-testid="demo-safe-evidence"
-                  className="mt-2 overflow-auto text-xs leading-5"
+                  className="mt-2 overflow-auto rounded-lg bg-[var(--civicos-surface-muted)] p-2 text-xs leading-5"
                   aria-label="Safe demo evidence"
                 >
                   {JSON.stringify(safeEvidence)}
@@ -616,7 +729,7 @@ export function DemoCenter(props: DemoCenterProps) {
                 borderColor: 'var(--civicos-accent)',
                 borderRadius: 'var(--civicos-radius-sm)',
                 color: 'var(--civicos-accent)',
-                background: 'var(--civicos-surface)',
+                background: 'color-mix(in srgb, var(--civicos-accent) 8%, var(--civicos-surface))',
               }}
             >
               Chạy lại
@@ -625,9 +738,18 @@ export function DemoCenter(props: DemoCenterProps) {
         </>
       ) : (
         <p
-          className="mt-4 text-sm leading-6"
-          style={{ color: 'var(--civicos-text-muted)' }}
+          className="mt-4 rounded-xl border p-4 text-sm leading-6"
+          style={{
+            borderColor: 'var(--civicos-border)',
+            borderLeft: '3px solid var(--civicos-danger)',
+            borderRadius: 'var(--civicos-radius-md)',
+            color: 'var(--civicos-text-muted)',
+            background: 'var(--civicos-surface)',
+          }}
         >
+          <span aria-hidden="true" style={{ color: 'var(--civicos-danger)' }}>
+            ⊘{' '}
+          </span>
           Mã trạng thái: {toSafeReasonCode(target.reason)}
         </p>
       )}
@@ -636,15 +758,19 @@ export function DemoCenter(props: DemoCenterProps) {
         className="mt-4 rounded-xl border p-4 text-sm leading-6"
         style={{
           borderColor: 'var(--civicos-border)',
+          borderLeft: '3px solid var(--civicos-info)',
           borderRadius: 'var(--civicos-radius-md)',
           color: 'var(--civicos-text-muted)',
           background: 'var(--civicos-surface)',
         }}
       >
         <p className="font-semibold" style={{ color: 'var(--civicos-text)' }}>
+          <span aria-hidden="true" style={{ color: 'var(--civicos-info)' }}>
+            ℹ{' '}
+          </span>
           Mobile chỉ đọc
         </p>
-        <p>
+        <p className="mt-1">
           Cầu nối thiết bị do operator khởi động trước. Demo Center không khởi
           động bridge và không ghi dữ liệu từ mobile.
         </p>

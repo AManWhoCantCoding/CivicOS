@@ -13,7 +13,7 @@ export const PILOT01_SANDBOX = {
   prefix: 'civicos-pilot01-20261019-r01',
   database: 'civicos_demo',
   host: '127.0.0.1',
-  hostPort: '55432',
+  hostPort: '5433',
   postgresPort: '5432',
   image: 'postgis/postgis:16-3.4',
 } as const;
