@@ -27,8 +27,14 @@ playwright/.pytest_cache/
 /.agents/
 /AGENTS.md
 /CLAUDE.md
+/GEMINI.md
 /Lesson-learned.md
 /skills-lock.json
+/.claude/
+/.codex/
+/.gemini/
+/.mcp.json
+/.vscode/mcp.json
 /.opencode/skills
 /.claude/skills
 /.commandcode/
@@ -40,6 +46,8 @@ playwright/.pytest_cache/
 
 # Agent workflow documentation
 /docs/agents/
+/docs/superpowers/plans/
+/docs/archive/DESIGN_DOC_PROCESS.md
 /docs/archive/AI-AGENT-WORKFLOW.md
 /docs/archive/workflow.md
 /workflow-roles/
@@ -50,6 +58,17 @@ playwright/.pytest_cache/
 /scripts/check-scope.mjs
 /scripts/oc.mjs
 /scripts/verify.mjs
+/scripts/audit-bundle.py
+/scripts/lessons.mjs
+/scripts/setup-agent-tools.ps1
+/scripts/verify-skill-contract.mjs
+
+# Agent-specific experiments and contracts
+/tests/adaptive-reasoning.test.mjs
+/tests/developer-quota-router.test.mjs
+/tests/git-exception.test.mjs
+/tests/lessons.test.mjs
+/tests/multi-agent-reasoning.test.mjs
 
 # Legacy workflow backup artifacts
 *.bak-workflow-*
