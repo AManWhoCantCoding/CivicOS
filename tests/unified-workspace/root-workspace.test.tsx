@@ -290,8 +290,9 @@ describe('T-002 role-aware root workspace', () => {
       demoTarget: evaluateDemoTargetGuard({
         demoModeEnabled: true,
         demoDatabaseUrl:
-          'postgresql://demo-user:s3cret-token@localhost:5432/civicos_demo?schema=public',
-        databaseUrl: undefined,
+          'postgresql://demo-user:s3cret-token@localhost:5432/civicos?schema=public',
+        databaseUrl:
+          'postgresql://demo-user:s3cret-token@localhost:5432/civicos?schema=public',
       }),
     });
     expect(ready).toContain('data-testid="demo-center"');

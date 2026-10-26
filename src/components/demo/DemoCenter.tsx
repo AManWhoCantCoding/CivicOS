@@ -38,7 +38,7 @@ export const DEMO_DEFAULT_MANIFEST: DemoManifest = {
   sceneId: 'demo-center',
   surface: 'web',
   personaAlias: 'commander',
-  precondition: 'Target civicos_demo san sang va che do LIVE_DEMO dang bat.',
+  precondition: 'Target civicos san sang va che do LIVE_DEMO dang bat.',
   explanation: 'Huong dan demo tung buoc bang tieng Viet tren web.',
   expectedState: 'completed',
   mutationClass: 'none',
@@ -550,7 +550,7 @@ export function DemoCenter(props: DemoCenterProps) {
             >
               {(
                 [
-                  ['Target:', 'civicos_demo', null],
+                  ['Target:', 'civicos', null],
                   ['Phiên bản manifest:', manifest.version, null],
                   ['Persona:', manifest.personaAlias, null],
                 ] as const

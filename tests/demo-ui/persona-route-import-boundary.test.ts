@@ -15,9 +15,9 @@ vi.mock('@/modules/identity', () => {
 });
 
 const DEMO_URL =
-  'postgresql://demo:placeholder@localhost:5432/civicos_demo?schema=public';
+  'postgresql://demo:placeholder@localhost:5432/civicos?schema=public';
 const OTHER_URL =
-  'postgresql://app:placeholder@localhost:5432/civicos?schema=public';
+  'postgresql://app:placeholder@localhost:5432/civicos-prod?schema=public';
 
 afterEach(() => {
   vi.unstubAllEnvs();

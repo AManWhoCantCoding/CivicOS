@@ -18,7 +18,7 @@ export const DEMO_ACTIONS = [
 export type DemoAction = (typeof DEMO_ACTIONS)[number];
 export type NativeCommand = {
   mode: 'LIVE_DEMO';
-  target: 'civicos_demo';
+  target: 'civicos';
   origin: 'local' | 'demo';
   manifestVersion: string;
   sceneId: string;
@@ -130,7 +130,7 @@ function normalizedCommand(input: unknown): NativeCommand | null {
   if (
     input.mode !== 'LIVE_DEMO' ||
     typeof input.target !== 'string' ||
-    input.target.trim() !== 'civicos_demo' ||
+    input.target.trim() !== 'civicos' ||
     input.surface !== 'mobile'
   )
     return null;
@@ -154,7 +154,7 @@ function normalizedCommand(input: unknown): NativeCommand | null {
   if (!(DEMO_ACTIONS as readonly string[]).includes(action)) return null;
   return {
     mode: 'LIVE_DEMO',
-    target: 'civicos_demo',
+    target: 'civicos',
     origin: input.origin.trim() as 'local' | 'demo',
     manifestVersion: DEMO_MANIFEST_VERSION,
     sceneId: input.sceneId.trim(),
@@ -173,7 +173,7 @@ export function validateNativeCommand(
     return { ok: false, reason: 'BRIDGE_STALE_MODE' };
   if (
     typeof input.target !== 'string' ||
-    input.target.trim() !== 'civicos_demo'
+    input.target.trim() !== 'civicos'
   )
     return { ok: false, reason: 'BRIDGE_FORBIDDEN_TARGET' };
   if (

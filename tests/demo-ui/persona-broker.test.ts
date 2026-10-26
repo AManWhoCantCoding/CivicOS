@@ -11,7 +11,7 @@ const READY_REQUEST: PersonaBrokerRequest = {
   alias: 'commander',
   mode: 'LIVE_DEMO',
   guardState: 'ready',
-  target: 'civicos_demo',
+  target: 'civicos',
 };
 
 function makeDeps(overrides: Partial<PersonaBrokerDeps> = {}): {

@@ -169,7 +169,7 @@ export async function switchDemoPersona(
   }
   const guardState = rawInput.guardState;
   const target = rawInput.target;
-  if (guardState !== 'ready' || target !== 'civicos_demo') {
+  if (guardState !== 'ready' || target !== 'civicos') {
     return { status: 'blocked', reason: 'TARGET_NOT_READY' };
   }
   const rawAlias =

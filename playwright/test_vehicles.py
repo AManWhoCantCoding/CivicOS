@@ -28,7 +28,7 @@ def test_vehicle_registry_observation_match_confirm_verify_evidence_and_escalate
     app.submit_vehicle_observation(
         plate, f"Quan sát khớp registry {marker}", navigate=False
     )
-    app.sync_offline_queue(expected_synced=1)
+    app.sync_offline_queue(expected_synced=1, expected_total=1)
     offline_status.page.close()
     app.goto("/field/vehicles")
     observation_id = app.vehicle_observation_id_for_plate(plate)
@@ -51,10 +51,8 @@ def test_vehicle_registry_observation_match_confirm_verify_evidence_and_escalate
         ).fetchone()
     assert audit is not None
     assert audit[0]["evidenceId"] == evidence_id
-    app.logout()
-    app.login(accounts["commander"])
     app.open_vehicle_observation(observation_id)
-    app.escalate_vehicle(accounts["cross_org_field_officer"].organization_id)
+    app.escalate_vehicle("unit-cap-tren")
     evidence_resource_links = app.page.locator(
         f"a[href='/api/evidence?evidenceId={evidence_id}']"
     )
@@ -79,7 +77,7 @@ def test_duplicate_offline_vehicle_command_is_idempotent(
         plate, f"Quan sát replay {marker}", navigate=False
     )
     app.duplicate_last_offline_command()
-    app.sync_offline_queue(expected_synced=2)
+    app.sync_offline_queue(expected_synced=2, expected_total=2)
     offline_status.page.close()
 
     app.goto("/field/vehicles")
@@ -91,11 +89,13 @@ def test_vehicle_two_hour_sla_and_outbox_are_visible_after_controlled_time_advan
     app: CivicApp, accounts: dict[str, object], e2e_database
 ) -> None:
     marker = uuid.uuid4().hex[:8]
+    plate = f"32E2E{marker[:3].upper()}"
+    app.login(accounts["commander"])
+    app.create_registry_entry(plate, marker)
+    app.logout()
     app.login(accounts["field_officer"])
-    app.submit_vehicle_observation(
-        f"32E2E{marker[:3].upper()}", "SLA kiểm tra cuối tuần"
-    )
-    observation_id = app.vehicle_observation_id_for_plate(f"32E2E{marker[:3].upper()}")
+    app.submit_vehicle_observation(plate, "SLA kiểm tra cuối tuần")
+    observation_id = app.vehicle_observation_id_for_plate(plate)
     with e2e_database.connect() as connection:
         sla = connection.execute(
             'SELECT "id", "dueAt" FROM "SlaInstance" '

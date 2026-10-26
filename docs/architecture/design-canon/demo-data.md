@@ -29,7 +29,7 @@ Không ghép hai manifest thành một. Các count, state, credential, ordering 
 
 ## Boundary an toàn
 
-- Target reset/rebuild chỉ là `civicos_demo`; không reset `civicos`, production, `.env`, secrets, tile storage hoặc môi trường khác.
+- Target reset/rebuild chỉ là `civicos` trên Docker Compose local, PostgreSQL loopback port `5432`; không dùng shared/staging/production, `.env`, secrets, tile storage hoặc môi trường khác. Quyết định target: `docs/reset/decision-log.md` D-80.
 - Target/clock/confirmation phải được kiểm tra trước import hoặc mutation theo contract của work item.
 - Dùng dữ liệu synthetic; không đưa PII thật hoặc credential vào manifest, report, screenshot hoặc log.
 - Derived event/outbox/projection/SLA/notification/audit phải do command/worker sở hữu theo thiết kế, không insert trực tiếp chỉ để làm dữ liệu demo “đủ”.

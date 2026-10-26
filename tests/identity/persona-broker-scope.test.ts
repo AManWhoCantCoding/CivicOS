@@ -37,7 +37,7 @@ describe('T-003 AC-3 persona switch preserves authorization boundaries', () => {
         alias: 'commander',
         mode: 'LIVE_DEMO',
         guardState: 'ready',
-        target: 'civicos_demo',
+        target: 'civicos',
       },
       {
         ...base,
@@ -53,7 +53,7 @@ describe('T-003 AC-3 persona switch preserves authorization boundaries', () => {
         alias: 'unassigned',
         mode: 'LIVE_DEMO',
         guardState: 'ready',
-        target: 'civicos_demo',
+        target: 'civicos',
       },
       {
         ...base,

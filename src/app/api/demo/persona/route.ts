@@ -6,22 +6,23 @@ import {
   type PersonaBrokerRequest,
 } from '@/modules/demo/persona-broker';
 import { evaluateDemoTargetGuard } from '@/modules/demo/target-guard';
-import { dbNameFromUrl } from '../../../../../scripts/demo/demo-db';
+import { assertDemoTarget } from '../../../../../scripts/demo/demo-db';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
 /**
- * Prisma connects with DATABASE_URL at runtime. The demo guard resolver
- * prefers DEMO_DATABASE_URL, so verify the actual runtime database here and
- * fail closed when it is not exactly civicos_demo. Read-only; never mutates env.
+ * Prisma connects with DATABASE_URL at runtime. The demo guard resolves the
+ * canonical DATABASE_URL (the DEMO_DATABASE_URL alias may never diverge), so
+ * verify the actual runtime database here and fail closed when it is not
+ * exactly civicos. Read-only; never mutates env.
  */
 function isRuntimeDemoDatabase(): boolean {
   const raw = process.env.DATABASE_URL;
   if (!raw) return false;
   try {
-    return dbNameFromUrl(raw) === 'civicos_demo';
+    return assertDemoTarget(raw) === 'civicos';
   } catch {
     return false;
   }
@@ -43,7 +44,7 @@ function statusFor(reason: string): number {
 
 /**
  * Local/demo-only persona broker. Disabled in production, guarded by explicit
- * LIVE_DEMO mode and the exact runtime civicos_demo target before any
+ * LIVE_DEMO mode and the exact runtime civicos target before any
  * identity call. Composes the existing auth boundary and sets the same
  * httpOnly session cookie as /api/auth/session.
  */

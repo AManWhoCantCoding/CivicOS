@@ -5,7 +5,7 @@ import { DemoTargetStatus } from '@/components/demo/DemoTargetStatus';
 import { evaluateDemoTargetGuard } from '@/modules/demo/target-guard';
 
 const DEMO_URL =
-  'postgresql://demo-user:s3cret-token@localhost:5432/civicos_demo?schema=public';
+  'postgresql://demo-user:s3cret-token@localhost:5432/civicos?schema=public';
 const WRONG_URL =
   'postgresql://demo-user:s3cret-token@localhost:5432/civicos_demo_shadow?schema=public';
 
@@ -14,13 +14,13 @@ describe('T-001 demo target status component', () => {
     const result = evaluateDemoTargetGuard({
       demoModeEnabled: true,
       demoDatabaseUrl: DEMO_URL,
-      databaseUrl: undefined,
+      databaseUrl: DEMO_URL,
     });
     const html = renderToStaticMarkup(
       <DemoTargetStatus result={result} onStart={() => {}} />,
     );
     expect(html).toContain('role="status"');
-    expect(html).toContain('civicos_demo');
+    expect(html).toContain('civicos');
     expect(html).not.toContain('s3cret-token');
     expect(html).not.toContain('postgresql://');
     expect(html).not.toContain('disabled=""');

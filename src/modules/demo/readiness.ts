@@ -55,7 +55,7 @@ const PREREQUISITE_REASONS: Record<ReadinessDependencyKey, string> = {
     'Worker chưa sẵn sàng. Liên hệ operator để xác nhận worker trước khi chạy mobile.',
   map: 'Bản đồ chưa sẵn sàng. Liên hệ operator để xác nhận provider bản đồ trước khi chạy mobile.',
   target:
-    'Target demo chưa sẵn sàng. Liên hệ operator để cấu hình target civicos_demo trước khi chạy mobile.',
+    'Target demo chưa sẵn sàng. Liên hệ operator để cấu hình target civicos trước khi chạy mobile.',
   mode: 'Chế độ demo chưa bật. Liên hệ operator để bật chế độ LIVE_DEMO trước khi chạy mobile.',
   manifest:
     'Manifest mobile chưa hợp lệ. Liên hệ operator để kiểm tra manifest trước khi chạy mobile.',
@@ -115,7 +115,7 @@ async function resolveTarget(value: unknown): Promise<ReadinessStatus> {
     };
     if (
       target.state === 'ready' &&
-      target.target === 'civicos_demo' &&
+      target.target === 'civicos' &&
       target.canStart === true
     ) {
       return 'ready';

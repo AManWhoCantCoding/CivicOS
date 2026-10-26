@@ -6,7 +6,7 @@ import { DEMO_ACTIONS, DEMO_MANIFEST_VERSION } from './manifest';
 
 export const BRIDGE_MODE = 'LIVE_DEMO' as const;
 
-export const BRIDGE_TARGET = 'civicos_demo' as const;
+export const BRIDGE_TARGET = 'civicos' as const;
 
 export const BRIDGE_ORIGINS = ['local', 'demo'] as const;
 

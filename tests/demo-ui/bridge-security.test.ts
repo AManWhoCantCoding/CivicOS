@@ -9,7 +9,7 @@ import {
 function validCommand(overrides: Record<string, unknown> = {}) {
   return {
     mode: 'LIVE_DEMO',
-    target: 'civicos_demo',
+    target: 'civicos',
     origin: 'local',
     manifestVersion: '1',
     sceneId: 'scene-01',
@@ -21,8 +21,13 @@ function validCommand(overrides: Record<string, unknown> = {}) {
 }
 
 describe('T-008 bridge security boundary', () => {
-  it('rejects production and unknown targets', () => {
-    for (const target of ['civicos', 'civicos_demo_shadow', 'unknown', '']) {
+  it('rejects stale demo, lookalike and unknown targets', () => {
+    for (const target of [
+      'civicos_demo',
+      'civicos_demo_shadow',
+      'unknown',
+      '',
+    ]) {
       const result = validateBridgeCommand(validCommand({ target }));
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.reason).toBe('BRIDGE_FORBIDDEN_TARGET');
@@ -81,7 +86,7 @@ describe('T-008 bridge security boundary', () => {
       durationMs: 120,
     }));
     const rejected = [
-      validCommand({ target: 'civicos' }),
+      validCommand({ target: 'civicos_demo' }),
       validCommand({ origin: 'production' }),
       validCommand({ mode: 'LIVE_PROD' }),
       validCommand({ manifestVersion: '0' }),

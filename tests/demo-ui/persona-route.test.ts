@@ -19,9 +19,9 @@ import {
 } from '@/modules/identity';
 
 const DEMO_URL =
-  'postgresql://demo-user:pw@localhost:5432/civicos_demo?schema=public';
+  'postgresql://demo-user:pw@localhost:5432/civicos?schema=public';
 const PROD_URL =
-  'postgresql://app-user:pw@localhost:5432/civicos?schema=public';
+  'postgresql://app-user:pw@localhost:5432/civicos-prod?schema=public';
 
 const mocked = {
   authenticateLocal: vi.mocked(authenticateLocal),

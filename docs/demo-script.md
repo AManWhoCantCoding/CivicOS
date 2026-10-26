@@ -26,7 +26,7 @@ Sau demo, người xem phải thấy được:
 - **Thời lượng chuẩn:** 35–50 phút; mobile native là phần optional thêm 10–15 phút.
 - **Người trình bày:** đổi account khi cần để làm rõ boundary quyền.
 - **Khán giả:** product/domain, techlead và người review UX.
-- **Database:** chỉ sử dụng `civicos_demo`.
+- **Database:** chỉ sử dụng `civicos` của Docker Compose local trên loopback port `5432`; không dùng shared, staging hoặc production (D-80).
 
 ## 3. Preflight an toàn (Windows PowerShell)
 
@@ -42,23 +42,19 @@ docker compose exec -T postgres pg_isready -U civicos -d civicos
 npm run prisma:generate
 ```
 
-Docker Compose chỉ tạo database mặc định `civicos`. Tạo database demo một lần,
-không dùng `docker compose down -v`:
-
-```powershell
-$exists = docker compose exec -T postgres psql -U civicos -d civicos -tAc "SELECT 1 FROM pg_database WHERE datname = 'civicos_demo'"
-if ($exists.Trim() -ne "1") {
-  docker compose exec -T postgres psql -U civicos -d civicos -c "CREATE DATABASE civicos_demo;"
-}
-```
+Docker Compose đã tạo sẵn database demo mặc định `civicos` — không cần tạo
+database riêng. Không dùng `docker compose down -v` như cleanup mặc định.
 
 ### 3.2. Chọn target và fixed clock
 
-`demo:bootstrap` chạy migration bằng `DATABASE_URL`, còn seed ưu tiên
-`DEMO_DATABASE_URL`. Vì vậy, trong process bootstrap phải đặt **cả hai** về
+Prisma runtime đọc `DATABASE_URL`; đây là biến quyết định target demo, và seed
+cũng dùng chính nó. Target guard chỉ chấp nhận PostgreSQL `civicos` trên
+loopback port `5432`. `DEMO_DATABASE_URL` chỉ là alias tùy chọn và chỉ được
+chấp nhận khi cùng database — đặt **cả hai** cùng một giá trị. Không trỏ tới
+shared, staging hoặc production:
 
 ```powershell
-$demoDatabaseUrl = "postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public"
+$demoDatabaseUrl = "postgresql://civicos:civicos@localhost:5432/civicos?schema=public"
 $env:DEMO_DATABASE_URL = $demoDatabaseUrl
 $env:DATABASE_URL = $demoDatabaseUrl
 $env:DEMO_NOW = "2026-09-28T08:00:00.000Z"
@@ -76,6 +72,10 @@ npm run demo:bootstrap
 # Lệnh này không nằm trong demo:bootstrap.
 npx tsx scripts/demo/seed-land.ts
 ```
+
+`npm run demo:bootstrap` tự chạy preflight target và fixed clock từ environment/
+`.env` trước; chỉ khi kiểm tra pass mới chạy migrations rồi seed. Lệnh gọi
+`predemo:bootstrap` dựa trên lifecycle script chuẩn của npm.
 
 `demo:bootstrap` hiện gọi các seed module sau:
 
@@ -112,7 +112,7 @@ Mở hai PowerShell riêng. Đặt target demo trong **mỗi** terminal.
 ### Terminal A — worker
 
 ```powershell
-$env:DEMO_DATABASE_URL = "postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public"
+$env:DEMO_DATABASE_URL = "postgresql://civicos:civicos@localhost:5432/civicos?schema=public"
 $env:DATABASE_URL = $env:DEMO_DATABASE_URL
 $env:DEMO_NOW = "2026-09-28T08:00:00.000Z"
 $env:EVENT_WORKER_INTERVAL_MS = "500"
@@ -122,7 +122,7 @@ npm run worker
 ### Terminal B — Next.js
 
 ```powershell
-$env:DEMO_DATABASE_URL = "postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public"
+$env:DEMO_DATABASE_URL = "postgresql://civicos:civicos@localhost:5432/civicos?schema=public"
 $env:DATABASE_URL = $env:DEMO_DATABASE_URL
 $env:DEMO_NOW = "2026-09-28T08:00:00.000Z"
 npm run dev
@@ -331,7 +331,7 @@ port khác, thay port trong `CIVICOS_API_BASE_URL` rồi build/install lại.
 
 ## 8. Acceptance checklist cho người review
 
-- [ ] Mọi terminal demo dùng `civicos_demo`, không dùng `civicos`.
+- [ ] Mọi terminal demo dùng `civicos`, không dùng database khác.
 - [ ] `DEMO_NOW` có timezone và log seed cho thấy bốn intake, ba inspection và
       ba vehicle states.
 - [ ] Worker chạy riêng; health không có dead letter.
@@ -364,15 +364,15 @@ docker compose stop
 ```
 
 `stop` giữ dữ liệu. Khi cần chạy lại, mở terminal mới và lặp preflight/target
-setup để tránh dùng nhầm `civicos_demo` cho web local thông thường.
+setup để phân biệt phiên demo với web local thông thường.
 
 ### Reset sạch database demo
 
 Đây là destructive reset. Kiểm tra URL trước; lệnh hiện tại truncate các
-application models, **bao gồm land models**, nhưng không đụng database `civicos`.
+application models, **bao gồm land models**, trong database `civicos`.
 
 ```powershell
-$env:DEMO_DATABASE_URL = "postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public"
+$env:DEMO_DATABASE_URL = "postgresql://civicos:civicos@localhost:5432/civicos?schema=public"
 $env:DATABASE_URL = $env:DEMO_DATABASE_URL
 $env:DEMO_RESET_CONFIRM = "1"
 npm run demo:reset
@@ -387,14 +387,15 @@ npm run demo:reset -- --confirm
 
 Kết thúc bằng terminal mới hoặc bỏ các biến target demo trước khi chạy web thông
 thường. Không dùng `docker compose down -v` như thao tác cleanup mặc định vì nó
-có thể xoá named volume chứa cả hai database.
+có thể xoá named volume cùng toàn bộ database và dữ liệu local bên trong.
 
 ## 10. Các lỗi thường gặp khi demo
 
 | Hiện tượng                             | Cách xử lý                                                                                                                |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `DEMO_DATABASE_URL_REQUIRED`           | Đặt `DEMO_DATABASE_URL` trong terminal hiện tại.                                                                          |
-| `DEMO_RESET_REFUSED`                   | URL được chọn không có database name chính xác `civicos_demo`.                                                            |
+| `DEMO_DATABASE_URL_REQUIRED`           | Đặt `DATABASE_URL` (và `DEMO_DATABASE_URL` nếu terminal dùng alias) trong terminal hiện tại.                               |
+| `DEMO_RESET_REFUSED`                   | URL được chọn không có database name chính xác `civicos`.                                                                 |
+| `DEMO_TARGET_CONFLICT`                 | `DEMO_DATABASE_URL` khác `DATABASE_URL`; đặt cả hai cùng giá trị.                                                          |
 | `DEMO_RESET_CONFIRM_REQUIRED`          | Dùng `DEMO_RESET_CONFIRM=1` hoặc `--confirm`.                                                                             |
 | `DEMO_NOW_INVALID`                     | Dùng timestamp ISO-8601 có `Z` hoặc offset, ví dụ `2026-09-28T08:00:00.000Z`.                                             |
 | Login thất bại                         | Đảm bảo seed đã chạy, account `.local` và password `civicos-dev`; không dùng account production.                          |

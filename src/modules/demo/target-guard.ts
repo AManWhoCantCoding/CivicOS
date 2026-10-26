@@ -1,7 +1,7 @@
 import { resolveDemoTarget } from '../../../scripts/demo/demo-db';
 
 export type DemoGuardState = 'ready' | 'blocked';
-export type DemoGuardTarget = 'civicos_demo' | 'unknown' | 'forbidden';
+export type DemoGuardTarget = 'civicos' | 'unknown' | 'forbidden';
 
 export type DemoTargetGuardInput = {
   demoModeEnabled: boolean;
@@ -18,7 +18,7 @@ export type DemoTargetGuardResult = {
   message: string;
 };
 
-const DEMO_SAFE_LABEL = 'civicos_demo';
+const DEMO_SAFE_LABEL = 'civicos';
 
 function blocked(
   target: DemoGuardTarget,
@@ -63,6 +63,26 @@ export function evaluateDemoTargetGuard(
       message: `Target demo ${DEMO_SAFE_LABEL} đã sẵn sàng kiểm tra.`,
     };
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes('DEMO_TARGET_LOCAL_ONLY')
+    ) {
+      return blocked(
+        'forbidden',
+        'DEMO_TARGET_LOCAL_ONLY',
+        'Demo chỉ cho phép database civicos trên Docker Compose loopback:5432. Runner bị chặn, không đăng nhập persona.',
+      );
+    }
+    if (
+      error instanceof Error &&
+      error.message.includes('DEMO_TARGET_CONFLICT')
+    ) {
+      return blocked(
+        'forbidden',
+        'DEMO_TARGET_CONFLICT',
+        'DEMO_DATABASE_URL xung đột với DATABASE_URL runtime. Runner bị chặn, không đăng nhập persona.',
+      );
+    }
     if (
       error instanceof Error &&
       error.message.includes('DEMO_RESET_REFUSED')

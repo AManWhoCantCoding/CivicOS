@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
@@ -12,32 +14,47 @@ import {
   resolveResetTarget,
 } from '../../scripts/demo/reset';
 
-const CIVICOS_URL =
-  'postgresql://civicos:civicos@localhost:5432/civicos?schema=public';
 const DEMO_URL =
+  'postgresql://civicos:civicos@localhost:5432/civicos?schema=public';
+const STALE_DEMO_URL =
   'postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public';
+
+describe('demo bootstrap migration preflight', () => {
+  it('runs a pure preflight before the migration command', () => {
+    const packageJson = JSON.parse(
+      readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
+    ) as { scripts: Record<string, string> };
+
+    expect(packageJson.scripts['predemo:bootstrap']).toBe(
+      'node --env-file=.env --import=tsx scripts/demo/preflight.ts',
+    );
+    expect(packageJson.scripts['demo:bootstrap']).toBe(
+      'prisma migrate deploy && node --env-file=.env --import=tsx scripts/demo/seed.ts',
+    );
+  });
+});
 
 const savedDatabaseUrl = process.env.DATABASE_URL;
 afterEach(() => {
   process.env.DATABASE_URL = savedDatabaseUrl;
 });
 
-// Hoi quy: connection thuc te phai la target demo da validate, khong phai
-// DATABASE_URL moi truong (co the dang tro nham DB khac).
+// Hoi quy: DATABASE_URL la canonical (Prisma runtime doc chinh no); alias
+// DEMO_DATABASE_URL chi duoc chap nhan neu khop target da validate.
 describe('demo target binding', () => {
-  it('seed resolve sang civicos_demo du DATABASE_URL dang tro civicos', () => {
+  it('seed resolve sang civicos (canonical DATABASE_URL)', () => {
     const target = resolveSeedTarget({
-      DATABASE_URL: CIVICOS_URL,
+      DATABASE_URL: DEMO_URL,
       DEMO_DATABASE_URL: DEMO_URL,
     });
-    expect(target.dbName).toBe('civicos_demo');
+    expect(target.dbName).toBe('civicos');
     expect(target.url).toBe(DEMO_URL);
   });
 
   it('seed ap target da validate vao connection truoc khi nap Prisma/domain', () => {
-    process.env.DATABASE_URL = CIVICOS_URL;
+    process.env.DATABASE_URL = STALE_DEMO_URL;
     const target = resolveSeedTarget({
-      DATABASE_URL: CIVICOS_URL,
+      DATABASE_URL: DEMO_URL,
       DEMO_DATABASE_URL: DEMO_URL,
     });
     applyDemoTargetToEnv(target);
@@ -45,16 +62,18 @@ describe('demo target binding', () => {
   });
 
   it('reset tu choi DATABASE_URL mac dinh ngoai target demo', () => {
-    expect(() => assertDemoTarget(CIVICOS_URL)).toThrow('DEMO_RESET_REFUSED');
+    expect(() => assertDemoTarget(STALE_DEMO_URL)).toThrow(
+      'DEMO_RESET_REFUSED',
+    );
   });
 
-  it('reset resolve sang civicos_demo va doi confirm bat buoc', () => {
+  it('reset resolve sang civicos va doi confirm bat buoc', () => {
     const target = resolveResetTarget({
-      DATABASE_URL: CIVICOS_URL,
+      DATABASE_URL: DEMO_URL,
       DEMO_DATABASE_URL: DEMO_URL,
     });
-    expect(target.dbName).toBe('civicos_demo');
-    expect(target.displayUrl).toContain('civicos_demo');
+    expect(target.dbName).toBe('civicos');
+    expect(target.displayUrl).toContain('civicos');
     expect(target.displayUrl).not.toContain('civicos:civicos');
     expect(() => requireResetConfirm({})).toThrow(
       'DEMO_RESET_CONFIRM_REQUIRED',
@@ -64,31 +83,38 @@ describe('demo target binding', () => {
     ).not.toThrow();
   });
 
-  it('uu tien DEMO_DATABASE_URL raw va khong rewrite database name', () => {
-    const target = resolveDemoTarget(
-      'postgresql://civicos:civicos@localhost:5432/civicos?schema=public',
-      'postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public',
-    );
-    expect(target.url).toBe(
-      'postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public',
+  it('DATABASE_URL la canonical; alias DEMO_DATABASE_URL khong duoc chiem doat target', () => {
+    const target = resolveDemoTarget(DEMO_URL, DEMO_URL);
+    expect(target.url).toBe(DEMO_URL);
+    expect(() => resolveDemoTarget(DEMO_URL, STALE_DEMO_URL)).toThrow(
+      'DEMO_TARGET_CONFLICT',
     );
   });
 
-  it('tu choi raw DEMO_DATABASE_URL sai du DATABASE_URL dung', () => {
-    expect(() =>
-      resolveDemoTarget(
-        DEMO_URL,
-        'postgresql://civicos:civicos@localhost:5432/civicos?schema=public',
-      ),
-    ).toThrow('DEMO_RESET_REFUSED');
+  it('tu choi DATABASE_URL ngoai target demo du alias dung', () => {
+    expect(() => resolveDemoTarget(STALE_DEMO_URL, DEMO_URL)).toThrow(
+      'DEMO_RESET_REFUSED',
+    );
   });
 
-  it('tu choi database name gan giong civicos_demo', () => {
+  it('tu choi database name gan giong civicos ke ca khi alias khop', () => {
     expect(() =>
       assertDemoTarget(
         'postgresql://civicos:civicos@localhost:5432/civicos_demo_shadow',
       ),
     ).toThrow('DEMO_RESET_REFUSED');
+    expect(() =>
+      resolveDemoTarget(
+        'postgresql://civicos:civicos@localhost:5432/civicos_demo_shadow',
+        'postgresql://civicos:civicos@localhost:5432/civicos_demo_shadow',
+      ),
+    ).toThrow('DEMO_RESET_REFUSED');
+  });
+
+  it('alias DEMO_DATABASE_URL sai dinh dang bi tu choi', () => {
+    expect(() => resolveDemoTarget(DEMO_URL, '::not-a-url::')).toThrow(
+      'DEMO_TARGET_CONFLICT',
+    );
   });
 });
 

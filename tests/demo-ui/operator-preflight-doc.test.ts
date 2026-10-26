@@ -9,7 +9,8 @@ const runbook = readFileSync(
 
 describe('T-013 operator preflight documentation', () => {
   it('names the operator-owned infrastructure, readiness, provider, target, and start sequence', () => {
-    expect(runbook).toContain('civicos_demo');
+    expect(runbook).toContain('civicos');
+    expect(runbook).toContain('loopback port `5432`');
     expect(runbook).toContain('demo:bootstrap');
     expect(runbook).toContain('seed-land.ts');
     for (const dependency of [
@@ -28,7 +29,7 @@ describe('T-013 operator preflight documentation', () => {
   });
 
   it('uses placeholders rather than embedding secrets', () => {
-    expect(runbook).toContain('<DEMO_DATABASE_URL>');
+    expect(runbook).toContain('<DATABASE_URL>');
     expect(runbook).not.toMatch(/civicos-dev|password|token|cookie|secret/i);
   });
 });

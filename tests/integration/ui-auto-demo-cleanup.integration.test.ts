@@ -53,7 +53,7 @@ describe('T-011 cleanup handoff integration boundary', () => {
 
     expect(resetSource).toContain('target.dbName');
     expect(resetSource).toContain('requireResetConfirm');
-    expect(targetSource).toContain("['civicos_demo']");
+    expect(targetSource).toContain("['civicos']");
     expect(centerSource).toContain('demo-safe-evidence');
     expect(centerSource).toContain('JSON.stringify(safeEvidence)');
     expect(centerSource).not.toContain('demo:reset');

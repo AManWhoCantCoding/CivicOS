@@ -1,5 +1,7 @@
 # Runbook vận hành UI Auto Demo
 
+> **Trạng thái: CHƯA KHẢ DỤNG.** UI Auto Demo là tính năng dự kiến, chưa được xác nhận sẵn sàng để operator sử dụng. Tài liệu này là handoff/prerequisite cho tương lai, không phải bằng chứng tính năng đã hoàn tất; không khởi chạy hoặc vận hành UI Auto Demo theo các bước bên dưới. Để chạy demo thông thường hiện có, dùng [`docs/demo-script.md`](../../demo-script.md). D-80 chỉ quyết định target cho demo Compose thông thường và không thay thế các SOW/contract locked của UI Auto Demo.
+
 Runbook này dành cho operator của môi trường local/demo. Runner chỉ kiểm tra readiness và báo `blocked` hoặc `deferred`; operator sở hữu việc khởi động và dừng PostgreSQL, Next.js, worker, TileServer, Metro và emulator/device.
 
 ## 1. Preflight và target
@@ -14,21 +16,22 @@ docker compose exec -T postgres pg_isready -U civicos -d civicos
 npm run prisma:generate
 ```
 
-Target duy nhất là `civicos_demo`. Operator đặt `DEMO_DATABASE_URL` và `DATABASE_URL` trong từng process về `<DEMO_DATABASE_URL>`; giá trị phải có database name chính xác `civicos_demo`. Đặt fixed clock bằng ISO-8601 có timezone:
+Target duy nhất là `civicos` của Docker Compose local, PostgreSQL loopback port `5432` (D-80). Compose chỉ publish cổng trên loopback; target guard từ chối remote host hoặc port khác, kể cả khi database trùng tên. Prisma runtime đọc `DATABASE_URL`; đây là biến quyết định target demo. `DEMO_DATABASE_URL` chỉ là alias tùy chọn và chỉ được chấp nhận khi trùng database với `DATABASE_URL` — nếu khác, mọi demo action bị chặn trước side effect. Giá trị chuẩn khớp Compose/.env.example là `postgresql://civicos:civicos@localhost:5432/civicos?schema=public`. Đặt fixed clock bằng ISO-8601 có timezone:
 
 ```powershell
-$env:DEMO_DATABASE_URL = "<DEMO_DATABASE_URL>"
-$env:DATABASE_URL = $env:DEMO_DATABASE_URL
+$env:DATABASE_URL = "<DATABASE_URL>"   # database name chính xác: civicos
+$env:DEMO_DATABASE_URL = $env:DATABASE_URL   # alias tùy chọn, phải khớp
 $env:DEMO_NOW = "<ISO_8601_WITH_TIMEZONE>"
 ```
 
-Nếu target không đúng `civicos_demo`, thiếu provider hoặc readiness chưa đạt, runner phải dừng ở `blocked`; không đăng nhập persona và không mutation.
+Nếu target không đúng `civicos`, sai/khác giữa `DEMO_DATABASE_URL` và `DATABASE_URL`, thiếu provider hoặc readiness chưa đạt, runner phải dừng ở `blocked`; không đăng nhập persona và không mutation.
 
 ## 2. Bootstrap và readiness
 
-Operator chạy seed trước khi yêu cầu runner `Start`:
+Operator chạy seed trước khi yêu cầu runner `Start`. Trên máy mới: copy `.env`, cài dependency, start PostgreSQL (`docker compose up -d postgres`), generate Prisma client, rồi áp migrations trước khi seed. `npm run demo:bootstrap` tự chạy `predemo:bootstrap` để kiểm tra target và fixed clock trước; chỉ sau khi preflight pass mới chạy `prisma migrate deploy` rồi `node --env-file=.env --import=tsx scripts/demo/seed.ts`. Runbook này vẫn chỉ là handoff cho UI Auto Demo chưa khả dụng, không phải hướng dẫn operator chạy tính năng ngay:
 
 ```powershell
+npm run prisma:generate
 npm run demo:bootstrap
 npx tsx scripts/demo/seed-land.ts
 ```
@@ -39,7 +42,7 @@ Runner kiểm tra các dependency sau và chỉ báo kết quả:
 
 | Dependency      | Readiness cần operator xác nhận                          |
 | --------------- | -------------------------------------------------------- |
-| PostgreSQL      | kết nối được tới `civicos_demo`                          |
+| PostgreSQL      | kết nối được tới `civicos`                               |
 | Next.js         | web sẵn sàng trên cổng local đã cấu hình                 |
 | worker          | health không có dead letter và queue ổn định             |
 | TileServer      | chỉ khi asset CADN qua metadata gate                     |
@@ -54,7 +57,7 @@ Chỉ dùng `storage/tiles/cadn/cadn.mbtiles` sau khi metadata gate hiện có �
 
 ## 4. Start, pacing và surface
 
-Sau khi mọi readiness check pass, operator yêu cầu runner `Start`. Runner phải giữ mode `LIVE_DEMO`, target `civicos_demo`, local/demo persona provider và nhịp 3 giây giữa các action.
+Sau khi mọi readiness check pass, operator yêu cầu runner `Start`. Runner phải giữ mode `LIVE_DEMO`, target `civicos`, local/demo persona provider và nhịp 3 giây giữa các action.
 
 - Live mutation chỉ chạy trên web qua authorization, Assignment và masking hiện có.
 - Mobile giữ read-only qua `WriteGuard`; UAD-14 mobile write là forbidden, không có CTA hoặc fake success.
@@ -81,11 +84,11 @@ Dừng process bằng `Ctrl+C`, sau đó operator có thể giữ volume bằng:
 docker compose stop
 ```
 
-Destructive reset chỉ được operator thực hiện sau khi xác nhận đúng target `civicos_demo`, dùng guard hiện có:
+Destructive reset chỉ được operator thực hiện sau khi xác nhận đúng target `civicos`, dùng guard hiện có:
 
 ```powershell
-$env:DEMO_DATABASE_URL = "<DEMO_DATABASE_URL>"
-$env:DATABASE_URL = $env:DEMO_DATABASE_URL
+$env:DATABASE_URL = "<DATABASE_URL>"
+$env:DEMO_DATABASE_URL = $env:DATABASE_URL
 $env:DEMO_RESET_CONFIRM = "1"
 npm run demo:reset
 ```

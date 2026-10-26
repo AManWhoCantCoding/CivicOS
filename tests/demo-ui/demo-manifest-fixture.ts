@@ -12,7 +12,7 @@ export function makeValidManifest(
     sceneId: 'scene-01',
     surface: 'web',
     personaAlias: 'demo-guide',
-    precondition: 'Target civicos_demo da san sang.',
+    precondition: 'Target civicos da san sang.',
     explanation: 'Huong dan demo tung buoc bang tieng Viet.',
     expectedState: 'completed',
     mutationClass: 'none',

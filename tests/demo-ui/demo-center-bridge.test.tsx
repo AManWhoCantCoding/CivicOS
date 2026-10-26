@@ -7,13 +7,13 @@ import { evaluateDemoTargetGuard } from '@/modules/demo/target-guard';
 import { makeValidManifest } from './demo-manifest-fixture';
 
 const DEMO_URL =
-  'postgresql://demo-user:s3cret-token@localhost:5432/civicos_demo?schema=public';
+  'postgresql://demo-user:s3cret-token@localhost:5432/civicos?schema=public';
 
 const readyTarget = () =>
   evaluateDemoTargetGuard({
     demoModeEnabled: true,
     demoDatabaseUrl: DEMO_URL,
-    databaseUrl: undefined,
+    databaseUrl: DEMO_URL,
   });
 
 const mobileManifest = () =>

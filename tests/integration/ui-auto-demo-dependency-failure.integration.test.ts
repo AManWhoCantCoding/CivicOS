@@ -14,7 +14,7 @@ describe('T-010 dependency failure', () => {
           state: 'blocked',
           canStart: false,
           reason: 'DEMO_DEPENDENCY_UNAVAILABLE',
-          target: 'civicos_demo',
+          target: 'civicos',
           web: 'unavailable',
           message: 'safe prerequisite',
         },

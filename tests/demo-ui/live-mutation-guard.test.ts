@@ -27,7 +27,7 @@ function validPolicy(
 function validInput(overrides: Record<string, unknown> = {}) {
   return {
     demoModeEnabled: true,
-    targetName: 'civicos_demo',
+    targetName: 'civicos',
     surface: 'web',
     mutationClass: 'create',
     action: 'submit',
@@ -69,7 +69,7 @@ function makeFormHarness(requestSubmit: () => void) {
 }
 
 describe('T-007 AC-1 live mutation allowlist', () => {
-  it('permits an approved submit in explicit LIVE_DEMO on exact civicos_demo', () => {
+  it('permits an approved submit in explicit LIVE_DEMO on exact civicos', () => {
     expect(evaluateLiveMutation(validInput())).toEqual({
       ok: true,
       reason: 'LIVE_MUTATION_READY',
@@ -102,8 +102,8 @@ describe('T-007 AC-2 fail-closed preflight', () => {
 
   it('blocks any non-exact target', () => {
     for (const targetName of [
+      'civicos_demo',
       'civicos_demo_shadow',
-      'civicos',
       'unknown',
       'forbidden',
       '',
@@ -226,7 +226,7 @@ describe('T-007 AC-1 guarded submit delegates to the rendered form', () => {
       inner: createWebActionExecutor(makeFormHarness(requestSubmit)),
       guard: {
         demoModeEnabled: true,
-        targetName: 'civicos_demo',
+        targetName: 'civicos',
         surface: 'web',
         mutationClass: 'create',
         manifestVersion: DEMO_MANIFEST_VERSION,
@@ -249,7 +249,7 @@ describe('T-007 AC-1 guarded submit delegates to the rendered form', () => {
     const guarded = createLiveMutationExecutor({
       guard: {
         demoModeEnabled: true,
-        targetName: 'civicos_demo',
+        targetName: 'civicos',
         surface: 'web',
         mutationClass: 'create',
         manifestVersion: DEMO_MANIFEST_VERSION,
@@ -274,7 +274,7 @@ describe('T-007 AC-1 guarded submit delegates to the rendered form', () => {
     const guarded = createLiveMutationExecutor({
       guard: {
         demoModeEnabled: true,
-        targetName: 'civicos_demo',
+        targetName: 'civicos',
         surface: 'web',
         mutationClass: 'none',
         manifestVersion: DEMO_MANIFEST_VERSION,
@@ -300,7 +300,7 @@ describe('T-007 AC-1 guarded submit delegates to the rendered form', () => {
       },
       guard: {
         demoModeEnabled: true,
-        targetName: 'civicos_demo',
+        targetName: 'civicos',
         surface: 'web',
         mutationClass: 'create',
         manifestVersion: DEMO_MANIFEST_VERSION,
@@ -326,7 +326,7 @@ describe('T-007 AC-1 guarded submit delegates to the rendered form', () => {
     const guarded = createLiveMutationExecutor({
       guard: {
         demoModeEnabled: false,
-        targetName: 'civicos_demo',
+        targetName: 'civicos',
         surface: 'web',
         mutationClass: 'create',
         manifestVersion: DEMO_MANIFEST_VERSION,

@@ -8,13 +8,13 @@ import { evaluateDemoTargetGuard } from '@/modules/demo/target-guard';
 import { makeValidManifest } from '../demo-ui/demo-manifest-fixture';
 
 const DEMO_URL =
-  'postgresql://demo-user@localhost:5432/civicos_demo?schema=public';
+  'postgresql://demo-user@localhost:5432/civicos?schema=public';
 
 function readyTarget() {
   return evaluateDemoTargetGuard({
     demoModeEnabled: true,
     demoDatabaseUrl: DEMO_URL,
-    databaseUrl: undefined,
+    databaseUrl: DEMO_URL,
   });
 }
 
@@ -147,8 +147,13 @@ describe('T-008 AC-2 missing dependency blocks with prerequisite', () => {
   });
 
   it.each([
-    { state: 'ready', target: 'civicos', canStart: true },
-    { state: 'ready', target: 'civicos_demo', canStart: false },
+    { state: 'ready', target: 'civicos_demo' as const, canStart: true },
+    {
+      state: 'ready',
+      target: 'civicos_demo_shadow' as const,
+      canStart: true,
+    },
+    { state: 'ready', target: 'civicos' as const, canStart: false },
     'ready',
   ] as const)('rejects forged target readiness: %j', async (target) => {
     const readiness = await evaluateBridgeReadiness({

@@ -41,7 +41,7 @@ Business records are never inserted by the test code. Tests create and mutate In
 
 ## Fixture dữ liệu demo
 
-Fixture `demo_labels` trả về ba nhãn ổn định khớp với `scripts/demo/seed.ts`: `[DEMO-INCIDENT-01]` (Incident), `[DEMO] Quan karaoke Sao Dem` (Inspection) và `43DEMO01` (Vehicle). Dùng các nhãn này để chọn đúng hồ sơ khi trình diễn trên database demo cô lập (`civicos_demo`); mật khẩu demo là `civicos-dev`, chỉ dùng cho demo.
+Fixture `demo_labels` trả về ba nhãn ổn định khớp với `scripts/demo/seed.ts`: `[DEMO-INCIDENT-01]` (Incident), `[DEMO] Quan karaoke Sao Dem` (Inspection) và `43DEMO01` (Vehicle). Khi chạy demo thủ công, dùng các nhãn này trên database `civicos` của Docker Compose local tại loopback:5432; suite Playwright dùng database E2E cô lập `civicos_e2e` như mô tả ở trên. Mật khẩu demo là `civicos-dev`, chỉ dùng cho demo.
 
 ## Artifacts and cleanup
 

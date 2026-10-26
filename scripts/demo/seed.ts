@@ -67,14 +67,31 @@ export async function seedDemo(env: DemoEnv = process.env) {
   );
   let incidentId: string | null = registered.incidentId;
   if (!incidentId) {
-    await incidentCommands.verifyIntakeReport(registered.reportId, duty, {
-      classification: 'sufficient',
-      verificationNote: 'Demo xac minh du co so.',
+    const report = await prisma.intakeReport.findUniqueOrThrow({
+      where: { id: registered.reportId },
+      select: { status: true, confirmedAt: true, incidentId: true },
     });
-    const { incidentId: convertedId } =
-      await incidentCommands.convertIntakeToIncident(registered.reportId, duty);
-    if (!convertedId) throw new Error('SEED_CONVERT_FAILED');
-    incidentId = convertedId;
+    if (report.incidentId) {
+      incidentId = report.incidentId;
+    } else {
+      if (report.status === 'RECEIVED') {
+        await incidentCommands.verifyIntakeReport(registered.reportId, duty, {
+          classification: 'sufficient',
+          verificationNote: 'Demo xac minh du co so.',
+        });
+      } else if (report.status !== 'VERIFIED') {
+        throw new Error(`SEED_INTAKE_STATUS_UNSUPPORTED:${report.status}`);
+      }
+      if (!report.confirmedAt) {
+        await incidentCommands.confirmIntakeReport(registered.reportId, duty);
+      }
+    }
+    if (!incidentId) {
+      const { incidentId: convertedId } =
+        await incidentCommands.convertIntakeToIncident(registered.reportId, duty);
+      if (!convertedId) throw new Error('SEED_CONVERT_FAILED');
+      incidentId = convertedId;
+    }
   }
   const assigned = await prisma.assignment.findFirst({
     where: {

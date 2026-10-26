@@ -70,7 +70,7 @@ export function evaluateLiveMutation(
   }
   if (
     typeof input.targetName !== 'string' ||
-    input.targetName.trim() !== 'civicos_demo'
+    input.targetName.trim() !== 'civicos'
   ) {
     return { ok: false, reason: 'LIVE_MUTATION_BLOCKED_TARGET' };
   }

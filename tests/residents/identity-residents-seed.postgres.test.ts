@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
 // Database-backed coverage for T-002. No static Prisma/domain imports here:
-// the demo target guard must bind DATABASE_URL to civicos_demo before the
+// the demo target guard must bind DATABASE_URL to civicos before the
 // Prisma singleton is created, so everything below is dynamic-imported after
 // the seed preflight. Stable-key isolation keeps this repeat-safe on the
 // shared demo database; no cleanup deletes demo fixtures.
@@ -19,7 +19,7 @@ import {
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
 const DEMO_URL =
   process.env.DEMO_DATABASE_URL ??
-  'postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public';
+  'postgresql://civicos:civicos@localhost:5432/civicos?schema=public';
 const CIVICOS_URL =
   'postgresql://civicos:civicos@localhost:5432/civicos?schema=public';
 const DEMO_NOW_ISO = '2026-09-28T08:00:00.000Z';

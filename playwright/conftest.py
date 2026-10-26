@@ -158,11 +158,11 @@ DEMO_SCENARIO_LABELS = (
 
 REFERENCE_TABLES = (
     "Assignment",
-    "OutboxMessage",
+    "AuditEvent",
     "EventRecord",
+    "OutboxMessage",
     "ProjectionCheckpoint",
     "ProjectionRecord",
-    "AuditEvent",
     "Evidence",
     "SlaInstance",
     "Notification",
@@ -434,17 +434,18 @@ class E2EDatabase:
                 assert row is not None
                 role_ids[role_name] = row[0]
 
-            for unit_id, name, level in (
-                ("unit-nghia-tru", "Công an xã Nghĩa Trụ", "commune"),
-                ("unit-cap-tren", "Đơn vị cấp trên", "district"),
+            for unit_id, name, level, parent_id in (
+                ("unit-cap-tren", "Đơn vị cấp trên", "district", None),
+                ("unit-nghia-tru", "Công an xã Nghĩa Trụ", "commune", "unit-cap-tren"),
             ):
                 connection.execute(
                     "INSERT INTO \"OrganizationUnit\" "
-                    "(\"id\", \"name\", \"level\", \"active\", \"createdAt\", \"updatedAt\") "
-                    "VALUES (%s, %s, %s, TRUE, %s, %s) "
+                    "(\"id\", \"name\", \"level\", \"parentId\", \"active\", \"createdAt\", \"updatedAt\") "
+                    "VALUES (%s, %s, %s, %s, TRUE, %s, %s) "
                     "ON CONFLICT (\"id\") DO UPDATE SET \"name\" = EXCLUDED.\"name\", "
-                    "\"level\" = EXCLUDED.\"level\", \"active\" = TRUE, \"updatedAt\" = EXCLUDED.\"updatedAt\"",
-                    (unit_id, name, level, now, now),
+                    "\"level\" = EXCLUDED.\"level\", \"parentId\" = EXCLUDED.\"parentId\", "
+                    "\"active\" = TRUE, \"updatedAt\" = EXCLUDED.\"updatedAt\"",
+                    (unit_id, name, level, parent_id, now, now),
                 )
 
             for key, user_id, email, name, role_name, organization_id in ACCOUNT_SPECS:
@@ -818,7 +819,8 @@ def e2e_database(pytestconfig: pytest.Config) -> Iterator[E2EDatabase]:
 
 @pytest.fixture(scope="session")
 def e2e_services(
-    pytestconfig: pytest.Config, e2e_database: E2EDatabase
+    pytestconfig: pytest.Config,
+    e2e_database: E2EDatabase,
 ) -> Iterator[E2EServices]:
     browser_option = pytestconfig.getoption("--browser")
     browser_names = (
@@ -858,9 +860,16 @@ def demo_labels() -> tuple[str, str, str]:
 
 
 @pytest.fixture(autouse=True)
-def clean_business_data(e2e_database: E2EDatabase) -> Iterator[None]:
+def clean_business_data(
+    e2e_database: E2EDatabase, e2e_services: E2EServices
+) -> Iterator[None]:
+    e2e_services.stop()
     e2e_database.reset_business_data()
-    yield
+    try:
+        e2e_services.start()
+        yield
+    finally:
+        e2e_services.stop()
 
 
 @pytest.fixture(params=("desktop", "mobile"), ids=("desktop", "mobile"))

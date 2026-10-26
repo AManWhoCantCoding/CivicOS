@@ -22,9 +22,9 @@ import {
   resolveResetTarget,
 } from '../../scripts/demo/reset';
 
-const CIVICOS_URL =
-  'postgresql://civicos:civicos@localhost:5432/civicos?schema=public';
 const DEMO_URL =
+  'postgresql://civicos:civicos@localhost:5432/civicos?schema=public';
+const STALE_DEMO_URL =
   'postgresql://civicos:civicos@localhost:5432/civicos_demo?schema=public';
 const DEMO_NOW = '2026-09-28T08:00:00.000Z';
 
@@ -61,11 +61,23 @@ function mockPrisma() {
 }
 
 describe('demo foundation target boundary', () => {
-  it('rejects civicos database name', () => {
-    expect(() => assertDemoTarget(CIVICOS_URL)).toThrow('DEMO_RESET_REFUSED');
-    expect(() => resolveDemoTarget(DEMO_URL, CIVICOS_URL)).toThrow(
+  it('allows only the exact civicos main database; other names block', () => {
+    expect(resolveDemoTarget(DEMO_URL, undefined).dbName).toBe('civicos');
+    expect(() => assertDemoTarget(STALE_DEMO_URL)).toThrow(
       'DEMO_RESET_REFUSED',
     );
+  });
+
+  it('rejects a stale DEMO_DATABASE_URL alias that differs from runtime', () => {
+    expect(() => resolveDemoTarget(DEMO_URL, STALE_DEMO_URL)).toThrow(
+      'DEMO_TARGET_CONFLICT',
+    );
+    expect(() =>
+      preflightDemoFoundation({
+        DATABASE_URL: DEMO_URL,
+        DEMO_DATABASE_URL: STALE_DEMO_URL,
+      }),
+    ).toThrow('DEMO_TARGET_CONFLICT');
   });
 
   it('rejects near-miss demo database names', () => {
@@ -74,16 +86,57 @@ describe('demo foundation target boundary', () => {
         'postgresql://civicos:civicos@localhost:5432/civicos_demo_shadow',
       ),
     ).toThrow('DEMO_RESET_REFUSED');
+    expect(() =>
+      assertDemoTarget('postgresql://civicos:civicos@localhost:5432/civicos2'),
+    ).toThrow('DEMO_RESET_REFUSED');
   });
 
-  it('requires an explicit database url', () => {
-    expect(() => resolveDemoTarget(undefined, undefined)).toThrow(
-      'DEMO_DATABASE_URL_REQUIRED',
+  it('requires an explicit runtime database url even with an alias set', () => {
+    expect(() =>
+      resolveDemoTarget(undefined, 'postgresql://civicos:civicos@localhost:5432/civicos'),
+    ).toThrow('DEMO_DATABASE_URL_REQUIRED');
+  });
+
+  it('fail-closed voi scheme khong phai PostgreSQL du path trung civicos', () => {
+    expect(() => assertDemoTarget('http://localhost:3000/civicos')).toThrow(
+      'DEMO_TARGET_CONFLICT',
+    );
+    expect(() =>
+      resolveDemoTarget(DEMO_URL, 'http://localhost:3000/civicos'),
+    ).toThrow('DEMO_TARGET_CONFLICT');
+  });
+
+  it('chap nhan ca postgres: va postgresql: cho target civicos', () => {
+    expect(
+      resolveDemoTarget(
+        'postgres://civicos:civicos@localhost:5432/civicos',
+        undefined,
+      ).dbName,
+    ).toBe('civicos');
+    expect(assertDemoTarget('postgres://civicos:civicos@localhost:5432/civicos')).toBe(
+      'civicos',
     );
   });
 
+  it.each([
+    'postgresql://civicos:civicos@db.example:5432/civicos',
+    'postgresql://civicos:civicos@127.0.0.1:5433/civicos',
+    'postgresql://civicos:civicos@localhost:55432/civicos',
+  ])('rejects non-local or non-5432 demo endpoints: %s', (url) => {
+    expect(() => assertDemoTarget(url)).toThrow('DEMO_TARGET_LOCAL_ONLY');
+  });
+
+  it('rejects a remote same-name alias before accepting the target', () => {
+    expect(() =>
+      resolveDemoTarget(
+        DEMO_URL,
+        'postgresql://civicos:civicos@db.example:5432/civicos',
+      ),
+    ).toThrow('DEMO_TARGET_CONFLICT');
+  });
+
   it('reset keeps explicit confirmation and demo-only target', () => {
-    expect(() => resolveResetTarget({ DATABASE_URL: CIVICOS_URL })).toThrow(
+    expect(() => resolveResetTarget({ DATABASE_URL: STALE_DEMO_URL })).toThrow(
       'DEMO_RESET_REFUSED',
     );
     expect(() => requireResetConfirm({})).toThrow(
@@ -96,7 +149,10 @@ describe('demo foundation target boundary', () => {
 
   it('foundation preflight refuses wrong target before mutation', () => {
     expect(() =>
-      preflightDemoFoundation({ DATABASE_URL: CIVICOS_URL, DEMO_NOW }),
+      preflightDemoFoundation({
+        DATABASE_URL: STALE_DEMO_URL,
+        DEMO_NOW,
+      }),
     ).toThrow('DEMO_RESET_REFUSED');
   });
 });
@@ -124,11 +180,11 @@ describe('demo foundation clock preflight', () => {
     expect(first.now.toISOString()).toBe(DEMO_NOW);
     expect(second.now.toISOString()).toBe(first.now.toISOString());
     const foundation = preflightDemoFoundation({
-      DATABASE_URL: CIVICOS_URL,
+      DATABASE_URL: DEMO_URL,
       DEMO_DATABASE_URL: DEMO_URL,
       DEMO_NOW: DEMO_NOW,
     });
-    expect(foundation.target.dbName).toBe('civicos_demo');
+    expect(foundation.target.dbName).toBe('civicos');
     expect(foundation.now.toISOString()).toBe(DEMO_NOW);
   });
 });

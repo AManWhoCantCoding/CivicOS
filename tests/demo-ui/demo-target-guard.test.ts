@@ -3,11 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { evaluateDemoTargetGuard } from '@/modules/demo/target-guard';
 
 const DEMO_URL =
+  'postgresql://demo-user:s3cret-token@localhost:5432/civicos?schema=public';
+const STALE_URL =
   'postgresql://demo-user:s3cret-token@localhost:5432/civicos_demo?schema=public';
 const WRONG_URL =
   'postgresql://demo-user:s3cret-token@localhost:5432/civicos_demo_shadow?schema=public';
 const PROD_URL =
-  'postgresql://app-user:prod-secret@localhost:5432/civicos?schema=public';
+  'postgresql://app-user:prod-secret@db.example:5432/civicos?schema=public';
 
 describe('T-001 demo target guard matrix', () => {
   it('AC-1: demo mode disabled blocks before parsing target', () => {
@@ -21,23 +23,37 @@ describe('T-001 demo target guard matrix', () => {
     expect(result.web).toBe('unavailable');
   });
 
-  it('AC-3: exact civicos_demo plus valid mode returns sanitized ready', () => {
+  it('AC-3: exact civicos plus valid mode returns sanitized ready', () => {
     const result = evaluateDemoTargetGuard({
       demoModeEnabled: true,
       demoDatabaseUrl: DEMO_URL,
-      databaseUrl: PROD_URL,
+      databaseUrl: DEMO_URL,
     });
     expect(result.state).toBe('ready');
-    expect(result.target).toBe('civicos_demo');
+    expect(result.target).toBe('civicos');
     expect(result.canStart).toBe(true);
     expect(result.web).toBe('ready');
+  });
+
+  it('canonical DATABASE_URL wins; a stale DEMO_DATABASE_URL alias blocks', () => {
+    // Runtime Prisma reads DATABASE_URL, so the alias may never diverge: it
+    // must be forbidden even though the alias itself looks demo.
+    const result = evaluateDemoTargetGuard({
+      demoModeEnabled: true,
+      demoDatabaseUrl: DEMO_URL,
+      databaseUrl: STALE_URL,
+    });
+    expect(result.state).toBe('blocked');
+    expect(result.target).toBe('forbidden');
+    expect(result.canStart).toBe(false);
+    expect(result.reason).toBe('DEMO_TARGET_FORBIDDEN');
   });
 
   it('AC-2: wrong target returns safe forbidden blocked without connection', () => {
     const result = evaluateDemoTargetGuard({
       demoModeEnabled: true,
-      demoDatabaseUrl: WRONG_URL,
-      databaseUrl: undefined,
+      demoDatabaseUrl: undefined,
+      databaseUrl: WRONG_URL,
     });
     expect(result.state).toBe('blocked');
     expect(result.target).toBe('forbidden');
@@ -48,12 +64,27 @@ describe('T-001 demo target guard matrix', () => {
   it('AC-2: production target fails closed as forbidden', () => {
     const result = evaluateDemoTargetGuard({
       demoModeEnabled: true,
-      demoDatabaseUrl: PROD_URL,
-      databaseUrl: undefined,
+      demoDatabaseUrl: undefined,
+      databaseUrl: PROD_URL,
     });
     expect(result.state).toBe('blocked');
     expect(result.target).toBe('forbidden');
     expect(result.canStart).toBe(false);
+  });
+
+  it('rejects loopback URLs on any port other than Compose 5432', () => {
+    const result = evaluateDemoTargetGuard({
+      demoModeEnabled: true,
+      demoDatabaseUrl: undefined,
+      databaseUrl:
+        'postgresql://demo-user:s3cret-token@localhost:55432/civicos?schema=public',
+    });
+    expect(result).toMatchObject({
+      state: 'blocked',
+      target: 'forbidden',
+      canStart: false,
+      reason: 'DEMO_TARGET_LOCAL_ONLY',
+    });
   });
 
   it.each([[undefined], [''], ['not-a-url'], ['://missing-host']])(

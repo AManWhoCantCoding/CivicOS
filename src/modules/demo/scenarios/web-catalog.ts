@@ -130,11 +130,11 @@ const REGISTRY = 'src/components/navigation/feature-registry.ts';
 const SHELL_SPEC = 'tests/e2e/module-shell.spec.ts';
 
 const COMMANDER_READY =
-  'Đã đăng nhập persona demo commander trên target civicos_demo.';
-const DUTY_READY = 'Đã đăng nhập persona demo duty trên target civicos_demo.';
+  'Đã đăng nhập persona demo commander trên target civicos.';
+const DUTY_READY = 'Đã đăng nhập persona demo duty trên target civicos.';
 const OFFICE_READY =
-  'Đã đăng nhập persona demo office trên target civicos_demo.';
-const FIELD_READY = 'Đã đăng nhập persona demo field trên target civicos_demo.';
+  'Đã đăng nhập persona demo office trên target civicos.';
+const FIELD_READY = 'Đã đăng nhập persona demo field trên target civicos.';
 
 // Evidence-backed read/navigation catalog. Every entry traces to an existing
 // route/component/source or test anchor; live mutation belongs to T-007.
@@ -269,7 +269,7 @@ export const WEB_SCENARIO_CATALOG: readonly WebScenarioEntry[] = Object.freeze([
     '/public/land/lookup',
     null,
     'Tra cứu hồ sơ đất đai',
-    'Trên target civicos_demo; operator mở trực tiếp trang tra cứu công khai, runner chỉ kiểm tra trạng thái sẵn sàng.',
+    'Trên target civicos; operator mở trực tiếp trang tra cứu công khai, runner chỉ kiểm tra trạng thái sẵn sàng.',
     'Đọc trạng thái tra cứu mô phỏng đang hiển thị trên trang công khai.',
     {
       sources: [

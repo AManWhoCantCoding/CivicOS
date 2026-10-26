@@ -6,6 +6,7 @@ import { PrismaClient } from '@prisma/client';
 
 import { cleanupDemoEvidenceFiles } from '@/modules/platform/evidence/storage-adapter';
 import { BUSINESS_TABLES, resetDemo } from '../../scripts/demo/reset';
+import { dbNameFromUrl } from '../../scripts/demo/demo-db';
 
 const enabled = process.env.RUN_DB_TESTS === '1';
 const demoUrl = process.env.DEMO_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -15,6 +16,28 @@ const civicosUrl = process.env.CIVICOS_DATABASE_URL;
 
 const applicationModels: readonly string[] = BUSINESS_TABLES;
 
+// Tạo thư mục per-run duy nhất: mkdir KHÔNG recursive (throw EEXIST nếu tên
+// đã tồn tại) nên run này sở hữu chắc chắn một thư mục mới, không trùng với
+// nội dung evidence có sẵn.
+async function createRunRoot(parent: string): Promise<string> {
+  await mkdir(parent, { recursive: true });
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const candidate = path.join(
+      parent,
+      `demo-reset-integration-${Date.now().toString(36)}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`,
+    );
+    try {
+      await mkdir(candidate);
+      return candidate;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+    }
+  }
+  throw new Error('demo reset integration: het ten thu muc run unique');
+}
+
 describe.skipIf(!enabled)('demo reset integration', () => {
   let prisma: PrismaClient;
   let civicos: PrismaClient;
@@ -22,7 +45,7 @@ describe.skipIf(!enabled)('demo reset integration', () => {
   beforeAll(async () => {
     if (!demoUrl) {
       throw new Error(
-        'CIVICOS_DATABASE_URL or DEMO_DATABASE_URL is required for demo reset integration',
+        'DATABASE_URL or DEMO_DATABASE_URL is required for demo reset integration',
       );
     }
     if (!testDatabaseUrl) {
@@ -35,8 +58,14 @@ describe.skipIf(!enabled)('demo reset integration', () => {
         'CIVICOS_DATABASE_URL is required for demo reset integration',
       );
     }
-    expect(new URL(demoUrl).pathname).toMatch(/\/civicos_demo$/);
-    expect(new URL(civicosUrl).pathname).not.toMatch(/\/civicos_demo$/);
+    // Fail-closed boundary (dbNameFromUrl tu choi scheme khong phai PostgreSQL):
+    // - demoUrl phai tro dung target demo canonical "civicos";
+    // - civicosUrl (snapshot chi doc) phai la primary "civicos";
+    // - client test duoc inject KHONG duoc la "civicos".
+    expect(dbNameFromUrl(demoUrl)).toBe('civicos');
+    expect(dbNameFromUrl(civicosUrl)).toBe('civicos');
+    const testDbName = dbNameFromUrl(testDatabaseUrl);
+    expect(testDbName).not.toBe('civicos');
     prisma = new PrismaClient({
       datasources: { db: { url: testDatabaseUrl } },
     });
@@ -46,7 +75,8 @@ describe.skipIf(!enabled)('demo reset integration', () => {
     const database = await prisma.$queryRaw<[{ database: string }]>`
       SELECT current_database() AS database
     `;
-    expect(database[0]?.database).not.toBe('civicos_demo');
+    expect(database[0]?.database).toBe(testDbName);
+    expect(database[0]?.database).not.toBe('civicos');
   });
 
   afterAll(async () => {
@@ -79,14 +109,17 @@ describe.skipIf(!enabled)('demo reset integration', () => {
   it('dọn file Evidence demo, giữ file non-marker va tiles', async () => {
     const evidenceRoot = path.join(process.cwd(), 'storage', 'evidence');
     const tileRoot = path.join(process.cwd(), 'storage', 'tiles');
-    const demoKey = 'demo/resource/file.jpg';
-    const otherKey = 'other/resource/file.jpg';
-    const tilePath = path.join(tileRoot, 'sentinel.pbf');
-    await mkdir(path.join(evidenceRoot, 'demo/resource'), { recursive: true });
-    await mkdir(path.join(evidenceRoot, 'other/resource'), { recursive: true });
+    const runRoot = await createRunRoot(evidenceRoot);
+    const runId = path.basename(runRoot);
+    const demoKey = `${runId}/demo/resource/file.jpg`;
+    const otherKey = `${runId}/other/resource/file.jpg`;
+    // Tile fixture cung per-run unique: chi ghi/tao dung tep nay.
+    const tilePath = path.join(tileRoot, `${runId}.pbf`);
+    await mkdir(path.join(runRoot, 'demo', 'resource'), { recursive: true });
+    await mkdir(path.join(runRoot, 'other', 'resource'), { recursive: true });
     await mkdir(tileRoot, { recursive: true });
-    await writeFile(path.join(evidenceRoot, demoKey), 'demo');
-    await writeFile(path.join(evidenceRoot, otherKey), 'other');
+    await writeFile(path.join(runRoot, 'demo', 'resource', 'file.jpg'), 'demo');
+    await writeFile(path.join(runRoot, 'other', 'resource', 'file.jpg'), 'other');
     await writeFile(tilePath, 'tile');
     await prisma.evidence.createMany({
       data: [
@@ -136,15 +169,11 @@ describe.skipIf(!enabled)('demo reset integration', () => {
       );
       expect(removed).toEqual([]);
     } finally {
-      await rm(path.join(evidenceRoot, 'demo'), {
-        recursive: true,
-        force: true,
-      });
-      await rm(path.join(evidenceRoot, 'other'), {
-        recursive: true,
-        force: true,
-      });
-      await rm(tileRoot, { recursive: true, force: true });
+      // Chi don dep dung fixture cua run nay: thu muc run duy nhat + dung tep
+      // tile. Khong rm storage/tiles, storage/evidence goc hay thu muc nao co
+      // noi dung san.
+      await rm(runRoot, { recursive: true, force: true });
+      await rm(tilePath, { force: true });
     }
   });
 
@@ -154,7 +183,7 @@ describe.skipIf(!enabled)('demo reset integration', () => {
     expect(await prisma.user.count()).toBe(0);
   });
 
-  it('chi mutate civicos_demo va giu snapshot civicos', async () => {
+  it('chi mutate target demo (civicos) va giu snapshot civicos', async () => {
     const before = await civicos.$queryRaw<
       Array<{ database: string; users: bigint }>
     >`SELECT current_database() AS database, COUNT(*)::bigint AS users FROM "User"`;

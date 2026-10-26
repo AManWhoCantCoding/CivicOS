@@ -9,7 +9,7 @@ import { MOBILE_READ_TASK } from '../../scripts/demo/seed-mobile-readonly';
 import { seedDemo } from '../../scripts/demo/seed';
 
 // DB-backed T-010 boundary coverage. No static Prisma/domain imports here:
-// seedDemo binds DATABASE_URL to civicos_demo when it runs, so every module
+// seedDemo binds DATABASE_URL to civicos when it runs, so every module
 // below is dynamic-imported after the seed preflight. Stable-key isolation
 // keeps this repeat-safe on the shared demo database; only t010-prefixed
 // fixture rows are created, and they are removed in afterAll.

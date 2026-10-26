@@ -10,7 +10,7 @@ const BASE: PersonaBrokerRequest = {
   alias: 'commander',
   mode: 'LIVE_DEMO',
   guardState: 'ready',
-  target: 'civicos_demo',
+  target: 'civicos',
 };
 
 function makeDeps(
@@ -76,7 +76,7 @@ describe('T-003 AC-2 persona broker fail-closed rejections', () => {
   );
 
   it.each([
-    [{ guardState: 'blocked' as const, target: 'civicos_demo' as const }],
+    [{ guardState: 'blocked' as const, target: 'civicos' as const }],
     [{ guardState: 'ready' as const, target: 'forbidden' as const }],
     [{ guardState: 'ready' as const, target: 'unknown' as const }],
     [{ guardState: 'blocked' as const, target: 'forbidden' as const }],

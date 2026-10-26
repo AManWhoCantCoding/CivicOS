@@ -4,6 +4,8 @@ out/
 *.log
 *.tsbuildinfo
 .env
+.env.*
+!.env.example
 .env*.local
 prisma/*.db
 prisma/*.db-journal
@@ -46,6 +48,8 @@ playwright/.pytest_cache/
 
 # Agent workflow documentation
 /docs/agents/
+/docs/reset/agent-inventory.md
+/docs/reset/agent-setup/
 /docs/superpowers/plans/
 /docs/archive/DESIGN_DOC_PROCESS.md
 /docs/archive/AI-AGENT-WORKFLOW.md

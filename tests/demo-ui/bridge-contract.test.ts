@@ -12,7 +12,7 @@ import { DEMO_ACTIONS, DEMO_MANIFEST_VERSION } from '@/modules/demo/manifest';
 function validCommand(overrides: Record<string, unknown> = {}) {
   return {
     mode: 'LIVE_DEMO',
-    target: 'civicos_demo',
+    target: 'civicos',
     origin: 'local',
     manifestVersion: DEMO_MANIFEST_VERSION,
     sceneId: 'scene-01',
@@ -24,9 +24,9 @@ function validCommand(overrides: Record<string, unknown> = {}) {
 }
 
 describe('T-008 bridge contract shape', () => {
-  it('locks the LIVE_DEMO + civicos_demo + local/demo boundary', () => {
+  it('locks the LIVE_DEMO + civicos + local/demo boundary', () => {
     expect(BRIDGE_MODE).toBe('LIVE_DEMO');
-    expect(BRIDGE_TARGET).toBe('civicos_demo');
+    expect(BRIDGE_TARGET).toBe('civicos');
     expect([...BRIDGE_ORIGINS].sort()).toEqual(['demo', 'local']);
   });
 
@@ -36,7 +36,7 @@ describe('T-008 bridge contract shape', () => {
     if (!result.ok) return;
     expect(result.command).toEqual({
       mode: 'LIVE_DEMO',
-      target: 'civicos_demo',
+      target: 'civicos',
       origin: 'demo',
       manifestVersion: DEMO_MANIFEST_VERSION,
       sceneId: 'scene-01',
@@ -86,7 +86,7 @@ describe('T-008 bridge contract shape', () => {
     const json = serializeBridgeCommand(validated.command);
     expect(JSON.parse(json)).toEqual({
       mode: 'LIVE_DEMO',
-      target: 'civicos_demo',
+      target: 'civicos',
       origin: 'local',
       manifestVersion: DEMO_MANIFEST_VERSION,
       sceneId: 'scene-01',

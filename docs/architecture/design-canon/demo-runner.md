@@ -26,7 +26,7 @@ Runner điều phối UI thật; không phải Playwright test harness thay th�
 ## Runtime behavior được thiết kế
 
 - Phạm vi điều phối: web và native mobile.
-- Live mutation: web only và target `civicos_demo`; scene/manifest/cleanup/replay cần allowlist rõ.
+- Live mutation: web only và target `civicos` trên Docker Compose local, loopback port `5432`; scene/manifest/cleanup/replay cần allowlist rõ. Quyết định target: `docs/reset/decision-log.md` D-80.
 - Mobile: chỉ native UI và read APIs; giữ `WriteGuard`/read-only boundary.
 - Persona: đăng nhập/chuyển persona qua local/demo credential provider; không dùng production credential, không hard-code secret, không đổi cookie tùy tiện.
 - Pacing mặc định: 3.000 ms sau khi action settle và trước thao tác tiếp theo; readiness wait là cơ chế riêng.

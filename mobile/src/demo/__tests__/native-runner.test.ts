@@ -9,7 +9,7 @@ import {
 
 const command = (action = 'native-tap') => ({
   mode: 'LIVE_DEMO',
-  target: 'civicos_demo',
+  target: 'civicos',
   origin: 'local',
   manifestVersion: '1',
   sceneId: 'scene-1',

@@ -9,7 +9,7 @@ import { MOBILE_READ_TASK } from '../../scripts/demo/seed-mobile-readonly';
 // NOTE: this file must not statically import anything that transitively pulls
 // in @/lib/prisma (notably ./helpers -> ./fixtures). The Prisma client binds
 // DATABASE_URL at import time, while seedDemo switches the env target to
-// civicos_demo only when it runs. An early static import would pin the client
+// civicos only when it runs. An early static import would pin the client
 // to the outer DATABASE_URL (civicos). Runtime modules stay dynamic and run
 // only after seedDemo() has bound the demo target, and the PII assertion below
 // is intentionally inlined instead of importing ./helpers.

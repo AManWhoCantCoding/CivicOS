@@ -9,8 +9,8 @@ import { evaluateLiveMutation } from '@/modules/demo/live-mutation';
 // T-007 AC-4: safe replay reuses the existing domain dedupe/version
 // contract; unsafe replay never runs a duplicate mutation. The DB-backed
 // section below is explicitly gated: without RUN_DB_TESTS=1 and a database
-// URL it reports skipped, never a faked pass, and it refuses the shared
-// `civicos_demo` and `civicos` databases before opening any connection.
+// URL it reports skipped, never a faked pass, and it refuses the demo
+// database (`civicos`) before opening any connection.
 
 describe('T-007 AC-4 replay policy mirrors the existing domain contract', () => {
   const policy = {
@@ -21,7 +21,7 @@ describe('T-007 AC-4 replay policy mirrors the existing domain contract', () => 
   };
   const base = {
     demoModeEnabled: true,
-    targetName: 'civicos_demo',
+    targetName: 'civicos',
     surface: 'web',
     mutationClass: 'create',
     action: 'submit',

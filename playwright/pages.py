@@ -184,24 +184,45 @@ class CivicApp:
         )
         self.page.get_by_label("Tên nguồn tin", exact=True).fill(f"Nguồn E2E {marker}")
         self.page.get_by_label("Liên hệ nguồn tin", exact=True).fill("0900000000")
-        self.page.get_by_role("button", name="Tạo Incident", exact=True).click()
-        expect(self.page).to_have_url(re.compile(r"/incidents/[^/]+$"))
-        return self._last_path_segment()
+        self.page.get_by_role("button", name="Ghi nhận tin báo", exact=True).click()
+        expect(self.page).to_have_url(re.compile(r"/intake/[^/]+$"))
+        self.page.get_by_role("button", name="Lưu xác minh (không tạo Incident)", exact=True).click()
+        expect(self.page.get_by_text("Đã ghi nhận thao tác.", exact=True)).to_be_visible()
+        self.page.get_by_role("button", name="Xác nhận hồ sơ", exact=True).click()
+        expect(self.page.get_by_text("Đã ghi nhận thao tác.", exact=True)).to_be_visible()
+        with self.page.expect_response(
+            lambda response: response.request.method == "POST"
+            and "/api/intake-reports/" in response.url
+            and response.url.endswith("/commands")
+        ) as conversion:
+            self.page.get_by_role("button", name="Tạo Incident", exact=True).click()
+        response = conversion.value
+        assert response.ok, f"expected intake conversion to succeed, saw HTTP {response.status}"
+        body = response.json()
+        incident_id = body.get("incidentId")
+        assert isinstance(incident_id, str) and incident_id
+        expect(self.page.get_by_text("Đã tạo Incident từ tin báo.", exact=True)).to_be_visible()
+        self.open_incident(incident_id)
+        return incident_id
 
     def open_incident(self, incident_id: str) -> None:
         self.goto(f"/incidents/{incident_id}")
-        loaded = self.page.get_by_text("Incident", exact=True).first
+        loaded = self.page.get_by_role("heading", name=incident_id, exact=True)
         denied = self.page.get_by_role(
             "heading", name="Không có quyền truy cập", exact=True
         )
         expect(loaded.or_(denied).first).to_be_visible()
 
     def incident_status(self, status: str) -> None:
-        expect(self.page.get_by_text(status, exact=True).last).to_be_visible()
+        badge = self.page.locator(
+            "main > div > div.mt-10 > div > span.rounded-full"
+        )
+        expect(badge).to_have_count(1)
+        expect(badge).to_have_text(re.compile(rf"^[○▲●]\s*{re.escape(status)}$"))
 
     def incident_classify(self) -> None:
         self.page.get_by_role("button", name="Lưu phân loại", exact=True).click()
-        expect(self.page.get_by_text("Đã ghi nhận thao tác.", exact=True)).to_be_visible()
+        expect(self.page.get_by_role("status").filter(has_text="Đã ghi nhận thao tác.")).to_be_visible()
         self.page.reload(wait_until="domcontentloaded")
         self.incident_status("classified")
 
@@ -210,7 +231,7 @@ class CivicApp:
             "Đã kiểm tra thông tin ban đầu qua UI E2E."
         )
         self.page.get_by_role("button", name="Bắt đầu xác minh", exact=True).click()
-        expect(self.page.get_by_text("Đã ghi nhận thao tác.", exact=True)).to_be_visible()
+        expect(self.page.get_by_role("status").filter(has_text="Đã ghi nhận thao tác.")).to_be_visible()
         self.page.reload(wait_until="domcontentloaded")
         self.incident_status("verifying")
 
@@ -221,11 +242,11 @@ class CivicApp:
         self.page.get_by_role(
             "button", name="Gửi đề xuất kết quả", exact=True
         ).click()
-        expect(self.page.get_by_text("Đã gửi yêu cầu Approval.", exact=True)).to_be_visible()
-        expect(self.page.get_by_role("button", name="Phê duyệt", exact=True)).to_be_visible()
+        expect(self.page.get_by_role("status").filter(has_text="Đã gửi yêu cầu Approval.")).to_be_visible()
 
     def incident_approve(self, expected_status: str) -> None:
         self.page.get_by_role("button", name="Phê duyệt", exact=True).click()
+        expect(self.page.get_by_role("status").filter(has_text="Đã ghi nhận thao tác.")).to_be_visible()
         self.page.reload(wait_until="domcontentloaded")
         self.incident_status(expected_status)
 
@@ -234,7 +255,7 @@ class CivicApp:
             "Cần bổ sung thông tin trước khi quyết định."
         )
         self.page.get_by_role("button", name="Từ chối", exact=True).click()
-        expect(self.page.get_by_text("Đã ghi nhận thao tác.", exact=True)).to_be_visible()
+        expect(self.page.get_by_role("status").filter(has_text="Đã ghi nhận thao tác.")).to_be_visible()
         self.page.reload(wait_until="domcontentloaded")
         self.incident_status(expected_status)
 
@@ -242,16 +263,17 @@ class CivicApp:
         self.page.get_by_role(
             "button", name="Gửi yêu cầu đóng Incident", exact=True
         ).click()
-        expect(self.page.get_by_text("Đã gửi yêu cầu Approval.", exact=True)).to_be_visible()
-        expect(self.page.get_by_role("button", name="Phê duyệt", exact=True)).to_be_visible()
+        expect(self.page.get_by_role("status").filter(has_text="Đã gửi yêu cầu Approval.")).to_be_visible()
 
     def assign_incident(self, account: Any, *, expect_success: bool = True) -> None:
         checkbox = self.page.get_by_role(
             "checkbox", name=re.compile(re.escape(account.email))
         )
         expect(checkbox).to_be_visible()
-        checkbox.check()
-        self.page.get_by_role("button", name="Gửi phân công", exact=True).click()
+        checkbox.focus()
+        checkbox.press("Space")
+        expect(checkbox).to_be_checked()
+        self.page.get_by_role("button", name="Gửi phân công", exact=True).press("Enter")
         if expect_success:
             expect(self.page.get_by_text("Đã gửi phân công.", exact=True)).to_be_visible()
         else:
@@ -263,14 +285,22 @@ class CivicApp:
 
     def revoke_assignment(self, resource_id: str, reason: str) -> None:
         self.goto("/assignments")
-        assignment = self.page.locator("li").filter(has_text=resource_id).first
-        expect(assignment).to_be_visible()
-        assignment.get_by_role(
-            "button", name="Thu hồi Assignment", exact=True
-        ).click()
-        assignment.get_by_label("Lý do thu hồi", exact=True).fill(reason)
-        assignment.get_by_role("button", name="Xác nhận thu hồi", exact=True).click()
-        expect(self.page.get_by_text("Đã thu hồi Assignment.", exact=True)).to_be_visible()
+        expect(self.page.get_by_text("Assignment lifecycle", exact=True)).to_be_visible()
+        expect(self.page.get_by_text("Đang tải Assignment…", exact=True)).to_have_count(
+            0, timeout=15_000
+        )
+        row = self.page.locator("ol > li").filter(
+            has_text=re.compile(re.escape(resource_id))
+        )
+        expect(row).to_be_visible(timeout=15_000)
+        expect(row).to_have_count(1)
+        expect(row).to_contain_text(f"Incident · {resource_id}")
+        expect(row.locator("span.rounded-full")).to_have_text("●active")
+        row.get_by_role("button", name="Thu hồi Assignment", exact=True).click()
+        row.get_by_label("Lý do thu hồi", exact=True).fill(reason)
+        row.get_by_role("button", name="Xác nhận thu hồi", exact=True).click()
+        expect(self.page.get_by_role("status").filter(has_text="Đã thu hồi Assignment.")).to_have_text(re.compile(r"^●\s*Đã thu hồi Assignment\.$"))
+        expect(self.page.get_by_text(f"Lý do thu hồi: {reason}", exact=True)).to_be_visible()
 
     def expect_access_denied(self) -> None:
         heading = self.page.get_by_role(
@@ -289,9 +319,7 @@ class CivicApp:
         self.page.get_by_label("Tên cơ sở", exact=True).fill(name)
         self.page.get_by_label("Chủ cơ sở", exact=True).fill(f"Chủ E2E {marker}")
         self.page.get_by_label("Địa chỉ", exact=True).fill(f"Địa chỉ E2E {marker}")
-        self.page.get_by_label("Loại hình", exact=True).select_option(
-            label="Karaoke — Đ3 khoản 21(a)"
-        )
+        self.page.locator("#establishment-type").select_option(label="Karaoke — Đ3 khoản 21(a)")
         self.page.get_by_label(re.compile(r"^Mã giấy phép")).fill(f"GP-{marker}")
         self.page.get_by_role("button", name="Tạo cơ sở", exact=True).click()
         expect(self.page.get_by_text("Đã tạo cơ sở.", exact=True)).to_be_visible()
@@ -321,23 +349,23 @@ class CivicApp:
         )
         cadence = self.page.locator('select[name="cadenceMonths"]')
         expect(cadence).to_be_visible()
-        cadence.select_option("3")
-        expect(cadence).to_have_value("3")
+        cadence.select_option("6")
+        expect(cadence).to_have_value("6")
         assignee = self.page.get_by_label(re.compile(r"^Người được giao"))
         try:
             assignee.select_option(value=assignee_id)
         except Exception:
             assignee.fill(assignee_id)
-        self.page.get_by_role("button", name="Tạo lịch kiểm tra", exact=True).click()
+        with self.page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.endswith("/api/inspections")
+        ) as scheduled:
+            self.page.get_by_role("button", name="Tạo lịch kiểm tra", exact=True).click()
         expect(self.page.get_by_text("Đã lập lịch kiểm tra.", exact=True)).to_be_visible()
-        self.goto("/inspections/establishments")
-        link = self.page.locator(
-            'a[href^="/inspections/"]:not([href^="/inspections/establishments/"])'
-        ).first
-        expect(link).to_be_visible()
-        href = link.get_attribute("href")
-        assert href is not None
-        return href.rstrip("/").split("/")[-1]
+        body = scheduled.value.json()
+        inspection = body.get("inspection")
+        assert isinstance(inspection, dict) and isinstance(inspection.get("id"), str)
+        return inspection["id"]
 
     def open_inspection(self, inspection_id: str) -> None:
         self.goto(f"/inspections/{inspection_id}")
@@ -350,7 +378,9 @@ class CivicApp:
             "completed": "Đã hoàn tất",
         }
         badge = self.page.get_by_test_id("inspection-status")
-        expect(badge).to_have_text(labels.get(status, status))
+        icon = {"scheduled": "○", "in_progress": "▲", "completed": "●"}.get(status)
+        assert icon is not None
+        expect(badge).to_have_text(re.compile(rf"^{icon}\s*{re.escape(labels.get(status, status))}$"))
 
     def fill_required_checklist(self, marker: str) -> None:
         for label, value in (
@@ -374,7 +404,10 @@ class CivicApp:
                 "buffer": b"\xff\xd8\xff\xe0civicos-e2e\xff\xd9",
             }
         )
-        expect(self.page.get_by_text(f"Đã chọn: {filename}", exact=True)).to_be_visible()
+        expect(
+            self.page.locator("dt").filter(has_text="Tệp đã chọn")
+            .locator("xpath=following-sibling::dd[1]")
+        ).to_have_text(filename)
         if expect_uploaded:
             expect(
                 self.page.get_by_text(
@@ -434,18 +467,23 @@ class CivicApp:
 
     def recommendation_approve(self) -> None:
         self.page.get_by_role("button", name="Duyệt", exact=True).click()
-        expect(self.page.get_by_text("Đã duyệt đề xuất.", exact=True)).to_be_visible()
-        expect(self.page.get_by_text("approved", exact=True)).to_be_visible()
+        expect(self.page.get_by_role("status").filter(has_text="Đã duyệt đề xuất.")).to_be_visible()
+        badge = self.page.locator("section").filter(has=self.page.get_by_role("heading", name="Phê duyệt đề xuất", exact=True)).locator("span.rounded-full").filter(has_text=re.compile(r"^●\s*approved$"))
+        expect(badge).to_have_count(1)
+        expect(badge).to_have_text(re.compile(r"^[○▲●]\s*approved$"))
 
     def recommendation_reject(self, reason: str) -> None:
         self.page.get_by_label("Lý do từ chối", exact=True).fill(reason)
         self.page.get_by_role("button", name="Từ chối", exact=True).click()
-        expect(self.page.get_by_text("Đã từ chối đề xuất.", exact=True)).to_be_visible()
-        expect(self.page.get_by_text("rejected", exact=True)).to_be_visible()
+        expect(self.page.get_by_role("status").filter(has_text="Đã từ chối đề xuất.")).to_be_visible()
+        badge = self.page.locator("section").filter(has=self.page.get_by_role("heading", name="Phê duyệt đề xuất", exact=True)).locator("span.rounded-full").filter(has_text=re.compile(r"^⚠\s*rejected$"))
+        expect(badge).to_have_count(1)
+        expect(badge).to_have_text(re.compile(r"^⚠\s*rejected$"))
 
     def open_offline_status(self) -> None:
         self.goto("/field/offline")
         expect(self.page.get_by_role("heading", name="Trạng thái thiết bị", exact=True)).to_be_visible()
+        self.page.wait_for_load_state("networkidle")
 
     def open_offline_status_tab(self) -> "CivicApp":
         status_page = self.page.context.new_page()
@@ -454,12 +492,32 @@ class CivicApp:
         return status_app
 
     def expect_offline(self) -> None:
-        expect(self.page.get_by_text("Offline", exact=True)).to_be_visible()
+        self.page.context.set_offline(True)
+        self._poll_value(
+            lambda: self.page.evaluate("navigator.onLine"),
+            expected=False,
+            describe="browser page to report offline",
+        )
+        self._poll_value(
+            lambda: (
+                self.page.evaluate(
+                    "() => window.dispatchEvent(new Event('offline'))"
+                ),
+                self.page.locator('[data-online="false"]').count(),
+            )[1],
+            expected=1,
+            describe="offline status indicator to render",
+        )
+        expect(self.page.locator('[data-online="false"]')).to_have_attribute("data-online", "false")
         expect(self.page.get_by_text("Đang ngoại tuyến. Thao tác mới sẽ chờ đồng bộ.", exact=True)).to_be_visible()
 
     def expect_queue_count(self, label: str, value: str) -> None:
-        definition = self.page.get_by_text(label, exact=True).locator("..")
-        expect(definition.get_by_text(value, exact=True)).to_be_visible()
+        test_id = {
+            "Chờ gửi": "queue-pending-count",
+            "Lỗi/từ chối": "queue-failed-count",
+            "Đã xác nhận": "queue-synced-count",
+        }[label]
+        expect(self.page.get_by_test_id(test_id)).to_have_text(value)
 
     def sync_offline_queue(
         self,
@@ -475,7 +533,7 @@ class CivicApp:
             while True:
                 last = self.page.evaluate(
                     """
-                    () => {
+                    async () => {
                       const queue = JSON.parse(
                         localStorage.getItem('civicos:offline-queue') || '[]',
                       );
@@ -486,13 +544,28 @@ class CivicApp:
                       return {
                         total: items.length,
                         terminal,
-                        statuses: items.map((item) => `${item.commandType}:${item.status}:${item.error ?? ''}`),
+                        localItems: items.map(({ id, commandType, status, error }) => ({ id, commandType, status, error })),
+                        online: navigator.onLine,
+                        dataOnline: document.querySelector('[data-online]')?.getAttribute('data-online') ?? null,
+                        renderedQueueCounts: Object.fromEntries(
+                          [...document.querySelectorAll('[data-testid]')]
+                            .filter((element) => /queue|sync/i.test(element.getAttribute('data-testid') || ''))
+                            .map((element) => [element.getAttribute('data-testid'), element.textContent?.trim()]),
+                        ),
                       };
                     }
                     """
                 )
                 if last["total"] == expected_total and last["terminal"] == expected_total:
-                    return
+                    if expected_synced is not None:
+                        try:
+                            self.expect_queue_count("Đã xác nhận", str(expected_synced))
+                        except AssertionError:
+                            break
+                        else:
+                            return
+                    else:
+                        return
                 if time.monotonic() >= deadline:
                     break
                 try:
@@ -500,6 +573,29 @@ class CivicApp:
                 except Exception:
                     pass
                 time.sleep(0.25)
+            try:
+                last["serverCommands"] = self.page.evaluate(
+                    """async (localIds) => {
+                      try {
+                        const response = await fetch('/api/sync');
+                        const body = await response.json();
+                        const ids = new Set(localIds);
+                        return {
+                          httpStatus: response.status,
+                          commands: Array.isArray(body.commands)
+                            ? body.commands
+                                .filter(({ clientCommandId }) => ids.has(clientCommandId))
+                                .map(({ clientCommandId, status, error }) => ({ clientCommandId, status, error }))
+                            : [],
+                        };
+                      } catch (error) {
+                        return { error: String(error) };
+                      }
+                    }""",
+                    [item["id"] for item in last["localItems"]],
+                )
+            except Exception as error:
+                last["serverCommands"] = {"error": str(error)}
             raise AssertionError(
                 "timed out after 15000ms waiting for offline queue to account "
                 f"for all commands as synced or rejected with no pending items; "
@@ -614,7 +710,7 @@ class CivicApp:
                 "buffer": b"\xff\xd8\xff\xe0civicos-vehicle\xff\xd9",
             }
         )
-        expect(self.page.get_by_text(f"Đã chọn: {evidence_name}", exact=True)).to_be_visible()
+        expect(self.page.get_by_text(evidence_name, exact=True)).to_be_visible()
         expect(self.page.get_by_text(f"Đã tải {evidence_name} lên máy chủ.", exact=True)).to_be_visible()
         self.page.get_by_role("button", name="Lưu xác minh", exact=True).click()
         expect(self.page.get_by_text("Đã ghi nhận xác minh.", exact=True)).to_be_visible()
@@ -631,11 +727,14 @@ class CivicApp:
         self.vehicle_status("escalated")
 
     def worker_health(self) -> dict[str, Any]:
-        response: APIResponse = self.page.context.request.get(
-            self.url("/api/health/worker")
+        result = self.page.evaluate(
+            """async () => {
+              const response = await fetch('/api/health/worker', { cache: 'no-store' });
+              return { status: response.status, body: await response.json() };
+            }"""
         )
-        assert response.ok, response.text()
-        body = response.json()
+        assert result["status"] == 200, f"worker health HTTP {result['status']}: {result['body']!r}"
+        body = result["body"]
         assert isinstance(body, dict)
         return body
 
@@ -700,7 +799,7 @@ class CivicApp:
         if match and match.group(1) != "establishments":
             return match.group(1)
         link = self.page.locator(
-            'a[href^="/inspections/"]:not([href^="/inspections/establishments/"])'
+            'a[href^="/inspections/"]:not([href^="/inspections/establishments/"]):not([href="/inspections/reports"])'
         ).first
         expect(link).to_be_visible()
         href = link.get_attribute("href")

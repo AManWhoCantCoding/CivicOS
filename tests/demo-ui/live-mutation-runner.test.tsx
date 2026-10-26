@@ -57,15 +57,16 @@ function mutationManifest(
 
 const liveContext = {
   demoModeEnabled: true,
-  targetName: 'civicos_demo',
+  targetName: 'civicos',
 };
 
 const readyTarget = () =>
   evaluateDemoTargetGuard({
     demoModeEnabled: true,
     demoDatabaseUrl:
-      'postgresql://demo-user:s3cret-token@localhost:5432/civicos_demo?schema=public',
-    databaseUrl: undefined,
+      'postgresql://demo-user:s3cret-token@localhost:5432/civicos?schema=public',
+    databaseUrl:
+      'postgresql://demo-user:s3cret-token@localhost:5432/civicos?schema=public',
   });
 
 describe('T-007 AC-3 committed stop exposes cleanup-pending without rollback', () => {
