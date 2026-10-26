@@ -17,8 +17,6 @@ sources:
   - ../../../docs/reset/decision-log.md
   - ../../../docs/reset/scratch-files.md
   - ../../../docs/agents/cach-soan-tai-lieu.md
-  - ../../../CIVICOS-WEB-UIUX-DESIGN-PREPARATION.md
-  - ../../../CIVICOS-PILOT-01-V2-VISUAL-DESIGN-AND-WEB-COVERAGE.md
   - ../../../ui1-visual-redesign-brief.md
   - ../../../kiem-ke-ui-civicos.md
 ---
@@ -63,7 +61,7 @@ Research là evidence có ngày và confidence cụ thể; cần quay lại ngu�
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | Requirement/domain        | `Requirement.md`, `CONTEXT.md`                                                                                                                             | Yêu cầu gốc và ngôn ngữ nghiệp vụ; đọc trước design                                                |
 | UI/route                  | `docs/UI-map.md`, `docs/rbac/role-matrix-v2.md`                                                                                                            | Click path và mapping; không thay server authorization                                             |
-| Proposal/visual inventory | `CIVICOS-WEB-UIUX-DESIGN-PREPARATION.md`, `CIVICOS-PILOT-01-V2-VISUAL-DESIGN-AND-WEB-COVERAGE.md`, `ui1-visual-redesign-brief.md`, `kiem-ke-ui-civicos.md` | Bổ sung route/archetype/visual option; giữ status proposal/snapshot cho đến khi có approval riêng  |
+| Proposal/visual inventory | `ui1-visual-redesign-brief.md`, `kiem-ke-ui-civicos.md` | Bổ sung route/archetype/visual option; giữ status proposal/snapshot cho đến khi có approval riêng  |
 | Demo                      | `docs/demo-script.md`, `docs/runbooks/`                                                                                                                    | Operator-facing walkthrough/handoff; không phải production procedure                               |
 | Feature design            | `docs/<feature>/`                                                                                                                                          | Contract chi tiết; phải đọc đúng `LOCK.json`/workflow/evidence                                     |
 | Feature scratch           | `.scratch/<feature>/`                                                                                                                                      | Spec/SOW/UI/phases/tickets/status; phân biệt design input với history và execution record          |

@@ -17,8 +17,6 @@ sources:
   - ../../../brain/domains/ui-experience/research/civicos-unified-web-workspace/input.md
   - ../../../docs/UI-map.md
   - ../../../docs/rbac/role-matrix-v2.md
-  - ../../../CIVICOS-WEB-UIUX-DESIGN-PREPARATION.md
-  - ../../../CIVICOS-PILOT-01-V2-VISUAL-DESIGN-AND-WEB-COVERAGE.md
   - ../../../ui1-visual-redesign-brief.md
   - ../../../kiem-ke-ui-civicos.md
 ---
@@ -60,7 +58,7 @@ Design `civicos-unified-web-workspace` ghi nhận một workspace web sau login,
 
 `docs/UI-map.md` diễn tả đường đi người dùng qua Intake/Incident, Inspection, Vehicle/Field, Resident, Land/map và native mobile. Đây là tài liệu hướng dẫn/click path, không phải authorization contract. Khi khác với role/Assignment policy, dùng contract server-side và matrix đã được chấp thuận.
 
-Các file `CIVICOS-WEB-UIUX-DESIGN-PREPARATION.md`, `CIVICOS-PILOT-01-V2-VISUAL-DESIGN-AND-WEB-COVERAGE.md`, `ui1-visual-redesign-brief.md`, `kiem-ke-ui-civicos.md` là các brief/đề xuất/kiểm kê rải rác. Chúng được đưa vào nguồn tổng hợp để không bỏ sót route/archetype, nhưng trạng thái draft/visual proposal không biến chúng thành design approval.
+Các file `ui1-visual-redesign-brief.md` và `kiem-ke-ui-civicos.md` là các brief/đề xuất/kiểm kê còn lại. Chúng được đưa vào nguồn tổng hợp để không bỏ sót route/archetype, nhưng trạng thái draft/visual proposal không biến chúng thành design approval.
 
 `docs/previews/pilot-01-v2-visual-review.html` là preview artifact. Nó có thể giúp tra cứu hướng thị giác, nhưng không thay thế screen approval, locked UI contract hoặc capability/API contract.
 
