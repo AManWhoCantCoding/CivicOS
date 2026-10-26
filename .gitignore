@@ -51,9 +51,7 @@ playwright/.pytest_cache/
 /docs/reset/agent-inventory.md
 /docs/reset/agent-setup/
 /docs/superpowers/plans/
-/docs/archive/DESIGN_DOC_PROCESS.md
-/docs/archive/AI-AGENT-WORKFLOW.md
-/docs/archive/workflow.md
+/docs/archive/
 /workflow-roles/
 
 # Agent infrastructure scripts

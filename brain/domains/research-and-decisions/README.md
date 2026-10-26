@@ -17,8 +17,6 @@ sources:
   - ../../../docs/reset/decision-log.md
   - ../../../docs/reset/scratch-files.md
   - ../../../docs/agents/cach-soan-tai-lieu.md
-  - ../../../ui1-visual-redesign-brief.md
-  - ../../../kiem-ke-ui-civicos.md
 ---
 
 # CivicOS — research, quyết định và nguồn thiết kế
@@ -57,16 +55,15 @@ Research là evidence có ngày và confidence cụ thể; cần quay lại ngu�
 
 ## Tài liệu rải rác và cách phân loại
 
-| Nhóm nguồn                | File/vị trí                                                                                                                                                | Cách dùng                                                                                          |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Requirement/domain        | `Requirement.md`, `CONTEXT.md`                                                                                                                             | Yêu cầu gốc và ngôn ngữ nghiệp vụ; đọc trước design                                                |
-| UI/route                  | `docs/UI-map.md`, `docs/rbac/role-matrix-v2.md`                                                                                                            | Click path và mapping; không thay server authorization                                             |
-| Proposal/visual inventory | `ui1-visual-redesign-brief.md`, `kiem-ke-ui-civicos.md` | Bổ sung route/archetype/visual option; giữ status proposal/snapshot cho đến khi có approval riêng  |
-| Demo                      | `docs/demo-script.md`, `docs/runbooks/`                                                                                                                    | Operator-facing walkthrough/handoff; không phải production procedure                               |
-| Feature design            | `docs/<feature>/`                                                                                                                                          | Contract chi tiết; phải đọc đúng `LOCK.json`/workflow/evidence                                     |
-| Feature scratch           | `.scratch/<feature>/`                                                                                                                                      | Spec/SOW/UI/phases/tickets/status; phân biệt design input với history và execution record          |
-| Reset/audit               | `docs/reset/`                                                                                                                                              | Snapshot kiểm kê/audit theo ngày; hữu ích để định vị nguồn, không phải canonical business decision |
-| Archive                   | `docs/archive/` và các `archive`/`agent-setup` artifacts                                                                                                   | Lịch sử hoặc proposal; không nhận làm instruction đang hiệu lực nếu project policy nói khác        |
+| Nhóm nguồn         | File/vị trí                                              | Cách dùng                                                                                          |
+| ------------------ | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Requirement/domain | `Requirement.md`, `CONTEXT.md`                           | Yêu cầu gốc và ngôn ngữ nghiệp vụ; đọc trước design                                                |
+| UI/route           | `docs/UI-map.md`, `docs/rbac/role-matrix-v2.md`          | Click path và mapping; không thay server authorization                                             |
+| Demo               | `docs/demo-script.md`, `docs/runbooks/`                  | Operator-facing walkthrough/handoff; không phải production procedure                               |
+| Feature design     | `docs/<feature>/`                                        | Contract chi tiết; phải đọc đúng `LOCK.json`/workflow/evidence                                     |
+| Feature scratch    | `.scratch/<feature>/`                                    | Spec/SOW/UI/phases/tickets/status; phân biệt design input với history và execution record          |
+| Reset/audit        | `docs/reset/`                                            | Snapshot kiểm kê/audit theo ngày; hữu ích để định vị nguồn, không phải canonical business decision |
+| Archive            | `docs/archive/` và các `archive`/`agent-setup` artifacts | Lịch sử hoặc proposal; không nhận làm instruction đang hiệu lực nếu project policy nói khác        |
 
 `docs/reset/doc-census.md` và `scratch-files.md` là inventories có thể đã lệch so với working tree; dùng chúng làm locator, không làm bằng chứng rằng mỗi đường dẫn còn tồn tại hoặc được dùng.
 

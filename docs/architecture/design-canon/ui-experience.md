@@ -17,8 +17,6 @@ sources:
   - ../../../brain/domains/ui-experience/research/civicos-unified-web-workspace/input.md
   - ../../../docs/UI-map.md
   - ../../../docs/rbac/role-matrix-v2.md
-  - ../../../ui1-visual-redesign-brief.md
-  - ../../../kiem-ke-ui-civicos.md
 ---
 
 # CivicOS — trải nghiệm web/mobile và điều hướng
@@ -30,7 +28,7 @@ sources:
 | `civicos-ui-design-system`      | Workflow ghi B8/B9/B12 approved, B11 complete; B13 deferred                                                                        | Shared Light/Blue presentation baseline đã được duyệt; không mở rộng cải tiến ngoài quyết định đó |
 | `civicos-uiux-alignment`        | B8 approved, B9 no-known-impact, B11 complete; B12 được duyệt 2026-10-23 sau khi overview phục hồi được chấp nhận làm bản thay thế | Phạm vi migration presentation rộng hơn; không được đổi behavior/data/permission                  |
 | `civicos-unified-web-workspace` | Workflow ghi B6–B9 approved và B11 phase pass                                                                                      | Unified web workspace; mobile chỉ visual/state audit                                              |
-| UI map và root design briefs    | UI map mô tả click path; các brief/kiểm kê là proposal hoặc snapshot                                                               | Dùng để truy vết surface, không tự thay feature contract hoặc quyền server                        |
+| UI map                          | UI map mô tả click path                                                                                                            | Dùng để truy vết surface, không tự thay feature contract hoặc quyền server                        |
 
 Các dòng trên là status được đọc từ artifacts đang có. `brain/adr/0003` vẫn nói B8 pending trong khi workflow UI design system ghi B8/B12 approved. ADR canonical `brain/adr/0004` được chấp thuận sau B12 ngày 2026-10-23; bản nguồn cũ `docs/adr/0004` được giữ nguyên làm lịch sử. Overview UIX là bản phục hồi được người dùng chấp nhận thay thế, không phải bản gốc đã khôi phục.
 
@@ -57,8 +55,6 @@ Design `civicos-unified-web-workspace` ghi nhận một workspace web sau login,
 ## UI map và tài liệu thiết kế rải rác
 
 `docs/UI-map.md` diễn tả đường đi người dùng qua Intake/Incident, Inspection, Vehicle/Field, Resident, Land/map và native mobile. Đây là tài liệu hướng dẫn/click path, không phải authorization contract. Khi khác với role/Assignment policy, dùng contract server-side và matrix đã được chấp thuận.
-
-Các file `ui1-visual-redesign-brief.md` và `kiem-ke-ui-civicos.md` là các brief/đề xuất/kiểm kê còn lại. Chúng được đưa vào nguồn tổng hợp để không bỏ sót route/archetype, nhưng trạng thái draft/visual proposal không biến chúng thành design approval.
 
 `docs/previews/pilot-01-v2-visual-review.html` là preview artifact. Nó có thể giúp tra cứu hướng thị giác, nhưng không thay thế screen approval, locked UI contract hoặc capability/API contract.
 
