@@ -173,9 +173,7 @@ export async function processOneOutboxMessage(filter?: {
       availableAt: { lte: new Date() },
       ...(filter?.eventId !== undefined ? { eventId: filter.eventId } : {}),
     },
-    orderBy: {
-      createdAt: process.env.CIVICOS_E2E_RUN === '1' ? 'desc' : 'asc',
-    },
+    orderBy: { createdAt: 'asc' },
   });
 
   if (!message) return false;

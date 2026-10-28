@@ -8,7 +8,9 @@ import {
   useMobileReadonlyFixture,
 } from './helpers';
 
-describe('mobile related-info search contract', () => {
+const describeWithDatabase = describe.skipIf(process.env.RUN_DB_TESTS !== '1');
+
+describeWithDatabase('mobile related-info search contract', () => {
   useMobileReadonlyFixture();
   it('echoes pagination and strips raw PII', async () => {
     const result = await searchRelatedInfo(mobileUsers.inScope, {

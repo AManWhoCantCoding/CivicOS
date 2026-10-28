@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { Prisma } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { prisma } from '@/lib/prisma';
@@ -47,6 +48,10 @@ const dbUsers = [commander, field, outsiderCommander, crossCommander];
 const trackedSubjects: string[] = [];
 const trackedRecords: string[] = [];
 const trackedReports: string[] = [];
+// Global Role rows this run PROVABLY created. Role rows that already existed
+// (detected via P2002 below) are left untouched — teardown deletes only these
+// tracked IDs, never by name.
+const ownedRoleIds: string[] = [];
 
 describe.skipIf(!postgresEnabled)(
   'PS-E1-004 resident business regression',
@@ -59,11 +64,23 @@ describe.skipIf(!postgresEnabled)(
         ],
       });
       for (const roleName of ['commander', 'field_officer']) {
-        await prisma.role.upsert({
-          where: { name: roleName },
-          update: {},
-          create: { name: roleName },
-        });
+        try {
+          // Atomic create: tracks ONLY the role this run actually created.
+          const created = await prisma.role.create({
+            data: { name: roleName },
+          });
+          ownedRoleIds.push(created.id);
+        } catch (error) {
+          if (
+            !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+            error.code !== 'P2002'
+          ) {
+            throw error;
+          }
+          // Unique-key race: a global role with this name already existed from
+          // seed or a prior run; adopt it without recording ownership.
+          await prisma.role.findUniqueOrThrow({ where: { name: roleName } });
+        }
       }
       for (const user of dbUsers) {
         await prisma.user.create({
@@ -85,7 +102,62 @@ describe.skipIf(!postgresEnabled)(
     });
 
     afterAll(async () => {
+      // Event/audit/approval cleanup is scoped to this run's unique actors,
+      // tracked report IDs, and exact SLA instances this run created via its
+      // tracked records (L-20261024-01: no broad deletes, no outbox
+      // processing, checkpoints untouched). Outbox rows are removed before
+      // their EventRecord rows; AuditEvent rows share the run-unique actor IDs.
+      const actorIds = dbUsers.map((user) => user.id);
+      // SlaStarted events are recorded with `actor: {}`, so their EventRecord
+      // rows have a null actorId and actor-scoped selection misses them.
+      // Select the exact SLA instance IDs created for this run's tracked
+      // records, then the events whose aggregate is one of those exact
+      // instance IDs — never by event type, date, status, or resource scope.
+      const ownedSlaIds = trackedRecords.length
+        ? await prisma.slaInstance.findMany({
+            where: {
+              resourceType: 'SubjectManagementRecord',
+              resourceId: { in: trackedRecords },
+            },
+            select: { id: true },
+          })
+        : [];
+      const slaEventIds = ownedSlaIds.length
+        ? await prisma.eventRecord.findMany({
+            where: {
+              aggregateType: 'SlaInstance',
+              aggregateId: { in: ownedSlaIds.map((sla) => sla.id) },
+            },
+            select: { eventId: true },
+          })
+        : [];
+      const ownedEvents = await prisma.eventRecord.findMany({
+        where: { actorId: { in: actorIds } },
+        select: { eventId: true },
+      });
+      const ownedEventIds = [
+        ...new Set(
+          [...ownedEvents, ...slaEventIds].map((event) => event.eventId),
+        ),
+      ];
+      if (ownedEventIds.length) {
+        await prisma.outboxMessage.deleteMany({
+          where: { eventId: { in: ownedEventIds } },
+        });
+        await prisma.eventRecord.deleteMany({
+          where: { eventId: { in: ownedEventIds } },
+        });
+      }
+      await prisma.auditEvent.deleteMany({
+        where: { actorId: { in: actorIds } },
+      });
       if (trackedReports.length) {
+        await prisma.approval.deleteMany({
+          where: {
+            resourceType: 'ResidentMonthlyReport',
+            resourceId: { in: trackedReports },
+          },
+        });
         await prisma.residentMonthlyReport.deleteMany({
           where: { id: { in: trackedReports } },
         });
@@ -115,6 +187,19 @@ describe.skipIf(!postgresEnabled)(
       await prisma.user.deleteMany({
         where: { id: { in: dbUsers.map((user) => user.id) } },
       });
+      // Role cleanup runs only after this run's users (and their UserRole
+      // links, which cascade on user deletion) are gone, and deletes solely
+      // IDs this setup created — never a name, never a pre-existing row. The
+      // `users: { none: {} }` filter additionally spares any owned row a
+      // concurrent writer has linked a user to by now.
+      if (ownedRoleIds.length) {
+        await prisma.role.deleteMany({
+          where: {
+            id: { in: ownedRoleIds },
+            users: { none: {} },
+          },
+        });
+      }
       await prisma.organizationUnit.deleteMany({
         where: { id: { in: [ORG, UPPER] } },
       });
@@ -243,6 +328,32 @@ describe.skipIf(!postgresEnabled)(
       await expect(sendReport(report.id, '  ', commander)).rejects.toThrow(
         'TARGET_ORGANIZATION_REQUIRED',
       );
+      // DB-backed persistence evidence (PS-E1-004): the approved snapshot must
+      // be physically persisted in PostgreSQL and must never change when the
+      // same OU/period is regenerated or when the report is sent.
+      const persisted = await prisma.residentMonthlyReport.findUniqueOrThrow({
+        where: { id: report.id },
+      });
+      expect(persisted.status).toBe('approved');
+      expect(persisted.snapshotPayload).toEqual(approved.snapshotPayload);
+      expect(persisted.snapshotHash).toBeTruthy();
+      expect(persisted.snapshotHash).toBe(approved.snapshotHash);
+      const regenerated = await generateMonthlyReport(
+        { organizationId: ORG, period: '2026-09' },
+        commander,
+      );
+      expect(regenerated.id).toBe(report.id);
+      expect(regenerated.status).toBe('approved');
+      expect(regenerated.snapshotPayload).toEqual(persisted.snapshotPayload);
+      expect(regenerated.snapshotHash).toBe(persisted.snapshotHash);
+      const sent = await sendReport(report.id, UPPER, commander);
+      expect(sent.status).toBe('sent');
+      const afterSend = await prisma.residentMonthlyReport.findUniqueOrThrow({
+        where: { id: report.id },
+      });
+      expect(afterSend.status).toBe('sent');
+      expect(afterSend.snapshotPayload).toEqual(persisted.snapshotPayload);
+      expect(afterSend.snapshotHash).toBe(persisted.snapshotHash);
     });
 
     it('scopes report previews to the requested organization unit', async () => {

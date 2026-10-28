@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import socket
 
+import pytest
+
 from conftest import _select_available_loopback_port
+
+pytestmark = pytest.mark.civicos_db_free
 
 
 def test_occupied_requested_port_uses_available_port_without_killing_listener():

@@ -29,6 +29,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const result = await registerIntakeReport(
       {
         ...parseIntakeReport(await request.json()),
+        receivedAt: new Date().toISOString(),
         idempotencyKey: request.headers.get('Idempotency-Key') ?? undefined,
       },
       user,

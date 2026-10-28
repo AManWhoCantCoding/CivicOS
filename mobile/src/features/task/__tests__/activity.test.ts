@@ -42,8 +42,13 @@ import {
   canRecordResidentActivity,
   resetInspectionDraft,
   resetActivityDraft,
+  queueRetryFeedback,
 } from '../TaskScreen';
-import { retryResidentActivities, syncResidentActivity } from '../activitySync';
+import {
+  retryResidentActivities,
+  syncResidentActivity,
+  type QueueRetryOutcome,
+} from '../activitySync';
 import { requestJson } from '../../../api/client';
 import {
   enqueue,
@@ -213,6 +218,26 @@ describe('resident activity mobile boundary', () => {
     expect(setKey).toHaveBeenCalledWith('');
     expect(setDescription).toHaveBeenCalledWith('');
     expect(setResult).toHaveBeenCalledWith('needs_action');
+  });
+
+  it('maps queue retry outcomes to the user-visible feedback message', () => {
+    expect(queueRetryFeedback('synced')).toBe('Đã đồng bộ thao tác đã lưu.');
+    for (const outcome of [
+      'pending',
+      'rejected',
+      'idle',
+      'error',
+    ] as const) {
+      expect(queueRetryFeedback(outcome)).toBeUndefined();
+    }
+    const exhaustive: Record<QueueRetryOutcome, string | undefined> = {
+      synced: 'Đã đồng bộ thao tác đã lưu.',
+      pending: undefined,
+      rejected: undefined,
+      idle: undefined,
+      error: undefined,
+    };
+    expect(Object.keys(exhaustive)).toHaveLength(5);
   });
 
   it('persists one stable command id for retries and isolates/clears users', () => {

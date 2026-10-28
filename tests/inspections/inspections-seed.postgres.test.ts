@@ -13,7 +13,12 @@ import {
   type InspectionsSeedResult,
 } from '../../scripts/demo/seed-inspections';
 
-const postgresEnabled = process.env.RUN_DB_TESTS === '1';
+// DB-CONSOLIDATION SLICE (Task 3): the DB-backed demo inspections seed suite
+// is explicitly disabled — its seed helpers target the production/demo
+// `civicos` database, which the approved Vitest DB runner
+// (127.0.0.1:5432/civicos_e2e) must never touch. Skipped until a dedicated
+// E2E-safe demo fixture/reset seam exists (later consolidation task).
+
 const DEMO_URL =
   process.env.DEMO_DATABASE_URL ??
   'postgresql://civicos:civicos@localhost:5432/civicos?schema=public';
@@ -56,7 +61,7 @@ async function loadActor(
   };
 }
 
-describe.skipIf(!postgresEnabled)('demo inspections seed', () => {
+describe.skip('demo inspections seed', () => {
   let shared!: Shared;
 
   beforeAll(async () => {

@@ -311,7 +311,9 @@ test('establishment and inspection created in UI appear in catalog and detail re
   await page.getByLabel('Tên cơ sở').fill(establishmentName);
   await page.getByLabel('Chủ cơ sở').fill(`Chủ read model ${marker}`);
   await page.getByLabel('Địa chỉ').fill(`Địa chỉ read model ${marker}`);
-  await page.getByLabel('Loại hình', { exact: true }).fill('Karaoke');
+  await page
+    .locator('#establishment-type')
+    .selectOption({ label: 'Karaoke — Đ3 khoản 21(a)' });
   await page.getByLabel(/Mã giấy phép/).fill(`GP-RM-${marker.slice(0, 8)}`);
   const establishmentPromise = page.waitForResponse(
     (response) =>

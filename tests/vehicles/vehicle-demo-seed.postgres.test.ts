@@ -13,7 +13,12 @@ import {
   type VehiclesSeedResult,
 } from '../../scripts/demo/seed-vehicles';
 
-const postgresEnabled = process.env.RUN_DB_TESTS === '1';
+// DB-CONSOLIDATION SLICE (Task 3): the DB-backed demo vehicles seed suite is
+// explicitly disabled — its seed helpers target the production/demo `civicos`
+// database (DATABASE_URL/DEMO_DATABASE_URL for the `civicos` demo target),
+// which the approved Vitest DB runner (127.0.0.1:5432/civicos_e2e) must never
+// touch. Skipped until a dedicated E2E-safe demo fixture/reset seam exists
+// (later consolidation task).
 const DEMO_URL =
   process.env.DEMO_DATABASE_URL ??
   'postgresql://civicos:civicos@localhost:5432/civicos?schema=public';
@@ -137,7 +142,9 @@ async function scopedCounts(
   };
 }
 
-describe.skipIf(!postgresEnabled)('demo vehicles seed', () => {
+// DB-CONSOLIDATION SLICE (Task 3): DB-backed suite skipped explicitly (see
+// note below). Do not re-enable via RUN_DB_TESTS.
+describe.skip('demo vehicles seed', () => {
   let shared!: Shared;
   let rerunSnapshot!: Awaited<ReturnType<typeof scopedCounts>>;
 

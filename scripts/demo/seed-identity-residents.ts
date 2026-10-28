@@ -273,7 +273,13 @@ export async function seedIdentityResidents(
       knownRecord?.id ??
       (
         await residents.createManagementRecord(
-          { subjectId, purpose: fixture.purpose },
+          {
+            subjectId,
+            purpose: fixture.purpose,
+            ...(fixture.purpose === 'foreign_resident'
+              ? { arrivalAt: at.toISOString() }
+              : {}),
+          },
           duty as IdentityUser,
         )
       ).id;

@@ -16,7 +16,9 @@ import {
   useMobileReadonlyFixture,
 } from './helpers';
 
-describe('tasks-by-dispatch compatibility alias', () => {
+const describeWithDatabase = describe.skipIf(process.env.RUN_DB_TESTS !== '1');
+
+describeWithDatabase('tasks-by-dispatch compatibility alias', () => {
   useMobileReadonlyFixture();
   it('returns an envelope for an in-scope dispatch and hides an outside dispatch', async () => {
     const inScope = await listTasksByDispatchId(

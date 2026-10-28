@@ -22,6 +22,46 @@ const unavailableFocusStates = [
 ] as const;
 
 describe('T-004 web map state safety', () => {
+  it('ignores failures from obsolete map loads', () => {
+    const workspace = readSource('src/components/map/MapWorkspace.tsx');
+    const loadCatch = workspace.slice(
+      workspace.indexOf('} catch (reason: unknown) {'),
+      workspace.indexOf('  }, [focusParcelId]);'),
+    );
+
+    // Source-wiring regression check; this does not simulate async runtime behavior.
+    expect(loadCatch).toContain('if (mapLoadSeq.current !== seq) return;');
+  });
+
+  it('clears protected map state on 401, invalidates pending requests, and preserves masked basemap', () => {
+    const workspace = readSource('src/components/map/MapWorkspace.tsx');
+    const unauthorized = workspace.slice(
+      workspace.indexOf('if (rows.status === 401)'),
+      workspace.indexOf('if (rows.status === 403)'),
+    );
+    const successfulRows = workspace.slice(
+      workspace.indexOf('if (rows.status !== 200)'),
+      workspace.indexOf('} catch (reason: unknown) {'),
+    );
+    const mapEffect = workspace.slice(
+      workspace.indexOf('const activeProvider = provider;'),
+      workspace.indexOf('  }, [\n    state,', workspace.indexOf('const activeProvider = provider;')),
+    );
+
+    // Source-level regression check; this does not simulate async runtime behavior.
+    expect(unauthorized).toContain('setMarkers([])');
+    expect(unauthorized).toContain('++focusSeq.current');
+    expect(unauthorized).toContain('++discoverySeq.current');
+    expect(unauthorized).toContain('setFocusParcel(null)');
+    expect(unauthorized).toContain('setDiscoveryItems([])');
+    expect(unauthorized).toContain('setDiscoverySelectedId(null)');
+    expect(unauthorized).toContain("setDiscoveryStatus('idle')");
+    expect(unauthorized).toContain('setMasked(true)');
+    expect(successfulRows).toContain('setMasked(false)');
+    expect(mapEffect).toContain('new maplibregl.Map');
+    expect(workspace).toContain('    masked,\n    denied,');
+  });
+
   it.each(unavailableFocusStates)(
     'does not make a LandParcel polygon renderable in %s',
     (state) => {

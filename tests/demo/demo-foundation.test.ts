@@ -93,7 +93,10 @@ describe('demo foundation target boundary', () => {
 
   it('requires an explicit runtime database url even with an alias set', () => {
     expect(() =>
-      resolveDemoTarget(undefined, 'postgresql://civicos:civicos@localhost:5432/civicos'),
+      resolveDemoTarget(
+        undefined,
+        'postgresql://civicos:civicos@localhost:5432/civicos',
+      ),
     ).toThrow('DEMO_DATABASE_URL_REQUIRED');
   });
 
@@ -113,9 +116,9 @@ describe('demo foundation target boundary', () => {
         undefined,
       ).dbName,
     ).toBe('civicos');
-    expect(assertDemoTarget('postgres://civicos:civicos@localhost:5432/civicos')).toBe(
-      'civicos',
-    );
+    expect(
+      assertDemoTarget('postgres://civicos:civicos@localhost:5432/civicos'),
+    ).toBe('civicos');
   });
 
   it.each([
@@ -247,36 +250,19 @@ describe('demo reset land boundary', () => {
     expect(indexOf('LandEncumbrance')).toBeLessThan(indexOf('LandParcel'));
   });
 
-  it('truncates land tables, scopes evidence to civicos-demo, keeps migrations', async () => {
+  it('DB-CONSOLIDATION Task 4: resetDemo rejects even for the accepted civicos target with confirmation, touching no Prisma method', async () => {
     const { prisma, calls } = mockPrisma();
-    await resetDemo(
-      { DATABASE_URL: DEMO_URL, DEMO_RESET_CONFIRM: '1' },
-      prisma as never,
-    );
-    expect(prisma.$executeRawUnsafe).toHaveBeenCalledOnce();
-    const sql = calls.truncateSql[0] as string;
-    for (const table of LAND_TABLES) {
-      expect(sql).toContain(`"${table}"`);
-    }
-    expect(sql).not.toContain('_prisma_migrations');
-    expect(prisma.evidence.findMany).toHaveBeenCalledOnce();
-    expect(calls.evidenceWhere[0]).toMatchObject({
-      where: { metadata: { path: ['demoNamespace'], equals: 'civicos-demo' } },
-    });
-  });
-
-  it('re-running reset on empty inventory stays a deterministic no-op', async () => {
-    const first = mockPrisma();
-    await resetDemo(
-      { DATABASE_URL: DEMO_URL, DEMO_RESET_CONFIRM: '1' },
-      first.prisma as never,
-    );
-    const second = mockPrisma();
-    await resetDemo(
-      { DATABASE_URL: DEMO_URL, DEMO_RESET_CONFIRM: '1' },
-      second.prisma as never,
-    );
-    expect(second.calls.truncateSql[0]).toBe(first.calls.truncateSql[0]);
+    await expect(
+      resetDemo(
+        { DATABASE_URL: DEMO_URL, DEMO_RESET_CONFIRM: '1' },
+        prisma as never,
+      ),
+    ).rejects.toThrow('DEMO_RESET_RETIRED_USE_E2E_LIFECYCLE');
+    expect(prisma.$queryRawUnsafe).not.toHaveBeenCalled();
+    expect(prisma.$executeRawUnsafe).not.toHaveBeenCalled();
+    expect(prisma.evidence.findMany).not.toHaveBeenCalled();
+    expect(calls.truncateSql).toEqual([]);
+    expect(calls.evidenceWhere).toEqual([]);
   });
 
   it('evidence cleanup never leaves the storage root or touches tiles', async () => {

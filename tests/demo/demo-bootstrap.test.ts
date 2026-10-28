@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   DEMO_LABELS,
@@ -9,10 +9,7 @@ import {
   resolveDemoTarget,
 } from '../../scripts/demo/demo-db';
 import { resolveSeedTarget, seedDemo } from '../../scripts/demo/seed';
-import {
-  requireResetConfirm,
-  resolveResetTarget,
-} from '../../scripts/demo/reset';
+import { requireResetConfirm, resetDemo } from '../../scripts/demo/reset';
 
 const DEMO_URL =
   'postgresql://civicos:civicos@localhost:5432/civicos?schema=public';
@@ -67,20 +64,27 @@ describe('demo target binding', () => {
     );
   });
 
-  it('reset resolve sang civicos va doi confirm bat buoc', () => {
-    const target = resolveResetTarget({
-      DATABASE_URL: DEMO_URL,
-      DEMO_DATABASE_URL: DEMO_URL,
-    });
-    expect(target.dbName).toBe('civicos');
-    expect(target.displayUrl).toContain('civicos');
-    expect(target.displayUrl).not.toContain('civicos:civicos');
+  it('DB-CONSOLIDATION Task 4: resetDemo retired — rejects for the accepted civicos target even with confirmation; confirm guard stays pure', async () => {
     expect(() => requireResetConfirm({})).toThrow(
       'DEMO_RESET_CONFIRM_REQUIRED',
     );
     expect(() =>
       requireResetConfirm({ DEMO_RESET_CONFIRM: '1' }),
     ).not.toThrow();
+
+    const noop = vi.fn();
+    const fakePrisma = {
+      $queryRawUnsafe: noop,
+      $executeRawUnsafe: noop,
+      evidence: { findMany: noop },
+    };
+    await expect(
+      resetDemo(
+        { DATABASE_URL: DEMO_URL, DEMO_RESET_CONFIRM: '1' },
+        fakePrisma as never,
+      ),
+    ).rejects.toThrow('DEMO_RESET_RETIRED_USE_E2E_LIFECYCLE');
+    expect(noop).not.toHaveBeenCalled();
   });
 
   it('DATABASE_URL la canonical; alias DEMO_DATABASE_URL khong duoc chiem doat target', () => {
@@ -118,7 +122,12 @@ describe('demo target binding', () => {
   });
 });
 
-const postgresEnabled = process.env.RUN_DB_TESTS === '1';
+// DB-CONSOLIDATION SLICE (Task 3): the DB-backed demo bootstrap smoke suite is
+// explicitly disabled — it seeds against the production/demo `civicos`
+// database (its demo-target guard only permits demo), which the approved
+// Vitest DB runner (127.0.0.1:5432/civicos_e2e) must never touch. The suite
+// remains here until a dedicated E2E-safe demo fixture/reset seam exists
+// (later consolidation task). The pure preflight blocks above stay active.
 
 let bound = false;
 
@@ -133,7 +142,9 @@ async function demoModules() {
   return { prisma: prismaModule.prisma, identity, eventing };
 }
 
-describe.skipIf(!postgresEnabled)('demo bootstrap smoke', () => {
+// DB-CONSOLIDATION SLICE (Task 3): DB-backed suite disabled (see note above
+// `demoModules`). Explicit skip — do not re-enable via RUN_DB_TESTS.
+describe.skip('demo bootstrap smoke', () => {
   it('seed idempotent: chay hai lan khong tao ban ghi trung', async () => {
     const first = await seedDemo();
     const second = await seedDemo();

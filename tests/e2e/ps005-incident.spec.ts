@@ -1,10 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const PASSWORD = 'civicos-dev';
-const COMMANDER = 'truong@civicos.local';
-const DUTY = 'trucban@civicos.local';
-const FIELD = 'hientruong@civicos.local';
-const UNASSIGNED = 'khongduocphancong@civicos.local';
+const RUN_ID = process.env.CIVICOS_E2E_RUN_ID ?? '';
+const PASSWORD = process.env.CIVICOS_E2E_FIXTURE_PASSWORD ?? '';
+if (!RUN_ID || !PASSWORD) throw new Error('PS005_E2E_FIXTURE_ENV_REQUIRED');
+const email = (role: string) => `ps007-e2e-${RUN_ID}-${role}@example.test`;
+const COMMANDER = email('commander');
+const DUTY = email('duty_officer');
+const FIELD = email('field');
+const UNASSIGNED = email('unassigned');
+const RECEIVING_OU = `ps007-e2e-${RUN_ID}-parent`;
 
 async function loginAs(page: Page, email: string): Promise<void> {
   await page.goto('/login');
@@ -225,7 +229,10 @@ test('[Web] commander sees a converted incident and assigns duty', async ({
   await loginAs(page, COMMANDER);
   await page.goto(`/incidents/${incidentId}`);
   await expect(page.getByText(content)).toBeVisible();
-  await assignUser(page, /trucban@civicos\.local/);
+  await assignUser(
+    page,
+    new RegExp(DUTY.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+  );
 });
 
 test('[Web] duty officer classifies an assigned incident', async ({ page }) => {
@@ -243,7 +250,10 @@ test('[Web] duty officer classifies an assigned incident', async ({ page }) => {
   await page.getByRole('button', { name: 'Lưu phân loại' }).click();
   await expect(page.getByText('Đã ghi nhận thao tác.')).toBeVisible();
   await expect(
-    page.locator('main').getByText('classified', { exact: true }).first(),
+    page
+      .locator('main')
+      .getByText(/classified$/)
+      .first(),
   ).toBeVisible();
 });
 
@@ -261,8 +271,12 @@ test('[Web] field officer verifies and requests a transfer', async ({
   await page.getByRole('button', { name: 'Bắt đầu xác minh' }).click();
   await expect(page.getByText('Đã ghi nhận thao tác.')).toBeVisible();
   await expect(
-    page.locator('main').getByText('verifying', { exact: true }).first(),
+    page
+      .locator('main')
+      .getByText(/verifying$/)
+      .first(),
   ).toBeVisible();
+  await page.getByLabel('Đơn vị nhận').selectOption(RECEIVING_OU);
   await page.getByRole('button', { name: 'Gửi yêu cầu chuyển' }).click();
   await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
     timeout: 15000,
@@ -282,6 +296,7 @@ test('[Web] commander approves a transfer request', async ({ page }) => {
   await page.getByLabel('Ghi chú xác minh').fill('Da xuong hien truong.');
   await page.getByRole('button', { name: 'Bắt đầu xác minh' }).click();
   await expect(page.getByText('Đã ghi nhận thao tác.')).toBeVisible();
+  await page.getByLabel('Đơn vị nhận').selectOption(RECEIVING_OU);
   await page.getByRole('button', { name: 'Gửi yêu cầu chuyển' }).click();
   await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
     timeout: 15000,
@@ -296,7 +311,10 @@ test('[Web] commander approves a transfer request', async ({ page }) => {
   ).toBeVisible({ timeout: 15000 });
   await page.getByRole('button', { name: 'Phê duyệt' }).click();
   await expect(
-    page.locator('main').getByText('transferred', { exact: true }).first(),
+    page
+      .locator('main')
+      .getByText(/transferred$/)
+      .first(),
   ).toBeVisible();
 });
 
@@ -323,7 +341,10 @@ test('[Web] field officer proposes a resolution for approval', async ({
   await page.goto(`/incidents/${incidentId}`);
   await page.getByRole('button', { name: 'Phê duyệt' }).click();
   await expect(
-    page.locator('main').getByText('resolved', { exact: true }).first(),
+    page
+      .locator('main')
+      .getByText(/resolved$/)
+      .first(),
   ).toBeVisible();
 });
 
@@ -350,7 +371,10 @@ test('[Web] field officer requests closure and commander closes', async ({
   await page.goto(`/incidents/${incidentId}`);
   await page.getByRole('button', { name: 'Phê duyệt' }).click();
   await expect(
-    page.locator('main').getByText('resolved', { exact: true }).first(),
+    page
+      .locator('main')
+      .getByText(/resolved$/)
+      .first(),
   ).toBeVisible();
   await logout(page);
   await loginAs(page, FIELD);
@@ -364,7 +388,10 @@ test('[Web] field officer requests closure and commander closes', async ({
   await page.goto(`/incidents/${incidentId}`);
   await page.getByRole('button', { name: 'Phê duyệt' }).click();
   await expect(
-    page.locator('main').getByText('closed', { exact: true }).first(),
+    page
+      .locator('main')
+      .getByText(/closed$/)
+      .first(),
   ).toBeVisible();
 });
 
@@ -378,7 +405,10 @@ test('[Web] closed incident timeline lists every lifecycle event', async ({
   await logout(page);
   await loginAs(page, COMMANDER);
   await page.goto(`/incidents/${incidentId}`);
-  await assignUser(page, /trucban@civicos\.local/);
+  await assignUser(
+    page,
+    new RegExp(DUTY.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+  );
   await logout(page);
   await loginAs(page, DUTY);
   await page.goto(`/incidents/${incidentId}`);
@@ -389,13 +419,17 @@ test('[Web] closed incident timeline lists every lifecycle event', async ({
   await logout(page);
   await loginAs(page, COMMANDER);
   await page.goto(`/incidents/${incidentId}`);
-  await assignUser(page, /hientruong@civicos\.local/);
+  await assignUser(
+    page,
+    new RegExp(FIELD.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+  );
   await logout(page);
   await loginAs(page, FIELD);
   await page.goto(`/incidents/${incidentId}`);
   await page.getByLabel('Ghi chú xác minh').fill('Da xuong hien truong.');
   await page.getByRole('button', { name: 'Bắt đầu xác minh' }).click();
   await expect(page.getByText('Đã ghi nhận thao tác.')).toBeVisible();
+  await page.getByLabel('Đơn vị nhận').selectOption(RECEIVING_OU);
   await page.getByRole('button', { name: 'Gửi yêu cầu chuyển' }).click();
   await expect(page.getByText('Đã gửi yêu cầu Approval.')).toBeVisible({
     timeout: 15000,
@@ -405,7 +439,10 @@ test('[Web] closed incident timeline lists every lifecycle event', async ({
   await page.goto(`/incidents/${incidentId}`);
   await page.getByRole('button', { name: 'Phê duyệt' }).click();
   await expect(
-    page.locator('main').getByText('transferred', { exact: true }).first(),
+    page
+      .locator('main')
+      .getByText(/transferred$/)
+      .first(),
   ).toBeVisible();
   await logout(page);
   await loginAs(page, FIELD);
@@ -420,7 +457,10 @@ test('[Web] closed incident timeline lists every lifecycle event', async ({
   await page.goto(`/incidents/${incidentId}`);
   await page.getByRole('button', { name: 'Phê duyệt' }).click();
   await expect(
-    page.locator('main').getByText('resolved', { exact: true }).first(),
+    page
+      .locator('main')
+      .getByText(/resolved$/)
+      .first(),
   ).toBeVisible();
   await logout(page);
   await loginAs(page, FIELD);
@@ -434,7 +474,10 @@ test('[Web] closed incident timeline lists every lifecycle event', async ({
   await page.goto(`/incidents/${incidentId}`);
   await page.getByRole('button', { name: 'Phê duyệt' }).click();
   await expect(
-    page.locator('main').getByText('closed', { exact: true }).first(),
+    page
+      .locator('main')
+      .getByText(/closed$/)
+      .first(),
   ).toBeVisible();
   const timeline = page.locator('section', { hasText: 'Timeline' });
   for (const eventType of [

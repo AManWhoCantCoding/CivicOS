@@ -168,10 +168,10 @@ test('establishment-to-approval lifecycle runs through the browser without autom
   await expect(
     page.getByText('Inspection', { exact: true }).first(),
   ).toBeVisible();
-  const databaseUrl = new URL(process.env.DEMO_DATABASE_URL!);
+  const databaseUrl = new URL(process.env.CIVICOS_E2E_DATABASE_URL!);
   expect(databaseUrl.hostname).toBe('127.0.0.1');
-  expect(databaseUrl.port).toBe('5433');
-  expect(databaseUrl.pathname).toBe('/civicos_demo');
+  expect(databaseUrl.port).toBe('5432');
+  expect(databaseUrl.pathname).toBe('/civicos_e2e');
   const prisma = new PrismaClient({
     datasources: { db: { url: databaseUrl.toString() } },
   });
@@ -180,7 +180,7 @@ test('establishment-to-approval lifecycle runs through the browser without autom
       Array<{ database: string; port: number; address: string | null }>
     >`SELECT current_database() AS database, (SELECT setting::int FROM pg_settings WHERE name = 'port') AS port, inet_server_addr()::text AS address`;
     expect(identity).toEqual([
-      { database: 'civicos_demo', port: 5432, address: expect.any(String) },
+      { database: 'civicos_e2e', port: 5432, address: expect.any(String) },
     ]);
     const where = {
       resourceType: 'Inspection',
@@ -200,7 +200,7 @@ test('establishment-to-approval lifecycle runs through the browser without autom
   }
   await page.getByRole('button', { name: 'Bắt đầu kiểm tra' }).click();
   await expect(page.getByText('Đã bắt đầu inspection.')).toBeVisible();
-  await expect(page.getByTestId('inspection-status')).toHaveText(
+  await expect(page.getByTestId('inspection-status')).toContainText(
     'Đang kiểm tra',
   );
 
@@ -236,7 +236,14 @@ test('establishment-to-approval lifecycle runs through the browser without autom
   };
   expect(String(evidenceBody.evidence?.latitude)).toBe('10.12345');
   expect(String(evidenceBody.evidence?.longitude)).toBe('106.54321');
-  await expect(page.getByText('GPS: 10.12345, 106.54321')).toBeVisible();
+  // GPS hiển thị dạng danh sách mô tả (<dt>GPS</dt><dd>10.12345, 106.54321</dd>)
+  // trong EvidenceCapture; tra bằng phần tử ngữ nghĩa <dt>/<dd> riêng biệt
+  //(playwright role engine không khớp tên cho term/definition trong DOM này)
+  // thay vì chuỗi ghép "GPS: ..." không tồn tại trong DOM.
+  await expect(page.locator('dt').filter({ hasText: /^GPS$/ })).toBeVisible();
+  await expect(
+    page.locator('dd').filter({ hasText: /^10\.12345, 106\.54321$/ }),
+  ).toBeVisible();
   await expect(
     page.getByText('Đã tải ps007-evidence.jpg lên máy chủ.'),
   ).toBeVisible();
@@ -293,9 +300,19 @@ test('establishment-to-approval lifecycle runs through the browser without autom
   };
   expect(completeBody.inspection?.status).toBe('completed');
   await expect(page.getByText('Đã hoàn tất inspection.')).toBeVisible();
-  await expect(page.getByTestId('inspection-status')).toHaveText('Đã hoàn tất');
+  await expect(page.getByTestId('inspection-status')).toContainText(
+    'Đã hoàn tất',
+  );
 
-  await expect(page.getByText('approved', { exact: true })).toBeVisible();
+  // Huy hiệu trạng thái hiển thị "●approved" (span aria-hidden trang trí trước
+  // nhãn) trong panel 'Phê duyệt đề xuất'; khôi phục phạm vi panel và khớp
+  // theo đoạn chứa 'approved' thay vì exact DOM text.
+  await expect(
+    page
+      .locator('section')
+      .filter({ has: page.getByRole('heading', { name: 'Phê duyệt đề xuất' }) })
+      .getByText('approved'),
+  ).toBeVisible();
   await expect(
     page.getByText(
       /Xử phạt|Quyết định xử phạt|Kết luận.*pháp lý|vi phạm hành chính/i,

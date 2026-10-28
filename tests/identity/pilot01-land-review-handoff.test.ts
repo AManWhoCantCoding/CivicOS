@@ -539,7 +539,101 @@ function startPilot01Handoff(
   };
 }
 
-describe('NGOÀI BASELINE — CIVICOS PILOT 01 — REVIEW SESSION LOGOUT FAILURE (PO-approved chat request; existing D-52/D-53 provisioning coverage)', () => {
+describe('NGOÀI BASELINE — CIVICOS PILOT 01 — D-78 Sandbox runtime retirement (out of baseline; Phase 3 DB-consolidation) — DB-free, browser-free, OS-free guard assertions; every exported Pilot 01 land-review runtime entrypoint fails closed before any secret/API/OS-identity/TTY side effect', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('DB-CONSOLIDATION D-78 Task 4: CLI runner retires immediately without env-file load or bootstrap call', async () => {
+    const loadEnvFile = vi
+      .spyOn(process, 'loadEnvFile')
+      .mockImplementation(() => {});
+    try {
+      await expect(runPilot01LandReviewCli()).rejects.toThrow(
+        'PILOT01_SANDBOX_RUNTIME_RETIRED',
+      );
+
+      expect(loadEnvFile).not.toHaveBeenCalled();
+      expect(mocks.runPilot01CommanderBootstrap).not.toHaveBeenCalled();
+      expect(mocks.readPilot01CommanderSecret).not.toHaveBeenCalled();
+      expect(mocks.findUniqueLandParcel).not.toHaveBeenCalled();
+      expect(mocks.disconnectPrisma).not.toHaveBeenCalled();
+      expect(mocks.fetch).not.toHaveBeenCalled();
+      expect(mocks.launch).not.toHaveBeenCalled();
+      expect(mocks.execFileSync).not.toHaveBeenCalled();
+      expect(mocks.createInterface).not.toHaveBeenCalled();
+    } finally {
+      loadEnvFile.mockRestore();
+    }
+  });
+
+  it('D-78 Task 4 (retired): land review preparation rejects before any DPAPI secret read, secret-store write, Commander bootstrap, Prisma or API activity', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    try {
+      await expect(preparePilot01LandReviewAccount()).rejects.toThrow(
+        'PILOT01_SANDBOX_RUNTIME_RETIRED',
+      );
+
+      expect(mocks.readPilot01CommanderSecret).not.toHaveBeenCalled();
+      expect(mocks.storePilot01CommanderSecret).not.toHaveBeenCalled();
+      expect(mocks.runPilot01CommanderBootstrap).not.toHaveBeenCalled();
+      expect(mocks.findUniqueLandParcel).not.toHaveBeenCalled();
+      expect(mocks.disconnectPrisma).not.toHaveBeenCalled();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('D-78 Task 4 (retired): land officer browser handoff rejects before Windows identity lookup, TTY prompt, browser launch, secret read or API calls', async () => {
+    await expect(runPilot01LandOfficerHandoff()).rejects.toThrow(
+      'PILOT01_SANDBOX_RUNTIME_RETIRED',
+    );
+
+    expect(mocks.execFileSync).not.toHaveBeenCalled();
+    expect(mocks.createInterface).not.toHaveBeenCalled();
+    expect(mocks.launch).not.toHaveBeenCalled();
+    expect(mocks.readPilot01CommanderSecret).not.toHaveBeenCalled();
+    expect(mocks.runPilot01CommanderBootstrap).not.toHaveBeenCalled();
+    expect(mocks.storePilot01CommanderSecret).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it('prefills only the review email and leaves password entry to the PO', async () => {
+    const emailFill = vi.fn();
+    const passwordFill = vi.fn();
+    const waitForHeading = vi.fn();
+    const passwordInput = {
+      fill: passwordFill,
+    };
+    const page = {
+      getByRole: vi.fn(() => ({ waitFor: waitForHeading })),
+      getByLabel: vi.fn((label: string) =>
+        label === 'Email' ? { fill: emailFill } : passwordInput,
+      ),
+    };
+
+    await fillPilot01LandOfficerLogin(page as never);
+
+    expect(waitForHeading).toHaveBeenCalledOnce();
+    expect(emailFill).toHaveBeenCalledWith('pilot01-land-review@civicos.local');
+    expect(page.getByLabel).toHaveBeenCalledOnce();
+    expect(page.getByLabel).not.toHaveBeenCalledWith('Mật khẩu', {
+      exact: true,
+    });
+    expect(passwordFill).not.toHaveBeenCalled();
+    expect(page.getByRole).toHaveBeenCalledOnce();
+  });
+});
+
+// DB-CONSOLIDATION D-78 Task 4 (retired runtime): the mocked workflow tests
+// below directly execute the retired Pilot 01 land-review preparation and
+// browser handoff runtimes (`preparePilot01LandReviewAccount` and
+// `runPilot01LandOfficerHandoff`), which are now hard-retired with a stable
+// `PILOT01_SANDBOX_RUNTIME_RETIRED` failure. They are skipped as retired D-78
+// use; the active guard coverage lives in the describe block above.
+describe.skip('NGOÀI BASELINE — CIVICOS PILOT 01 — REVIEW SESSION LOGOUT FAILURE (PO-approved chat request; existing D-52/D-53 provisioning coverage; SKIPPED: D-78 retired Pilot 01 sandbox runtime)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal('fetch', mocks.fetch);
@@ -567,50 +661,6 @@ describe('NGOÀI BASELINE — CIVICOS PILOT 01 — REVIEW SESSION LOGOUT FAILURE
 
   afterEach(() => {
     vi.unstubAllGlobals();
-  });
-
-  it('loads the approved runtime env only in the CLI runner before the guard', async () => {
-    const loadEnvFile = vi
-      .spyOn(process, 'loadEnvFile')
-      .mockImplementation(() => {});
-    try {
-      mockSuccessfulApi();
-      await preparePilot01LandReviewAccount();
-      expect(loadEnvFile).not.toHaveBeenCalled();
-
-      mocks.fetch.mockClear();
-      mocks.runPilot01CommanderBootstrap.mockClear();
-      mockSuccessfulApi();
-
-      const result = await runPilot01LandReviewCli();
-
-      expect(result.parcelCode).toBe(parcelCode);
-      expect(loadEnvFile).toHaveBeenCalledOnce();
-      expect(loadEnvFile).toHaveBeenCalledWith(
-        path.join(
-          process.cwd(),
-          '.scratch',
-          'CIVICOS-PHASE3-COMMANDER-BOOTSTRAP-20261020',
-          'runtime.env',
-        ),
-      );
-      expect(loadEnvFile.mock.invocationCallOrder[0]).toBeLessThan(
-        mocks.runPilot01CommanderBootstrap.mock.invocationCallOrder[0],
-      );
-
-      mocks.fetch.mockClear();
-      mocks.runPilot01CommanderBootstrap.mockClear();
-      loadEnvFile.mockImplementationOnce(() => {
-        throw new Error('runtime.env unavailable');
-      });
-      await expect(runPilot01LandReviewCli()).rejects.toThrow(
-        'runtime.env unavailable',
-      );
-      expect(mocks.runPilot01CommanderBootstrap).not.toHaveBeenCalled();
-      expect(mocks.fetch).not.toHaveBeenCalled();
-    } finally {
-      loadEnvFile.mockRestore();
-    }
   });
 
   it('requires the existing Commander DPAPI secret before guard or API activity', async () => {
@@ -1007,32 +1057,6 @@ describe('NGOÀI BASELINE — CIVICOS PILOT 01 — REVIEW SESSION LOGOUT FAILURE
           url.pathname === '/api/auth/session' && method === 'DELETE',
       ),
     ).toHaveLength(1);
-  });
-
-  it('prefills only the review email and leaves password entry to the PO', async () => {
-    const emailFill = vi.fn();
-    const passwordFill = vi.fn();
-    const waitForHeading = vi.fn();
-    const passwordInput = {
-      fill: passwordFill,
-    };
-    const page = {
-      getByRole: vi.fn(() => ({ waitFor: waitForHeading })),
-      getByLabel: vi.fn((label: string) =>
-        label === 'Email' ? { fill: emailFill } : passwordInput,
-      ),
-    };
-
-    await fillPilot01LandOfficerLogin(page as never);
-
-    expect(waitForHeading).toHaveBeenCalledOnce();
-    expect(emailFill).toHaveBeenCalledWith('pilot01-land-review@civicos.local');
-    expect(page.getByLabel).toHaveBeenCalledOnce();
-    expect(page.getByLabel).not.toHaveBeenCalledWith('Mật khẩu', {
-      exact: true,
-    });
-    expect(passwordFill).not.toHaveBeenCalled();
-    expect(page.getByRole).toHaveBeenCalledOnce();
   });
 
   it.each([

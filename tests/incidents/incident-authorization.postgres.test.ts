@@ -1,12 +1,20 @@
 import { randomUUID } from 'node:crypto';
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+vi.mock('next/headers', () => ({ cookies: vi.fn() }));
+vi.mock('@/modules/identity', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/modules/identity')>()),
+  getCurrentUser: vi.fn(),
+}));
 
 import { prisma } from '@/lib/prisma';
+import { GET as getIncidentRoute } from '@/app/api/incidents/[incidentId]/route';
 import {
   assertAccess,
   canAccess,
   createAssignments,
+  getCurrentUser,
   revokeAssignment,
   type IdentityUser,
 } from '@/modules/identity';
@@ -533,7 +541,13 @@ describe.skipIf(!postgresEnabled)(
         },
         commander,
       );
-      const detail = await getIncident(registered.incidentId, commander);
+      vi.mocked(getCurrentUser).mockResolvedValue(commander);
+      const response = await getIncidentRoute(new Request('http://localhost'), {
+        params: Promise.resolve({ incidentId: registered.incidentId }),
+      });
+      const payload = await response.json();
+      const detail = payload.incident;
+      expect(response.status).toBe(200);
       expect(detail.informant).toMatchObject({
         name: 'Nguyen Van Mat T03',
         contact: '0900000001',
@@ -547,15 +561,18 @@ describe.skipIf(!postgresEnabled)(
       await expect(getIncident(registered.incidentId, sysop)).rejects.toThrow(
         'FORBIDDEN',
       );
-      await expect(
-        prisma.auditEvent.count({
-          where: {
-            resourceType: 'Incident',
-            resourceId: registered.incidentId,
-            operation: 'incident.sensitive_read',
-          },
-        }),
-      ).resolves.toBeGreaterThan(0);
+      const readAudits = await prisma.auditEvent.findMany({
+        where: {
+          actorId: commander.id,
+          resourceType: 'Incident',
+          resourceId: registered.incidentId,
+          operation: { in: ['incident.read', 'incident.sensitive_read'] },
+        },
+      });
+      expect(readAudits.map(({ operation }) => operation).sort()).toEqual([
+        'incident.read',
+        'incident.sensitive_read',
+      ]);
       const events = await prisma.eventRecord.findMany({
         where: {
           OR: [

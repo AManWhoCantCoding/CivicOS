@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import signal
 import socket
 import subprocess
@@ -10,6 +11,7 @@ import sys
 import time
 import uuid
 from dataclasses import dataclass
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterator
@@ -35,9 +37,112 @@ except ModuleNotFoundError:  # pragma: no cover - reported during fixture setup
 from pages import CivicApp
 
 
-DEFAULT_DATABASE_URL = "postgresql://civicos:civicos@localhost:5432/civicos"
 E2E_DATABASE_NAME = "civicos_e2e"
 DEFAULT_PASSWORD = "civicos-dev"
+
+# allowlist for the ONLY accepted E2E target — mirrors scripts/e2e/e2e-target.mjs
+E2E_TARGET_HOST = "127.0.0.1"
+E2E_TARGET_PORT = 5432
+E2E_TARGET_DATABASE = "civicos_e2e"
+E2E_ALLOWED_QUERY_KEYS = frozenset({"schema", "connection_limit"})
+_CONNECTION_LIMIT_PATTERN = r"[1-9][0-9]*"
+
+# Cross-runner advisory lock serialized with the Node harnesses
+# (see scripts/e2e/database-lifecycle.mjs). App data resets, migrations and
+# fixture seeding below run only while this lock is held on one persistent
+# session; schema, `_prisma_migrations` and PostGIS data always survive.
+E2E_ADVISORY_LOCK_KEY = 1128236101
+E2E_ADVISORY_LOCK_ACQUIRE_SQL = (
+    f"SELECT pg_advisory_lock({E2E_ADVISORY_LOCK_KEY}) IS NOT NULL AS acquired"
+)
+E2E_ADVISORY_LOCK_RELEASE_SQL = f"SELECT pg_advisory_unlock({E2E_ADVISORY_LOCK_KEY})"
+
+# `public` tables that are NOT application data: migration history and PostGIS
+# reference rows. Restarting application data never touches these tables.
+PROTECTED_TABLES = ("_prisma_migrations", "spatial_ref_sys")
+_IDENTIFIER_PATTERN = r"[A-Za-z_][A-Za-z0-9_]*"
+
+
+class E2ESpecError(RuntimeError):
+    """Stable, credential-free refusal — the message is the error code alone."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+def quote_postgres_identifier(name: str) -> str:
+    if not isinstance(name, str) or re.fullmatch(_IDENTIFIER_PATTERN, name) is None:
+        raise E2ESpecError("E2E_RESET_TABLE_NAME_REFUSED")
+    return f'"{name}"'
+
+
+def application_tables_from(tablenames: Any) -> tuple[str, ...]:
+    """Filter a `public` table list to application tables only."""
+    if not isinstance(tablenames, (list, tuple)):
+        raise E2ESpecError("E2E_RESET_QUERY_FAILED")
+    excluded = lambda name: name.startswith("pg_") or name in PROTECTED_TABLES
+    result: list[str] = []
+    for name in tablenames:
+        if not isinstance(name, str):
+            raise E2ESpecError("E2E_RESET_TABLE_NAME_REFUSED")
+        if not re.fullmatch(_IDENTIFIER_PATTERN, name) and not excluded(name):
+            # A legitimate application table must never be silently skipped.
+            raise E2ESpecError("E2E_RESET_TABLE_NAME_REFUSED")
+        if not excluded(name):
+            result.append(name)
+    return tuple(result)
+
+
+def resolve_e2e_database_url(
+    env: dict[str, str] | None = None,
+) -> str:
+    """Resolve the ONLY accepted E2E database target, fail closed.
+
+    The target must be the explicit process environment variable
+    ``CIVICOS_E2E_DATABASE_URL`` pointing at PostgreSQL
+    ``127.0.0.1:5432/civicos_e2e``. There is NO fallback to ``DATABASE_URL``
+    and no path rewrite. Raises ``E2ESpecError`` with a stable, credential-free
+    code before any connection is opened.
+    """
+    snapshot = os.environ if env is None else env
+    raw = snapshot.get("CIVICOS_E2E_DATABASE_URL")
+    if not isinstance(raw, str) or raw.strip() == "":
+        raise E2ESpecError("E2E_DATABASE_URL_REQUIRED")
+    try:
+        parts = urlsplit(raw)
+        port = parts.port  # non-numeric port raises ValueError
+    except ValueError:
+        raise E2ESpecError("E2E_DATABASE_URL_MALFORMED") from None
+    if not parts.scheme or not parts.netloc:
+        # Nothing resembling an authority at all: like Node's URL constructor.
+        raise E2ESpecError("E2E_DATABASE_URL_MALFORMED")
+    hostname = parts.hostname
+    if not isinstance(hostname, str) or re.fullmatch(r"[A-Za-z0-9.\-_]+", hostname) is None:
+        # Python's urlsplit is looser than Node's WHATWG URL parser; reject
+        # exotic hostnames as malformed to keep the parity contract.
+        raise E2ESpecError("E2E_DATABASE_URL_MALFORMED")
+    if parts.scheme not in ("postgres", "postgresql"):
+        raise E2ESpecError("E2E_DATABASE_URL_REFUSED")
+    if (
+        parts.hostname != E2E_TARGET_HOST
+        or port != E2E_TARGET_PORT
+        or parts.path != f"/{E2E_TARGET_DATABASE}"
+        or parts.fragment
+    ):
+        raise E2ESpecError("E2E_DATABASE_URL_REFUSED")
+    query_pairs = parse_qsl(parts.query, keep_blank_values=True)
+    query_keys = [key for key, _ in query_pairs]
+    if len(set(query_keys)) != len(query_keys):
+        raise E2ESpecError("E2E_DATABASE_URL_REFUSED")
+    for key, value in query_pairs:
+        if key not in E2E_ALLOWED_QUERY_KEYS:
+            raise E2ESpecError("E2E_DATABASE_URL_REFUSED")
+        if key == "schema" and value != "public":
+            raise E2ESpecError("E2E_DATABASE_URL_REFUSED")
+        if key == "connection_limit" and re.fullmatch(_CONNECTION_LIMIT_PATTERN, value) is None:
+            raise E2ESpecError("E2E_DATABASE_URL_REFUSED")
+    return raw
 
 # Serialises concurrent `prisma generate` runs (parallel pytest workers or a
 # previous e2e server still holding the query-engine DLL on Windows) and
@@ -251,16 +356,12 @@ def _release_generate_lock(lock_path: Path, token: str) -> None:
 
 def _without_prisma_options(url: str) -> str:
     parts = urlsplit(url)
-    query = [(key, value) for key, value in parse_qsl(parts.query) if key != "schema"]
+    query = [
+        (key, value)
+        for key, value in parse_qsl(parts.query)
+        if key not in E2E_ALLOWED_QUERY_KEYS
+    ]
     return urlunsplit(parts._replace(query=urlencode(query)))
-
-
-def _e2e_database_url() -> str:
-    source = os.environ.get("CIVICOS_E2E_DATABASE_URL") or os.environ.get(
-        "DATABASE_URL", DEFAULT_DATABASE_URL
-    )
-    parts = urlsplit(source)
-    return urlunsplit(parts._replace(path=f"/{E2E_DATABASE_NAME}"))
 
 
 def _admin_database_url(database_url: str) -> str:
@@ -282,12 +383,20 @@ def _password_hash(password: str) -> str:
 
 
 class E2EDatabase:
-    def __init__(self, database_url: str, recreate: bool) -> None:
+    def __init__(self, database_url: str) -> None:
         self.url = database_url
         self.psycopg_url = _without_prisma_options(database_url)
         self.admin_url = _without_prisma_options(_admin_database_url(database_url))
-        self.recreate = recreate
         self.accounts: dict[str, TestAccount] = {}
+        # Whole-run advisory-lock ownership: set only after
+        # `pg_advisory_lock(1128236101)` is confirmed on the persistent
+        # session stored in `_lock_connection`. Reset SQL NEVER runs while this
+        # is False, and the unlock runs on the same session on every path.
+        self.lock_owned = False
+        self._lock_connection: Any = None
+        # Owed-final-reset flag: set when the UNDER-LOCK initial reset
+        # succeeded; the final reset runs afterwards on every outcome.
+        self.reset_owed = False
 
     def connect(self, url: str | None = None):
         if psycopg is None:
@@ -316,20 +425,9 @@ class E2EDatabase:
             ).fetchone()
         return row is not None
 
-    def _drop_database(self) -> None:
-        if not self._database_exists():
-            return
-        with self.connect(self.admin_url,) as connection:
-            connection.autocommit = True
-            connection.execute(
-                "SELECT pg_terminate_backend(pid) "
-                "FROM pg_stat_activity "
-                "WHERE datname = %s AND pid <> pg_backend_pid()",
-                (E2E_DATABASE_NAME,),
-            )
-            connection.execute(f'DROP DATABASE "{E2E_DATABASE_NAME}"')
-
-    def _create_database(self) -> None:
+    def create_database_if_missing(self) -> None:
+        """Safe create-if-missing only. The database is NEVER dropped,
+        sessions are never terminated, and existing schema/data are preserved."""
         if self._database_exists():
             return
         with self.connect(self.admin_url) as connection:
@@ -338,9 +436,20 @@ class E2EDatabase:
 
     def _node_environment(self) -> dict[str, str]:
         environment = os.environ.copy()
+        # Child Node processes must only ever see the validated exact
+        # `civicos_e2e` target. Any inherited main/demo/test database URL
+        # alias is scrubbed, never trusted, and never rewritten.
+        for unsafe in (
+            "DATABASE_URL",
+            "DEMO_DATABASE_URL",
+            "CIVICOS_DATABASE_URL",
+            "CIVICOS_TEST_DATABASE_URL",
+        ):
+            environment.pop(unsafe, None)
         environment.update(
             {
                 "DATABASE_URL": self.url,
+                "CIVICOS_E2E_DATABASE_URL": self.url,
                 "NODE_ENV": "development",
                 "SESSION_SECRET": "civicos-e2e-session-secret",
                 "EVENT_WORKER_INTERVAL_MS": os.environ.get(
@@ -404,18 +513,98 @@ class E2EDatabase:
             _release_generate_lock(lock_path, lock_token)
 
     def migrate(self) -> None:
+        if not self.lock_owned:
+            raise E2ESpecError("E2E_LOCK_NOT_OWNED")
         self._run_prisma_generate()
         self._run_node_command([_node_command(), "run", "prisma:migrate:deploy"])
 
+    def acquire_advisory_lock(self) -> None:
+        """Acquire the shared whole-run advisory lock on one persistent
+        connection to the exact `civicos_e2e` database.
+
+        Must be called only after the target was validated and PostgreSQL is
+        ready and the database exists. Refusal to acquire is a hard failure —
+        never a silent continue. No reset/migration/seed may run until this
+        confirms ownership.
+        """
+        connection = self.connect()
+        self._lock_connection = connection
+        try:
+            # Session-level advisory locks are session-scoped regardless of
+            # transaction state; autocommit avoids pinning an idle open
+            # transaction for the whole suite.
+            connection.autocommit = True
+            row = connection.execute(E2E_ADVISORY_LOCK_ACQUIRE_SQL).fetchone()
+            if row is None or not row[0]:
+                raise E2ESpecError("E2E_ADVISORY_LOCK_FAILED")
+            self.lock_owned = True
+        except Exception:
+            try:
+                connection.close()
+            except Exception:  # pragma: no cover - close failure on lost session
+                pass
+            if self._lock_connection is connection:
+                self._lock_connection = None
+            raise
+
+    def release_advisory_lock(self) -> None:
+        """Unlock the same persistent session and close it.
+
+        Closing the connection also releases session-level locks, so a failed
+        SQL unlock still cannot leak the lock for other runners.
+        """
+        connection = self._lock_connection
+        if self.lock_owned and connection is not None:
+            try:
+                connection.execute(E2E_ADVISORY_LOCK_RELEASE_SQL)
+            except Exception:
+                pass
+            try:
+                connection.close()
+            except Exception:
+                pass
+        self.lock_owned = False
+        self._lock_connection = None
+
+    def reset_application_data(self) -> tuple[str, ...]:
+        """Truncate ALL application data under lock ownership only.
+
+        Proves `current_database()` = 'civicos_e2e' before any mutating SQL,
+        dynamically enumerates `public` application tables (excluding
+        `_prisma_migrations`, `spatial_ref_sys`, and `pg_` catalog names), and
+        keeps schema, migration history, and PostGIS rows intact.
+        """
+        if not self.lock_owned:
+            raise E2ESpecError("E2E_LOCK_NOT_OWNED")
+        with self.connect() as connection:
+            identity_row = connection.execute(
+                "SELECT current_database() AS db"
+            ).fetchone()
+            if identity_row is None or identity_row[0] != E2E_TARGET_DATABASE:
+                raise E2ESpecError("E2E_RESET_CONNECTED_DATABASE_REFUSED")
+            listing = connection.execute(
+                "SELECT tablename AS table_name FROM pg_tables "
+                "WHERE schemaname = 'public' "
+                "ORDER BY tablename"
+            ).fetchall()
+            tables = application_tables_from([row[0] for row in listing])
+            if tables:
+                quoted = ", ".join(quote_postgres_identifier(t) for t in tables)
+                connection.execute(f"TRUNCATE TABLE {quoted} RESTART IDENTITY CASCADE")
+        if not self.reset_owed:
+            self.reset_owed = True
+        return tables
+
     def prepare(self, timeout: float) -> None:
-        self.wait_for_postgres(timeout)
-        if self.recreate:
-            self._drop_database()
-        self._create_database()
-        self.migrate()
-        self.seed_reference_data()
+        """Legacy single-call prepare (readiness → create → lock → migrate →
+        reset → seed). The session fixture uses `e2e_database_lifecycle` to
+        keep the lock held across the test session; prefer that path."""
+        with e2e_database_lifecycle(self, timeout):
+            pass
 
     def seed_reference_data(self) -> None:
+        if not self.lock_owned:
+            raise E2ESpecError("E2E_LOCK_NOT_OWNED")
         now = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())
         with self.connect() as connection:
             role_ids: dict[str, str] = {}
@@ -543,6 +732,8 @@ class E2EDatabase:
                 )
 
     def reset_business_data(self) -> None:
+        if not self.lock_owned:
+            raise E2ESpecError("E2E_LOCK_NOT_OWNED")
         table_list = ", ".join(f'"{table}"' for table in REFERENCE_TABLES)
         with self.connect() as connection:
             connection.execute(f"TRUNCATE TABLE {table_list} RESTART IDENTITY CASCADE")
@@ -552,6 +743,8 @@ class E2EDatabase:
             )
 
     def create_health_session(self) -> str:
+        if not self.lock_owned:
+            raise E2ESpecError("E2E_LOCK_NOT_OWNED")
         token = os.urandom(32).hex()
         now = datetime.now(timezone.utc)
         token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
@@ -570,10 +763,6 @@ class E2EDatabase:
                 ),
             )
         return token
-
-    def drop(self) -> None:
-        if self._database_exists():
-            self._drop_database()
 
 
 def _safe_name(value: str) -> str:
@@ -777,44 +966,54 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Readiness timeout for PostgreSQL, Next, and the worker.",
     )
     group.addoption(
-        "--keep-e2e-db",
-        action="store_true",
-        default=os.environ.get("CIVICOS_E2E_KEEP_DB") == "1",
-        help="Keep civicos_e2e after the run for local debugging.",
-    )
-    group.addoption(
         "--project",
         choices=("all", "desktop", "mobile"),
         default=os.environ.get("CIVICOS_E2E_PROJECT", "all"),
         help="Run the Chromium desktop project, mobile project, or both.",
     )
-    group.addoption(
-        "--recreate-e2e-db",
-        action="store_true",
-        default=False,
-        help="Opt in to dropping and recreating the dedicated database.",
-    )
-    group.addoption(
-        "--drop-e2e-db",
-        action="store_true",
-        default=False,
-        help="Opt in to dropping the dedicated database after the run.",
-    )
+
+
+@contextmanager
+def e2e_database_lifecycle(database: E2EDatabase, timeout: float):
+    """Whole-run E2E database session lifecycle (once per `e2e_database`).
+
+    Order: readiness → safe create-if-missing → whole-run advisory lock on the
+    persistent `civicos_e2e` session → migrate → initial FULL application-data
+    reset → seed reference fixtures → test body → final FULL reset AFTER the
+    dependent app/worker fixtures have torn down → unlock on the same session.
+    """
+    database.wait_for_postgres(timeout)
+    database.create_database_if_missing()
+    database.acquire_advisory_lock()
+    try:
+        database.migrate()
+        database.reset_application_data()
+        database.seed_reference_data()
+        yield database
+    finally:
+        error: BaseException | None = None
+        # Owed only once the initial reset succeeded; attempted on EVERY
+        # outcome (including a failed seed or failed test start).
+        if database.reset_owed:
+            try:
+                database.reset_application_data()
+            except BaseException as exception:  # noqa: BLE001 - re-raised after unlock
+                error = exception
+        try:
+            database.release_advisory_lock()
+        except BaseException as exception:  # pragma: no cover - defensive
+            if error is None:
+                error = exception
+        if error is not None:
+            raise error
+
 
 @pytest.fixture(scope="session")
 def e2e_database(pytestconfig: pytest.Config) -> Iterator[E2EDatabase]:
-    database = E2EDatabase(
-        _e2e_database_url(),
-        recreate=pytestconfig.getoption("--recreate-e2e-db"),
-    )
-    try:
-        database.prepare(pytestconfig.getoption("--service-timeout"))
+    timeout = float(pytestconfig.getoption("--service-timeout"))
+    database = E2EDatabase(resolve_e2e_database_url())
+    with e2e_database_lifecycle(database, timeout):
         yield database
-    finally:
-        if pytestconfig.getoption("--drop-e2e-db") and not pytestconfig.getoption(
-            "--keep-e2e-db"
-        ):
-            database.drop()
 
 
 @pytest.fixture(scope="session")
@@ -859,17 +1058,55 @@ def demo_labels() -> tuple[str, str, str]:
     return DEMO_SCENARIO_LABELS
 
 
+# Marker scoped to the DB-free lifecycle unit tests: nothing under it may
+# request the E2E database or service fixtures, and the autouse per-test
+# business cleanup below must NOT touch PostgreSQL for those tests.
+DB_FREE_MARKER = "civicos_db_free"
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "markers",
+        f"{DB_FREE_MARKER}: pure database-target/lifecycle unit tests; never touch the DB, services, or browser",
+    )
+
+
 @pytest.fixture(autouse=True)
-def clean_business_data(
-    e2e_database: E2EDatabase, e2e_services: E2EServices
-) -> Iterator[None]:
-    e2e_services.stop()
-    e2e_database.reset_business_data()
+def _verify_url(request: pytest.FixtureRequest) -> Iterator[None]:
+    """Narrow override of pytest-base-url's SESSION-SCOPE autouse verifier.
+
+    The plugin's `_verify_url` requests the `base_url` fixture unconditionally,
+    which forces `e2e_services`/`e2e_database` (and Chromium-era service
+    startup) even for DB-free tests. This override keeps behavior for browser
+    tests (this suite never exercises the plugin's URL verification) while
+    letting DB-free tests run without any service/DB fixture.
+    """
+    if request.node.get_closest_marker(DB_FREE_MARKER) is not None:
+        yield
+        return
+    pytestconfig = request.getfixturevalue("pytestconfig")
+    if pytestconfig.getoption("verify_base_url", default=False):
+        request.getfixturevalue("base_url")
+    yield
+
+
+@pytest.fixture(autouse=True)
+def clean_business_data(request: pytest.FixtureRequest) -> Iterator[None]:
+    marker = request.node.get_closest_marker(DB_FREE_MARKER)
+    if marker is not None:
+        # DB-free test: resolve no fixture that could connect or start services.
+        yield
+        return
+    pytestconfig = request.getfixturevalue("pytestconfig")
+    services = request.getfixturevalue("e2e_services")
+    database = request.getfixturevalue("e2e_database")
+    services.stop()
+    database.reset_business_data()
     try:
-        e2e_services.start()
+        services.start()
         yield
     finally:
-        e2e_services.stop()
+        services.stop()
 
 
 @pytest.fixture(params=("desktop", "mobile"), ids=("desktop", "mobile"))

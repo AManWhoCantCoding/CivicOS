@@ -2640,9 +2640,11 @@ describe.skipIf(!psE1009Enabled)(
 
         const saturday = new Date('2026-09-19T01:00:00.000Z');
         expect(saturday.getUTCDay()).toBe(6);
+        const weekendPlate = ps009Plate('S');
+        await ps009CreateRegistry(weekendPlate);
         const weekend = await recordVehicleObservation(
           {
-            plate: ps009Plate('S'),
+            plate: weekendPlate,
             observedAt: saturday.toISOString(),
             latitude: 20.96,
             longitude: 105.93,

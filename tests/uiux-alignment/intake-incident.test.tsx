@@ -137,7 +137,11 @@ describe('T-006 intake/incident', () => {
     expect(form).toContain("'content-type': 'application/json'");
     expect(form).toContain("'Idempotency-Key'");
     expect(form).toContain('sourceChannel: form.get(');
-    expect(form).toContain('receivedAt: receivedAt.toISOString()');
+    // receivedAt is assigned server-side by the route, not supplied by the form.
+    expect(form).not.toContain('receivedAt');
+    expect(readSource('src/app/api/intake-reports/route.ts')).toContain(
+      'receivedAt: new Date().toISOString(),',
+    );
     expect(form).toContain('content: form.get(');
     expect(form).toContain('sensitiveRef: form.get(');
 

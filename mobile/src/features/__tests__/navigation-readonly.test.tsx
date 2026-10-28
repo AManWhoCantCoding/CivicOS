@@ -75,3 +75,34 @@ describe('CUI-003 read-only screens and approved task actions', () => {
     }
   });
 });
+
+describe('D-79 task input accessibility semantics (source-level)', () => {
+  // D-79 gate is automation-only; Android emulator accessibility-tree checks are
+  // out of scope here. This block asserts the semantic props already shipped in
+  // TaskScreen source, not runtime/emulator behavior.
+  it('labels the resident activity and inspection task inputs for screen readers', () => {
+    const task = readSource('../task/TaskScreen.tsx');
+    // Resident activity input carries a stable label.
+    expect(task).toContain('accessibilityLabel="Nội dung hoạt động"');
+    // Checklist inputs are labeled per template item key.
+    expect(task).toMatch(/accessibilityLabel=\{`Checklist \$\{item\.key\}`\}/);
+    // Finding result choices expose radio role and selected state.
+    expect(task).toMatch(
+      /accessibilityRole="radio"\s*\n\s*accessibilityState=\{\{ selected: findingKey === item\.key \}\}/,
+    );
+    // Finding description input carries a stable label.
+    expect(task).toContain('accessibilityLabel="Finding description"');
+  });
+  it('keeps button roles on the approved activity, checklist, and finding submits', () => {
+    const task = readSource('../task/TaskScreen.tsx');
+    expect(task).toMatch(
+      /accessibilityRole="button"\s*\n\s*onPress=\{\(\) => void submitActivity\(\)\}/,
+    );
+    expect(task).toMatch(
+      /accessibilityRole="button"\s*\n\s*onPress=\{\(\) =>\s*\n?\s*void submitInspection\('inspection\.save_checklist'/,
+    );
+    expect(task).toMatch(
+      /accessibilityRole="button"\s*\n\s*onPress=\{\(\) =>\s*\n\s*void submitInspection\('inspection\.finding'/,
+    );
+  });
+});

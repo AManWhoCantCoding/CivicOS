@@ -19,7 +19,9 @@ import {
 } from './fixtures';
 import { expectNoRawPii, useMobileReadonlyFixture } from './helpers';
 
-describe('mobile forces read contract', () => {
+const describeWithDatabase = describe.skipIf(process.env.RUN_DB_TESTS !== '1');
+
+describeWithDatabase('mobile forces read contract', () => {
   useMobileReadonlyFixture();
   it('keeps list views read-only, linked, and masked', async () => {
     const result = await Promise.all([

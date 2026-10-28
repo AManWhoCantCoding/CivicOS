@@ -16,7 +16,12 @@ import {
   residentReportPeriods,
 } from '../../scripts/demo/seed-identity-residents';
 
-const postgresEnabled = process.env.RUN_DB_TESTS === '1';
+// DB-CONSOLIDATION SLICE (Task 3): the DB-backed demo identity/residents seed
+// suite is explicitly disabled — its seed helpers target the production/demo
+// `civicos` database, which the approved Vitest DB runner
+// (127.0.0.1:5432/civicos_e2e) must never touch. Skipped until a dedicated
+// E2E-safe demo fixture/reset seam exists (later consolidation task).
+
 const DEMO_URL =
   process.env.DEMO_DATABASE_URL ??
   'postgresql://civicos:civicos@localhost:5432/civicos?schema=public';
@@ -41,7 +46,7 @@ type Shared = {
   residents: typeof import('@/modules/residents');
 };
 
-describe.skipIf(!postgresEnabled)('demo identity/residents seed', () => {
+describe.skip('demo identity/residents seed', () => {
   let shared!: Shared;
 
   beforeAll(async () => {

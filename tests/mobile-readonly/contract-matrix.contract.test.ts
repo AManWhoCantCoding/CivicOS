@@ -38,7 +38,9 @@ import * as searchRoute from '@/app/api/related-info/search/route';
 import * as countsRoute from '@/app/api/related-info/counts/route';
 import * as detailRoute from '@/app/api/related-info/[entityType]/[id]/route';
 
-describe('mobile contract matrix', () => {
+const describeWithDatabase = describe.skipIf(process.env.RUN_DB_TESTS !== '1');
+
+describeWithDatabase('mobile contract matrix', () => {
   useMobileReadonlyFixture();
 
   it('checks layers, related-info, forces, boundaries, masking, and GET-only shape', async () => {

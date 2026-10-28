@@ -23,6 +23,7 @@ import {
   isResidentSubjectType,
   maskDisplayName,
   nextCheckForPurpose,
+  nextCheckAfterActivityForPurpose,
   slaRuleForPurpose,
 } from './contracts';
 import type { ResidentActor, ResidentSubjectType } from './contracts';
@@ -182,6 +183,7 @@ export type CreateRecordInput = {
   riskLevel?: string;
   sourceOrganizationId?: string;
   assignedOrganizationId?: string;
+  arrivalAt?: string;
 };
 
 export async function createManagementRecord(
@@ -192,6 +194,14 @@ export async function createManagementRecord(
   if (!isResidentSubjectType(input.purpose)) {
     throw new Error('INVALID_SUBJECT_TYPE');
   }
+  const arrivalAt =
+    input.purpose === 'foreign_resident'
+      ? new Date(input.arrivalAt ?? '')
+      : undefined;
+  if (arrivalAt && Number.isNaN(arrivalAt.getTime()))
+    throw new Error('INVALID_ARRIVAL_AT');
+  if (input.purpose === 'foreign_resident' && !arrivalAt)
+    throw new Error('INVALID_ARRIVAL_AT');
   const subject = await prisma.subject.findUnique({
     where: { id: input.subjectId },
   });
@@ -200,16 +210,27 @@ export async function createManagementRecord(
     input.assignedOrganizationId ?? actor.organizationUnitId;
   if (!sameUnit(actor, organizationId)) throw new Error('FORBIDDEN');
   return prisma.$transaction(async (tx) => {
-    const record = await tx.subjectManagementRecord.create({
+    let record = await tx.subjectManagementRecord.create({
       data: {
         subjectId: subject.id,
         purpose: input.purpose,
         riskLevel: input.riskLevel ?? 'normal',
         sourceOrganizationId: input.sourceOrganizationId,
         assignedOrganizationId: organizationId,
-        nextCheckAt: nextCheckForPurpose(input.purpose, new Date()),
+        nextCheckAt:
+          input.purpose === 'reintegration'
+            ? undefined
+            : nextCheckForPurpose(input.purpose, new Date()),
       },
     });
+    if (input.purpose === 'reintegration') {
+      record = await tx.subjectManagementRecord.update({
+        where: { id: record.id },
+        data: {
+          nextCheckAt: nextCheckForPurpose(input.purpose, record.createdAt),
+        },
+      });
+    }
     await appendEvent(tx, {
       eventId: randomUUID(),
       eventType: 'SubjectManagementRecordCreated',
@@ -223,6 +244,7 @@ export async function createManagementRecord(
         subjectId: subject.id,
         purpose: record.purpose,
         riskLevel: record.riskLevel,
+        ...(arrivalAt ? { arrivalAt: arrivalAt.toISOString() } : {}),
       },
       metadata: {},
     });
@@ -231,7 +253,7 @@ export async function createManagementRecord(
         resourceType: 'SubjectManagementRecord',
         resourceId: record.id,
         rule: slaRuleForPurpose(input.purpose, 'registration'),
-        startedAt: record.createdAt,
+        startedAt: arrivalAt ?? record.createdAt,
         assigneeUserId: actor.id,
       },
       tx,
@@ -241,7 +263,12 @@ export async function createManagementRecord(
         {
           resourceType: 'SubjectManagementRecord',
           resourceId: record.id,
-          rule: slaRuleForPurpose(input.purpose, 'checkup'),
+          rule: {
+            ...slaRuleForPurpose(input.purpose, 'checkup'),
+            durationMs:
+              nextCheckForPurpose(input.purpose, record.createdAt).getTime() -
+              record.createdAt.getTime(),
+          },
           startedAt: record.createdAt,
           assigneeUserId: actor.id,
         },
@@ -254,7 +281,7 @@ export async function createManagementRecord(
           resourceType: 'SubjectManagementRecord',
           resourceId: record.id,
           rule: slaRuleForPurpose(input.purpose, 'same_day'),
-          startedAt: record.createdAt,
+          startedAt: arrivalAt ?? record.createdAt,
           assigneeUserId: actor.id,
         },
         tx,
@@ -266,7 +293,11 @@ export async function createManagementRecord(
         resourceType: 'SubjectManagementRecord',
         resourceId: record.id,
         operation: 'subject_record.created',
-        metadata: { subjectId: subject.id, purpose: record.purpose },
+        metadata: {
+          subjectId: subject.id,
+          purpose: record.purpose,
+          ...(arrivalAt ? { arrivalAt: arrivalAt.toISOString() } : {}),
+        },
       },
       tx,
     );
@@ -487,7 +518,7 @@ export async function recordActivity(
       input.activityType === 'checkup' &&
       isResidentSubjectType(recordState.purpose)
     ) {
-      const nextCheck = nextCheckForPurpose(
+      const nextCheck = nextCheckAfterActivityForPurpose(
         recordState.purpose as ResidentSubjectType,
         occurredAt,
       );
@@ -763,7 +794,15 @@ export async function generateMonthlyReport(
       const byKey = await tx.residentMonthlyReport.findUnique({
         where: { idempotencyKey: input.idempotencyKey },
       });
-      if (byKey) return byKey;
+      if (byKey) {
+        if (
+          byKey.organizationId !== input.organizationId ||
+          byKey.period !== input.period
+        ) {
+          throw new Error('IDEMPOTENCY_CONFLICT');
+        }
+        return byKey;
+      }
     }
     const records = await tx.subjectManagementRecord.findMany({
       where: { assignedOrganizationId: input.organizationId },

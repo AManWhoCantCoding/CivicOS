@@ -34,10 +34,6 @@ export function IntakeReportForm() {
     setSuccess(null);
     try {
       const form = new FormData(event.currentTarget);
-      const receivedAt = new Date(String(form.get('receivedAt')));
-      if (Number.isNaN(receivedAt.getTime())) {
-        throw new Error('INVALID_RECEIVED_AT');
-      }
       const latitude = readOptionalCoordinate(form.get('latitude'));
       const longitude = readOptionalCoordinate(form.get('longitude'));
       if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
@@ -54,7 +50,6 @@ export function IntakeReportForm() {
         },
         body: JSON.stringify({
           sourceChannel: form.get('sourceChannel'),
-          receivedAt: receivedAt.toISOString(),
           content: form.get('content'),
           sourceName: form.get('sourceName'),
           sourceContact: form.get('sourceContact'),
@@ -84,7 +79,6 @@ export function IntakeReportForm() {
         CONTENT_REQUIRED: 'Cần nhập nội dung tin báo.',
         GEOPOINT_INCOMPLETE: 'Cần nhập đủ vĩ độ và kinh độ.',
         INVALID_LOCATION: 'Vĩ độ và kinh độ phải là số hợp lệ.',
-        INVALID_RECEIVED_AT: 'Thời điểm tiếp nhận không hợp lệ.',
         UNAUTHENTICATED: 'Phiên đã hết hạn. Vui lòng đăng nhập lại.',
       };
       setError(messages[code] ?? 'Không thể ghi nhận tin báo.');
@@ -123,16 +117,6 @@ export function IntakeReportForm() {
           <option value="app">Ứng dụng</option>
           <option value="district_transfer">Chuyển đơn vị</option>
         </select>
-      </label>
-      <label className="block text-sm text-[var(--civicos-text)]">
-        Thời điểm tiếp nhận
-        <input
-          name="receivedAt"
-          type="datetime-local"
-          defaultValue={new Date().toISOString().slice(0, 16)}
-          required
-          className="mt-2 min-h-[44px] w-full rounded-lg border border-[var(--civicos-border)] bg-[var(--civicos-surface)] px-3 py-3 text-[var(--civicos-text)] outline-none focus:border-[var(--civicos-focus)] focus:ring-2 focus:ring-[var(--civicos-focus)]"
-        />
       </label>
       <label className="block text-sm text-[var(--civicos-text)]">
         Nội dung tin báo

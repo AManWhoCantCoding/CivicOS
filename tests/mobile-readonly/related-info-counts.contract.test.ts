@@ -4,7 +4,9 @@ import { countRelatedInfo } from '@/modules/mobile-readonly/related-info';
 import { mobileUsers } from './fixtures';
 import { useMobileReadonlyFixture } from './helpers';
 
-describe('mobile related-info counts contract', () => {
+const describeWithDatabase = describe.skipIf(process.env.RUN_DB_TESTS !== '1');
+
+describeWithDatabase('mobile related-info counts contract', () => {
   useMobileReadonlyFixture();
   it('returns exactly the five entity counters', async () => {
     const result = await countRelatedInfo(mobileUsers.inScope, {});

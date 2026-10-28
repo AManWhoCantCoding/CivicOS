@@ -4,7 +4,9 @@ import { hasActiveAssignmentForRead } from '@/modules/identity';
 import { mobileUsers, mobileResource } from './fixtures';
 import { useMobileReadonlyFixture } from './helpers';
 
-describe('mobile assignment boundary regression', () => {
+const describeWithDatabase = describe.skipIf(process.env.RUN_DB_TESTS !== '1');
+
+describeWithDatabase('mobile assignment boundary regression', () => {
   useMobileReadonlyFixture();
   it('does not grant a commander an assignment-free read', async () => {
     await expect(

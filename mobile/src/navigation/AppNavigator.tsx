@@ -37,6 +37,39 @@ export const routes = [
   'Settings',
 ] as const;
 
+// Primary bottom-tab destinations. Everything else lives behind "Thêm".
+const PRIMARY_TABS = ['Map', 'Alarms', 'Tasks'] as const;
+const SECONDARY_ROUTES = [
+  'RelatedInfo',
+  'Dispatches',
+  'Incident',
+  'Land',
+  'Settings',
+] as const;
+
+const ROUTE_LABEL: Record<(typeof routes)[number], string> = {
+  Map: 'Bản đồ',
+  RelatedInfo: 'Thông tin',
+  Alarms: 'Cảnh báo',
+  Dispatches: 'Điều phối',
+  Tasks: 'Nhiệm vụ',
+  Incident: 'Sự cố',
+  Land: 'Đất đai',
+  Settings: 'Cài đặt',
+};
+
+// Minimal text glyphs — no icon dependency installed.
+const ROUTE_ICON: Record<(typeof routes)[number], string> = {
+  Map: '◎',
+  RelatedInfo: '☰',
+  Alarms: '⚠',
+  Dispatches: '⇄',
+  Tasks: '☑',
+  Incident: '⌁',
+  Land: '⬡',
+  Settings: '⚙',
+};
+
 export function AppNavigator({
   demoCommand,
   demoScene,
@@ -65,10 +98,14 @@ export function AppNavigator({
   const [relatedEntityType, setRelatedEntityType] = useState<
     'RESIDENT' | 'BUSINESS' | 'HOTSPOT' | 'VIOLATION' | undefined
   >();
+  const [showMore, setShowMore] = useState(false);
   const lastDemoCommand = useRef<string | undefined>(undefined);
   const navigate = useCallback(
     (link: ReturnType<typeof deepLinkFor>) => {
       if (!link) return;
+      // Presentation-only: a deep-link navigation must surface its target
+      // screen, so the More panel is dismissed when a link is accepted.
+      setShowMore(false);
       setContext(link.params);
       setMapItem(undefined);
       if (link.route === 'VehicleObservationDetail') {
@@ -126,6 +163,7 @@ export function AppNavigator({
     // A manual tab entry starts a blank land form, not a stale auto-load.
     if (item === 'Land') setLandParcelCode(undefined);
     setVehicleMapOrigin(null);
+    setShowMore(false);
     setRoute(item);
   };
   useEffect(() => {
@@ -274,44 +312,192 @@ export function AppNavigator({
     ) : (
       <SettingsScreen />
     );
+  // Presentation-only derivation: the header and selected tab follow the
+  // transient VehicleObservationDetail's origin surface, and show "Thêm" while
+  // the More panel is open. No route or state semantics change.
+  const presentationRoute: (typeof routes)[number] =
+    route === 'VehicleObservationDetail' ? vehicleOrigin : route;
+  const headerTitle = showMore ? 'Thêm' : ROUTE_LABEL[presentationRoute];
+  const moreActive =
+    showMore || (SECONDARY_ROUTES as readonly string[]).includes(presentationRoute);
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: mobileBaseline.color.canvas }}
     >
-      <View style={{ flex: 1 }}>{screen}</View>
+      <View
+        accessibilityRole="header"
+        style={{
+          height: 44,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: mobileBaseline.space.s3,
+          backgroundColor: mobileBaseline.color.surface,
+          borderBottomColor: mobileBaseline.color.border,
+          borderBottomWidth: 1,
+        }}
+      >
+        <Text
+          aria-hidden
+          style={{
+            fontFamily: mobileBaseline.font.sans,
+            fontSize: mobileBaseline.size.body,
+            fontWeight: '700',
+            color: mobileBaseline.color.accent,
+          }}
+        >
+          CivicOS
+        </Text>
+        <Text
+          accessibilityLabel={`Màn hình ${headerTitle}`}
+          style={{
+            fontFamily: mobileBaseline.font.sans,
+            fontSize: mobileBaseline.size.label,
+            color: mobileBaseline.color.textMuted,
+          }}
+        >
+          {headerTitle}
+        </Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        {showMore ? (
+          <View
+            style={{
+              flex: 1,
+              padding: mobileBaseline.space.s3,
+              gap: mobileBaseline.space.s2,
+            }}
+          >
+            {/* Header already announces the surface; keep spacing for the list. */}
+            {SECONDARY_ROUTES.map((item) => (
+              <Pressable
+                key={item}
+                accessibilityRole="button"
+                accessibilityLabel={ROUTE_LABEL[item]}
+                accessibilityState={{ selected: route === item }}
+                onPress={() => openTab(item)}
+                style={{
+                  minHeight: mobileBaseline.controlMin,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: mobileBaseline.space.s2,
+                  paddingHorizontal: mobileBaseline.space.s3,
+                  backgroundColor: mobileBaseline.color.surface,
+                  borderColor: mobileBaseline.color.border,
+                  borderWidth: 1,
+                  borderRadius: mobileBaseline.radius.md,
+                }}
+              >
+                <Text
+                  aria-hidden
+                  style={{
+                    fontFamily: mobileBaseline.font.sans,
+                    fontSize: mobileBaseline.size.body,
+                    color: mobileBaseline.color.textMuted,
+                  }}
+                >
+                  {ROUTE_ICON[item]}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: mobileBaseline.font.sans,
+                    fontSize: mobileBaseline.size.body,
+                    lineHeight: mobileBaseline.size.bodyLine,
+                    fontWeight: route === item ? '600' : '400',
+                    color: mobileBaseline.color.text,
+                  }}
+                >
+                  {ROUTE_LABEL[item]}
+                </Text>
+              </Pressable>
+            ))}
+            <View
+              style={{
+                borderTopColor: mobileBaseline.color.border,
+                borderTopWidth: 1,
+                paddingTop: mobileBaseline.space.s2,
+              }}
+            >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đăng xuất"
+                onPress={() => void signOut()}
+                style={{
+                  minHeight: mobileBaseline.controlMin,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: mobileBaseline.space.s2,
+                  paddingHorizontal: mobileBaseline.space.s3,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: mobileBaseline.font.sans,
+                    fontSize: mobileBaseline.size.body,
+                    color: mobileBaseline.color.textMuted,
+                  }}
+                >
+                  {'⏏'}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: mobileBaseline.font.sans,
+                    fontSize: mobileBaseline.size.body,
+                    lineHeight: mobileBaseline.size.bodyLine,
+                    color: mobileBaseline.color.textMuted,
+                  }}
+                >
+                  Đăng xuất
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          screen
+        )}
+      </View>
       <View
         style={{
           flexDirection: 'row',
-          flexWrap: 'wrap',
           backgroundColor: mobileBaseline.color.surface,
           borderTopColor: mobileBaseline.color.border,
           borderTopWidth: 1,
         }}
       >
-        {routes.map((item) => {
-          const active = route === item;
+        {PRIMARY_TABS.map((item) => {
+          const active = !showMore && presentationRoute === item;
           return (
             <Pressable
               key={item}
-              accessibilityRole="button"
+              accessibilityRole="tab"
+              accessibilityLabel={ROUTE_LABEL[item]}
               accessibilityState={{ selected: active }}
               onPress={() => openTab(item)}
               style={{
-                minHeight: mobileBaseline.controlMin,
-                minWidth: mobileBaseline.controlMin,
-                flexGrow: 1,
-                flexBasis: '18%',
+                flex: 1,
+                minHeight: 56,
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 2,
                 paddingVertical: mobileBaseline.space.s2,
-                paddingHorizontal: mobileBaseline.space.s1,
                 borderTopWidth: 2,
                 borderTopColor: active
                   ? mobileBaseline.color.accent
                   : 'transparent',
               }}
             >
+              <Text
+                aria-hidden
+                style={{
+                  fontFamily: mobileBaseline.font.sans,
+                  fontSize: mobileBaseline.size.section,
+                  color: active
+                    ? mobileBaseline.color.accent
+                    : mobileBaseline.color.textMuted,
+                }}
+              >
+                {ROUTE_ICON[item]}
+              </Text>
               <Text
                 style={{
                   fontFamily: mobileBaseline.font.sans,
@@ -320,43 +506,56 @@ export function AppNavigator({
                   color: active
                     ? mobileBaseline.color.accent
                     : mobileBaseline.color.textMuted,
-                  textAlign: 'center',
                 }}
               >
-                {item === 'Land' ? 'Đất đai' : item}
+                {ROUTE_LABEL[item]}
               </Text>
             </Pressable>
           );
         })}
         <Pressable
-          accessibilityRole="button"
-          onPress={() => void signOut()}
+          accessibilityRole="tab"
+          accessibilityLabel="Thêm"
+          accessibilityState={{ selected: moreActive }}
+          onPress={() => setShowMore((prev) => !prev)}
           style={{
-            minHeight: mobileBaseline.controlMin,
-            minWidth: mobileBaseline.controlMin,
-            flexGrow: 1,
-            flexBasis: '18%',
+            flex: 1,
+            minHeight: 56,
             alignItems: 'center',
             justifyContent: 'center',
             gap: 2,
             paddingVertical: mobileBaseline.space.s2,
-            paddingHorizontal: mobileBaseline.space.s1,
             borderLeftColor: mobileBaseline.color.border,
             borderLeftWidth: 1,
             borderTopWidth: 2,
-            borderTopColor: 'transparent',
+            borderTopColor: moreActive
+              ? mobileBaseline.color.accent
+              : 'transparent',
           }}
         >
+          <Text
+            aria-hidden
+            style={{
+              fontFamily: mobileBaseline.font.sans,
+              fontSize: mobileBaseline.size.section,
+              color: moreActive
+                ? mobileBaseline.color.accent
+                : mobileBaseline.color.textMuted,
+            }}
+          >
+            {'⋯'}
+          </Text>
           <Text
             style={{
               fontFamily: mobileBaseline.font.sans,
               fontSize: mobileBaseline.size.caption,
-              fontWeight: '500',
-              color: mobileBaseline.color.textMuted,
-              textAlign: 'center',
+              fontWeight: moreActive ? '600' : '500',
+              color: moreActive
+                ? mobileBaseline.color.accent
+                : mobileBaseline.color.textMuted,
             }}
           >
-            Đăng xuất
+            Thêm
           </Text>
         </Pressable>
       </View>

@@ -110,10 +110,19 @@ describe('cross-module replay safety guard', () => {
   });
 });
 
-const replayEnabled = isReplayDatabaseAllowed(
-  process.env.DATABASE_URL,
-  process.env.PARALLEL_WAVE_REPLAY_DB,
-);
+// DB-CONSOLIDATION SLICE (Task 3): the data phase additionally requires
+// RUN_DB_TESTS=1 AND the supported runner lifecycle marker. Ordinary
+// `npm test` can never activate it, and the approved Vitest DB runner only
+// accepts the exact 127.0.0.1:5432/civicos_e2e target — which this file's
+// replay-target predicate below refuses. Replay databases are therefore never
+// created, rebuilt, processed or dropped by that runner or by normal runs.
+const replayEnabled =
+  isReplayDatabaseAllowed(
+    process.env.DATABASE_URL,
+    process.env.PARALLEL_WAVE_REPLAY_DB,
+  ) &&
+  process.env.RUN_DB_TESTS === '1' &&
+  process.env.CIVICOS_E2E_LIFECYCLE === '1';
 
 const replayStamp = randomUUID().replace(/-/g, '').slice(0, 8);
 const REPLAY_ORG = 'unit-nghia-tru';

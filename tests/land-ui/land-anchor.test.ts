@@ -25,17 +25,20 @@ const driftPaint =
 
 describe('T-002 land anchor', () => {
   it('shares the canonical Light/Blue wrapper tokens across the three land entries', () => {
-    for (const source of [
-      landSource(),
-      applicationsSource(),
-      parcelsSource(),
-    ]) {
+    for (const source of [landSource(), applicationsSource()]) {
       expect(source).toContain('bg-[var(--civicos-canvas)]');
       expect(source).toContain('text-[var(--civicos-text)]');
       expect(source).toContain('text-[var(--civicos-accent)]');
       expect(source).toContain('text-[var(--civicos-text-muted)]');
       expect(source).toContain('var(--civicos-');
     }
+    const parcels = parcelsSource();
+    expect(parcels).toContain('bg-[var(--civicos-canvas)]');
+    expect(parcels).toContain('text-[var(--civicos-text)]');
+    expect(parcels).toContain('var(--civicos-');
+    const parcelHeader = readSource('src/components/land/ParcelPilotUI.tsx');
+    expect(parcelHeader).toContain('text-[var(--civicos-accent)]');
+    expect(parcelHeader).toContain('text-[var(--civicos-text-muted)]');
     expect(landSource()).toContain('text-[var(--civicos-simulated-text)]');
     expect(applicationsSource()).toContain(
       'text-[var(--civicos-simulated-text)]',

@@ -44,6 +44,8 @@ export async function POST(
       {
         subjectId,
         purpose: body.purpose as never,
+        arrivalAt:
+          typeof body.arrivalAt === 'string' ? body.arrivalAt : undefined,
         riskLevel:
           typeof body.riskLevel === 'string' ? body.riskLevel : undefined,
         sourceOrganizationId:

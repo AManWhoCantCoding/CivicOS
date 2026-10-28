@@ -6,25 +6,35 @@ const {
   assignmentLookup,
   recordAudit,
   readAuthorization,
-} = vi.hoisted(() => ({
-  prisma: {
-    assignment: { findMany: vi.fn() },
+} = vi.hoisted(() => {
+  const assignmentLookup = vi.fn();
+  const prisma = {
+    assignment: { findMany: assignmentLookup },
     notification: { findMany: vi.fn().mockResolvedValue([]) },
     incident: { findMany: vi.fn().mockResolvedValue([]) },
     eventRecord: { findMany: vi.fn().mockResolvedValue([]) },
     projectionRecord: { findMany: vi.fn().mockResolvedValue([]) },
-    inspection: { findMany: vi.fn().mockResolvedValue([]) },
+    inspection: {
+      findMany: vi.fn().mockResolvedValue([]),
+      findUnique: vi.fn(),
+    },
     subjectManagementRecord: { findMany: vi.fn().mockResolvedValue([]) },
     vehicle: { findMany: vi.fn().mockResolvedValue([]) },
     inspectionFinding: { findMany: vi.fn().mockResolvedValue([]) },
     vehicleObservation: { findMany: vi.fn().mockResolvedValue([]) },
-    establishment: { findMany: vi.fn().mockResolvedValue([]) },
-  },
-  resourceLookup: vi.fn(),
-  assignmentLookup: vi.fn(),
-  recordAudit: vi.fn(),
-  readAuthorization: vi.fn(async () => true),
-}));
+    establishment: {
+      findMany: vi.fn().mockResolvedValue([]),
+      findUnique: vi.fn(),
+    },
+  };
+  return {
+    prisma,
+    resourceLookup: vi.fn(),
+    assignmentLookup,
+    recordAudit: vi.fn(),
+    readAuthorization: vi.fn(async () => true),
+  };
+});
 
 vi.mock('@/lib/prisma', () => ({ prisma }));
 vi.mock('@/modules/identity', async (importOriginal) => {
@@ -37,7 +47,11 @@ vi.mock('@/modules/identity', async (importOriginal) => {
   };
 });
 import { hasActiveAssignmentForRead } from '@/modules/identity/authorization';
-import { listAlarms, listDispatches } from '@/modules/mobile-readonly/forces';
+import {
+  listAlarms,
+  listDispatches,
+  listTasks,
+} from '@/modules/mobile-readonly/forces';
 import { resolveMobileLayers } from '@/modules/mobile-readonly/layers';
 import {
   countRelatedInfo,
@@ -160,6 +174,86 @@ describe('mobile organization scope', () => {
     }
   });
 
+  it('allows Inspection read when establishment organization matches an active compatible assignment', async () => {
+    const inspectionFindUnique = vi.fn().mockResolvedValue({
+      establishmentId: 'e1',
+    });
+    const establishmentFindUnique = vi
+      .fn()
+      .mockResolvedValue({ organizationId: 'unit-a' });
+    const client = {
+      inspection: { findUnique: inspectionFindUnique },
+      establishment: { findUnique: establishmentFindUnique },
+      assignment: { findMany: assignmentLookup },
+    };
+    assignmentLookup.mockResolvedValue([{ task: 'inspection_fieldwork' }]);
+    expect(
+      await hasActiveAssignmentForRead(
+        actor('unit-a'),
+        { resourceType: 'Inspection', resourceId: 'i1' },
+        client as never,
+      ),
+    ).toBe(true);
+    expect(inspectionFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'i1' } }),
+    );
+    expect(establishmentFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'e1' } }),
+    );
+  });
+
+  it('denies Inspection read on organization mismatch', async () => {
+    const client = {
+      inspection: {
+        findUnique: vi.fn().mockResolvedValue({ establishmentId: 'e1' }),
+      },
+      establishment: {
+        findUnique: vi.fn().mockResolvedValue({ organizationId: 'unit-b' }),
+      },
+      assignment: { findMany: assignmentLookup },
+    };
+    assignmentLookup.mockResolvedValue([{ task: 'inspection_fieldwork' }]);
+    expect(
+      await hasActiveAssignmentForRead(
+        actor('unit-a'),
+        { resourceType: 'Inspection', resourceId: 'i1' },
+        client as never,
+      ),
+    ).toBe(false);
+    expect(assignmentLookup).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'inspection missing',
+    'establishment missing',
+  ] as const)(
+    'denies Inspection read when %s',
+    async (missing) => {
+      const client = {
+        inspection: {
+          findUnique: vi
+            .fn()
+            .mockResolvedValue(missing === 'inspection missing' ? null : { establishmentId: 'e1' }),
+        },
+        establishment: {
+          findUnique: vi
+            .fn()
+            .mockResolvedValue(missing === 'establishment missing' ? null : { organizationId: 'unit-a' }),
+        },
+        assignment: { findMany: assignmentLookup },
+      };
+      assignmentLookup.mockResolvedValue([{ task: 'inspection_fieldwork' }]);
+      expect(
+        await hasActiveAssignmentForRead(
+          actor('unit-a'),
+          { resourceType: 'Inspection', resourceId: 'i1' },
+          client as never,
+        ),
+      ).toBe(false);
+      expect(assignmentLookup).not.toHaveBeenCalled();
+    },
+  );
+
   it('rejects whitespace unit before mobile layer entity reads', async () => {
     await expect(resolveMobileLayers(actor(' \t'))).rejects.toThrow(
       'FORBIDDEN',
@@ -201,5 +295,64 @@ describe('mobile organization scope', () => {
     ]) {
       expect(model.findMany).not.toHaveBeenCalled();
     }
+  });
+
+  it('projects an active Inspection assignment into listTasks with baseVersion via the establishment organization resolver', async () => {
+    const row = {
+      id: 'a1',
+      resourceType: 'Inspection',
+      resourceId: 'i1',
+      task: 'inspection_fieldwork',
+      status: 'active',
+      organizationId: 'unit-a',
+      createdAt: new Date('2026-01-02T03:04:05Z'),
+    };
+    // Keep the real resolver in the assertion path: the barrel mock delegates
+    // to hasActiveAssignmentForRead with the shared fake Prisma client, using
+    // the known actor/resource for this scenario.
+    readAuthorization.mockImplementationOnce(() =>
+      hasActiveAssignmentForRead(
+        actor('unit-a'),
+        { resourceType: 'Inspection', resourceId: 'i1' },
+        prisma as never,
+      ),
+    );
+    assignmentLookup.mockResolvedValueOnce([row]);
+    assignmentLookup.mockResolvedValueOnce([{ task: 'inspection_fieldwork' }]);
+    prisma.inspection.findUnique.mockResolvedValueOnce({
+      establishmentId: 'e1',
+    });
+    prisma.establishment.findUnique.mockResolvedValueOnce({
+      organizationId: 'unit-a',
+    });
+    prisma.inspection.findMany.mockResolvedValueOnce([
+      { id: 'i1', version: 3 },
+    ]);
+
+    const result = await listTasks(actor('unit-a'), {});
+
+    expect(result.total).toBe(1);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]).toMatchObject({
+      id: 'task:a1',
+      dispatchId: 'dispatch:a1',
+      title: 'inspection fieldwork',
+      status: 'active',
+      resourceType: 'Inspection',
+      resourceId: 'i1',
+      assignmentSummary: {
+        assignmentId: 'a1',
+        task: 'inspection_fieldwork',
+        status: 'active',
+      },
+      baseVersion: 3,
+    });
+    expect(prisma.inspection.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'i1' } }),
+    );
+    expect(prisma.establishment.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'e1' } }),
+    );
+    expect(prisma.inspection.findUnique).toHaveBeenCalledTimes(1);
   });
 });

@@ -10,7 +10,7 @@ async function get(path: string): Promise<Response> {
   return fetch(new URL(path, baseUrl));
 }
 
-describe('mobile read-only HTTP contract', () => {
+describe.skipIf(!baseUrl)('mobile read-only HTTP contract', () => {
   it('reads layers from the real backend contract', async () => {
     const response = await get('/api/map/layers');
     expect([200, 401, 403]).toContain(response.status);

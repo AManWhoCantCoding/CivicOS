@@ -1,7 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const PASSWORD = 'civicos-dev';
-const COMMANDER = 'truong@civicos.local';
+const runId = process.env.CIVICOS_E2E_RUN_ID ?? '';
+const PASSWORD = process.env.CIVICOS_E2E_FIXTURE_PASSWORD ?? '';
+if (!runId || !PASSWORD) throw new Error('E2E_FIXTURE_CREDENTIALS_REQUIRED');
+const COMMANDER = `ps007-e2e-${runId}-commander@example.test`;
 const MASKED_SUBJECT_ID = 'subject-masked-001';
 const RAW_PII_SENTINEL = 'RAW-PII-0900123456';
 const RUNTIME_TARGET = 'upper-unit-runtime-001';
@@ -234,7 +236,9 @@ test('resident reports show loading, empty, snapshot, runtime send target', asyn
     });
   });
   await page.goto('/residents/reports');
-  await expect(page.getByText('2026-09 · draft')).toBeVisible();
+  const draftReport = page.getByRole('listitem').filter({ hasText: '2026-09' });
+  await expect(draftReport.getByText('2026-09')).toBeVisible();
+  await expect(draftReport.getByText(/draft$/)).toBeVisible();
   await expect(page.getByText(/Snapshot bất biến:/).first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Phê duyệt' })).toBeVisible();
   const targetInput = page.getByLabel('Đơn vị cấp trên nhận báo cáo');
@@ -247,7 +251,11 @@ test('resident reports show loading, empty, snapshot, runtime send target', asyn
     page.getByText('Nhập đơn vị cấp trên nhận báo cáo.'),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Thử lại' }).click();
-  await expect(page.getByText('2026-08 · approved')).toBeVisible();
+  const approvedReport = page
+    .getByRole('listitem')
+    .filter({ hasText: '2026-08' });
+  await expect(approvedReport.getByText('2026-08')).toBeVisible();
+  await expect(approvedReport.getByText(/approved$/)).toBeVisible();
 
   const sendResponsePromise = page.waitForResponse(
     (response) =>

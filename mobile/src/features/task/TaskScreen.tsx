@@ -14,10 +14,12 @@ import {
 } from '../../navigation/deepLinks';
 import { useSession } from '../../auth/SessionContext';
 import {
-  retryResidentActivities,
+  createQueueRetryRunner,
   syncFieldCommand,
   syncResidentActivity,
+  type QueueRetryOutcome,
 } from './activitySync';
+import { addRestoredOnlineListener } from './connectivity';
 import {
   nextInspectionVersion,
   readRejected,
@@ -45,6 +47,17 @@ export function resetActivityDraft(
 ) {
   setActivity('');
   setActivityState('');
+}
+
+/**
+ * Maps a serialized queue-retry pass to user-visible feedback. Only a fully
+ * synced pass replaces the "saved for retry" message; pending/rejected/idle/
+ * error passes must keep the existing feedback untouched (undefined).
+ */
+export function queueRetryFeedback(
+  outcome: QueueRetryOutcome,
+): string | undefined {
+  return outcome === 'synced' ? 'Đã đồng bộ thao tác đã lưu.' : undefined;
 }
 
 export function canFieldwork(item: ForceItem | null) {
@@ -182,12 +195,30 @@ export function TaskScreen({
       );
     }
   };
+  // One runner serializes all queue retries (session change and Android's
+  // restored-online event) and coalesces triggers while a pass is in flight.
+  const queueRetryRunnerRef = useRef<ReturnType<
+    typeof createQueueRetryRunner
+  > | null>(null);
+  if (queueRetryRunnerRef.current === null)
+    queueRetryRunnerRef.current = createQueueRetryRunner((outcome) => {
+      setQueueRevision((revision) => revision + 1);
+      const message = queueRetryFeedback(outcome);
+      if (message) setActivityState(message);
+    });
+  useEffect(() => () => queueRetryRunnerRef.current?.stop(), []);
   useEffect(() => {
     if (session.status === 'authenticated' && session.user?.id)
-      void retryResidentActivities(session.user.id)
-        .catch(() => undefined)
-        .finally(() => setQueueRevision((revision) => revision + 1));
+      queueRetryRunnerRef.current!.retry(session.user.id);
   }, [session.status, session.user?.id]);
+  const authenticatedUserId =
+    session.status === 'authenticated' ? session.user?.id : undefined;
+  useEffect(() => {
+    if (!authenticatedUserId) return;
+    return addRestoredOnlineListener(() =>
+      queueRetryRunnerRef.current!.retry(authenticatedUserId),
+    );
+  }, [authenticatedUserId]);
   const submitActivity = async () => {
     if (
       !eligible ||

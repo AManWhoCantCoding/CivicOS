@@ -50,11 +50,12 @@ function readOptionalText(value: unknown): string | undefined {
 }
 
 /** Parse intake boundary input into the canonical write model. */
-export function parseIntakeReport(input: unknown): IntakeReportInput {
+export function parseIntakeReport(
+  input: unknown,
+): Omit<IntakeReportInput, 'receivedAt'> {
   if (!input || typeof input !== 'object') throw new Error('INVALID_INTAKE');
   const value = input as Record<string, unknown>;
-  if (typeof value.content !== 'string' || typeof value.receivedAt !== 'string')
-    throw new Error('INVALID_INTAKE');
+  if (typeof value.content !== 'string') throw new Error('INVALID_INTAKE');
   const { channel, sourceChannel } = readChannel(value);
   const latitude = parseCoordinate(value.latitude);
   const longitude = parseCoordinate(value.longitude);
@@ -64,7 +65,6 @@ export function parseIntakeReport(input: unknown): IntakeReportInput {
   return {
     channel,
     sourceChannel,
-    receivedAt: value.receivedAt,
     content: value.content,
     sourceName:
       typeof value.sourceName === 'string' ? value.sourceName : undefined,

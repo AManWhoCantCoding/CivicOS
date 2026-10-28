@@ -8,7 +8,13 @@ import { cleanupDemoEvidenceFiles } from '@/modules/platform/evidence/storage-ad
 import { BUSINESS_TABLES, resetDemo } from '../../scripts/demo/reset';
 import { dbNameFromUrl } from '../../scripts/demo/demo-db';
 
-const enabled = process.env.RUN_DB_TESTS === '1';
+// DB-CONSOLIDATION SLICE (Task 3): the DB-backed demo seed/reset suite is
+// explicitly disabled — it requires the production/demo `civicos` database
+// (both a demo target and a separate read-only `civicos` Prisma client) and
+// the approved Vitest DB runner must only ever touch
+// 127.0.0.1:5432/civicos_e2e. These cases remain skipped until a dedicated
+// E2E-safe demo fixture/reset seam exists (later consolidation task).
+
 const demoUrl = process.env.DEMO_DATABASE_URL ?? process.env.DATABASE_URL;
 const testDatabaseUrl =
   process.env.CIVICOS_TEST_DATABASE_URL ?? process.env.CIVICOS_E2E_DATABASE_URL;
@@ -38,7 +44,7 @@ async function createRunRoot(parent: string): Promise<string> {
   throw new Error('demo reset integration: het ten thu muc run unique');
 }
 
-describe.skipIf(!enabled)('demo reset integration', () => {
+describe.skip('demo reset integration', () => {
   let prisma: PrismaClient;
   let civicos: PrismaClient;
 
@@ -119,7 +125,10 @@ describe.skipIf(!enabled)('demo reset integration', () => {
     await mkdir(path.join(runRoot, 'other', 'resource'), { recursive: true });
     await mkdir(tileRoot, { recursive: true });
     await writeFile(path.join(runRoot, 'demo', 'resource', 'file.jpg'), 'demo');
-    await writeFile(path.join(runRoot, 'other', 'resource', 'file.jpg'), 'other');
+    await writeFile(
+      path.join(runRoot, 'other', 'resource', 'file.jpg'),
+      'other',
+    );
     await writeFile(tilePath, 'tile');
     await prisma.evidence.createMany({
       data: [

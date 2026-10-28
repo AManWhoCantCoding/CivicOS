@@ -53,11 +53,37 @@ export function nextCheckForPurpose(
   purpose: ResidentSubjectType,
   from: Date,
 ): Date {
+  return nextCheck(purpose, from, 0);
+}
+
+export function nextCheckAfterActivityForPurpose(
+  purpose: ResidentSubjectType,
+  occurredAt: Date,
+): Date {
+  return nextCheck(purpose, occurredAt, 1);
+}
+
+function nextCheck(
+  purpose: ResidentSubjectType,
+  from: Date,
+  monthsAfterCurrent: number,
+): Date {
   const rule = slaRuleForPurpose(
     purpose,
     purpose === 'reintegration' ? 'checkup' : 'registration',
   );
-  return new Date(from.getTime() + rule.durationMs);
+  if (purpose !== 'reintegration')
+    return new Date(from.getTime() + rule.durationMs);
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: 'numeric',
+  }).formatToParts(from);
+  const year = Number(parts.find((part) => part.type === 'year')!.value);
+  const month = Number(parts.find((part) => part.type === 'month')!.value);
+  return new Date(
+    Date.UTC(year, month + monthsAfterCurrent, 1) - 7 * 60 * 60 * 1000,
+  );
 }
 
 export function maskDisplayName(name: string): string {
@@ -78,8 +104,12 @@ export function slaBadge(
 }
 
 export function reportPeriod(date: Date): string {
-  const month = `${date.getUTCMonth() + 1}`.padStart(2, '0');
-  return `${date.getUTCFullYear()}-${month}`;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(date);
+  return `${parts.find((part) => part.type === 'year')!.value}-${parts.find((part) => part.type === 'month')!.value}`;
 }
 
 export function toApiError(error: unknown): {
@@ -97,7 +127,7 @@ export function toApiError(error: unknown): {
   if (message.includes('NOT_FOUND')) {
     return { status: 404, message, code: message };
   }
-  if (message === 'STALE_RECORD') {
+  if (message === 'STALE_RECORD' || message === 'IDEMPOTENCY_CONFLICT') {
     return { status: 409, message, code: message };
   }
   return { status: 400, message, code: message };

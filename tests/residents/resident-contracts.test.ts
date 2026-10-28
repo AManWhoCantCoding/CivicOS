@@ -6,13 +6,32 @@ import {
   isResidentSubjectType,
   maskDisplayName,
   nextCheckForPurpose,
+  nextCheckAfterActivityForPurpose,
   reportPeriod,
   slaBadge,
   slaRuleForPurpose,
   toApiError,
 } from '@/modules/residents/contracts';
+import { createManagementRecord } from '@/modules/residents/commands';
 
 describe('resident contracts seam', () => {
+  it.each([undefined, 'not-a-date'])(
+    'rejects invalid foreign arrivalAt %s',
+    async (arrivalAt) => {
+      await expect(
+        createManagementRecord(
+          { subjectId: 'not-used', purpose: 'foreign_resident', arrivalAt },
+          {
+            id: 'officer',
+            email: 'officer@example.test',
+            name: 'Officer',
+            roles: ['duty_officer'],
+            organizationUnitId: 'unit',
+          },
+        ),
+      ).rejects.toThrow('INVALID_ARRIVAL_AT');
+    },
+  );
   it('exposes exactly the three managed resident types', () => {
     expect([...RESIDENT_SUBJECT_TYPES].sort()).toEqual(
       ['temporary_resident', 'foreign_resident', 'reintegration'].sort(),
@@ -44,12 +63,60 @@ describe('resident contracts seam', () => {
     );
   });
 
-  it('advances nextCheck from the activity time', () => {
-    const from = new Date('2026-09-01T00:00:00.000Z');
-    expect(nextCheckForPurpose('reintegration', from).toISOString()).toBe(
-      '2026-10-01T00:00:00.000Z',
-    );
-  });
+  it.each([
+    ['month end', '2026-09-30T16:00:00.000Z', '2026-10-31T17:00:00.000Z'],
+    [
+      'year rollover in a short month',
+      '2026-12-31T16:00:00.000Z',
+      '2027-01-31T17:00:00.000Z',
+    ],
+  ])(
+    'sets an activity deadline at the end of the following local month (%s)',
+    (_label, occurredAt, expected) => {
+      expect(
+        nextCheckAfterActivityForPurpose(
+          'reintegration',
+          new Date(occurredAt),
+        ).toISOString(),
+      ).toBe(expected);
+    },
+  );
+
+  it.each([
+    [
+      'Vietnam-local month boundary',
+      '2026-09-30T16:59:59.000Z',
+      '2026-09-30T17:00:00.000Z',
+      '2026-09',
+      '2026-10',
+      '2026-10-31T17:00:00.000Z',
+    ],
+    [
+      'year rollover',
+      '2026-12-31T16:59:59.000Z',
+      '2026-12-31T17:00:00.000Z',
+      '2026-12',
+      '2027-01',
+      '2027-01-31T17:00:00.000Z',
+    ],
+    [
+      'short month boundary',
+      '2026-02-28T16:59:59.000Z',
+      '2026-02-28T17:00:00.000Z',
+      '2026-02',
+      '2026-03',
+      '2026-03-31T17:00:00.000Z',
+    ],
+  ])(
+    'uses Vietnam-local calendar months for %s',
+    (_label, before, after, beforePeriod, afterPeriod, expected) => {
+      expect(reportPeriod(new Date(before))).toBe(beforePeriod);
+      expect(reportPeriod(new Date(after))).toBe(afterPeriod);
+      expect(
+        nextCheckForPurpose('reintegration', new Date(after)).toISOString(),
+      ).toBe(expected);
+    },
+  );
 
   it('masks display names without leaking the full value', () => {
     const masked = maskDisplayName('Nguyen Van Tam');

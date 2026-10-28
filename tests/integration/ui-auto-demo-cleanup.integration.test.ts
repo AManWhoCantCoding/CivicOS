@@ -37,7 +37,7 @@ describe('T-011 cleanup handoff integration boundary', () => {
     expect(JSON.stringify(evidence)).not.toContain('reset');
   });
 
-  it('keeps reset as the guarded operator boundary', () => {
+  it('keeps retired reset throwing the stable retirement code before any destructive action', () => {
     const resetSource = readFileSync(
       join(process.cwd(), 'scripts/demo/reset.ts'),
       'utf8',
@@ -51,8 +51,21 @@ describe('T-011 cleanup handoff integration boundary', () => {
       'utf8',
     );
 
-    expect(resetSource).toContain('target.dbName');
-    expect(resetSource).toContain('requireResetConfirm');
+    // resetDemo is retired: it must rejection-throw the stable code before
+    // resolving any target, contacting Prisma, truncating or writing anything.
+    const resetDemoIdx = resetSource.indexOf(
+      'export async function resetDemo(',
+    );
+    const resetDemoBody =
+      resetDemoIdx >= 0 ? resetSource.slice(resetDemoIdx) : '';
+    expect(resetSource).toContain(
+      "DEMO_RESET_RETIRED_CODE = 'DEMO_RESET_RETIRED_USE_E2E_LIFECYCLE'",
+    );
+    expect(resetDemoBody).toContain('throw new Error(DEMO_RESET_RETIRED_CODE)');
+    expect(resetDemoBody).not.toContain('await ');
+    expect(resetDemoBody).not.toMatch(/\bTRUNCATE\b/i);
+    expect(resetDemoBody).not.toContain('resolveDemoTarget(');
+    expect(resetDemoBody).not.toContain('$executeRawUnsafe(');
     expect(targetSource).toContain("['civicos']");
     expect(centerSource).toContain('demo-safe-evidence');
     expect(centerSource).toContain('JSON.stringify(safeEvidence)');

@@ -1,9 +1,16 @@
 import { randomUUID } from 'node:crypto';
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+vi.mock('next/headers', () => ({ cookies: vi.fn() }));
+vi.mock('@/modules/identity', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/modules/identity')>()),
+  getCurrentUser: vi.fn(),
+}));
 
 import { prisma } from '@/lib/prisma';
-import type { IdentityUser } from '@/modules/identity';
+import { getCurrentUser, type IdentityUser } from '@/modules/identity';
+import { GET as getInspectionStatsRoute } from '@/app/api/inspections/stats/route';
 import { inspectionStats } from '@/modules/inspections';
 
 const postgresEnabled = process.env.RUN_DB_TESTS === '1';
@@ -208,7 +215,15 @@ describe.skipIf(!postgresEnabled)(
         const from = '2026-09-01T00:00:00.000Z';
         const to = '2026-09-30T23:59:59.999Z';
         const before = Date.now();
-        const stats = await inspectionStats(commander, { from, to });
+        vi.mocked(getCurrentUser).mockResolvedValue(commander);
+        const url = new URL('http://localhost/api/inspections/stats');
+        url.searchParams.set('from', from);
+        url.searchParams.set('to', to);
+        const response = await getInspectionStatsRoute(
+          new Request(url),
+        );
+        expect(response.status).toBe(200);
+        const { stats } = await response.json();
         const audit = await prisma.auditEvent.findFirst({
           where: {
             actorId: commander.id,

@@ -225,8 +225,16 @@ describe('T-007 inspection', () => {
       'Checklist chỉ có thể lưu khi inspection đang được kiểm tra.',
     );
     expect(checklist).toContain('Điền mục bắt buộc trước khi lưu:');
-    expect(checklist).toContain(
+    expect(checklist).not.toContain(
       'Offline: bắt đầu, lưu và hoàn tất sẽ chờ đồng bộ.',
+    );
+    // start/save queue offline via submitOfflineCommand; complete stays online-gated.
+    expect(checklist).toContain('if (!online)');
+    expect(checklist).toContain(
+      'Đang ngoại tuyến. Kết nối mạng để hoàn tất inspection.',
+    );
+    expect(checklist).toContain(
+      'disabled={!online || !completionResult || loadingCommand !== null}',
     );
     expect(checklist).toContain('Đã lưu cục bộ, chờ đồng bộ.');
     expect(checklist).toContain('Đã bắt đầu inspection.');

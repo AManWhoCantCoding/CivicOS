@@ -69,13 +69,15 @@ import {
   authenticateLocal,
   ensureDevelopmentUsers,
   hashPassword,
-  verifyPassword,
 } from '@/modules/identity/local-provider';
 import {
   readPilot01CommanderSecret,
   storePilot01CommanderSecret,
 } from '../../scripts/demo/pilot01-secret-store';
-import { fillPilot01CommanderLogin } from '../../scripts/demo/use-pilot01-commander';
+import {
+  fillPilot01CommanderLogin,
+  runPilot01CommanderCredentialHandoff,
+} from '../../scripts/demo/use-pilot01-commander';
 import {
   assertPilot01DatabaseUrl,
   generatePilot01CommanderPassword,
@@ -680,170 +682,76 @@ describe('NGOÀI BASELINE — D-53 Pilot 01 fixture guard', () => {
     expect(first === 'civicos-dev').toBe(false);
   });
 
-  it.skipIf(process.platform !== 'win32')(
-    'creates one commander with the current password hash and provenance audit, then is idempotent',
-    async () => {
-      const credentialPath = path.join(
-        process.cwd(),
-        '.scratch',
-        'CIVICOS-PHASE3-COMMANDER-BOOTSTRAP-20261020',
-        `commander-test-${randomUUID()}.dpapi`,
-      );
-      const directory = path.dirname(credentialPath);
-      mkdirSync(directory, { recursive: true });
-      try {
-        const created = await runPilot01CommanderBootstrap({ credentialPath });
-        const createInput = testPrisma.user.create.mock.calls[0][0] as {
-          data: {
-            passwordHash: string;
-            email: string;
-            name: string;
-            organizationUnitId: string;
-            active: boolean;
-          };
-        };
-        const secret = readPilot01CommanderSecret(credentialPath) ?? '';
-        const storedUser = {
-          ...createInput.data,
-          id: 'pilot01-commander-id',
-          active: true,
-          organizationUnitId: 'pilot01-synthetic-district',
-          roles: [{ role: { name: 'commander' } }],
-        };
-        testPrisma.organizationUnit.findUnique.mockResolvedValue({
-          id: 'pilot01-synthetic-district',
-          name: 'Pilot 01 synthetic district',
-          level: 'district',
-          parentId: null,
-          active: true,
-        });
-        testPrisma.user.findUnique.mockResolvedValue(storedUser);
-        testPrisma.auditEvent.findFirst.mockResolvedValue({ id: 'audit-1' });
+  // DB-CONSOLIDATION SLICE (D-78 Task 4): the Pilot 01 provisioning runtime
+  // is retired (PILOT01_SANDBOX_RUNTIME_RETIRED). The former win32 execution
+  // tests below (commander creation, duplicate refusal, SQL-identity mismatch,
+  // address projection) covered that retired runtime and are replaced by the
+  // single retirement assertion here. Pure guard and helper tests above stay
+  // active, including PILOT01_SANDBOX_IDENTITY_UNVERIFIED for the legacy
+  // endpoint, DPAPI/Chromium helper fixtures, and idempotent-seeding checks.
+  it('retires the Pilot 01 bootstrap runtime before Docker inspection, Prisma activity or secret side effects', async () => {
+    const credentialPath = path.join(
+      process.cwd(),
+      '.scratch',
+      'CIVICOS-PHASE3-COMMANDER-BOOTSTRAP-20261020',
+      `commander-retired-${randomUUID()}.dpapi`,
+    );
 
-        const repeated = await runPilot01CommanderBootstrap({ credentialPath });
+    await expect(
+      runPilot01CommanderBootstrap({ credentialPath }),
+    ).rejects.toThrow('PILOT01_SANDBOX_RUNTIME_RETIRED');
 
-        expect(created.created).toBe(true);
-        expect(repeated.created).toBe(false);
-        expect(createInput.data.email).toBe('pilot01-commander@civicos.local');
-        expect(createInput.data.name).toBe('Pilot 01 Commander');
-        expect(createInput.data.organizationUnitId).toBe(
-          'pilot01-synthetic-district',
-        );
-        expect(createInput.data.active).toBe(true);
-        expect(testPrisma.organizationUnit.create).toHaveBeenCalledOnce();
-        expect(
-          testPrisma.organizationUnit.create.mock.calls[0][0].data,
-        ).toEqual({
-          id: 'pilot01-synthetic-district',
-          name: 'Pilot 01 synthetic district',
-          level: 'district',
-          parentId: null,
-          active: true,
-        });
-        expect(testPrisma.role.upsert.mock.calls[0][0].where.name).toBe(
-          'commander',
-        );
-        expect(
-          /^[a-f0-9]{32}\.[a-f0-9]{128}$/.test(createInput.data.passwordHash),
-        ).toBe(true);
-        expect(verifyPassword(secret, createInput.data.passwordHash)).toBe(
-          true,
-        );
-        expect(secret === createInput.data.passwordHash).toBe(false);
-        expect(testPrisma.user.create).toHaveBeenCalledOnce();
-        expect(testPrisma.auditEvent.create).toHaveBeenCalledOnce();
-        expect(testPrisma.eventRecord.create).toHaveBeenCalledOnce();
-        expect(
-          testPrisma.auditEvent.create.mock.calls[0][0].data.operation,
-        ).toBe('identity.commander.bootstrap.pilot01');
-        expect(
-          testPrisma.auditEvent.create.mock.calls[0][0].data.metadata,
-        ).toMatchObject({
-          ticketId: 'CIVICOS-PHASE3-COMMANDER-BOOTSTRAP-20261020',
-          source: 'demo-only-bootstrap',
-        });
-        expect(
-          JSON.stringify(testPrisma.auditEvent.create.mock.calls).includes(
-            secret,
-          ),
-        ).toBe(false);
-        expect(
-          JSON.stringify(testPrisma.eventRecord.create.mock.calls).includes(
-            secret,
-          ),
-        ).toBe(false);
-      } finally {
-        rmSync(credentialPath, { force: true });
-      }
-    },
-  );
+    expect(testPrisma.execFileSync).not.toHaveBeenCalled();
+    expect(testPrisma.$queryRaw).not.toHaveBeenCalled();
+    expect(testPrisma.$transaction).not.toHaveBeenCalled();
+    expect(testPrisma.$disconnect).not.toHaveBeenCalled();
+    expect(testPrisma.organizationUnit.create).not.toHaveBeenCalled();
+    expect(testPrisma.user.create).not.toHaveBeenCalled();
+    expect(testPrisma.auditEvent.create).not.toHaveBeenCalled();
+    expect(existsSync(credentialPath)).toBe(false);
+  });
 
-  it.skipIf(process.platform !== 'win32')(
-    'refuses an existing commander identity instead of creating a duplicate',
-    async () => {
-      const credentialPath = path.join(
-        process.cwd(),
-        '.scratch',
-        'CIVICOS-PHASE3-COMMANDER-BOOTSTRAP-20261020',
-        `commander-test-${randomUUID()}.dpapi`,
-      );
-      testPrisma.user.findFirst.mockResolvedValue({
-        id: 'pre-existing-commander',
+  // DB-CONSOLIDATION SLICE (D-78 Task 4): the browser credential-handoff
+  // runtime in scripts/demo/use-pilot01-commander.ts is retired as well; it
+  // must fail closed with the same stable code before touching Chromium,
+  // DPAPI secret storage, Prisma or the API.
+  it('retires the Pilot 01 credential-handoff runtime before browser, secret or Prisma side effects', async () => {
+    // Guard the guarded invariant itself: if a regression restored any
+    // browser-launch or DPAPI secret-store activity in front of the stable
+    // throw, these spies intercept it instead of letting a real Chromium
+    // process or DPAPI write happen during the filtered run.
+    const secretStoreModule =
+      await import('../../scripts/demo/pilot01-secret-store');
+    const launchSpy = vi.spyOn(chromium, 'launch').mockImplementation(() => {
+      throw new Error('PILOT01_BROWSER_LAUNCH_FORBIDDEN');
+    });
+    const readSecretSpy = vi
+      .spyOn(secretStoreModule, 'readPilot01CommanderSecret')
+      .mockImplementation(() => {
+        throw new Error('PILOT01_SECRET_STORE_FORBIDDEN');
+      });
+    const storeSecretSpy = vi
+      .spyOn(secretStoreModule, 'storePilot01CommanderSecret')
+      .mockImplementation(() => {
+        throw new Error('PILOT01_SECRET_STORE_FORBIDDEN');
       });
 
-      await expect(
-        runPilot01CommanderBootstrap({ credentialPath }),
-      ).rejects.toThrow('PILOT01_COMMANDER_DUPLICATE');
-      expect(testPrisma.organizationUnit.create).not.toHaveBeenCalled();
-      expect(testPrisma.user.create).not.toHaveBeenCalled();
-      expect(testPrisma.auditEvent.create).not.toHaveBeenCalled();
-      expect(readPilot01CommanderSecret(credentialPath)).toBeNull();
-    },
-  );
-
-  it.skipIf(process.platform !== 'win32')(
-    'does not persist credentials or write when SQL identity differs from inspected Docker identity',
-    async () => {
-      const credentialPath = path.join(
-        process.cwd(),
-        '.scratch',
-        'CIVICOS-PHASE3-COMMANDER-BOOTSTRAP-20261020',
-        `commander-test-${randomUUID()}.dpapi`,
+    try {
+      await expect(runPilot01CommanderCredentialHandoff()).rejects.toThrow(
+        'PILOT01_SANDBOX_RUNTIME_RETIRED',
       );
-      testPrisma.$queryRaw.mockResolvedValue([
-        {
-          databaseName: 'civicos_demo',
-          databaseUser: 'runtime-selected-user',
-          serverAddress: '172.18.0.99',
-          serverPort: 5432,
-          serverVersionNum: '160004',
-        },
-      ]);
 
-      await expect(
-        runPilot01CommanderBootstrap({ credentialPath }),
-      ).rejects.toThrow('PILOT01_DATABASE_IDENTITY_UNVERIFIED');
+      expect(launchSpy).not.toHaveBeenCalled();
+      expect(readSecretSpy).not.toHaveBeenCalled();
+      expect(storeSecretSpy).not.toHaveBeenCalled();
+      expect(testPrisma.execFileSync).not.toHaveBeenCalled();
+      expect(testPrisma.$queryRaw).not.toHaveBeenCalled();
       expect(testPrisma.$transaction).not.toHaveBeenCalled();
-      expect(testPrisma.user.create).not.toHaveBeenCalled();
-      expect(existsSync(credentialPath)).toBe(false);
-    },
-  );
-
-  it.skipIf(process.platform !== 'win32')(
-    'projects the normalized SQL address before Pilot bootstrap writes',
-    async () => {
-      testPrisma.$queryRaw.mockResolvedValue([]);
-
-      await expect(runPilot01CommanderBootstrap()).rejects.toThrow(
-        'PILOT01_DATABASE_IDENTITY_UNVERIFIED',
-      );
-      expect(testPrisma.$queryRaw).toHaveBeenCalledOnce();
-      const sql = testPrisma.$queryRaw.mock.calls[0][0] as TemplateStringsArray;
-      expect(sql.join('')).toContain(
-        'host(inet_server_addr()) AS "serverAddress"',
-      );
-      expect(testPrisma.$transaction).not.toHaveBeenCalled();
-      expect(testPrisma.user.create).not.toHaveBeenCalled();
-    },
-  );
+      expect(testPrisma.$disconnect).not.toHaveBeenCalled();
+    } finally {
+      launchSpy.mockRestore();
+      readSecretSpy.mockRestore();
+      storeSecretSpy.mockRestore();
+    }
+  });
 });

@@ -34,7 +34,9 @@ describe('T-004 web map accessibility and privacy contract', () => {
   it('provides visible focus, keyboard selection and large recovery targets', () => {
     const workspace = readSource('src/components/map/MapWorkspace.tsx');
 
-    expect(workspace).toContain('focus-visible:outline-2');
+    expect(workspace).toContain('focus-visible:outline-[3px]');
+    expect(workspace).toContain('focus-visible:outline-offset-2');
+    expect(workspace).toContain('focus-visible:outline-[var(--civicos-focus)]');
     expect(workspace).toContain('tabIndex={-1}');
     expect(workspace).toContain('aria-pressed={focusSelected}');
     expect(workspace).toContain(

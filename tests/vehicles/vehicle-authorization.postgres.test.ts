@@ -347,7 +347,7 @@ describe.skipIf(!enabled)('ticket 05 vehicle authorization matrix', () => {
       registryIds.push(entry.id);
       const { observation } = await recordVehicleObservation(
         {
-          plate: nextPlate(),
+          plate,
           observedAt: '2026-09-19T01:00:00.000Z',
           latitude: 20.96,
           longitude: 105.93,
@@ -356,7 +356,7 @@ describe.skipIf(!enabled)('ticket 05 vehicle authorization matrix', () => {
         field,
       );
       observationIds.push(observation.id);
-      expect(observation.status).toBe('recorded');
+      expect(observation.status).toBe('match_suggested');
       const proof = await uploadVehicleEvidence(
         observation.id,
         field,

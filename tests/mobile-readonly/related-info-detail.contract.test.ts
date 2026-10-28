@@ -8,7 +8,9 @@ import { getRelatedInfoDetail } from '@/modules/mobile-readonly/related-info';
 import { mobileEntityIds, mobileUsers } from './fixtures';
 import { expectNoRawPii, useMobileReadonlyFixture } from './helpers';
 
-describe('mobile related-info detail contract', () => {
+const describeWithDatabase = describe.skipIf(process.env.RUN_DB_TESTS !== '1');
+
+describeWithDatabase('mobile related-info detail contract', () => {
   useMobileReadonlyFixture();
   it('returns an entity envelope without raw PII', async () => {
     const result = await getRelatedInfoDetail(

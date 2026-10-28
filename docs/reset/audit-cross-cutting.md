@@ -30,7 +30,7 @@ Trạng thái: **CÓ** = đầy đủ; **MỘT PHẦN** = một phần; **KHÔNG
 
 ## NFR-X-03 — Mobile-first cho hiện trường: PS-005, 008, 009 cần app mobile ổn định, tối ưu thao tác nhanh
 
-| ID con | Trạng thái | Bằng chứng code (file:line) | Test (CHƯA CHẠY) | Ghi chú |
+| ID con | Trạng thái | Bằng chứng code (file:line) | Test / kết quả | Ghi chú |
 |---|---|---|---|---|
 | NFR-X-03a | **MỘT PHẦN** | `src/modules/mobile-readonly/contracts.ts` (MobileActor, MobileListQuery, AlarmReadItem, DispatchReadItem, TaskReadItem) <br> `src/modules/mobile-readonly/forces.ts` (listAlarms, listDispatches, listTasks, listTasksByDispatchId) | `tests/mobile-readonly/alarm-dispatch-contract.test.ts` — **CHƯA CHẠY** | Mobile-readonly API cho alarms, dispatches, tasks. **Thiếu**: write flow (ADR-0005 cho phép mobile write cho PS-004/007, nhưng code hiện chỉ read-only). |
 | NFR-X-03b | **MỘT PHẦN** | `src/modules/platform/evidence/evidence-service.ts` (createEvidence: latitude, longitude, capturedAt) <br> `src/modules/platform/geo/index.ts:12-20` (createGeoPoint) | `tests/platform/evidence.integration.test.ts:22-41` — **CHƯA CHẠY** | GPS capture cho evidence. **Thiếu**: mobile write flow ghi activity/verification với GPS tự động (PS-005, 008, 009). |
@@ -51,8 +51,10 @@ Trạng thái: **CÓ** = đầy đủ; **MỘT PHẦN** = một phần; **KHÔNG
 
 | ID con | Trạng thái | Bằng chứng code (file:line) | Test (CHƯA CHẠY) | Ghi chú |
 |---|---|---|---|---|
-| NFR-X-05a | **CÓ** | `src/modules/identity/audit.ts:24-77` (recordAudit) <br> `src/modules/incidents/commands.ts` (intake.created, intake.verified, intake.sensitive_reveal, intake.read) <br> `src/modules/residents/commands.ts` (recordAudit cho Subject, Record, Activity, Report) | `tests/incidents/intake-report-separation.postgres.test.ts:852-898` — **CHƯA CHẠY** | Audit log đầy đủ cho IntakeReport (created, verified, sensitive_reveal, read) và Residents (Subject, Record, Activity, Report). |
+| NFR-X-05a | **CÓ** | `src/modules/identity/audit.ts:24-77` (recordAudit) <br> `src/modules/incidents/commands.ts` (intake.created, intake.verified, intake.sensitive_reveal, intake.read, incident.read, incident.sensitive_read) <br> `src/modules/residents/commands.ts` (Subject/Record/Activity/Report mutations) <br> `src/modules/residents/projection.ts` (subject.sensitive_read, subject_record.read) | `tests/incidents/intake-report-separation.postgres.test.ts` — 17/17 (2026-10-27; actual IntakeReport GET reveal/masking/audit, previously recorded) <br> `tests/incidents/incident-authorization.postgres.test.ts` — 12/12 (2026-10-27; actual Incident GET plus sensitive-read audit) <br> `tests/residents/resident-workflow.postgres.test.ts` — 11/11 (2026-10-27; actual subject/management-record GET audit, previously recorded) | Audit log for IntakeReport, Incident sensitive reveal, and Resident detail reads is evidenced at these exact routes/fixtures; not a claim that every endpoint/path has been exercised. |
 | NFR-X-05b | **CÓ** | `src/modules/inspections/commands.ts` (recordAudit cho Establishment, Inspection, Finding, Recommendation) <br> `src/modules/vehicles/commands.ts` (recordAudit cho Observation, Verification, Escalation) | **CHƯA CHẠY** | Audit log cho Inspections và Vehicles. |
+
+**Ngoài phạm vi NFR-X-05 (D-81):** `inspection.stats.read` được giữ như audit truy cập phục vụ trách nhiệm giải trình cho thống kê Inspection tổng hợp đã được phân quyền; đây không phải yêu cầu nhạy cảm NFR-X-05, nghĩa vụ pháp lý hay chứng nhận.
 
 ---
 

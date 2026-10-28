@@ -291,6 +291,7 @@ export function MapWorkspace({
     null,
   );
   const discoverySeq = useRef(0);
+  const mapLoadSeq = useRef(0);
   const [online, setOnline] = useState(
     () => typeof window === 'undefined' || window.navigator.onLine,
   );
@@ -313,6 +314,7 @@ export function MapWorkspace({
   }, []);
 
   const load = useCallback(async () => {
+    const seq = ++mapLoadSeq.current;
     if (!window.navigator.onLine) {
       setError(null);
       setProviderFailed(false);
@@ -322,6 +324,7 @@ export function MapWorkspace({
     try {
       setProviderFailed(false);
       const config = await readJson('/api/map/config');
+      if (mapLoadSeq.current !== seq) return;
       if (config.status !== 200 || !isRecord(config.body)) {
         throw new Error('MAP_PROVIDER_UNAVAILABLE');
       }
@@ -341,9 +344,17 @@ export function MapWorkspace({
         official: rawProvider.official === true,
       };
       const rows = await readJson('/api/map/markers');
+      if (mapLoadSeq.current !== seq) return;
       if (rows.status === 401) {
         setProvider(nextProvider);
         setMarkers([]);
+        ++focusSeq.current;
+        ++discoverySeq.current;
+        setFocusParcel(null);
+        setFocusStatus(focusParcelId ? 'forbidden' : 'empty');
+        setDiscoveryItems([]);
+        setDiscoverySelectedId(null);
+        setDiscoveryStatus('idle');
         setMasked(true);
         setState('ready');
         return;
@@ -363,9 +374,11 @@ export function MapWorkspace({
       }
       setProvider(nextProvider);
       setMarkers(rows.body.markers as MapMarkerView[]);
+      setMasked(false);
       setUpdatedAt(new Date().toLocaleString('vi-VN'));
       setState('ready');
     } catch (reason: unknown) {
+      if (mapLoadSeq.current !== seq) return;
       if (!window.navigator.onLine) {
         setError(null);
         setProviderFailed(false);
@@ -383,7 +396,7 @@ export function MapWorkspace({
       );
       setState('error');
     }
-  }, []);
+  }, [focusParcelId]);
 
   // T-003: tải focused parcel từ route T-002 với cache no-store.
   // parcelId chỉ là navigation context; server kiểm tra lại policy.
@@ -761,7 +774,7 @@ export function MapWorkspace({
 
   useEffect(() => {
     const activeProvider = provider;
-    if (state !== 'ready' || !activeProvider || masked || denied) return;
+    if (state !== 'ready' || !activeProvider || denied) return;
     const node = mapNode.current;
     if (!node) return;
     let active = true;
@@ -769,6 +782,11 @@ export function MapWorkspace({
       try {
         const maplibregl = await import('maplibre-gl');
         if (!active) return;
+        // Next bundling can make MapLibre's import.meta.url resolve to the page
+        // URL, so its GeoJSON worker fails to load. Configure the official
+        // worker URL before creating the map; the same-origin route only serves
+        // the two allowlisted MapLibre JavaScript assets.
+        maplibregl.setWorkerUrl('/api/maplibre-assets/maplibre-gl-worker.mjs');
         mapRef.current?.remove();
         const bounds = providerConfig.bounds;
         // T-004: focus đúng một parcel — zoom vào tâm bbox, giữ nguyên

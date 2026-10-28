@@ -13,7 +13,9 @@ import { seedDemo } from '../../scripts/demo/seed';
 // below is dynamic-imported after the seed preflight. Stable-key isolation
 // keeps this repeat-safe on the shared demo database; only t010-prefixed
 // fixture rows are created, and they are removed in afterAll.
-const enabled = process.env.RUN_DB_TESTS === '1';
+// DB-CONSOLIDATION (safety follow-up): demo seed suite disabled — its seed
+// helpers intentionally target the demo `civicos` database; keep it skipped
+// until an E2E-safe fixture seam exists. Do not re-enable via RUN_DB_TESTS.
 const stamp = randomUUID().slice(0, 8);
 
 type SeedResult = Awaited<ReturnType<typeof seedDemo>>;
@@ -101,7 +103,7 @@ const verifyOnlyUser: IdentityUser = {
 };
 const MISSING_OBSERVATION_ID = `t010-missing-${stamp}`;
 
-describe.skipIf(!enabled)('T-010 vehicle mobile read boundary', () => {
+describe.skip('T-010 vehicle mobile read boundary', () => {
   beforeAll(async () => {
     seeded = await seedDemo();
     const prisma = await demoPrisma();

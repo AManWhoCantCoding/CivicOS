@@ -7,6 +7,12 @@ process.env.CIVICOS_E2E_FIXTURE_PASSWORD ??=
 
 export default defineConfig({
   testDir: './tests/e2e',
+  testMatch: '**/*.spec.ts',
+  // Standalone Land browser evidence lives in tests/e2e/land-parcel-polygon.spec.ts
+  // and must only ever run via playwright.land-parcels.config.ts (zero DB /
+  // fixture side effects). Excluded here so the ordinary suite cannot pick it
+  // up under the fixture/services webServer.
+  testIgnore: ['**/land-parcel-polygon.spec.ts'],
   // Giới hạn thời gian tối đa cho 1 testcase E2E (30s)
   timeout: 30 * 1000, // Mỗi testcase tối đa 30 giây
   expect: {

@@ -32,6 +32,8 @@ declare module 'maplibre-gl' {
   export class NavigationControl {
     constructor();
   }
+  // Expose the worker API needed by MapWorkspace's local minimal declaration.
+  export function setWorkerUrl(value: string): void;
   const maplibregl: {
     Map: typeof Map;
     Marker: typeof Marker;

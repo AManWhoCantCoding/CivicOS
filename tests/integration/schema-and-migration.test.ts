@@ -47,6 +47,7 @@ const expectedMigrationChain = [
   '20260924100000_ps_e1005_canonical_channel',
   '20260925000000_ps_e1007_completion',
   '20260930000000_lnd01_land_foundation',
+  '20261024095000_ps_e1_009_parking_watch',
 ];
 
 const expectedModels = [

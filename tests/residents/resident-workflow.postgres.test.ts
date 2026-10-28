@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 
+import { Prisma } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { GET as managementRecordGET } from '@/app/api/residents/[subjectId]/management-records/[recordId]/route';
@@ -56,6 +57,10 @@ const dbUsers = [commander, duty, field, outsider, crossCommander];
 const trackedSubjects: string[] = [];
 const trackedRecords: string[] = [];
 const trackedReports: string[] = [];
+// Global Role rows this run PROVABLY created. Role rows that already existed
+// (detected via P2002 below) are left untouched — teardown deletes only these
+// tracked IDs by exact ID, never by name.
+const ownedRoleIds: string[] = [];
 
 describe.skipIf(!postgresEnabled)(
   'PS-E1-004 resident management workflow',
@@ -68,11 +73,23 @@ describe.skipIf(!postgresEnabled)(
         ],
       });
       for (const roleName of ['commander', 'duty_officer', 'field_officer']) {
-        await prisma.role.upsert({
-          where: { name: roleName },
-          update: {},
-          create: { name: roleName },
-        });
+        try {
+          // Atomic create: tracks ONLY the role this run actually created.
+          const created = await prisma.role.create({
+            data: { name: roleName },
+          });
+          ownedRoleIds.push(created.id);
+        } catch (error) {
+          if (
+            !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+            error.code !== 'P2002'
+          ) {
+            throw error;
+          }
+          // Unique-key race: a global role with this name already existed from
+          // seed or a prior run; adopt it without recording ownership.
+          await prisma.role.findUniqueOrThrow({ where: { name: roleName } });
+        }
       }
       for (const user of dbUsers) {
         await prisma.user.create({
@@ -94,6 +111,12 @@ describe.skipIf(!postgresEnabled)(
     });
 
     afterAll(async () => {
+      // Cleanup is scoped to exact values this run created: run-unique actor
+      // IDs, tracked subject/record/report resource IDs, and the exact SLA
+      // instances created for this run's tracked records. No name, status,
+      // date, or resourceType-only filters; outbox rows are deleted, never
+      // processed; projections and checkpoints are untouched.
+      const actorIds = dbUsers.map(({ id }) => id);
       const assignmentIds = trackedRecords.length
         ? (
             await prisma.assignment.findMany({
@@ -116,22 +139,84 @@ describe.skipIf(!postgresEnabled)(
             })
           ).map(({ id }) => id)
         : [];
-      const auditEvents = await prisma.auditEvent.findMany({
+      // AuditEvent rows written for this run's subjects, records, and reports;
+      // selected by exact resource-ID pairs per aggregate type.
+      const auditResourceClauses = [
+        ...trackedSubjects.map((resourceId) => ({
+          resourceType: 'Subject',
+          resourceId,
+        })),
+        ...trackedRecords.map((resourceId) => ({
+          resourceType: 'SubjectManagementRecord',
+          resourceId,
+        })),
+        ...trackedReports.map((resourceId) => ({
+          resourceType: 'ResidentMonthlyReport',
+          resourceId,
+        })),
+      ];
+      const auditEvents = auditResourceClauses.length
+        ? await prisma.auditEvent.findMany({
+            where: { OR: auditResourceClauses },
+            select: { id: true },
+          })
+        : [];
+      const auditEventIds = auditEvents.map(({ id }) => id);
+      // SlaStarted events are recorded with `actor: {}`, so their EventRecord
+      // rows have a null actorId and actor-scoped selection misses them; they
+      // are selected by exact SLA instance ID instead. Every AuditEventRecorded
+      // event this run produced carries a run-unique actorId; the AuditEvent
+      // aggregate-ID clause additionally pins any event to the audit rows
+      // collected above. Exact event IDs are deduped before deletion.
+      const ownedEvents = await prisma.eventRecord.findMany({
         where: {
           OR: [
-            ...trackedSubjects.map((resourceId) => ({
-              resourceType: 'Subject',
-              resourceId,
-            })),
-            ...trackedRecords.map((resourceId) => ({
-              resourceType: 'SubjectManagementRecord',
-              resourceId,
-            })),
+            { actorId: { in: actorIds } },
+            ...(slaInstanceIds.length
+              ? [
+                  {
+                    aggregateType: 'SlaInstance',
+                    aggregateId: { in: slaInstanceIds },
+                  },
+                ]
+              : []),
+            ...(auditEventIds.length
+              ? [
+                  {
+                    aggregateType: 'AuditEvent',
+                    aggregateId: { in: auditEventIds },
+                  },
+                ]
+              : []),
           ],
         },
-        select: { id: true },
+        select: { eventId: true },
       });
+      const ownedEventIds = [
+        ...new Set([...ownedEvents].map(({ eventId }) => eventId)),
+      ];
+      if (ownedEventIds.length) {
+        // Outbox rows go before their EventRecord rows so the event FK is
+        // never violated; this only deletes rows, it never drains the queue.
+        await prisma.outboxMessage.deleteMany({
+          where: { eventId: { in: ownedEventIds } },
+        });
+        await prisma.eventRecord.deleteMany({
+          where: { eventId: { in: ownedEventIds } },
+        });
+      }
+      if (auditEventIds.length) {
+        await prisma.auditEvent.deleteMany({
+          where: { id: { in: auditEventIds } },
+        });
+      }
       if (trackedReports.length) {
+        await prisma.approval.deleteMany({
+          where: {
+            resourceType: 'ResidentMonthlyReport',
+            resourceId: { in: trackedReports },
+          },
+        });
         await prisma.residentMonthlyReport.deleteMany({
           where: { id: { in: trackedReports } },
         });
@@ -140,15 +225,16 @@ describe.skipIf(!postgresEnabled)(
         await prisma.subjectManagementActivity.deleteMany({
           where: { recordId: { in: trackedRecords } },
         });
-        await prisma.slaInstance.deleteMany({
-          where: {
-            resourceType: 'SubjectManagementRecord',
-            resourceId: { in: trackedRecords },
-          },
-        });
-        await prisma.assignment.deleteMany({
-          where: { resourceId: { in: trackedRecords } },
-        });
+        if (slaInstanceIds.length) {
+          await prisma.slaInstance.deleteMany({
+            where: { id: { in: slaInstanceIds } },
+          });
+        }
+        if (assignmentIds.length) {
+          await prisma.assignment.deleteMany({
+            where: { id: { in: assignmentIds } },
+          });
+        }
         await prisma.subjectManagementRecord.deleteMany({
           where: { id: { in: trackedRecords } },
         });
@@ -158,61 +244,22 @@ describe.skipIf(!postgresEnabled)(
           where: { id: { in: trackedSubjects } },
         });
       }
-      await prisma.eventRecord.deleteMany({
-        where: {
-          OR: [
-            ...trackedSubjects.map((aggregateId) => ({
-              aggregateType: 'Subject',
-              aggregateId,
-            })),
-            ...trackedRecords.map((aggregateId) => ({
-              aggregateType: 'SubjectManagementRecord',
-              aggregateId,
-            })),
-            ...(slaInstanceIds.length
-              ? [
-                  {
-                    aggregateType: 'SlaInstance',
-                    aggregateId: { in: slaInstanceIds },
-                  },
-                ]
-              : []),
-            ...(assignmentIds.length
-              ? [
-                  {
-                    aggregateType: 'Assignment',
-                    aggregateId: { in: assignmentIds },
-                  },
-                ]
-              : []),
-          ],
-        },
+      await prisma.user.deleteMany({
+        where: { id: { in: dbUsers.map(({ id }) => id) } },
       });
-      if (auditEvents.length) {
-        await prisma.eventRecord.deleteMany({
+      // Role cleanup runs only after this run's users (and their UserRole
+      // links, which cascade on user deletion) are gone, and deletes solely
+      // IDs this setup created — never a name, never a pre-existing row. The
+      // `users: { none: {} }` filter additionally spares any owned row a
+      // concurrent writer has linked a user to by now.
+      if (ownedRoleIds.length) {
+        await prisma.role.deleteMany({
           where: {
-            aggregateType: 'AuditEvent',
-            aggregateId: { in: auditEvents.map(({ id }) => id) },
+            id: { in: ownedRoleIds },
+            users: { none: {} },
           },
         });
       }
-      await prisma.auditEvent.deleteMany({
-        where: {
-          OR: [
-            ...trackedSubjects.map((resourceId) => ({
-              resourceType: 'Subject',
-              resourceId,
-            })),
-            ...trackedRecords.map((resourceId) => ({
-              resourceType: 'SubjectManagementRecord',
-              resourceId,
-            })),
-          ],
-        },
-      });
-      await prisma.user.deleteMany({
-        where: { id: { in: dbUsers.map((user) => user.id) } },
-      });
       await prisma.organizationUnit.deleteMany({
         where: { id: { in: [ORG, UPPER] } },
       });
@@ -269,6 +316,89 @@ describe.skipIf(!postgresEnabled)(
       });
       const elapsed = sla.dueAt.getTime() - record.createdAt.getTime();
       expect(elapsed).toBe(24 * 60 * 60 * 1000);
+    });
+
+    it('persists foreign arrival time in SLA, event, and audit evidence', async () => {
+      const arrivalAt = new Date('2026-09-30T16:00:00.000Z');
+      const subject = await registerSubject(
+        {
+          displayName: `E004 Foreign ${stamp}`,
+          subjectType: 'foreign_resident',
+        },
+        duty,
+      );
+      trackedSubjects.push(subject.id);
+      const record = await createManagementRecord(
+        {
+          subjectId: subject.id,
+          purpose: 'foreign_resident',
+          arrivalAt: arrivalAt.toISOString(),
+        },
+        duty,
+      );
+      trackedRecords.push(record.id);
+      for (const [kind, duration] of [
+        ['resident_registration_24h', 24 * 60 * 60 * 1000],
+        ['foreign_same_day_report', 24 * 60 * 60 * 1000],
+      ] as const) {
+        const sla = await prisma.slaInstance.findUniqueOrThrow({
+          where: {
+            resourceType_resourceId_kind: {
+              resourceType: 'SubjectManagementRecord',
+              resourceId: record.id,
+              kind,
+            },
+          },
+        });
+        expect(sla.dueAt.getTime()).toBe(arrivalAt.getTime() + duration);
+      }
+      const event = await prisma.eventRecord.findFirstOrThrow({
+        where: {
+          aggregateType: 'SubjectManagementRecord',
+          aggregateId: record.id,
+          eventType: 'SubjectManagementRecordCreated',
+        },
+      });
+      expect((event.payload as { arrivalAt?: string }).arrivalAt).toBe(
+        arrivalAt.toISOString(),
+      );
+      expect(event.occurredAt.getTime()).toBe(record.createdAt.getTime());
+      const audit = await prisma.auditEvent.findFirstOrThrow({
+        where: {
+          resourceType: 'SubjectManagementRecord',
+          resourceId: record.id,
+          operation: 'subject_record.created',
+        },
+      });
+      expect((audit.metadata as { arrivalAt?: string }).arrivalAt).toBe(
+        arrivalAt.toISOString(),
+      );
+    });
+
+    it('sets the initial reintegration check and SLA to one creation-time deadline', async () => {
+      const subject = await registerSubject(
+        {
+          displayName: `E004 Reintegration ${stamp}`,
+          subjectType: 'reintegration',
+        },
+        duty,
+      );
+      trackedSubjects.push(subject.id);
+      const record = await createManagementRecord(
+        { subjectId: subject.id, purpose: 'reintegration' },
+        duty,
+      );
+      trackedRecords.push(record.id);
+      const sla = await prisma.slaInstance.findUniqueOrThrow({
+        where: {
+          resourceType_resourceId_kind: {
+            resourceType: 'SubjectManagementRecord',
+            resourceId: record.id,
+            kind: 'resident_monthly_checkup',
+          },
+        },
+      });
+      expect(record.nextCheckAt?.getTime()).toBe(sla.dueAt.getTime());
     });
 
     it('scopes record visibility to assignments and units', async () => {
@@ -396,7 +526,7 @@ describe.skipIf(!postgresEnabled)(
         {
           recordId: record.id,
           activityType: 'checkup',
-          occurredAt: new Date().toISOString(),
+          occurredAt: '2026-09-30T16:00:00.000Z',
           content: 'Monthly visit completed',
           idempotencyKey: key,
         },
@@ -406,7 +536,7 @@ describe.skipIf(!postgresEnabled)(
         {
           recordId: record.id,
           activityType: 'checkup',
-          occurredAt: new Date().toISOString(),
+          occurredAt: '2026-09-30T16:00:00.000Z',
           content: 'Monthly visit completed',
           idempotencyKey: key,
         },
@@ -414,9 +544,20 @@ describe.skipIf(!postgresEnabled)(
       );
       expect(second.id).toBe(first.id);
       const refreshed = await getRecord(record.id, commander);
-      expect(
-        new Date(refreshed.nextCheckAt as string).getTime(),
-      ).toBeGreaterThan(Date.now());
+      const expectedDueAt = new Date('2026-10-31T17:00:00.000Z');
+      expect(new Date(refreshed.nextCheckAt as string).getTime()).toBe(
+        expectedDueAt.getTime(),
+      );
+      const checkupSla = await prisma.slaInstance.findUniqueOrThrow({
+        where: {
+          resourceType_resourceId_kind: {
+            resourceType: 'SubjectManagementRecord',
+            resourceId: record.id,
+            kind: 'resident_monthly_checkup',
+          },
+        },
+      });
+      expect(checkupSla.dueAt.getTime()).toBe(expectedDueAt.getTime());
     });
 
     it('rejects stale record updates through version checks', async () => {
@@ -464,7 +605,11 @@ describe.skipIf(!postgresEnabled)(
       );
       trackedSubjects.push(subject.id);
       const record = await createManagementRecord(
-        { subjectId: subject.id, purpose: 'foreign_resident' },
+        {
+          subjectId: subject.id,
+          purpose: 'foreign_resident',
+          arrivalAt: '2026-09-30T16:00:00.000Z',
+        },
         duty,
       );
       trackedRecords.push(record.id);

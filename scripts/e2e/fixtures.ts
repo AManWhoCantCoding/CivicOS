@@ -3,20 +3,27 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { resolveE2EDatabaseTarget } from './e2e-target.mjs';
+
 const type = 'Karaoke — Đ3 khoản 21(a)';
 const runId = process.env.CIVICOS_E2E_RUN_ID ?? '';
 const password = process.env.CIVICOS_E2E_FIXTURE_PASSWORD ?? '';
-const emails = ['commander', 'field', 'unassigned'].map(
+const emails = ['commander', 'duty_officer', 'field', 'unassigned'].map(
   (role) => `ps007-e2e-${runId}-${role}@example.test`,
 );
 const ouId = `ps007-e2e-${runId}`;
+const parentOuId = `${ouId}-parent`;
 const checklistId = `${ouId}-checklist`;
-const roleIds = ['commander', 'field_officer'].map(
+const roleIds = ['commander', 'duty_officer', 'field_officer'].map(
   (role) => `${ouId}-role-${role}`,
 );
 const checkpointPath = resolve(
   process.cwd(),
   `.brain/evidence/03-ps-e1005-intake-report/logs/${runId}.projection-checkpoints.json`,
+);
+const eventBaselinePath = resolve(
+  process.cwd(),
+  `.brain/evidence/03-ps-e1005-intake-report/logs/${runId}.event-baseline.json`,
 );
 
 function checkpointSnapshot(
@@ -53,38 +60,32 @@ function validate(): void {
 
 async function main(action: string): Promise<void> {
   validate();
+  // Process-only, fail-closed: the explicit CIVICOS_E2E_DATABASE_URL is
+  // validated BEFORE @next/env merges .env into process.env, so a .env
+  // variable can never impersonate it and the persistent DEMO_DATABASE_URL /
+  // DATABASE_URL (Pilot01 / civicos_demo) is never read as the E2E target.
+  // See scripts/e2e/e2e-target.mjs for the allowlist.
+  const target = resolveE2EDatabaseTarget(process.env);
   loadEnvConfig(process.cwd());
-  const raw = process.env.DATABASE_URL;
-  if (!raw) throw new Error('E2E_DATABASE_URL_REQUIRED');
-  const target = new URL(raw);
-  if (
-    target.hostname !== '127.0.0.1' ||
-    target.port !== '5433' ||
-    target.pathname !== '/civicos_demo'
-  )
-    throw new Error('E2E_DATABASE_URL_REFUSED');
-  const url = new URL(raw);
-  if (
-    !['postgres:', 'postgresql:'].includes(url.protocol) ||
-    url.hostname !== '127.0.0.1' ||
-    url.port !== '5433' ||
-    url.pathname !== '/civicos_demo' ||
-    url.hash
-  )
-    throw new Error('E2E_DATABASE_URL_TARGET_REJECTED');
-  const [{ PrismaClient }, { hashPassword }, { checklistForType }] =
-    await Promise.all([
-      import('@prisma/client'),
-      import('../../src/modules/identity/local-provider'),
-      import('../../src/modules/inspections/checklist-catalog'),
-    ]);
+  process.env.DATABASE_URL = target.href;
+  const [
+    { PrismaClient },
+    { ensureDevelopmentUsers, hashPassword },
+    { checklistForType },
+    { prisma: identityPrisma },
+  ] = await Promise.all([
+    import('@prisma/client'),
+    import('../../src/modules/identity/local-provider'),
+    import('../../src/modules/inspections/checklist-catalog'),
+    import('../../src/lib/prisma'),
+  ]);
   const prisma = new PrismaClient();
   try {
     const identity = await prisma.$queryRaw<
       Array<{ database: string; port: number; address: string | null }>
     >`SELECT current_database() AS database, (SELECT setting::int FROM pg_settings WHERE name='port') AS port, inet_server_addr()::text AS address`;
     if (
-      identity[0]?.database !== 'civicos_demo' ||
+      identity[0]?.database !== 'civicos_e2e' ||
       identity[0]?.port !== 5432 ||
       !identity[0]?.address
     )
@@ -92,12 +93,23 @@ async function main(action: string): Promise<void> {
     const migration = await prisma.$queryRaw<
       Array<{ count: bigint }>
     >`SELECT count(*)::bigint AS count FROM "_prisma_migrations" WHERE migration_name='20260925000000_ps_e1007_completion' AND finished_at IS NOT NULL AND rolled_back_at IS NULL`;
-    const roles = await prisma.role.findMany({
-      where: { name: { in: ['commander', 'field_officer'] } },
-      select: { id: true, name: true },
-    });
     if (Number(migration[0]?.count ?? 0) !== 1)
       throw new Error('E2E_E1007_PREFLIGHT_FAILED');
+    if (action === 'setup') {
+      const baselineEventIds = await prisma.eventRecord.findMany({
+        select: { eventId: true },
+      });
+      writeFileSync(
+        eventBaselinePath,
+        JSON.stringify(baselineEventIds.map(({ eventId }) => eventId)),
+        { flag: 'wx' },
+      );
+      await ensureDevelopmentUsers();
+    }
+    const roles = await prisma.role.findMany({
+      where: { name: { in: ['commander', 'duty_officer', 'field_officer'] } },
+      select: { id: true, name: true },
+    });
 
     if (action === 'setup') {
       const checkpoints = await prisma.projectionCheckpoint.findMany();
@@ -106,9 +118,11 @@ async function main(action: string): Promise<void> {
         flag: 'wx',
       });
       await prisma.$transaction(async (tx) => {
-        const userIds = [0, 1, 2].map((index) => `ps007-e2e-${runId}-${index}`);
-        const collision = await tx.organizationUnit.findUnique({
-          where: { id: ouId },
+        const userIds = [0, 1, 2, 3].map(
+          (index) => `ps007-e2e-${runId}-${index}`,
+        );
+        const collision = await tx.organizationUnit.findFirst({
+          where: { id: { in: [ouId, parentOuId] } },
         });
         const userIdCollision = await tx.user.findFirst({
           where: { id: { in: userIds } },
@@ -125,14 +139,27 @@ async function main(action: string): Promise<void> {
           throw new Error('E2E_FIXTURE_COLLISION');
         await tx.organizationUnit.create({
           data: {
+            id: parentOuId,
+            name: `PS007 E2E Parent ${runId}`,
+            level: 'province',
+            active: true,
+          },
+        });
+        await tx.organizationUnit.create({
+          data: {
             id: ouId,
             name: `PS007 E2E ${runId}`,
             level: 'district',
+            parentId: parentOuId,
             active: true,
           },
         });
         const roleMap = new Map(roles.map((r) => [r.name, r.id]));
-        for (const [index, name] of ['commander', 'field_officer'].entries()) {
+        for (const [index, name] of [
+          'commander',
+          'duty_officer',
+          'field_officer',
+        ].entries()) {
           if (roleMap.has(name)) continue;
           const role = await tx.role.create({
             data: {
@@ -145,6 +172,7 @@ async function main(action: string): Promise<void> {
         }
         for (const [index, role] of [
           'commander',
+          'duty_officer',
           'field_officer',
           'field_officer',
         ].entries()) {
@@ -198,6 +226,20 @@ async function main(action: string): Promise<void> {
       select: { id: true },
     });
     const actors = users.map((u) => u.id);
+    const intakeReports = await prisma.intakeReport.findMany({
+      where: { createdById: { in: actors }, organizationId: ouId },
+      select: { id: true },
+    });
+    const reportIds = intakeReports.map((r) => r.id);
+    const incidents = await prisma.incident.findMany({
+      where: { intakeReportId: { in: reportIds } },
+      select: { id: true },
+    });
+    const incidentIds = incidents.map((r) => r.id);
+    const intakeCommands = await prisma.intakeCommand.findMany({
+      where: { reportId: { in: reportIds } },
+      select: { id: true },
+    });
     const establishments = await prisma.establishment.findMany({
       where: { organizationId: ouId },
       select: { id: true },
@@ -217,15 +259,42 @@ async function main(action: string): Promise<void> {
       select: { id: true },
     });
     const resources = [
+      ...reportIds,
+      ...incidentIds,
       ...establishmentIds,
       ...inspectionIds,
       ...findings.map((r) => r.id),
       ...recommendations.map((r) => r.id),
     ];
+    const baselineEventIds = JSON.parse(
+      readFileSync(eventBaselinePath, 'utf8'),
+    ) as unknown;
+    if (
+      !Array.isArray(baselineEventIds) ||
+      !baselineEventIds.every((eventId) => typeof eventId === 'string')
+    )
+      throw new Error('E2E_EVENT_BASELINE_INVALID');
+    const ownedEvents = await prisma.eventRecord.findMany({
+      where: { eventId: { notIn: baselineEventIds } },
+      select: {
+        eventId: true,
+        aggregateType: true,
+        aggregateId: true,
+        recordedAt: true,
+      },
+    });
+    const eventIds = ownedEvents.map((r) => r.eventId);
+    const runAuditIds = ownedEvents
+      .filter((event) => event.aggregateType === 'AuditEvent')
+      .map((event) => event.aggregateId);
     const auditIds = (
       await prisma.auditEvent.findMany({
         where: {
-          OR: [{ actorId: { in: actors } }, { resourceId: { in: resources } }],
+          OR: [
+            { actorId: { in: actors } },
+            { resourceId: { in: resources } },
+            { id: { in: runAuditIds } },
+          ],
         },
         select: { id: true },
       })
@@ -253,26 +322,6 @@ async function main(action: string): Promise<void> {
       },
       select: { id: true, storageKey: true },
     });
-    const ownedEvents = await prisma.eventRecord.findMany({
-      where: {
-        OR: [
-          { organizationId: ouId },
-          { actorId: { in: actors } },
-          {
-            aggregateId: {
-              in: [...resources, ...auditIds, ...assignmentIds, ...slaIds],
-            },
-          },
-        ],
-      },
-      select: {
-        eventId: true,
-        aggregateType: true,
-        aggregateId: true,
-        recordedAt: true,
-      },
-    });
-    const eventIds = ownedEvents.map((r) => r.eventId);
     const projectionTuples = [
       ...new Map(
         ownedEvents.map((r) => [
@@ -321,6 +370,11 @@ async function main(action: string): Promise<void> {
       await tx.auditEvent.deleteMany({ where: { id: { in: auditIds } } });
       await tx.assignment.deleteMany({ where: { id: { in: assignmentIds } } });
       await tx.slaInstance.deleteMany({ where: { id: { in: slaIds } } });
+      await tx.intakeCommand.deleteMany({
+        where: { id: { in: intakeCommands.map((r) => r.id) } },
+      });
+      await tx.incident.deleteMany({ where: { id: { in: incidentIds } } });
+      await tx.intakeReport.deleteMany({ where: { id: { in: reportIds } } });
       await tx.enforcementRecommendation.deleteMany({
         where: { id: { in: recommendations.map((r) => r.id) } },
       });
@@ -341,6 +395,12 @@ async function main(action: string): Promise<void> {
           await tx.role.delete({ where: { id } });
       }
       await tx.organizationUnit.deleteMany({ where: { id: ouId } });
+      if (
+        !(await tx.organizationUnit.findFirst({
+          where: { parentId: parentOuId },
+        }))
+      )
+        await tx.organizationUnit.deleteMany({ where: { id: parentOuId } });
     });
     const baseline = readFileSync(checkpointPath, 'utf8');
     const baselineRows = JSON.parse(baseline) as Array<{
@@ -453,6 +513,7 @@ async function main(action: string): Promise<void> {
     }
   } finally {
     await prisma.$disconnect();
+    await identityPrisma.$disconnect();
   }
 }
 

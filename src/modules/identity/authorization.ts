@@ -439,6 +439,21 @@ async function mobileResourceOrganizationId(
       )?.assignedOrganizationId ?? undefined
     );
   }
+  if (resource.resourceType === 'Inspection') {
+    const inspection = await client.inspection.findUnique({
+      where: { id: resource.resourceId },
+      select: { establishmentId: true },
+    });
+    if (!inspection) return undefined;
+    return (
+      (
+        await client.establishment.findUnique({
+          where: { id: inspection.establishmentId },
+          select: { organizationId: true },
+        })
+      )?.organizationId ?? undefined
+    );
+  }
   if (resource.resourceType === 'InspectionFinding') {
     const finding = await client.inspectionFinding.findUnique({
       where: { id: resource.resourceId },

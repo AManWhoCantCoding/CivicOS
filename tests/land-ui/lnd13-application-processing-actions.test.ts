@@ -314,7 +314,9 @@ describe('LND-13 screen-03 detail source follows the locked handoff', () => {
     expect(detailSource).toContain('applicationCode');
     expect(detailSource).toContain('applicationStatusText');
     expect(detailSource).toContain('applicationChangeTypeText');
-    expect(detailSource).toContain('Mô phỏng');
+    expect(detailSource).toContain('<ParcelSimulatedBadge />');
+    const simulatedBadge = readSource('src/components/land/ParcelPilotUI.tsx');
+    expect(simulatedBadge).toContain('Mô phỏng · simulated');
     expect(detailSource).toContain('version');
     expect(detailSource).toContain('organizationId');
     expect(detailSource).toContain('createdById');

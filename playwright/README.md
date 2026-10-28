@@ -15,6 +15,12 @@ D:\Project\CivicOS\playwright\.venv\Scripts\python.exe -m playwright install chr
 
 ## Run (Windows native, PowerShell)
 
+Before running either command, set the explicit E2E target and freshly verify that the PostgreSQL endpoint, container, and volume at `127.0.0.1:5432` belong to the intended test database. The URL guard does not prove container/volume ownership. If the port is occupied, identify its owner before attempting to free it; do not reset or remove a database/volume manually.
+
+```powershell
+$env:CIVICOS_E2E_DATABASE_URL = "postgresql://civicos:civicos@127.0.0.1:5432/civicos_e2e?schema=public"
+```
+
 Targeted regression sweep (collects 18 items, both viewports):
 
 ```powershell
@@ -31,13 +37,13 @@ Both commands passed with exit code 0 on the verified runtime above. Collection 
 
 ## Environment variables
 
-`CIVICOS_E2E_DATABASE_URL` selects the PostgreSQL host, port, and credentials; the database path is always rewritten to the dedicated `civicos_e2e` database (`DATABASE_URL` is the fallback, default `postgresql://civicos:civicos@localhost:5432/civicos`). `CIVICOS_E2E_APP_PORT` selects the isolated Next.js port (default `4317`). `CIVICOS_E2E_TIMEOUT` is the readiness timeout in seconds for PostgreSQL, Next.js, and the worker (default `90`). `CIVICOS_E2E_KEEP_DB=1` (or `--keep-e2e-db`) keeps `civicos_e2e` after the run for debugging.
+`CIVICOS_E2E_DATABASE_URL` is the ONLY database target: it must be set explicitly for every process and must point at PostgreSQL `127.0.0.1:5432/civicos_e2e` — exact host, exact port, and database name `civicos_e2e`. There is NO fallback to `DATABASE_URL`, NO default URL, and NO path rewrite; anything else (other database names such as `civicos`, `civicos_test`, `civicos_demo`, other hosts/ports, fragments, unknown/duplicate query keys, non-`public` `schema=`, non-positive-integer `connection_limit=`) is refused fail-closed before any connection is opened. Only `schema=public` and a positive `connection_limit` are accepted in the query string; see `scripts/e2e/e2e-target.mjs` for the shared Node contract. Other variables: `CIVICOS_E2E_APP_PORT` selects the isolated Next.js port (default `4317`); `CIVICOS_E2E_TIMEOUT` is the readiness timeout in seconds for PostgreSQL, Next.js, and the worker (default `90`).
 
 ## Database lifecycle
 
-The harness waits for PostgreSQL, then drops and recreates the dedicated `civicos_e2e` database (unless `--no-recreate-e2e-db` is passed), runs `prisma:generate` plus `prisma:migrate:deploy` against it, and seeds only reference identity/configuration data (roles, organization units, test accounts, checklist templates). Every test starts with business tables truncated, and the database is removed after the run unless it is explicitly kept for inspection.
+The harness validates the explicit `civicos_e2e` target FIRST, waits for PostgreSQL readiness, then create-if-missing ONLY (it never drops or recreates the dedicated `civicos_e2e` database and never terminates database sessions), runs `prisma:generate` plus `prisma:migrate:deploy` against it, fully resets application data while `civicos_e2e`'s current identity is proven (`current_database()`), and seeds only reference identity/configuration data (roles, organization units, test accounts, checklist templates) — all under the shared whole-run PostgreSQL advisory lock (key `1128236101`, the same key as the Node harnesses, held on one persistent connection across migration, resets, fixture seeding, tests, and final cleanup so concurrent runs cannot interleave).
 
-Business records are never inserted by the test code. Tests create and mutate Incidents, Establishments, Inspections, Evidence, registry entries, and observations through visible UI controls. The only HTTP calls outside browser-rendered UI are authentication/readiness during service startup and the authenticated worker/projection health check. PostgreSQL is used by fixtures for database lifecycle, reference seeding, and destructive test isolation only.
+The full application-data reset (before seeding and again at session teardown) dynamically truncates every `public` application table, EXCLUDING `_prisma_migrations`, PostGIS `spatial_ref_sys`, and `pg_` catalog tables — so the schema, migration history, and PostGIS reference data survive every run. `civicos_e2e` is retained after the run (schema, migrations, and PostGIS remain; application rows are cleared). Business records are never inserted by the test code. Tests create and mutate Incidents, Establishments, Inspections, Evidence, registry entries, and observations through visible UI controls. The only HTTP calls outside browser-rendered UI are authentication/readiness during service startup and the authenticated worker/projection health check. PostgreSQL is used by fixtures for database lifecycle, reference seeding, and the per-test business-data isolation only (per-test isolation truncates the static `REFERENCE_TABLES` list and keeps reference fixtures available).
 
 ## Fixture dữ liệu demo
 
@@ -45,8 +51,8 @@ Fixture `demo_labels` trả về ba nhãn ổn định khớp với `scripts/dem
 
 ## Artifacts and cleanup
 
-Service logs are written to `test-results/services/next.log` and `test-results/services/worker.log` (`D:\Project\CivicOS\playwright\test-results\services\next.log` and `worker.log` from `D:\Project\CivicOS\playwright`). Each test node gets a directory below `test-results/` (`D:\Project\CivicOS\playwright\test-results\`) holding `trace.zip` and `failure-*.png` on failure; passed-test videos are deleted. Use `--keep-e2e-db` when inspecting a failed database state.
+Service logs are written to `test-results/services/next.log` and `test-results/services/worker.log` (`D:\Project\CivicOS\playwright\test-results\services\next.log` and `worker.log` from `D:\Project\CivicOS\playwright`). Each test node gets a directory below `test-results/` (`D:\Project\CivicOS\playwright\test-results\`) holding `trace.zip` and `failure-*.png` on failure; passed-test videos are deleted. For failed-run database inspection, connect to the retained `civicos_e2e` database directly (schema, migration history, and PostGIS rows are intact; application rows are cleared by the final reset).
 
-After a run the harness stops the Next.js and worker processes (`taskkill`), leaving no `node`, Chromium/Edge, or Playwright processes and no listeners on ports `3000`, `3001`, or `4317`. PostgreSQL stays up via Docker Desktop (`civicos-postgres-1`, `pg_isready` accepting connections) with only `civicos`, `postgres`, `template0`, and `template1` present; `civicos_e2e` is absent.
+After a run the harness stops the Next.js and worker processes (`taskkill`), leaving no `node`, Chromium/Edge, or Playwright processes and no listeners on ports `3000`, `3001`, or `4317`. PostgreSQL stays up via Docker Desktop (`civicos-postgres-1`, `pg_isready` accepting connections). The retained databases include `civicos`, `postgres`, `template0`, `template1`, and the dedicated `civicos_e2e`; `civicos_e2e` keeps its schema, migration history, and PostGIS data while application rows are reset at session end.
 
 The suite intentionally contains assertions for UI controls that are still being completed by the UI agent. Collection and syntax checks should work before every workflow is green.

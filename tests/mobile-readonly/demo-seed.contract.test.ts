@@ -28,7 +28,10 @@ function expectNoSensitiveLeak(value: unknown): void {
   expect(text).not.toContain('"body"');
 }
 
-const postgresEnabled = process.env.RUN_DB_TESTS === '1';
+// DB-CONSOLIDATION (safety follow-up): demo seed contract suite disabled —
+// its seed helpers intentionally target the demo `civicos` database; keep it
+// skipped until an E2E-safe fixture seam exists. Do not re-enable via
+// RUN_DB_TESTS.
 
 type SeedResult = Awaited<ReturnType<typeof seedDemo>>;
 
@@ -63,7 +66,7 @@ function seededIds(seeded: SeedResult) {
   ] as const;
 }
 
-describe.skipIf(!postgresEnabled)('mobile readonly demo seed contract', () => {
+describe.skip('mobile readonly demo seed contract', () => {
   it('grants exactly one active mobile_read assignment per resource across reruns', async () => {
     const first = await seedDemo();
     const second = await seedDemo();
