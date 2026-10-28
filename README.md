@@ -249,6 +249,8 @@ Một số test cần PostgreSQL hoặc cấu hình môi trường riêng; xem t
 
 ## Tài liệu liên quan
 
+- [`docs/architecture/current-state/README.md`](docs/architecture/current-state/README.md): bộ tài liệu kiến trúc/nghiệp vụ **AS-IS code-derived** tại baseline `567380b3c6fea42d359a99d41a8fe4e60134ffa9` (2026-10-28), không phải yêu cầu/phê duyệt/chứng nhận production.
+  - Lộ trình đọc đề nghị: [C4](docs/architecture/current-state/c4.md) → [module và trạng thái](docs/architecture/current-state/module-status.md) → [luồng nghiệp vụ](docs/architecture/current-state/business-flows.md) → [mô hình dữ liệu](docs/architecture/current-state/data-model.md) → [API/seam nội bộ](docs/architecture/current-state/interfaces-apis.md) → [luồng màn hình](docs/architecture/current-state/screen-flows.md) → [triển khai local](docs/architecture/current-state/deployment.md).
 - [`docs/demo-script.md`](docs/demo-script.md): preflight, accounts và kịch bản demo đầy đủ.
 - [`docs/runbooks/`](docs/runbooks/): operator runbooks và trạng thái handoff.
 - [`CONTEXT.md`](CONTEXT.md): ngôn ngữ/domain context.
