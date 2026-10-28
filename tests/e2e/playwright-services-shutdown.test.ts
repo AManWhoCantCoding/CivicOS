@@ -19,4 +19,9 @@ describe('playwright services shutdown exit status', () => {
     expect(result).toEqual([0, 1]);
     expect(status.current()).toBe(1);
   });
+
+  it('does not classify an app exit during intentional shutdown as failure', () => {
+    expect(createShutdownExitStatus().appExitCode(true)).toBe(0);
+    expect(createShutdownExitStatus().appExitCode(false)).toBe(1);
+  });
 });

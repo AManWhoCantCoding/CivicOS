@@ -13,6 +13,9 @@ export function createShutdownExitStatus(initialCode = 0) {
     current() {
       return code;
     },
+    appExitCode(intentionalShutdown) {
+      return intentionalShutdown ? 0 : 1;
+    },
     finalize(writeResult) {
       writeResult(code);
       finalized = true;

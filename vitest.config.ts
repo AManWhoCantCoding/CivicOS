@@ -11,7 +11,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.{ts,tsx}'],
-    pool: 'threads',
+    pool: process.env.RUN_DB_TESTS === '1' ? 'forks' : 'threads',
     fileParallelism: false,
     // DB-lifecycle safety gate: rejects bare RUN_DB_TESTS=1 and any
     // marker/target/DATABASE_URL disagreement before suite imports. DB-free

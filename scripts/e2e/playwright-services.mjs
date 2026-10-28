@@ -476,7 +476,11 @@ async function main() {
             }
           })();
           await Promise.race([
-            new Promise((resolve) => app.once('exit', () => resolve(1))),
+            new Promise((resolve) =>
+              app.once('exit', () =>
+                resolve(shutdownExitStatus.appExitCode(shuttingDown)),
+              ),
+            ),
           ]).then((code) => shutdown(code));
           await stopPoll;
         } catch (error) {
