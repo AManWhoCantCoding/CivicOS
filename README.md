@@ -113,6 +113,8 @@ npm run demo:bootstrap
 
 `demo:bootstrap` chạy preflight target/clock trước, sau đó mới deploy migration và seed dữ liệu demo. Bootstrap có thay đổi schema và dữ liệu trong database đã chọn; chỉ chạy trên target local nêu trên.
 
+`npm run demo:reset` đã được retire và luôn từ chối với `DEMO_RESET_RETIRED_USE_E2E_LIFECYCLE`; lệnh này không import Prisma, kết nối hoặc truncate `civicos`. Điều này không tắt demo seed thường dùng cho dữ liệu local.
+
 ### 2. Chạy worker và web
 
 Mở hai cửa sổ PowerShell riêng. Đặt target trong từng cửa sổ.
@@ -149,6 +151,21 @@ docker compose stop postgres
 ```
 
 Database nằm trong volume Compose và còn nguyên sau khi dừng container. Không dùng `docker compose down -v` như bước dọn dẹp mặc định.
+
+## Database-backed tests
+
+`civicos` là database cho ứng dụng và demo local. Tất cả test cần database chỉ được dùng target tách biệt `postgresql://...@127.0.0.1:5432/civicos_e2e`; không đổi `DATABASE_URL` để chuyển target và không dùng `civicos_test`/`civicos_demo` thay cho E2E target. `civicos_test` được giữ nguyên vì inventory read-only đã tìm migration/PostGIS data.
+
+Trước mỗi lần chạy test có database, xác minh lại PostgreSQL endpoint, container và volume sở hữu `127.0.0.1:5432`, đồng thời bảo đảm không có container khác dùng chung volume. Nếu cổng đang bị chiếm, xác định owner trước khi cân nhắc giải phóng cổng. URL allowlist không thay thế kiểm tra quyền sở hữu volume; không reset/xóa database hoặc volume thủ công.
+
+Vitest DB-backed dùng lifecycle runner (không gọi Vitest DB phase trực tiếp):
+
+```powershell
+$env:CIVICOS_E2E_DATABASE_URL = "postgresql://civicos:civicos@127.0.0.1:5432/civicos_e2e?schema=public"
+node scripts/e2e/run-vitest-db.mjs
+```
+
+Runner yêu cầu target tường minh, giữ advisory lock toàn run, deploy migration, seed Identity fixtures, chạy Vitest rồi xóa application rows trong `civicos_e2e`, giữ nguyên schema, `_prisma_migrations` và PostGIS reference data. `npm test` giữ các DB-backed suites ở trạng thái tắt; không tự đặt `RUN_DB_TESTS=1`. Xem [`playwright/README.md`](playwright/README.md) trước khi chạy Python browser suite.
 
 ## Chạy ứng dụng mobile Android
 
